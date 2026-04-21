@@ -161,7 +161,7 @@ export default function PlacesPage() {
     setLoadingStored(true);
     try {
       const { data } = await getStoredPlaces({ limit: 50, keyword: keyword || undefined });
-      setPlaces(data.places || []);
+      setPlaces(Array.isArray(data) ? data : (data.places || []));
     } catch {
       // silently fail – DB may not be connected
     } finally {
