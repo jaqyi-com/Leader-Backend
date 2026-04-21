@@ -68,20 +68,11 @@ function registerCronJob(phase, cronExpr, schedules, pipelineRef) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const ALLOWED_ORIGINS = [
-  "http://localhost:5173",
-  "http://localhost:3000",
-  process.env.FRONTEND_URL,
-].filter(Boolean);
-
 app.use(cors({
-  origin: (origin, cb) => {
-    // Allow no-origin (curl, Postman) and listed origins
-    if (!origin || ALLOWED_ORIGINS.some(o => origin.startsWith(o))) return cb(null, true);
-    cb(new Error(`CORS blocked: ${origin}`));
-  },
+  origin: true, // Allow all origins for the dashboard
   credentials: true,
 }));
+
 app.use(express.json());
 
 validateCredentials();
