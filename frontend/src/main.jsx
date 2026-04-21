@@ -2,19 +2,31 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
-import { ThemeProvider } from "./context/ThemeContext.jsx";
 import "./index.css";
 import { Toaster } from "react-hot-toast";
+
+// Always dark
+document.documentElement.classList.add("dark");
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
-      <ThemeProvider>
-        <App />
-        <Toaster position="bottom-right" toastOptions={{
-          style: { background: "#1e293b", color: "#fff", borderRadius: "12px" }
-        }} />
-      </ThemeProvider>
+      <App />
+      <Toaster
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: "var(--surface-3)",
+            color: "var(--text)",
+            border: "1px solid var(--border)",
+            borderRadius: "14px",
+            fontSize: "13px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)"
+          },
+          success: { iconTheme: { primary: "#10b981", secondary: "var(--surface-3)" } },
+          error:   { iconTheme: { primary: "#f43f5e", secondary: "var(--surface-3)" } },
+        }}
+      />
     </BrowserRouter>
   </React.StrictMode>
 );
