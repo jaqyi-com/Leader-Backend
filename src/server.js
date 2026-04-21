@@ -12,6 +12,8 @@ const validateCredentials = require("./utils/validateEnv");
 const PipelineOrchestrator = require("./orchestrator");
 const dedup = require("./utils/deduplication");
 const { connectDB } = require("./db/mongoose");
+const { cacheGet, cacheSet, cacheDel } = require("./db/redis");
+const { pipelineLimiter, placesLimiter, generalLimiter } = require("./middleware/rateLimiter");
 connectDB();
 
 // ---- Filesystem paths (use /tmp on Vercel serverless) ----
@@ -90,11 +92,17 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/api/stats", (req, res) => {
-
+app.get("/api/stats", generalLimiter, async (req, res) => {
   try {
+    const CACHE_KEY = "cache:stats";
+    const cached = await cacheGet(CACHE_KEY);
+    if (cached) {
+      return res.json({ ...cached, _cache: "hit" });
+    }
     const stats = pipeline.getFullStats();
-    res.json({ status: "running", stats });
+    const payload = { status: "running", stats };
+    await cacheSet(CACHE_KEY, payload, 300); // 5 min TTL
+    res.json({ ...payload, _cache: "miss" });
   } catch (err) {
     logger.error(`Error getting stats: ${err.message}`);
     res.status(500).json({ error: err.message });
@@ -104,13 +112,15 @@ app.get("/api/stats", (req, res) => {
 app.post("/api/reset", async (req, res) => {
   try {
     await dedup.clearMongo();
-    res.json({ success: true, message: "Deduplication memory completely cleared." });
+    await cacheDel("cache:stats");   // invalidate stats cache
+    await cacheDel("cache:sheets");  // invalidate sheets cache
+    res.json({ success: true, message: "Deduplication memory + Redis cache cleared." });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-app.post("/api/pipeline/all", async (req, res) => {
+app.post("/api/pipeline/all",    pipelineLimiter, async (req, res) => {
   logger.info("API Request: Run Full Pipeline");
   try {
     await pipeline.runFull();
@@ -126,7 +136,7 @@ app.post("/api/pipeline/all", async (req, res) => {
   }
 });
 
-app.post("/api/pipeline/scrape", async (req, res) => {
+app.post("/api/pipeline/scrape",  pipelineLimiter, async (req, res) => {
   logger.info("API Request: Scraping Phase");
   try {
     const companies = await pipeline.runScraping(req.body);
@@ -141,7 +151,7 @@ app.post("/api/pipeline/scrape", async (req, res) => {
   }
 });
 
-app.post("/api/pipeline/enrich", async (req, res) => {
+app.post("/api/pipeline/enrich",  pipelineLimiter, async (req, res) => {
   logger.info("API Request: Enrichment Phase");
   try {
     const contacts = await pipeline.runEnrichment();
@@ -561,8 +571,12 @@ app.post("/api/autonomous/:id/outreach", async (req, res) => {
 // ============================================================
 // SHEETS API  — Served from MongoDB (no Google Sheets)
 // ============================================================
-app.get("/api/sheets/data", async (req, res) => {
+app.get("/api/sheets/data", generalLimiter, async (req, res) => {
   try {
+    const CACHE_KEY = "cache:sheets";
+    const cached = await cacheGet(CACHE_KEY);
+    if (cached) return res.json(cached);
+
     const db = require("./db/mongoose");
     const [companies, contacts, outreach, responses, scores] = await Promise.all([
       db.Company.find().sort({ createdAt: -1 }).limit(500).lean(),
@@ -584,13 +598,16 @@ app.get("/api/sheets/data", async (req, res) => {
       return { headers, rows };
     };
 
-    res.json({
-      Companies:    toTable(companies,  ["name","website","industry","companySize","revenue","country","city","linkedin","status","icpScore","primarySegment","createdAt"]),
-      Contacts:     toTable(contacts,   ["name","email","phone","title","company","linkedin","emailStatus","createdAt"]),
-      "Outreach Log": toTable(outreach, ["contactName","company","email","subject","status","step","type","sentAt"]),
-      Responses:    toTable(responses,  ["from","company","intent","sentiment","body","receivedAt"]),
-      "Lead Scores": toTable(scores,    ["contactName","title","companyName","totalScore","priority","revenue","companySize","createdAt"]),
-    });
+    const payload = {
+      Companies:      toTable(companies,  ["name","website","industry","companySize","revenue","country","city","linkedin","status","icpScore","primarySegment","createdAt"]),
+      Contacts:       toTable(contacts,   ["name","email","phone","title","company","linkedin","emailStatus","createdAt"]),
+      "Outreach Log": toTable(outreach,   ["contactName","company","email","subject","status","step","type","sentAt"]),
+      Responses:      toTable(responses,  ["from","company","intent","sentiment","body","receivedAt"]),
+      "Lead Scores":  toTable(scores,     ["contactName","title","companyName","totalScore","priority","revenue","companySize","createdAt"]),
+    };
+
+    await cacheSet(CACHE_KEY, payload, 120); // 2 min TTL
+    res.json(payload);
   } catch (err) {
     logger.error(`/api/sheets/data error: ${err.message}`);
     res.status(500).json({ error: err.message });
@@ -610,6 +627,7 @@ app.delete("/api/sheets/row", async (req, res) => {
     const docs = await Model.find().sort({ createdAt: -1 }).skip(rowIndex).limit(1).lean();
     if (!docs.length) return res.status(404).json({ error: "Row not found" });
     await Model.findByIdAndDelete(docs[0]._id);
+    await cacheDel("cache:sheets"); // invalidate sheets cache after mutation
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

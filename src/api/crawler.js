@@ -12,6 +12,7 @@ const placesService = require("../services/GooglePlacesService");
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
+const { placesLimiter } = require("../middleware/rateLimiter");
 
 // Guard against missing multer gracefully
 let multipartMiddleware;
@@ -199,7 +200,7 @@ router.get("/websites", async (req, res) => {
 // Google Places Routes (native — no Python proxy)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-router.post("/places/search", async (req, res) => {
+router.post("/places/search", placesLimiter, async (req, res) => {
   try {
     const { lat, lng, radius, keyword } = req.body;
     const result = await placesService.searchAndStore(lat, lng, radius, keyword);
