@@ -91,7 +91,16 @@ const pipeline = new PipelineOrchestrator();
 // API ROUTES
 // ------------------------------------------------------------
 
+app.get("/", (req, res) => {
+  res.json({
+    name: "Leader API",
+    status: "online",
+    version: "1.0.0"
+  });
+});
+
 app.get("/api/stats", (req, res) => {
+
   try {
     const stats = pipeline.getFullStats();
     res.json({ status: "running", stats });
