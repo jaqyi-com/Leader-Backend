@@ -133,8 +133,8 @@ class GooglePlacesService {
 
     const records = [];
     
-    // Concurrency control for details fetching
-    const limit = require('p-limit')(10); // Using p-limit assuming it's available or we can just fetch concurrently with Promise.all and chunking. Let's do a simple chunking.
+    // Concurrency control for local fetching
+    // Uses simple chunking below.
     
     const chunkArray = (arr, size) => Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
       arr.slice(i * size, i * size + size)
