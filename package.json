@@ -1,0 +1,49 @@
+{
+  "name": "keli-sensing-agent",
+  "version": "1.0.0",
+  "description": "Multi-System AI Agent for Robotics Market Intelligence & Outreach - Keli Sensing",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "scrape": "node src/index.js --phase=scrape",
+    "enrich": "node src/index.js --phase=enrich",
+    "outreach": "node src/index.js --phase=outreach",
+    "score": "node src/index.js --phase=score",
+    "report": "node src/index.js --phase=report",
+    "full-pipeline": "node src/index.js --phase=all",
+    "reset": "rm -f data/seen_*.json data/outreach_log.json data/sent_emails.json data/lead_scores.json",
+    "dev": "node src/server.js"
+  },
+  "dependencies": {
+    "axios": "^1.6.0",
+    "chalk": "^4.1.2",
+    "cheerio": "^1.0.0",
+    "cli-progress": "^3.12.0",
+    "cors": "^2.8.6",
+    "csv-parser": "^3.0.0",
+    "csv-writer": "^1.6.0",
+    "date-fns": "^2.30.0",
+    "dotenv": "^16.3.1",
+    "express": "^5.2.1",
+    "franc-min": "^6.2.0",
+    "mongoose": "^9.4.1",
+    "multer": "^1.4.5-lts.1",
+    "natural": "^6.10.4",
+    "node-cron": "^3.0.3",
+    "node-fetch": "^2.7.0",
+    "nodemailer": "^6.9.7",
+    "openai": "^6.32.0",
+    "p-limit": "^5.0.0",
+    "sentiment": "^5.0.2",
+    "uuid": "^9.0.0",
+    "validator": "^13.11.0",
+    "winston": "^3.11.0",
+    "winston-daily-rotate-file": "^4.7.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #09090b;
+    --card: #ffffff;
+    --card-foreground: #09090b;
+    --border: #e4e4e7;
+    --muted: #f4f4f5;
+    --muted-foreground: #71717a;
+    --primary: #18181b;
+    --primary-foreground: #fafafa;
+    --secondary: #f4f4f5;
+    --secondary-foreground: #18181b;
+    color-scheme: light;
+  }
+
+  .dark {
+    --background: #09090b;
+    --foreground: #fafafa;
+    --card: #09090b;
+    --card-foreground: #fafafa;
+    --border: #27272a;
+    --muted: #27272a;
+    --muted-foreground: #a1a1aa;
+    --primary: #fafafa;
+    --primary-foreground: #18181b;
+    --secondary: #27272a;
+    --secondary-foreground: #fafafa;
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased transition-colors duration-300;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb { @apply bg-border rounded-full; }
+}
+
+@layer components {
+  /* Headings & Typographic Classes */
+  .display {
+    @apply font-serif tracking-tight leading-none text-foreground;
+  }
+  .eyebrow {
+    @apply font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground;
+  }
+
+  /* Structural Cards */
+  .glass-card, .glass-card-dark {
+    @apply bg-card text-card-foreground border border-border shadow-sm;
+  }
+
+  /* Modern Buttons */
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-none bg-primary text-primary-foreground font-mono text-[11px] uppercase tracking-[0.15em] transition hover:opacity-90 active:translate-y-[1px] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-none border border-border bg-transparent text-foreground font-mono text-[11px] uppercase tracking-[0.15em] transition hover:bg-secondary active:translate-y-[1px];
+  }
+  .btn-danger, .btn-success, .btn-cyan {
+    /* Mapped all to standard secondary/primary bounds to enforce the monochrome aesthetic */
+    @apply inline-flex items-center gap-2 px-4 py-2.5 rounded-none border border-border bg-card text-foreground font-mono text-[11px] uppercase tracking-[0.15em] transition hover:bg-muted active:translate-y-[1px] disabled:opacity-50;
+  }
+
+  /* Inputs */
+  .input {
+    @apply w-full px-4 py-2.5 rounded-none border border-border bg-background text-foreground text-sm font-sans focus:outline-none focus:border-foreground placeholder:text-muted-foreground transition-colors duration-200;
+  }
+
+  /* Sidebar */
+  .nav-item {
+    @apply flex items-center gap-4 px-3 py-2.5 text-sm font-sans text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer;
+  }
+  .nav-item-active {
+    @apply flex items-center gap-4 px-3 py-2.5 text-sm font-semibold text-foreground bg-secondary border-r-2 border-foreground;
+  }
+
+  /* Log line colors (muted for aesthetic) */
+  .log-info  { @apply text-foreground; }
+  .log-error { @apply text-red-500/80; }
+  .log-warn  { @apply text-amber-500/80; }
+  .log-debug { @apply text-muted-foreground; }
+}
+
+@layer utilities {
+  .text-gradient {
+    @apply text-foreground; /* Defeat gradient texts to maintain monochrome */
+  }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  
+  .marquee-track {
+    animation: marquee 30s linear infinite;
+  }
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+}
