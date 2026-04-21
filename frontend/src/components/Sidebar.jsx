@@ -1,7 +1,7 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard, Cpu, CalendarClock, Sheet, Trophy, Settings,
+  LayoutDashboard, Cpu, CalendarClock, Sheet, Trophy,
   Radio, Target, Globe, MapPin, Database, Bot, CheckSquare
 } from "lucide-react";
 
@@ -13,7 +13,6 @@ const links = [
   { to: "/app/sheets",    label: "Sheets",         icon: Sheet },
   { to: "/app/leads",     label: "Lead Scores",    icon: Trophy },
   { to: "/app/autonomousagents", label: "Autonomous SDR", icon: Bot },
-  { to: "/app/settings",  label: "Settings",       icon: Settings },
 ];
 
 const crawlerLinks = [

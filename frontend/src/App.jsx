@@ -5,7 +5,6 @@ import PipelinePage from "./pages/PipelinePage";
 import SchedulerPage from "./pages/SchedulerPage";
 import SheetsPage from "./pages/SheetsPage";
 import LeadsPage from "./pages/LeadsPage";
-import SettingsPage from "./pages/SettingsPage";
 import IcpPage from "./pages/IcpPage";
 import CrawlerPage from "./pages/CrawlerPage";
 import PlacesPage from "./pages/PlacesPage";
@@ -26,7 +25,6 @@ export default function App() {
         <Route path="scheduler" element={<SchedulerPage />} />
         <Route path="sheets"    element={<SheetsPage />} />
         <Route path="leads"     element={<LeadsPage />} />
-        <Route path="settings"  element={<SettingsPage />} />
         {/* Crawler2 features */}
         <Route path="crawler"   element={<CrawlerPage />} />
         <Route path="places"    element={<PlacesPage />} />
