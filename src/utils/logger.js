@@ -28,43 +28,44 @@ const consoleFormat = winston.format.printf(({ level, message, timestamp, agent,
   return `${ts} ${levelColor} ${agentTag} ${message}${metaStr}`;
 });
 
-// File transport (JSON structured)
-const fileTransport = new winston.transports.DailyRotateFile({
-  dirname: LOG_DIR,
-  filename: "agent-%DATE%.log",
-  datePattern: "YYYY-MM-DD",
-  maxFiles: "30d",
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-});
+const IS_VERCEL = !!process.env.VERCEL;
+const transports = [
+  new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.timestamp({ format: "HH:mm:ss" }),
+      consoleFormat
+    ),
+  })
+];
 
-const errorFileTransport = new winston.transports.DailyRotateFile({
-  dirname: LOG_DIR,
-  filename: "error-%DATE%.log",
-  datePattern: "YYYY-MM-DD",
-  level: "error",
-  maxFiles: "30d",
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.json()
-  ),
-});
+// Only enable file logging if not on Vercel (read-only filesystem)
+if (!IS_VERCEL) {
+  transports.push(
+    new winston.transports.DailyRotateFile({
+      dirname: LOG_DIR,
+      filename: "agent-%DATE%.log",
+      datePattern: "YYYY-MM-DD",
+      maxFiles: "30d",
+      format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+    })
+  );
+  transports.push(
+    new winston.transports.DailyRotateFile({
+      dirname: LOG_DIR,
+      filename: "error-%DATE%.log",
+      datePattern: "YYYY-MM-DD",
+      level: "error",
+      maxFiles: "30d",
+      format: winston.format.combine(winston.format.timestamp(), winston.format.json()),
+    })
+  );
+}
 
 const logger = winston.createLogger({
   level: process.env.LOG_LEVEL || "info",
-  transports: [
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.timestamp({ format: "HH:mm:ss" }),
-        consoleFormat
-      ),
-    }),
-    fileTransport,
-    errorFileTransport,
-  ],
+  transports,
 });
+
 
 // Create child loggers per agent
 logger.forAgent = (agentName) => logger.child({ agent: agentName });
