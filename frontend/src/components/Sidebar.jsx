@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Cpu, CalendarClock, Sheet, Trophy,
   Target, Globe, MapPin, Database, Bot, ChevronLeft, ChevronRight,
-  Zap,
+  Zap, Settings,
 } from "lucide-react";
 
 const MAIN_LINKS = [
@@ -14,6 +14,7 @@ const MAIN_LINKS = [
   { to: "/app/sheets",       label: "Data",           icon: Sheet },
   { to: "/app/leads",        label: "Lead Scores",    icon: Trophy },
   { to: "/app/autonomousagents", label: "Autonomous SDR", icon: Bot },
+  { to: "/app/settings",     label: "Settings",       icon: Settings },
 ];
 
 const CRAWLER_LINKS = [
