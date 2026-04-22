@@ -6,3 +6,6 @@ logs/
 .DS_Store
 package-lock.json
 {src
+
+# Reference project (not part of this repo)
+ai-assistant-backend/

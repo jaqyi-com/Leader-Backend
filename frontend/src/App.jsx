@@ -1,5 +1,15 @@
 import { Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
+import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
+
+// Auth pages
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import AuthCallbackPage from "./pages/AuthCallbackPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
+
+// App pages
 import DashboardPage from "./pages/DashboardPage";
 import PipelinePage from "./pages/PipelinePage";
 import SchedulerPage from "./pages/SchedulerPage";
@@ -12,27 +22,44 @@ import WebsitesPage from "./pages/WebsitesPage";
 import AutonomousAgentsPage from "./pages/AutonomousAgentsPage";
 import AutonomousAgentDetailPage from "./pages/AutonomousAgentDetailPage";
 import LandingPage from "./pages/LandingPage";
+import SettingsPage from "./pages/SettingsPage";
 
 export default function App() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
+    <AuthProvider>
+      <Routes>
+        {/* Public routes */}
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
 
-      <Route path="/app" element={<Layout />}>
-        <Route index element={<DashboardPage />} />
-        <Route path="pipeline"  element={<PipelinePage />} />
-        <Route path="icp"       element={<IcpPage />} />
-        <Route path="scheduler" element={<SchedulerPage />} />
-        <Route path="sheets"    element={<SheetsPage />} />
-        <Route path="leads"     element={<LeadsPage />} />
-        {/* Crawler2 features */}
-        <Route path="crawler"   element={<CrawlerPage />} />
-        <Route path="places"    element={<PlacesPage />} />
-        <Route path="websites"  element={<WebsitesPage />} />
-        {/* Autonomous SDR Bot */}
-        <Route path="autonomousagents" element={<AutonomousAgentsPage />} />
-        <Route path="autonomousagents/:id" element={<AutonomousAgentDetailPage />} />
-      </Route>
-    </Routes>
+        {/* Protected app routes */}
+        <Route
+          path="/app"
+          element={
+            <ProtectedRoute>
+              <Layout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<DashboardPage />} />
+          <Route path="pipeline"        element={<PipelinePage />} />
+          <Route path="icp"             element={<IcpPage />} />
+          <Route path="scheduler"       element={<SchedulerPage />} />
+          <Route path="sheets"          element={<SheetsPage />} />
+          <Route path="leads"           element={<LeadsPage />} />
+          <Route path="settings"        element={<SettingsPage />} />
+          {/* Crawler2 features */}
+          <Route path="crawler"         element={<CrawlerPage />} />
+          <Route path="places"          element={<PlacesPage />} />
+          <Route path="websites"        element={<WebsitesPage />} />
+          {/* Autonomous SDR Bot */}
+          <Route path="autonomousagents"     element={<AutonomousAgentsPage />} />
+          <Route path="autonomousagents/:id" element={<AutonomousAgentDetailPage />} />
+        </Route>
+      </Routes>
+    </AuthProvider>
   );
 }

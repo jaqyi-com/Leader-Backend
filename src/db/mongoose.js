@@ -38,6 +38,7 @@ const companySchema = new mongoose.Schema({
   primarySegment: String,
   estimatedEngineers: Number,
   techStackClasses: [String],
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
 }, { timestamps: true });
 
 const contactSchema = new mongoose.Schema({
@@ -52,6 +53,7 @@ const contactSchema = new mongoose.Schema({
   phone: String,
   enrichmentStatus: String,
   emailStatus: String,
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
 }, { timestamps: true });
 
 const outreachLogSchema = new mongoose.Schema({
@@ -64,6 +66,7 @@ const outreachLogSchema = new mongoose.Schema({
   sentAt: Date,
   subject: String,
   body: String,
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
 }, { timestamps: true });
 
 const responseSchema = new mongoose.Schema({
@@ -74,6 +77,7 @@ const responseSchema = new mongoose.Schema({
   urgency: String,
   summary: String,
   nextSteps: String,
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
 }, { timestamps: true });
 
 const leadScoreSchema = new mongoose.Schema({
@@ -89,6 +93,7 @@ const leadScoreSchema = new mongoose.Schema({
   totalScore: Number,
   priority: String,
   reasoning: String,
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
 }, { timestamps: true });
 
 const autonomousLeadSchema = new mongoose.Schema({
@@ -109,7 +114,8 @@ const autonomousLeadSchema = new mongoose.Schema({
     subject: String,
     body: String,
     context: String,
-  }
+  },
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
 }, { timestamps: true });
 
 const websiteSchema = new mongoose.Schema({
@@ -148,6 +154,7 @@ const websiteSchema = new mongoose.Schema({
   keyword_present:   [String],
   // Extra
   extra_data:        mongoose.Schema.Types.Mixed,
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
 }, { timestamps: true });
 
 const placeSchema = new mongoose.Schema({
@@ -163,6 +170,7 @@ const placeSchema = new mongoose.Schema({
   user_ratings_total: Number,
   category_keyword: String,
   raw: mongoose.Schema.Types.Mixed,
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
 }, { timestamps: true });
 
 const Company = mongoose.models.Company || mongoose.model("Company", companySchema);
@@ -174,6 +182,11 @@ const AutonomousLead = mongoose.models.AutonomousLead || mongoose.model("Autonom
 const Place = mongoose.models.Place || mongoose.model("Place", placeSchema);
 const Website = mongoose.models.Website || mongoose.model("Website", websiteSchema);
 
+// New auth/org models
+const User = require("./models/user");
+const Organization = require("./models/organization");
+const Member = require("./models/member");
+
 module.exports = {
   connectDB,
   Company,
@@ -184,5 +197,8 @@ module.exports = {
   AutonomousLead,
   Place,
   Website,
+  // Auth / Org layer
+  User,
+  Organization,
+  Member,
 };
-

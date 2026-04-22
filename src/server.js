@@ -7,6 +7,7 @@ const path = require("path");
 const cron = require("node-cron");
 const fetch = require("node-fetch");
 const FormData = require("form-data");
+const passport = require("passport");
 const logger = require("./utils/logger");
 const validateCredentials = require("./utils/validateEnv");
 const PipelineOrchestrator = require("./orchestrator");
@@ -14,7 +15,13 @@ const dedup = require("./utils/deduplication");
 const { connectDB } = require("./db/mongoose");
 const { cacheGet, cacheSet, cacheDel } = require("./db/redis");
 const { pipelineLimiter, placesLimiter, generalLimiter } = require("./middleware/rateLimiter");
+const { auth } = require("./middleware/auth");
+const authRouter = require("./routes/auth");
+const orgRouter = require("./routes/org");
+const { configurePassport } = require("./config/passport");
+
 connectDB();
+configurePassport();
 
 // ---- Filesystem paths (use /tmp on Vercel serverless) ----
 const IS_VERCEL = !!process.env.VERCEL;
@@ -71,14 +78,21 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: true, // Allow all origins for the dashboard
+  origin: true,
   credentials: true,
 }));
 
 app.use(express.json());
+app.use(passport.initialize());
 
 validateCredentials();
 const pipeline = new PipelineOrchestrator();
+
+// ------------------------------------------------------------
+// AUTH & ORG ROUTES (public — no auth required)
+// ------------------------------------------------------------
+app.use("/api/auth", authRouter);
+app.use("/api/org", orgRouter);
 
 // ------------------------------------------------------------
 // API ROUTES
