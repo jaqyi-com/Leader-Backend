@@ -199,17 +199,20 @@ router.post("/connect/link", async (req, res) => {
     const { provider, redirectUrl } = req.body;
     if (!provider) return res.status(400).json({ error: "provider is required" });
 
-    const response = await unifiedApi.post("/unified/integration-auth", {
-      workspace_id: process.env.UNIFIED_WORKSPACE_ID,
-      integration_type: provider,
-      redirect_url: redirectUrl || `${FRONTEND_URL}/app/social?connected=${provider}`,
-      scopes: ["social_post", "social_profile"],
-    });
+    const workspaceId = process.env.UNIFIED_WORKSPACE_ID;
+    if (!workspaceId) {
+      return res.status(500).json({ error: "UNIFIED_WORKSPACE_ID is not configured." });
+    }
 
-    res.json({ success: true, url: response.data?.url || response.data, data: response.data });
+    const finalRedirect = redirectUrl || `${FRONTEND_URL}/app/social?connected=${provider}`;
+    
+    // Unified.to uses a static GET endpoint for initiating OAuth flows
+    const authUrl = `${UNIFIED_BASE_URL}/unified/integration/auth/${workspaceId}/${provider}?success_redirect=${encodeURIComponent(finalRedirect)}&scopes=${encodeURIComponent("social_post,social_profile")}`;
+
+    res.json({ success: true, url: authUrl });
   } catch (err) {
     logger.error(`[Social] Failed to create OAuth link: ${err.message}`);
-    res.status(500).json({ error: err.response?.data?.message || err.message });
+    res.status(500).json({ error: err.message });
   }
 });
 

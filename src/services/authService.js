@@ -19,6 +19,20 @@ function getTransporter() {
   });
 }
 
+// ── Helper: Unique Slug Generation ───────────────────────────────────────────
+async function generateUniqueSlug(name) {
+  let baseSlug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  if (!baseSlug) baseSlug = "org";
+  
+  let slug = baseSlug;
+  let counter = 1;
+  while (await Organization.exists({ slug })) {
+    slug = `${baseSlug}-${counter}`;
+    counter++;
+  }
+  return slug;
+}
+
 // ── Token generation ─────────────────────────────────────────────────────────
 function generateToken(user, orgId, role = "member") {
   return jwt.sign(
