@@ -228,7 +228,7 @@ async function resendVerificationEmail(email) {
 
 // ── Helper: Send Verification Email ─────────────────────────────────────────
 async function sendVerificationEmail(user, token) {
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5174";
   const link = `${frontendUrl}/verify-email?token=${token}`;
 
   try {
@@ -262,7 +262,7 @@ async function forgotPassword(email) {
   user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
   await user.save();
 
-  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5174";
   const link = `${frontendUrl}/reset-password?token=${resetToken}`;
 
   try {

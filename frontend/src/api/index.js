@@ -90,3 +90,24 @@ export const exportPlacesCsv = (places) =>
 // --- Website Intelligence ---
 export const getWebsites = (params = {}) =>
   crawlerApi.get("/websites", { params });
+
+// ============================================================
+// SOCIAL MEDIA API (Unified.to MCP Integration)
+// ============================================================
+
+// Connections
+export const getSocialConnections   = ()             => api.get("/social/connections");
+export const getSocialIntegrations  = ()             => api.get("/social/integrations");
+export const createSocialConnectLink = (provider, redirectUrl) =>
+  api.post("/social/connect/link", { provider, redirectUrl });
+export const deleteSocialConnection = (id)           => api.delete(`/social/connections/${id}`);
+
+// Content Generation
+export const generateSocialPost     = (keywords, platform) =>
+  api.post("/social/generate", { keywords, platform });
+
+// Posts CRUD
+export const getSocialPosts         = ()             => api.get("/social/posts");
+export const createSocialPost       = (data)         => api.post("/social/posts", data);
+export const publishSocialPost      = (id)           => api.post(`/social/posts/${id}/publish`);
+export const deleteSocialPost       = (id)           => api.delete(`/social/posts/${id}`);

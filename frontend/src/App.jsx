@@ -25,6 +25,7 @@ import AutonomousAgentsPage from "./pages/AutonomousAgentsPage";
 import AutonomousAgentDetailPage from "./pages/AutonomousAgentDetailPage";
 import LandingPage from "./pages/LandingPage";
 import SettingsPage from "./pages/SettingsPage";
+import SocialMediaPage from "./pages/SocialMediaPage";
 
 export default function App() {
   return (
@@ -62,6 +63,8 @@ export default function App() {
           {/* Autonomous SDR */}
           <Route path="autonomousagents"      element={<AutonomousAgentsPage />} />
           <Route path="autonomousagents/:id"  element={<AutonomousAgentDetailPage />} />
+          {/* Social Media */}
+          <Route path="social" element={<SocialMediaPage />} />
         </Route>
 
         {/* ── 404 catch-all → redirect to login ─────────────── */}

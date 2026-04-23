@@ -182,6 +182,29 @@ const AutonomousLead = mongoose.models.AutonomousLead || mongoose.model("Autonom
 const Place = mongoose.models.Place || mongoose.model("Place", placeSchema);
 const Website = mongoose.models.Website || mongoose.model("Website", websiteSchema);
 
+// --- SOCIAL POST SCHEMA ---
+const socialPostSchema = new mongoose.Schema({
+  keywords:          { type: [String], default: [] },
+  platform:          { type: String, enum: ["linkedin", "instagram", "facebook", "x", "twitter"], default: "linkedin" },
+  connectionId:      String,  // Unified.to connection ID for the account
+  generatedContent:  { type: String, required: true },
+  trendSummary:      String,  // Why this topic is trending (LLM analysis)
+  hashtags:          [String],
+  status: {
+    type: String,
+    enum: ["draft", "pending_approval", "approved", "rejected", "published", "failed"],
+    default: "draft",
+  },
+  approvalToken:     String,  // UUID for secure email approval link
+  approvalEmail:     String,  // Email address for approval
+  publishedAt:       Date,
+  unifiedPostId:     String,  // Unified.to post ID after publishing
+  errorMessage:      String,
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
+}, { timestamps: true });
+
+const SocialPost = mongoose.models.SocialPost || mongoose.model("SocialPost", socialPostSchema);
+
 // New auth/org models
 const User = require("./models/user");
 const Organization = require("./models/organization");
@@ -197,6 +220,7 @@ module.exports = {
   AutonomousLead,
   Place,
   Website,
+  SocialPost,
   // Auth / Org layer
   User,
   Organization,

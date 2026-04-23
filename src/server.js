@@ -18,6 +18,7 @@ const { pipelineLimiter, placesLimiter, generalLimiter } = require("./middleware
 const { auth } = require("./middleware/auth");
 const authRouter = require("./routes/auth");
 const orgRouter = require("./routes/org");
+const socialRouter = require("./routes/social");
 const { configurePassport } = require("./config/passport");
 
 connectDB();
@@ -93,6 +94,7 @@ const pipeline = new PipelineOrchestrator();
 // ------------------------------------------------------------
 app.use("/api/auth", authRouter);
 app.use("/api/org", orgRouter);
+app.use("/api/social", socialRouter);
 
 // ------------------------------------------------------------
 // API ROUTES

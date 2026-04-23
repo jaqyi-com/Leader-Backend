@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Cpu, CalendarClock, Sheet, Trophy,
   Target, Globe, MapPin, Database, Bot, ChevronLeft, ChevronRight,
-  Zap, Settings,
+  Zap, Settings, Share2,
 } from "lucide-react";
 
 const MAIN_LINKS = [
@@ -21,6 +21,10 @@ const CRAWLER_LINKS = [
   { to: "/app/crawler",  label: "Web Crawler",  icon: Globe },
   { to: "/app/places",   label: "Places",       icon: MapPin },
   { to: "/app/websites", label: "Website Intel", icon: Database },
+];
+
+const SOCIAL_LINKS = [
+  { to: "/app/social", label: "Social Media", icon: Share2 },
 ];
 
 function NavItem({ to, label, icon: Icon, collapsed, end }) {
@@ -146,6 +150,12 @@ export default function Sidebar({ collapsed, onToggle }) {
         <SectionLabel label="Crawler" collapsed={collapsed} />
 
         {CRAWLER_LINKS.map(({ to, label, icon }) => (
+          <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
+        ))}
+
+        <SectionLabel label="Outreach" collapsed={collapsed} />
+
+        {SOCIAL_LINKS.map(({ to, label, icon }) => (
           <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
         ))}
       </nav>

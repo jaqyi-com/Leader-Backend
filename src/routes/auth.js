@@ -160,7 +160,7 @@ router.get(
   "/google/callback",
   (req, res, next) => {
     if (!process.env.GOOGLE_CLIENT_ID) {
-      return res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5173"}/login?error=google_not_configured`);
+      return res.redirect(`${process.env.FRONTEND_URL || "http://localhost:5174"}/login?error=google_not_configured`);
     }
     next();
   },
@@ -168,7 +168,7 @@ router.get(
   (req, res) => {
     // req.user is set by passport strategy to { token, user, org }
     const { token } = req.user;
-    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+    const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5174";
     // Redirect to frontend with token in query (frontend stores in localStorage)
     res.redirect(`${frontendUrl}/auth/callback?token=${token}`);
   }
