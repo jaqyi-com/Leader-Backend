@@ -207,7 +207,9 @@ router.post("/connect/link", async (req, res) => {
     const finalRedirect = redirectUrl || `${FRONTEND_URL}/app/social?connected=${provider}`;
     
     // Unified.to uses a static GET endpoint for initiating OAuth flows
-    const authUrl = `${UNIFIED_BASE_URL}/unified/integration/auth/${workspaceId}/${provider}?success_redirect=${encodeURIComponent(finalRedirect)}&scopes=${encodeURIComponent("social_post,social_profile")}`;
+    // Map 'x' to 'twitter' for the API if necessary
+    const unifiedProvider = provider === "x" ? "twitter" : provider;
+    const authUrl = `${UNIFIED_BASE_URL}/unified/integration/auth/${workspaceId}/${unifiedProvider}?success_redirect=${encodeURIComponent(finalRedirect)}&scopes=${encodeURIComponent("social_post,social_profile")}`;
 
     res.json({ success: true, url: authUrl });
   } catch (err) {
