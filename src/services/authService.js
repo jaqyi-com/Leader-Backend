@@ -251,22 +251,66 @@ async function sendVerificationEmail(user, token) {
   }
 }
 
-// ── Helper: Generate unique org slug ─────────────────────────────────────────
-async function generateUniqueSlug(name) {
-  let base = name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40);
+// ── Forgot Password ──────────────────────────────────────────────────────────
+async function forgotPassword(email) {
+  const user = await User.findOne({ email: email.toLowerCase() });
+  // Always return success — never reveal if email exists
+  if (!user) return;
 
-  let slug = base;
-  let counter = 0;
+  const resetToken = crypto.randomBytes(32).toString("hex");
+  user.passwordResetToken = resetToken;
+  user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  await user.save();
 
-  while (await Organization.exists({ slug })) {
-    counter++;
-    slug = `${base}-${counter}`;
+  const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const link = `${frontendUrl}/reset-password?token=${resetToken}`;
+
+  try {
+    const transporter = getTransporter();
+    await transporter.sendMail({
+      from: `"${process.env.SMTP_FROM_NAME || "Leader"}" <${process.env.SMTP_FROM_EMAIL}>`,
+      to: user.email,
+      subject: "Reset your Leader password",
+      html: `
+        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f8;padding:40px;border-radius:16px;border:1px solid rgba(255,255,255,0.07)">
+          <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Reset your password 🔐</h2>
+          <p style="color:#8888a8;margin:0 0 28px;font-size:14px;">We received a request to reset your password for <strong style="color:#f0f0f8">${user.email}</strong>. Click below to create a new one.</p>
+          <a href="${link}" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6c63ff,#8b5cf6);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;">Reset Password</a>
+          <p style="color:#55556a;font-size:12px;margin-top:28px;">This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+        </div>
+      `,
+    });
+  } catch (e) {
+    console.error("[AuthService] Failed to send password reset email:", e.message);
   }
-  return slug;
+}
+
+// ── Reset Password ───────────────────────────────────────────────────────────
+async function resetPassword(token, newPassword) {
+  const user = await User.findOne({
+    passwordResetToken: token,
+    passwordResetExpires: { $gt: new Date() },
+  });
+
+  if (!user) {
+    const err = new Error("Reset link is invalid or has expired.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (newPassword.length < 8) {
+    const err = new Error("Password must be at least 8 characters.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  user.passwordHash = newPassword; // pre-save hook will bcrypt this
+  user.passwordResetToken = null;
+  user.passwordResetExpires = null;
+  user.isEmailVerified = true; // resetting password implicitly verifies the email
+  await user.save();
+
+  return { message: "Password reset successfully. You can now log in." };
 }
 
 module.exports = {
@@ -275,5 +319,7 @@ module.exports = {
   handleGoogleOAuth,
   verifyEmail,
   resendVerificationEmail,
+  forgotPassword,
+  resetPassword,
   generateToken,
 };

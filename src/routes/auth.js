@@ -90,6 +90,33 @@ router.post("/resend-verification", async (req, res) => {
   }
 });
 
+// ── Forgot Password ───────────────────────────────────────────────────────────
+// POST /api/auth/forgot-password
+router.post("/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required." });
+    await authService.forgotPassword(email);
+    // Always respond with success (don't reveal if account exists)
+    res.json({ success: true, message: "If an account exists for that email, a password reset link has been sent." });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Reset Password ────────────────────────────────────────────────────────────
+// POST /api/auth/reset-password
+router.post("/reset-password", async (req, res) => {
+  try {
+    const { token, password } = req.body;
+    if (!token || !password) return res.status(400).json({ error: "Token and new password are required." });
+    const result = await authService.resetPassword(token, password);
+    res.json({ success: true, message: result.message });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+});
+
 // ── Get current user ─────────────────────────────────────────────────────────
 // GET /api/auth/me
 router.get("/me", auth, async (req, res) => {
