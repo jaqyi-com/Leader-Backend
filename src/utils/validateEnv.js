@@ -31,11 +31,15 @@ function validateCredentials() {
   }
 
   if (missing.length > 0) {
-    console.error(chalk.red("\n❌ STRICT CREDENTIAL VALIDATION FAILED:"));
-    console.error(chalk.red("The following required credentials are missing in your .env file:\n"));
-    missing.forEach((err) => console.error(chalk.red(`  - ${err}`)));
-    console.error(chalk.red("\nPlease update your .env file and restart the pipeline.\n"));
-    process.exit(1); 
+    console.error("❌ CREDENTIAL VALIDATION FAILED:");
+    console.error("Missing required credentials:\n");
+    missing.forEach((err) => console.error(`  - ${err}`));
+    console.error("\nPlease set these in your .env file (local) or Vercel environment variables (production).\n");
+    // On Vercel (serverless) we cannot call process.exit() — it kills the cold start.
+    // Log the error but let the server continue; affected endpoints will fail gracefully.
+    if (!process.env.VERCEL) {
+      process.exit(1);
+    }
   }
 
   logger.info(chalk.green("✅ All required credentials validated successfully."));

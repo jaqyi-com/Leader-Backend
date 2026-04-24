@@ -79,8 +79,24 @@ function registerCronJob(phase, cronExpr, schedules, pipelineRef) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// CORS — restrict to known frontend origins in production
+const ALLOWED_ORIGINS = [
+  "http://localhost:5174",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  process.env.FRONTEND_URL,           // e.g. https://leader-frontend.vercel.app
+  process.env.CORS_ORIGIN,            // extra override if needed
+].filter(Boolean);
+
 app.use(cors({
-  origin: true,
+  origin: (origin, callback) => {
+    // Allow no-origin requests (Postman, curl, server-to-server)
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    // In development allow all
+    if (process.env.NODE_ENV !== "production") return callback(null, true);
+    callback(new Error(`CORS: Origin ${origin} not allowed`));
+  },
   credentials: true,
 }));
 

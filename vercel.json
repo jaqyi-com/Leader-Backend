@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "name": "leadgenerator-api",
+  "name": "leader-backend",
   "builds": [
     {
       "src": "src/server.js",
@@ -18,5 +18,10 @@
   ],
   "env": {
     "NODE_ENV": "production"
+  },
+  "functions": {
+    "src/server.js": {
+      "maxDuration": 60
+    }
   }
 }

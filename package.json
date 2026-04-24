@@ -5,14 +5,14 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
     "scrape": "node src/index.js --phase=scrape",
     "enrich": "node src/index.js --phase=enrich",
     "outreach": "node src/index.js --phase=outreach",
     "score": "node src/index.js --phase=score",
     "report": "node src/index.js --phase=report",
     "full-pipeline": "node src/index.js --phase=all",
-    "reset": "rm -f data/seen_*.json data/outreach_log.json data/sent_emails.json data/lead_scores.json",
-    "dev": "node src/server.js"
+    "reset": "rm -f data/seen_*.json data/outreach_log.json data/sent_emails.json data/lead_scores.json"
   },
   "dependencies": {
     "@upstash/redis": "^1.37.0",
