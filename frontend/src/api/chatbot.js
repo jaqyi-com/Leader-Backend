@@ -6,7 +6,7 @@
 const BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
 function getAuthHeader() {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("leader_token");  // matches AuthContext key
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
