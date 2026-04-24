@@ -26,6 +26,8 @@ import AutonomousAgentDetailPage from "./pages/AutonomousAgentDetailPage";
 import LandingPage from "./pages/LandingPage";
 import SettingsPage from "./pages/SettingsPage";
 import SocialMediaPage from "./pages/SocialMediaPage";
+import ChatbotPage from "./pages/ChatbotPage";
+import ChatbotDataPage from "./pages/ChatbotDataPage";
 
 export default function App() {
   return (
@@ -65,6 +67,9 @@ export default function App() {
           <Route path="autonomousagents/:id"  element={<AutonomousAgentDetailPage />} />
           {/* Social Media */}
           <Route path="social" element={<SocialMediaPage />} />
+          {/* AI ChatBot */}
+          <Route path="chatbot" element={<ChatbotPage />} />
+          <Route path="chatbot/data" element={<ChatbotDataPage />} />
         </Route>
 
         {/* ── 404 catch-all → redirect to login ─────────────── */}

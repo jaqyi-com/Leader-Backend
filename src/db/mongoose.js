@@ -210,6 +210,12 @@ const User = require("./models/user");
 const Organization = require("./models/organization");
 const Member = require("./models/member");
 
+// Chatbot / RAG models
+const ChatKnowledgeChunk = require("./models/chatKnowledgeChunk");
+const ChatKnowledgeSource = require("./models/chatKnowledgeSource");
+const ChatConversation = require("./models/chatConversation");
+const ChatMessage = require("./models/chatMessage");
+
 module.exports = {
   connectDB,
   Company,
@@ -225,4 +231,9 @@ module.exports = {
   User,
   Organization,
   Member,
+  // Chatbot / RAG
+  ChatKnowledgeChunk,
+  ChatKnowledgeSource,
+  ChatConversation,
+  ChatMessage,
 };
