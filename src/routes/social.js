@@ -162,7 +162,16 @@ router.get("/connections", async (req, res) => {
     const response = await unifiedApi.get("/unified/connection", {
       params: { categories: ["social"] },
     });
-    res.json({ success: true, connections: response.data || [] });
+    
+    // Normalize provider types to match frontend PLATFORM_META keys
+    const mappedConnections = (response.data || []).map(conn => {
+      let type = conn.integration_type;
+      if (type === "twitter") type = "x";
+      if (type === "linkedin_v2") type = "linkedin";
+      return { ...conn, integration_type: type };
+    });
+
+    res.json({ success: true, connections: mappedConnections });
   } catch (err) {
     logger.error(`[Social] Failed to fetch connections: ${err.message}`);
     // Return empty list gracefully — Unified.to may not have social connections yet
@@ -176,7 +185,16 @@ router.get("/integrations", async (req, res) => {
     const response = await unifiedApi.get("/unified/integration", {
       params: { categories: ["social"] },
     });
-    res.json({ success: true, integrations: response.data || [] });
+    
+    // Normalize provider types
+    const mappedIntegrations = (response.data || []).map(intg => {
+      let type = intg.type;
+      if (type === "twitter") type = "x";
+      if (type === "linkedin_v2") type = "linkedin";
+      return { ...intg, type };
+    });
+
+    res.json({ success: true, integrations: mappedIntegrations });
   } catch (err) {
     logger.error(`[Social] Failed to fetch integrations: ${err.message}`);
     // Return hard-coded list as fallback so UI still works
@@ -186,7 +204,7 @@ router.get("/integrations", async (req, res) => {
         { type: "linkedin",  name: "LinkedIn",  categories: ["social"] },
         { type: "instagram", name: "Instagram", categories: ["social"] },
         { type: "facebook",  name: "Facebook",  categories: ["social"] },
-        { type: "twitter",   name: "X (Twitter)", categories: ["social"] },
+        { type: "x",   name: "X (Twitter)", categories: ["social"] },
       ],
       warning: err.message,
     });
@@ -207,8 +225,11 @@ router.post("/connect/link", async (req, res) => {
     const finalRedirect = redirectUrl || `${FRONTEND_URL}/app/social?connected=${provider}`;
     
     // Unified.to uses a static GET endpoint for initiating OAuth flows
-    // Map 'x' to 'twitter' for the API if necessary
-    const unifiedProvider = provider === "x" ? "twitter" : provider;
+    // Map 'x' to 'twitter' and 'linkedin' to 'linkedin_v2' for the API if necessary
+    let unifiedProvider = provider;
+    if (provider === "x") unifiedProvider = "twitter";
+    if (provider === "linkedin") unifiedProvider = "linkedin_v2";
+
     const authUrl = `${UNIFIED_BASE_URL}/unified/integration/auth/${workspaceId}/${unifiedProvider}?success_redirect=${encodeURIComponent(finalRedirect)}&scopes=${encodeURIComponent("social_post,social_profile")}`;
 
     res.json({ success: true, url: authUrl });
@@ -397,9 +418,13 @@ router.post("/posts/:id/publish", async (req, res) => {
         );
       } else {
         // Generic post — let Unified.to route it
+        let postType = post.platform;
+        if (postType === "x") postType = "twitter";
+        if (postType === "linkedin") postType = "linkedin_v2";
+
         unifiedResponse = await unifiedApi.post("/social/post", {
           ...unifiedPayload,
-          type: post.platform,
+          type: postType,
           workspace_id: process.env.UNIFIED_WORKSPACE_ID,
         });
       }

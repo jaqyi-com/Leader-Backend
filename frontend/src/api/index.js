@@ -84,6 +84,9 @@ export const searchPlaces = (lat, lng, radius, keyword) =>
 export const getStoredPlaces = (params = {}) =>
   crawlerApi.get("/places", { params });
 
+export const getPlacesHistory = () =>
+  crawlerApi.get("/places/history");
+
 export const exportPlacesCsv = (places) =>
   crawlerApi.post("/places/export-csv", places, { responseType: "blob" });
 

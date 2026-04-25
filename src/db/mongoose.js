@@ -173,6 +173,15 @@ const placeSchema = new mongoose.Schema({
   orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
 }, { timestamps: true });
 
+const placeSearchHistorySchema = new mongoose.Schema({
+  lat: Number,
+  lng: Number,
+  radius: Number,
+  keyword: String,
+  placesFound: Number,
+  orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
+}, { timestamps: true });
+
 const Company = mongoose.models.Company || mongoose.model("Company", companySchema);
 const Contact = mongoose.models.Contact || mongoose.model("Contact", contactSchema);
 const OutreachLog = mongoose.models.OutreachLog || mongoose.model("OutreachLog", outreachLogSchema);
@@ -180,6 +189,7 @@ const Response = mongoose.models.Response || mongoose.model("Response", response
 const LeadScore = mongoose.models.LeadScore || mongoose.model("LeadScore", leadScoreSchema);
 const AutonomousLead = mongoose.models.AutonomousLead || mongoose.model("AutonomousLead", autonomousLeadSchema);
 const Place = mongoose.models.Place || mongoose.model("Place", placeSchema);
+const PlaceSearchHistory = mongoose.models.PlaceSearchHistory || mongoose.model("PlaceSearchHistory", placeSearchHistorySchema);
 const Website = mongoose.models.Website || mongoose.model("Website", websiteSchema);
 
 // --- SOCIAL POST SCHEMA ---
@@ -225,6 +235,7 @@ module.exports = {
   LeadScore,
   AutonomousLead,
   Place,
+  PlaceSearchHistory,
   Website,
   SocialPost,
   // Auth / Org layer

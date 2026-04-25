@@ -6,6 +6,7 @@ import {
   ChevronRight, Bot, User, Sparkles, BookOpen, X, Loader2
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import toast from "react-hot-toast";
 import {
   fetchConversations, createConversation, fetchMessages,
   deleteConversation, sendMessage

@@ -1,5 +1,5 @@
 const axios = require("axios");
-const { Place } = require("../db/mongoose");
+const { Place, PlaceSearchHistory } = require("../db/mongoose");
 const logger = require("../utils/logger").forAgent("GooglePlaces");
 
 class GooglePlacesService {
@@ -157,6 +157,15 @@ class GooglePlacesService {
     }
 
     const count = await this.upsertPlaces(records);
+
+    // Log this search run to history
+    try {
+      await PlaceSearchHistory.create({
+        lat, lng, radius, keyword: keywordStr, placesFound: count
+      });
+    } catch (err) {
+      logger.error(`[GOOGLE_PLACES] Failed to log search history: ${err.message}`);
+    }
 
     return {
       status: "success",

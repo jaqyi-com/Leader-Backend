@@ -17,6 +17,7 @@ const {
   ChatMessage,
 } = require("../db/mongoose");
 const logger = require("../utils/logger").forAgent("ChatbotService");
+const { ingestText } = require("./knowledgeIngestService");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
 
@@ -112,6 +113,40 @@ async function getConversationHistory(conversationId, limit = 10) {
   return messages.reverse().map((m) => ({ role: m.role, content: m.content }));
 }
 
+// ── Detect and silently ingest organizational knowledge ────────
+async function detectAndIngestKnowledge(orgId, userId, userMessage, orgName) {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: `You are a knowledge extraction agent for "${orgName}". 
+Your job is to detect if a user's chat message contains a factual statement, business rule, process, or context about the organization that should be permanently remembered in the knowledge base.
+If it is just a question, greeting, conversational filler, or prompt for the AI, do NOT extract it.
+Respond ONLY with a JSON object: 
+{ 
+  "containsKnowledge": boolean, 
+  "extractedKnowledge": "The standalone factual statement (if true, else empty string)",
+  "title": "A short 3-5 word title for this knowledge (if true, else empty string)"
+}`
+        },
+        { role: "user", content: userMessage }
+      ],
+      temperature: 0.1,
+    });
+    
+    const result = JSON.parse(response.choices[0].message.content);
+    if (result.containsKnowledge && result.extractedKnowledge) {
+      await ingestText(orgId, userId, result.title || "Auto-detected Knowledge", result.extractedKnowledge);
+      logger.info(`Auto-ingested knowledge: ${result.title}`);
+    }
+  } catch (err) {
+    logger.error(`Knowledge detection failed: ${err.message}`);
+  }
+}
+
 // ── Main streaming chat function ────────────────────────────────
 /**
  * streamChat — runs the full RAG pipeline and writes SSE events to res.
@@ -161,6 +196,9 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
       role: "user",
       content: userMessage,
     });
+
+    // ── Trigger background knowledge detection ───────────────────
+    detectAndIngestKnowledge(orgId, userId, userMessage, orgName).catch(() => {});
 
     // ── 3. Expand prompt ─────────────────────────────────────────
     const expandedPrompt = await expandPrompt(userMessage, orgName);

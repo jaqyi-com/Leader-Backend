@@ -2,9 +2,9 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin, Search, Loader2, Star, Phone, Globe, ExternalLink,
-  Navigation, Download, AlertCircle, CheckCircle2, SlidersHorizontal,
+  Navigation, Download, AlertCircle, CheckCircle2, SlidersHorizontal, History, RotateCcw, X
 } from "lucide-react";
-import { searchPlaces, getStoredPlaces, exportPlacesCsv } from "../api";
+import { searchPlaces, getStoredPlaces, exportPlacesCsv, getPlacesHistory } from "../api";
 import toast from "react-hot-toast";
 
 // ── Rating stars ──────────────────────────────────────────────────────────────
@@ -109,6 +109,10 @@ export default function PlacesPage() {
   const [error, setError] = useState(null);
   const [loadingStored, setLoadingStored] = useState(false);
 
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyList, setHistoryList] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   // ── Geolocation ─────────────────────────────────────────────────────────────
   const handleGetLocation = () => {
     setError(null);
@@ -129,6 +133,28 @@ export default function PlacesPage() {
         setError(`Location error: ${err.message}`);
       }
     );
+  };
+
+  // ── History ────────────────────────────────────────────────────────────────
+  const fetchHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const { data } = await getPlacesHistory();
+      setHistoryList(Array.isArray(data) ? data : []);
+    } catch (e) {
+      toast.error("Failed to load history");
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleLoadHistory = (item) => {
+    setLat(item.lat);
+    setLng(item.lng);
+    setRadius(item.radius);
+    setKeyword(item.keyword);
+    setShowHistory(false);
+    toast.success("Loaded history parameters");
   };
 
   // ── Search places ────────────────────────────────────────────────────────────
@@ -236,7 +262,63 @@ export default function PlacesPage() {
   };
 
   return (
-    <div className="flex flex-col gap-6 max-w-5xl mx-auto">
+    <>
+      <AnimatePresence>
+        {showHistory && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => setShowHistory(false)}>
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]"
+            >
+              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-800/50">
+                <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <History size={16} className="text-brand-500" /> Search History
+                </h3>
+                <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-4 overflow-y-auto flex-1 space-y-3">
+                {loadingHistory ? (
+                  <div className="py-8 flex justify-center"><Loader2 className="animate-spin text-brand-500" /></div>
+                ) : historyList.length === 0 ? (
+                  <div className="py-8 text-center text-slate-500">No search history found.</div>
+                ) : (
+                  historyList.map(item => (
+                    <div key={item._id} className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-brand-300 dark:hover:border-brand-700 transition-colors flex items-center justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-slate-800 dark:text-slate-200 truncate">
+                          {item.keyword || "Any Category"}
+                        </div>
+                        <div className="text-[11px] text-slate-500 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                          <span className="flex items-center gap-1"><MapPin size={10} /> {item.lat?.toFixed(4)}, {item.lng?.toFixed(4)}</span>
+                          <span>⭕ {item.radius}m</span>
+                          <span className="text-brand-600 dark:text-brand-400 font-medium">✅ {item.placesFound} found</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-1">
+                          {new Date(item.createdAt).toLocaleString()}
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => handleLoadHistory(item)}
+                        className="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-brand-500 dark:hover:text-brand-400 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
+                        title="Load Parameters"
+                      >
+                        <RotateCcw size={16} />
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <div className="flex flex-col gap-6 max-w-5xl mx-auto">
 
       {/* Header */}
       <div>
@@ -255,9 +337,17 @@ export default function PlacesPage() {
           initial={{ opacity: 0, x: -16 }}
           animate={{ opacity: 1, x: 0 }}
         >
-          <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
-            <SlidersHorizontal size={16} className="text-brand-500" /> Search Config
-          </h3>
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-bold text-slate-800 dark:text-white flex items-center gap-2">
+              <SlidersHorizontal size={16} className="text-brand-500" /> Search Config
+            </h3>
+            <button 
+              onClick={() => { setShowHistory(true); fetchHistory(); }} 
+              className="text-xs text-brand-600 dark:text-brand-400 font-semibold flex items-center gap-1 hover:underline px-2 py-1 rounded-md hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
+            >
+              <History size={13} /> History
+            </button>
+          </div>
 
           {/* Location */}
           <div className="space-y-3">
@@ -451,6 +541,6 @@ export default function PlacesPage() {
           )}
         </div>
       </div>
-    </div>
+    </>
   );
 }

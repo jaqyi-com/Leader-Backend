@@ -222,6 +222,20 @@ router.get("/places", async (req, res) => {
   }
 });
 
+router.get("/places/history", async (req, res) => {
+  try {
+    const { PlaceSearchHistory } = require("../db/mongoose");
+    const history = await PlaceSearchHistory.find()
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+    res.json(history);
+  } catch (err) {
+    logger.error(`[Places /history] ${err.message}`);
+    res.status(500).json({ error: "Failed to fetch search history", detail: err.message });
+  }
+});
+
 router.post("/places/export-csv", async (req, res) => {
   try {
     const places = req.body;
