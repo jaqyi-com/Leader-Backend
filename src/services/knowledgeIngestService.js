@@ -17,7 +17,6 @@ const {
   ChatKnowledgeChunk,
   Organization,
 } = require("../db/mongoose");
-const { embedText } = require("./chatbotService");
 const logger = require("../utils/logger").forAgent("KnowledgeIngest");
 
 // ── Chunking config ───────────────────────────────────────────
@@ -57,6 +56,7 @@ function chunkText(text) {
  * Embed all chunks and save them to MongoDB.
  */
 async function saveChunks(orgId, sourceId, sourceName, sourceType, uploadedBy, chunks) {
+  const { embedText } = require("./chatbotService");
   const docs = [];
   for (let i = 0; i < chunks.length; i++) {
     const text = chunks[i];

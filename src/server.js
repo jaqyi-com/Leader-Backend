@@ -80,25 +80,36 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // CORS — restrict to known frontend origins in production
+// Clean up trailing slashes from env variables just in case
+const cleanFrontendUrl = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.replace(/\/$/, "") : null;
+const cleanCorsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.replace(/\/$/, "") : null;
+
 const ALLOWED_ORIGINS = [
   "http://localhost:5174",
   "http://localhost:5173",
   "http://localhost:3000",
-  process.env.FRONTEND_URL,           // e.g. https://leader-frontend.vercel.app
-  process.env.CORS_ORIGIN,            // extra override if needed
+  "https://leader-backend-oty3.vercel.app", // Explicitly allow current production frontend
+  cleanFrontendUrl,
+  cleanCorsOrigin,
 ].filter(Boolean);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow no-origin requests (Postman, curl, server-to-server)
-    if (!origin) return callback(null, true);
-    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
-    // In development allow all
-    if (process.env.NODE_ENV !== "production") return callback(null, true);
-    callback(new Error(`CORS: Origin ${origin} not allowed`));
-  },
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow no-origin requests (Postman, curl, server-to-server)
+      if (!origin) return callback(null, true);
+      // Clean the incoming origin just in case
+      const incomingOrigin = origin.replace(/\/$/, "");
+      if (ALLOWED_ORIGINS.includes(incomingOrigin)) return callback(null, true);
+      // In development allow all
+      if (process.env.NODE_ENV !== "production") return callback(null, true);
+      
+      console.error(`[CORS] Blocked request from origin: ${origin}`);
+      callback(new Error(`CORS: Origin ${origin} not allowed`));
+    },
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 app.use(passport.initialize());
