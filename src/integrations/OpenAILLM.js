@@ -354,6 +354,39 @@ Return the JSON.`;
       };
     }
   }
+
+  /**
+   * Extract dynamic user-defined fields from website context
+   */
+  async extractCustomFields(htmlContext, customFields) {
+    if (!customFields || !Array.isArray(customFields) || customFields.length === 0) return {};
+    
+    logger.info(`Extracting custom fields: ${customFields.join(", ")}`);
+    
+    const systemPrompt = `You are a precise data extraction bot.
+Your job is to extract specific requested fields from the provided website text.
+If a field's information is not present in the text, return null for that field.
+Return ONLY valid JSON exactly matching the requested fields as keys, with no markdown formatting or backticks.`;
+
+    const userMessage = `Website text:
+"""
+${htmlContext ? htmlContext.slice(0, 10000) : "(no website content available)"}
+"""
+
+Requested fields to extract:
+${customFields.map(f => `- ${f}`).join("\n")}
+
+Return JSON object mapping field names to their extracted values (or null).`;
+
+    const result = await this.complete(systemPrompt, userMessage, 800);
+    try {
+      const cleanJson = result.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/\s*```$/i, "").trim();
+      return JSON.parse(cleanJson);
+    } catch (err) {
+      logger.warn(`Failed to parse custom fields JSON: ${err.message}`);
+      return {};
+    }
+  }
 }
 
 module.exports = new OpenAILLM();

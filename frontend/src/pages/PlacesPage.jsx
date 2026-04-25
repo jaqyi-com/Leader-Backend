@@ -541,6 +541,7 @@ export default function PlacesPage() {
           )}
         </div>
       </div>
+      </div>
     </>
   );
 }

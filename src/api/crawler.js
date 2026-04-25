@@ -49,15 +49,15 @@ router.post("/start", async (req, res) => {
     return res.status(503).json({ error: "A crawl is already running. Please wait." });
   }
 
-  const { urls = [], keywords = [] } = req.body;
+  const { urls = [], keywords = [], customFields = [] } = req.body;
 
   if (!Array.isArray(urls) || urls.length === 0) {
     return res.status(422).json({ error: "'urls' must be a non-empty array of website URLs." });
   }
 
-  logger.info(`[API] Crawl started | urls=${urls.length} keywords=${keywords}`);
+  logger.info(`[API] Crawl started | urls=${urls.length} keywords=${keywords} customFields=${customFields.length}`);
 
-  crawler.runPipeline({ urls, keywords }).catch(err => {
+  crawler.runPipeline({ urls, keywords, customFields }).catch(err => {
     logger.error(`[PIPELINE] Unhandled error: ${err.message}`);
   });
 
@@ -103,15 +103,18 @@ router.post("/upload-csv", multipartMiddleware, async (req, res) => {
   }
 
   let keywords = [];
+  let customFields = [];
   try {
     const raw = req.body?.keywords || "[]";
     keywords = typeof raw === "string" ? JSON.parse(raw) : raw;
+    const rawCf = req.body?.customFields || "[]";
+    customFields = typeof rawCf === "string" ? JSON.parse(rawCf) : rawCf;
   } catch (_) {}
 
-  logger.info(`[API] Crawl started from CSV | urls=${urls.length} | keywords=${keywords}`);
+  logger.info(`[API] Crawl started from CSV | urls=${urls.length} | keywords=${keywords} | customFields=${customFields.length}`);
 
   // Fire-and-forget
-  crawler.runPipeline({ urls, keywords }).catch(err => {
+  crawler.runPipeline({ urls, keywords, customFields }).catch(err => {
     logger.error(`[PIPELINE] Unhandled error: ${err.message}`);
   });
 

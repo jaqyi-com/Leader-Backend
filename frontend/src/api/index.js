@@ -68,8 +68,8 @@ export const crawlerApi = axios.create({ baseURL: CRAWLER_BASE, timeout: 300000 
 
 
 // --- Crawler (website crawl) ---
-export const startCrawlFromUrls = (urls = [], keywords = []) =>
-  crawlerApi.post("/start", { urls, keywords });
+export const startCrawlFromUrls = (urls = [], keywords = [], customFields = []) =>
+  crawlerApi.post("/start", { urls, keywords, customFields });
 
 export const startCrawlFromCsv = (formData) =>
   crawlerApi.post("/upload-csv", formData);

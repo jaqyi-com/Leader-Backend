@@ -100,6 +100,22 @@ function WebsiteRow({ site, index }) {
         )}
       </td>
 
+      {/* Dynamic Fields */}
+      <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 max-w-[150px]">
+        {site.extra_data?.custom_fields && Object.keys(site.extra_data.custom_fields).length > 0 ? (
+          <div className="space-y-1">
+            {Object.entries(site.extra_data.custom_fields).map(([k, v]) => (
+              <div key={k} className="flex flex-col">
+                <span className="font-semibold text-[10px] uppercase text-brand-500 truncate" title={k}>{k}</span>
+                <span className="truncate" title={v}>{v || "—"}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <span className="text-slate-300 dark:text-slate-600">—</span>
+        )}
+      </td>
+
       {/* Failed badge */}
       <td className="px-4 py-3 text-center">
         {site.fetch_failed ? (
@@ -162,12 +178,29 @@ export default function WebsitesPage() {
   // Export CSV
   const handleExport = () => {
     if (websites.length === 0) return;
-    const headers = ["URL", "Title", "Brand", "Company", "Tech Stack", "Framework", "Backend", "Email", "Phone", "Country", "Failed"];
-    const rows = websites.map(s => [
-      s.input_url, s.website_title, s.brand_name, s.company_name,
-      s.technology_stack, s.framework_used, s.backend_language,
-      s.contact_email, s.phone_number, s.country, s.fetch_failed
-    ]);
+    
+    // Find all dynamic custom field keys used across the current dataset
+    const dynamicKeys = new Set();
+    websites.forEach(s => {
+      if (s.extra_data?.custom_fields) {
+        Object.keys(s.extra_data.custom_fields).forEach(k => dynamicKeys.add(k));
+      }
+    });
+    const dynamicHeaders = Array.from(dynamicKeys);
+    
+    const baseHeaders = ["URL", "Title", "Brand", "Company", "Tech Stack", "Framework", "Backend", "Email", "Phone", "Country", "Failed"];
+    const headers = [...baseHeaders, ...dynamicHeaders];
+    
+    const rows = websites.map(s => {
+      const baseData = [
+        s.input_url, s.website_title, s.brand_name, s.company_name,
+        s.technology_stack, s.framework_used, s.backend_language,
+        s.contact_email, s.phone_number, s.country, s.fetch_failed
+      ];
+      const dynamicData = dynamicHeaders.map(h => (s.extra_data?.custom_fields?.[h]) ?? "");
+      return [...baseData, ...dynamicData];
+    });
+    
     const csv = [headers, ...rows].map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
@@ -249,7 +282,7 @@ export default function WebsitesPage() {
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-slate-200 dark:border-gray-800 bg-slate-50/80 dark:bg-gray-900/40">
-                    {["Website", "Description", "Tech Stack", "Contact", "Country", "Status", ""].map(h => (
+                    {["Website", "Description", "Tech Stack", "Contact", "Country", "Dynamic Data", "Status", ""].map(h => (
                       <th key={h} className="px-4 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
                         {h}
                       </th>

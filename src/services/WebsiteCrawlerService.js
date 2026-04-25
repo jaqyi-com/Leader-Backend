@@ -7,6 +7,7 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
 const logger = require("../utils/logger").forAgent("WebsiteCrawler");
+const openAILLM = require("../integrations/OpenAILLM");
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // CONSTANTS
@@ -412,7 +413,7 @@ function isDataSufficient(record) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 10. WEBSITE RECORD BUILDER  (port of website_builder.py)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function buildWebsiteRecord(url, keywords) {
+async function buildWebsiteRecord(url, keywords, customFields = []) {
   url = normalizeUrl(url);
   pushLog(`[BUILDER] Building record: ${url}`);
 
@@ -511,10 +512,23 @@ async function buildWebsiteRecord(url, keywords) {
     if (htmlLang) record.website_language = htmlLang.slice(0, 5);
   }
 
-  // 13. Construct extra_data (debug)
+  // 13. Dynamic Custom Fields (AI Extraction)
+  try {
+    if (customFields && customFields.length > 0 && dom_text) {
+      pushLog(`[BUILDER] Extracting dynamic custom fields...`);
+      const extractedFields = await openAILLM.extractCustomFields(dom_text, customFields);
+      record.custom_fields = extractedFields;
+    }
+  } catch (e) {
+    pushLog(`[BUILDER] Custom fields extraction failed: ${e.message}`);
+  }
+
+  // 14. Construct extra_data
   record.extra_data = {};
   if (record._footer_data) record.extra_data.footer = record._footer_data;
+  if (record.custom_fields) record.extra_data.custom_fields = record.custom_fields;
   delete record._footer_data;
+  delete record.custom_fields;
 
   pushLog(
     `[BUILDER] Done | brand=${record.brand_name} fw=${record.framework_used || "?"} host=${record.hosting_provider || "?"}`
@@ -527,13 +541,13 @@ async function buildWebsiteRecord(url, keywords) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 11. LEVEL PIPELINE  (port of level_pipeline.py)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function crawlWithLevels(url, keywords) {
+async function crawlWithLevels(url, keywords, customFields = []) {
   pushLog("=".repeat(60));
   pushLog(`[LEVEL_PIPELINE] Starting: ${url}`);
 
   // Level 1
   pushLog("[LEVEL_PIPELINE] Running Level 1...");
-  const l1 = await buildWebsiteRecord(url, keywords);
+  const l1 = await buildWebsiteRecord(url, keywords, customFields);
   if (isDataSufficient(l1)) {
     pushLog("[LEVEL_PIPELINE] ✅ Data sufficient at Level 1");
     l1._crawl_level = "L1";
@@ -543,7 +557,7 @@ async function crawlWithLevels(url, keywords) {
 
   // Level 2 — retry same URL (sometimes transient failures resolve)
   pushLog("[LEVEL_PIPELINE] Running Level 2...");
-  const l2 = await buildWebsiteRecord(url, keywords);
+  const l2 = await buildWebsiteRecord(url, keywords, customFields);
   if (isDataSufficient(l2)) {
     pushLog("[LEVEL_PIPELINE] ✅ Data sufficient at Level 2");
     l2._crawl_level = "L2";
@@ -553,7 +567,7 @@ async function crawlWithLevels(url, keywords) {
 
   // Level 3 — final fallback
   pushLog("[LEVEL_PIPELINE] Running Level 3 (final)...");
-  const l3 = await buildWebsiteRecord(url, keywords);
+  const l3 = await buildWebsiteRecord(url, keywords, customFields);
   l3._crawl_level = "L3";
   return l3;
 }
@@ -565,7 +579,7 @@ async function crawlWithLevels(url, keywords) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const { Website } = require("../db/mongoose");
 
-async function runPipeline({ urls, keywords = [] }) {
+async function runPipeline({ urls, keywords = [], customFields = [] }) {
   if (pipelineRunning) {
     return { status: "error", reason: "A crawl is already running. Please wait." };
   }
@@ -591,7 +605,7 @@ async function runPipeline({ urls, keywords = [] }) {
       pushLog(`[PIPELINE] (${i + 1}/${total}) Crawling: ${url}`);
 
       try {
-        const record = await crawlWithLevels(url, keywords);
+        const record = await crawlWithLevels(url, keywords, customFields);
 
         // Upsert to MongoDB
         await Website.findOneAndUpdate(

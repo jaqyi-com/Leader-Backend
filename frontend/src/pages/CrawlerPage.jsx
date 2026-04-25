@@ -11,8 +11,8 @@ import toast from "react-hot-toast";
 function KeywordInput({ tags, setTags }) {
   const [input, setInput] = useState("");
   const add = () => {
-    const v = input.trim().toLowerCase();
-    if (v && !tags.includes(v)) setTags([...tags, v]);
+    const v = input.trim();
+    if (v && !tags.some(t => t.toLowerCase() === v.toLowerCase())) setTags([...tags, v]);
     setInput("");
   };
   return (
@@ -30,7 +30,7 @@ function KeywordInput({ tags, setTags }) {
         onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); add(); } }}
         onBlur={add}
         className="flex-1 min-w-[160px] bg-transparent outline-none text-sm text-slate-700 dark:text-slate-200 placeholder:text-slate-400"
-        placeholder={tags.length === 0 ? "Type keyword + Enter (e.g. ai, saas, fintech)" : "Add more..."}
+        placeholder={tags.length === 0 ? "Type and press Enter..." : "Add more..."}
       />
     </div>
   );
@@ -73,6 +73,7 @@ export default function CrawlerPage() {
   const [urlsText, setUrlsText] = useState(""); // newline-separated URLs
   const [csvFile, setCsvFile] = useState(null);
   const [keywords, setKeywords] = useState([]);
+  const [customFields, setCustomFields] = useState([]);
 
   // Runtime state
   const [logs, setLogs] = useState([]);
@@ -137,7 +138,7 @@ export default function CrawlerPage() {
     setRunning(true);
     startTimer();
     try {
-      await startCrawlFromUrls(urls, keywords);
+      await startCrawlFromUrls(urls, keywords, customFields);
       toast.success(`Crawl started for ${urls.length} URLs! Watch the log stream below.`);
     } catch (e) {
       const msg = e.response?.data?.error || e.message || "Failed to start crawl";
@@ -157,6 +158,7 @@ export default function CrawlerPage() {
       const formData = new FormData();
       formData.append("file", csvFile);
       formData.append("keywords", JSON.stringify(keywords));
+      formData.append("customFields", JSON.stringify(customFields));
       await startCrawlFromCsv(formData);
       toast.success("CSV crawl started! Watch the log stream below.");
     } catch (e) {
@@ -272,17 +274,26 @@ export default function CrawlerPage() {
         </div>
 
         {/* Quick keyword presets */}
-        <div className="flex gap-2 flex-wrap">
+        <div className="flex gap-2 flex-wrap pb-4 border-b border-slate-100 dark:border-gray-800">
           {["ai", "saas", "fintech", "robotics", "cloud", "b2b"].map(kw => (
-            <button key={kw} onClick={() => { if (!keywords.includes(kw)) setKeywords([...keywords, kw]); }}
+            <button key={kw} onClick={() => { if (!keywords.some(k => k.toLowerCase() === kw.toLowerCase())) setKeywords([...keywords, kw]); }}
               className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
-                keywords.includes(kw)
+                keywords.some(k => k.toLowerCase() === kw.toLowerCase())
                   ? "bg-brand-500 text-white border-brand-500"
                   : "border-slate-300 dark:border-gray-600 text-slate-600 dark:text-slate-300 hover:border-brand-400"
               }`}>
               {kw}
             </button>
           ))}
+        </div>
+
+        {/* Custom Fields */}
+        <div>
+          <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-2">
+            Dynamic Fields <span className="px-1.5 py-0.5 rounded bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 text-[10px] font-bold">AI Extracted</span>
+          </label>
+          <KeywordInput tags={customFields} setTags={setCustomFields} />
+          <p className="text-xs text-slate-400 mt-1">Add custom data points to extract (e.g. "LinkedIn URL", "Pricing Model", "Founder Name").</p>
         </div>
 
         {/* Run Button */}
