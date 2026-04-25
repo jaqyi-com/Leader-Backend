@@ -78,6 +78,9 @@ export const startCrawlFromCsv = (formData) =>
 export const getCrawlerLogStreamUrl = () => `${CRAWLER_BASE}/logs/stream`;
 
 // --- Google Places ---
+export const geocodePlacesAddress = (address) =>
+  crawlerApi.get("/places/geocode", { params: { address } });
+
 export const searchPlaces = (lat, lng, radius, keyword) =>
   crawlerApi.post("/places/search", { lat, lng, radius, keyword });
 

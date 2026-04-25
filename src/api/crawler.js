@@ -203,6 +203,21 @@ router.get("/websites", async (req, res) => {
 // Google Places Routes (native — no Python proxy)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+router.get("/places/geocode", async (req, res) => {
+  try {
+    const { address } = req.query;
+    if (!address) return res.status(400).json({ error: "Address is required" });
+    
+    const result = await placesService.geocodeAddress(address);
+    if (!result) return res.status(404).json({ error: "Location not found" });
+    
+    res.json(result);
+  } catch (err) {
+    logger.error(`[Places /geocode] ${err.message}`);
+    res.status(500).json({ error: "Failed to geocode address", detail: err.message });
+  }
+});
+
 router.post("/places/search", placesLimiter, async (req, res) => {
   try {
     const { lat, lng, radius, keyword } = req.body;

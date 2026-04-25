@@ -63,6 +63,33 @@ class GooglePlacesService {
     }
   }
 
+  async geocodeAddress(address) {
+    if (!this.apiKey) throw new Error("GOOGLE_API_KEY not set");
+    if (!address) throw new Error("Address is required");
+
+    const params = {
+      address: address,
+      key: this.apiKey
+    };
+
+    try {
+      const response = await axios.get("https://maps.googleapis.com/maps/api/geocode/json", { params });
+      if (response.data.status === "OK" && response.data.results.length > 0) {
+        const location = response.data.results[0].geometry.location;
+        const formatted_address = response.data.results[0].formatted_address;
+        return {
+          lat: location.lat,
+          lng: location.lng,
+          formatted_address: formatted_address
+        };
+      }
+      return null;
+    } catch (error) {
+      logger.error(`[GOOGLE_PLACES] Error geocoding address '${address}': ${error.message}`);
+      return null;
+    }
+  }
+
   normalizePlace(details, categoryKeyword) {
     const geom = details.geometry && details.geometry.location ? details.geometry.location : {};
     

@@ -4,7 +4,7 @@ import {
   MapPin, Search, Loader2, Star, Phone, Globe, ExternalLink,
   Navigation, Download, AlertCircle, CheckCircle2, SlidersHorizontal, History, RotateCcw, X
 } from "lucide-react";
-import { searchPlaces, getStoredPlaces, exportPlacesCsv, getPlacesHistory } from "../api";
+import { searchPlaces, getStoredPlaces, exportPlacesCsv, getPlacesHistory, geocodePlacesAddress } from "../api";
 import toast from "react-hot-toast";
 
 // ── Rating stars ──────────────────────────────────────────────────────────────
@@ -94,6 +94,8 @@ export default function PlacesPage() {
   const [lng, setLng] = useState("");
   const [radius, setRadius] = useState(2000);
   const [keyword, setKeyword] = useState("");
+  const [addressInput, setAddressInput] = useState("");
+  const [geocodingAddress, setGeocodingAddress] = useState(false);
 
   const [filterMinRating, setFilterMinRating] = useState(0);
   const [filterMinReviews, setFilterMinReviews] = useState(0);
@@ -113,7 +115,29 @@ export default function PlacesPage() {
   const [historyList, setHistoryList] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // ── Geolocation ─────────────────────────────────────────────────────────────
+  // ── Geolocation & Address Search ─────────────────────────────────────────────
+  const handleAddressSearch = async () => {
+    if (!addressInput.trim()) {
+      toast.error("Please enter a location to search");
+      return;
+    }
+    setError(null);
+    setGeocodingAddress(true);
+    try {
+      const { data } = await geocodePlacesAddress(addressInput);
+      if (data && data.lat && data.lng) {
+        setLat(data.lat.toFixed(6));
+        setLng(data.lng.toFixed(6));
+        toast.success(`Found: ${data.formatted_address}`);
+        setAddressInput(data.formatted_address); // Update input with full address
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to find location. Please try a different query.");
+    } finally {
+      setGeocodingAddress(false);
+    }
+  };
+
   const handleGetLocation = () => {
     setError(null);
     if (!navigator.geolocation) {
@@ -350,7 +374,31 @@ export default function PlacesPage() {
           </div>
 
           {/* Location */}
-          <div className="space-y-3">
+          <div className="space-y-4">
+            {/* Global Address Search */}
+            <div>
+              <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">Global Location Search</label>
+              <div className="flex gap-2">
+                <input className="input text-sm flex-1" type="text"
+                  value={addressInput} onChange={e => setAddressInput(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && handleAddressSearch()}
+                  placeholder="e.g. New York, London, Tokyo..." />
+                <button 
+                  onClick={handleAddressSearch} 
+                  disabled={geocodingAddress}
+                  className="btn-primary px-3 text-sm flex-shrink-0"
+                >
+                  {geocodingAddress ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
+              <span className="text-xs font-medium text-slate-400">OR</span>
+              <div className="h-px bg-slate-200 dark:bg-slate-700 flex-1"></div>
+            </div>
+
             <button onClick={handleGetLocation} disabled={geoLoading}
               className="btn-secondary w-full justify-center text-sm">
               {geoLoading ? <Loader2 size={14} className="animate-spin" /> : <Navigation size={14} />}
