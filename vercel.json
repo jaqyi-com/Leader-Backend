@@ -6,8 +6,7 @@
       "src": "src/server.js",
       "use": "@vercel/node",
       "config": {
-        "maxLambdaSize": "50mb",
-        "maxDuration": 60
+        "maxLambdaSize": "50mb"
       }
     }
   ],
