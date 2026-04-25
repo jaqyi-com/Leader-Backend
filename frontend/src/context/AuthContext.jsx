@@ -20,6 +20,7 @@ export function AuthProvider({ children }) {
   }, [token]);
 
   async function fetchMe() {
+    setLoading(true);
     try {
       const res = await fetch(`${API}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -78,6 +79,7 @@ export function AuthProvider({ children }) {
 
   // ── Handle Google OAuth callback (called by /auth/callback page) ──────────
   const handleOAuthCallback = useCallback((callbackToken) => {
+    setLoading(true);
     localStorage.setItem("leader_token", callbackToken);
     setToken(callbackToken);
     // fetchMe will run via useEffect
