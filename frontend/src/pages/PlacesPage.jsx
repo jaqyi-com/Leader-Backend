@@ -231,13 +231,16 @@ export default function PlacesPage() {
     }
   };
 
-  const handleLoadHistory = (item) => {
+  const handleLoadHistory = async (item) => {
     setLat(item.lat);
     setLng(item.lng);
     setRadius(item.radius);
     setKeyword(item.keyword);
     setShowHistory(false);
-    toast.success("Loaded history parameters");
+    
+    // Immediately load the previously fetched results from the database
+    await fetchStored(item.keyword);
+    toast.success("Loaded history and fetched stored results!");
   };
 
   // ── Search places ────────────────────────────────────────────────────────────
@@ -255,7 +258,7 @@ export default function PlacesPage() {
       setSearchStatus(data);
       toast.success(`Found ${data.count} places!`);
       // Load stored results
-      await fetchStored();
+      await fetchStored(keyword.trim());
     } catch (e) {
       const msg = e.response?.data?.error || e.response?.data?.detail || e.message;
       setError(msg);
@@ -266,10 +269,10 @@ export default function PlacesPage() {
   };
 
   // ── Fetch already-stored places ─────────────────────────────────────────────
-  const fetchStored = async () => {
+  const fetchStored = async (searchKeyword = keyword) => {
     setLoadingStored(true);
     try {
-      const { data } = await getStoredPlaces({ limit: 50, keyword: keyword || undefined });
+      const { data } = await getStoredPlaces({ limit: 50, keyword: searchKeyword || undefined });
       setPlaces(Array.isArray(data) ? data : (data.places || []));
     } catch {
       // silently fail – DB may not be connected
