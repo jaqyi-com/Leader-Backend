@@ -273,6 +273,7 @@ export default function CrawlerPage() {
             )}
           </AnimatePresence>
         </div>
+      </div>
 
       {/* Mode Tabs */}
       <div className="glass-card p-1 inline-flex gap-1 self-start">
