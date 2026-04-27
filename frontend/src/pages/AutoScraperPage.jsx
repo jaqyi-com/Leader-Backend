@@ -9,7 +9,7 @@ import { startAutoScraper, autocompleteLocation, geocodeLocation, getAutoScraper
 import toast from "react-hot-toast";
 
 const CRAWLER_API_URL = import.meta.env.VITE_CRAWLER_API_URL || "http://localhost:3001/api/crawler";
-const AUTO_SCRAPER_SSE = CRAWLER_API_URL.replace("/api/crawler", "/api/auto-scraper");
+const AUTO_SCRAPER_SSE = `${CRAWLER_API_URL}/auto-scraper`;
 
 // ── KeywordInput ─────────────────────────────────────────────
 function KeywordInput({ tags, setTags }) {

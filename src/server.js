@@ -727,8 +727,8 @@ app.get("/api/sheets/runs/:tabName", async (req, res) => {
 // ============================================================
 const crawlerRouter     = require("./api/crawler");
 const autoScraperRouter = require("./api/autoScraper");
-app.use("/api/crawler",      crawlerRouter);
-app.use("/api/auto-scraper", autoScraperRouter);
+app.use("/api/crawler",              crawlerRouter);
+app.use("/api/crawler/auto-scraper", autoScraperRouter);
 
 // Export for Vercel / serverless environments
 module.exports = app;
