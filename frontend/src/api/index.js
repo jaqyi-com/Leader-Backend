@@ -113,6 +113,19 @@ export const getCrawlRuns = () =>
 export const getCrawlRunWebsites = (runId, params = {}) =>
   crawlerApi.get(`/runs/${encodeURIComponent(runId)}/websites`, { params });
 
+// --- Auto Scraper ---
+export const startAutoScraper = (body) =>
+  crawlerApi.post("/auto-scraper/start", body);
+
+export const getAutoScraperSessions = () =>
+  crawlerApi.get("/auto-scraper/sessions");
+
+export const geocodeLocation = (q) =>
+  crawlerApi.get("/auto-scraper/geocode", { params: { q } });
+
+export const autocompleteLocation = (q) =>
+  crawlerApi.get("/auto-scraper/autocomplete", { params: { q } });
+
 // ============================================================
 // SOCIAL MEDIA API (Unified.to MCP Integration)
 // ============================================================

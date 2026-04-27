@@ -245,6 +245,42 @@ const ChatKnowledgeSource = require("./models/chatKnowledgeSource");
 const ChatConversation = require("./models/chatConversation");
 const ChatMessage = require("./models/chatMessage");
 
+// ─── Auto Scraper ────────────────────────────────────────────────────────────
+const autoScraperSessionSchema = new mongoose.Schema({
+  sessionId:   { type: String, required: true, unique: true, index: true },
+  keyword:     { type: String, required: true },
+  location:    String,
+  lat:         Number,
+  lng:         Number,
+  source:      { type: String, enum: ["google_search", "places_scraper"], default: "google_search" },
+  status:      { type: String, enum: ["discovering", "crawling", "filtering", "done", "failed"], default: "discovering" },
+  urlsFound:   { type: Number, default: 0 },
+  crawlRunId:  String,
+  leadsFound:  { type: Number, default: 0 },
+  orgId:       { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
+}, { timestamps: true });
+
+const autoScraperLeadSchema = new mongoose.Schema({
+  sessionId:      { type: String, index: true },
+  crawlRunId:     { type: String, index: true },
+  input_url:      String,
+  brand_name:     String,
+  website_title:  String,
+  contact_email:  String,
+  phone_number:   String,
+  developer_email: String,
+  developer_phone: String,
+  technology_stack: String,
+  framework_used:  String,
+  country:         String,
+  keyword:         String,
+  location:        String,
+  orgId:           { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
+}, { timestamps: true });
+
+const AutoScraperSession = mongoose.models.AutoScraperSession || mongoose.model("AutoScraperSession", autoScraperSessionSchema);
+const AutoScraperLead    = mongoose.models.AutoScraperLead    || mongoose.model("AutoScraperLead",    autoScraperLeadSchema);
+
 module.exports = {
   connectDB,
   Company,
@@ -258,6 +294,8 @@ module.exports = {
   Website,
   CrawlRun,
   SocialPost,
+  AutoScraperSession,
+  AutoScraperLead,
   // Auth / Org layer
   User,
   Organization,

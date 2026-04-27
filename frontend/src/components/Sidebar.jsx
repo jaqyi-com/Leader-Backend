@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Cpu, CalendarClock, Sheet, Trophy,
   Target, Globe, MapPin, Database, Bot, ChevronLeft, ChevronRight,
-  Zap, Settings, Share2, MessageSquare,
+  Zap, Settings, Share2, MessageSquare, Sparkles,
 } from "lucide-react";
 
 const MAIN_LINKS = [
@@ -18,9 +18,10 @@ const MAIN_LINKS = [
 ];
 
 const CRAWLER_LINKS = [
-  { to: "/app/crawler",  label: "Web Crawler",   icon: Globe },
-  { to: "/app/websites", label: "Website Intel",  icon: Database },
-  { to: "/app/places",   label: "Places Scraper", icon: MapPin },
+  { to: "/app/crawler",      label: "Web Crawler",   icon: Globe     },
+  { to: "/app/websites",    label: "Website Intel",  icon: Database  },
+  { to: "/app/auto-scraper",label: "Auto Scraper",   icon: Sparkles  },
+  { to: "/app/places",      label: "Places Scraper", icon: MapPin    },
 ];
 
 const SOCIAL_LINKS = [

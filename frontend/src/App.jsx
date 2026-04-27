@@ -21,6 +21,7 @@ import IcpPage from "./pages/IcpPage";
 import CrawlerPage from "./pages/CrawlerPage";
 import PlacesPage from "./pages/PlacesPage";
 import WebsitesPage from "./pages/WebsitesPage";
+import AutoScraperPage from "./pages/AutoScraperPage";
 import AutonomousAgentsPage from "./pages/AutonomousAgentsPage";
 import AutonomousAgentDetailPage from "./pages/AutonomousAgentDetailPage";
 import LandingPage from "./pages/LandingPage";
@@ -59,9 +60,10 @@ export default function App() {
           <Route path="leads"            element={<LeadsPage />} />
           <Route path="settings"         element={<SettingsPage />} />
           {/* Crawler */}
-          <Route path="crawler"          element={<CrawlerPage />} />
-          <Route path="places"           element={<PlacesPage />} />
-          <Route path="websites"         element={<WebsitesPage />} />
+          <Route path="crawler"       element={<CrawlerPage />} />
+          <Route path="places"        element={<PlacesPage />} />
+          <Route path="websites"      element={<WebsitesPage />} />
+          <Route path="auto-scraper"  element={<AutoScraperPage />} />
           {/* Autonomous SDR */}
           <Route path="autonomousagents"      element={<AutonomousAgentsPage />} />
           <Route path="autonomousagents/:id"  element={<AutonomousAgentDetailPage />} />
