@@ -1,134 +1,231 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Database, Search, Download, ExternalLink, Globe, Mail,
-  Phone, ChevronLeft, ChevronRight, Loader2, Server, RefreshCw,
-  Code2, MapPin, Building2, History, X, RotateCcw
+  Database, Search, Download, ExternalLink, Globe, Mail, Phone,
+  ChevronLeft, ChevronRight, Loader2, Server, RefreshCw, Code2,
+  MapPin, Filter, X, ArrowLeft, Clock, Tag, Layers, Eye,
+  SlidersHorizontal, Check, Globe2
 } from "lucide-react";
-import { getWebsites } from "../api";
+import { getCrawlRuns, getCrawlRunWebsites } from "../api";
 import toast from "react-hot-toast";
 
 const PAGE_SIZE = 25;
 
-// ── Tech badge ────────────────────────────────────────────────────────────────
-function TechBadge({ label }) {
-  if (!label) return null;
+function StatusBadge({ status }) {
+  const map = {
+    running: "badge badge-amber",
+    completed: "badge badge-green",
+    failed: "badge badge-rose",
+  };
+  const labels = { running: "Running", completed: "Completed", failed: "Failed" };
   return (
-    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 border border-violet-200 dark:border-violet-800">
-      <Code2 size={9} /> {label}
+    <span className={map[status] || "badge badge-rose"}>
+      {labels[status] || status}
     </span>
   );
 }
 
-// ── Website row ───────────────────────────────────────────────────────────────
-function WebsiteRow({ site, index }) {
-  const techParts = (site.technology_stack || "").split(",").map(s => s.trim()).filter(Boolean).slice(0, 3);
+function RunCard({ run, onClick, index }) {
+  const date = new Date(run.createdAt);
+  const dateStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const timeStr = date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+  const total = run.urlCount || 0;
+  const successRate = total > 0 ? Math.round(((run.successCount || 0) / total) * 100) : 0;
 
   return (
-    <motion.tr
-      initial={{ opacity: 0, y: 8 }}
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.03 }}
-      className="border-b border-slate-100 dark:border-gray-800 hover:bg-slate-50/60 dark:hover:bg-gray-800/40 transition-colors group"
+      transition={{ delay: index * 0.05, duration: 0.3 }}
+      onClick={onClick}
+      className="card card-interactive gradient-border cursor-pointer p-5 group space-y-4"
     >
-      {/* Domain / URL */}
-      <td className="px-4 py-3 min-w-[180px]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[var(--accent)] to-violet-500 flex items-center justify-center shadow-lg shadow-[var(--accent-glow)] flex-shrink-0">
+            <Globe size={18} className="text-white" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-[var(--text)] text-sm leading-snug truncate max-w-[180px]">
+              {run.label || `${total} URLs`}
+            </p>
+            <p className="text-[11px] text-[var(--text-3)] mt-0.5 flex items-center gap-1">
+              <Clock size={9} /> {dateStr} · {timeStr}
+            </p>
+          </div>
+        </div>
+        <StatusBadge status={run.status} />
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {[
+          { label: "Total", val: total, cls: "text-[var(--text-2)]" },
+          { label: "OK", val: run.successCount ?? 0, cls: "text-[var(--emerald)]" },
+          { label: "Failed", val: run.failedCount ?? 0, cls: "text-[var(--rose)]" },
+        ].map(s => (
+          <div key={s.label} className="bg-[var(--surface-2)] rounded-xl py-2.5 text-center">
+            <p className={`text-xl font-bold ${s.cls}`}>{s.val}</p>
+            <p className="text-[10px] text-[var(--text-3)] mt-0.5">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <div className="flex justify-between text-[10px] text-[var(--text-3)] mb-1">
+          <span>Success rate</span>
+          <span>{successRate}%</span>
+        </div>
+        <div className="w-full h-1.5 bg-[var(--surface-3)] rounded-full overflow-hidden">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${successRate}%` }}
+            transition={{ delay: index * 0.05 + 0.2, duration: 0.6 }}
+            className="h-full bg-gradient-to-r from-[var(--accent)] to-[var(--emerald)] rounded-full"
+          />
+        </div>
+      </div>
+
+      {run.keywords?.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {run.keywords.slice(0, 4).map(k => (
+            <span key={k} className="badge badge-purple text-[10px]">
+              <Tag size={8} /> {k}
+            </span>
+          ))}
+          {run.keywords.length > 4 && (
+            <span className="badge badge-purple text-[10px]">+{run.keywords.length - 4}</span>
+          )}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between border-t border-[var(--border)] pt-3">
+        <span className="text-[11px] text-[var(--text-3)]">
+          {run.source === "csv_upload" ? "CSV Upload" : "Direct URLs"}
+          {run.customFields?.length > 0 && ` · ${run.customFields.length} custom fields`}
+        </span>
+        <span className="text-[11px] text-[var(--accent)] font-semibold flex items-center gap-1 group-hover:underline">
+          View Data <ChevronRight size={11} />
+        </span>
+      </div>
+    </motion.div>
+  );
+}
+
+function TechBadge({ label }) {
+  if (!label) return null;
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-[var(--accent)]/10 text-[var(--accent-2)] border border-[var(--accent)]/15">
+      <Code2 size={8} /> {label}
+    </span>
+  );
+}
+
+function FilterChip({ label, active, onClick }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150 ${
+        active
+          ? "bg-[var(--accent)] text-white border-[var(--accent)] shadow-sm shadow-[var(--accent-glow)]"
+          : "bg-[var(--surface-2)] text-[var(--text-2)] border-[var(--border)] hover:border-[var(--border-hover)] hover:text-[var(--text)]"
+      }`}
+    >
+      {active && <Check size={10} />} {label}
+    </button>
+  );
+}
+
+function WebsiteRow({ site, index, dynKeys }) {
+  const techs = (site.technology_stack || "").split(",").map(s => s.trim()).filter(Boolean).slice(0, 3);
+  return (
+    <motion.tr
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.02 }}
+      className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors group"
+    >
+      <td className="px-4 py-3 min-w-[190px]">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-accent-cyan flex items-center justify-center flex-shrink-0 shadow-sm">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[var(--accent)] to-violet-500 flex items-center justify-center flex-shrink-0">
             <Globe size={12} className="text-white" />
           </div>
           <div className="min-w-0">
-            <div className="text-sm font-semibold text-slate-800 dark:text-white truncate max-w-[160px]">
-              {site.brand_name || site.company_name || site.website_title || "—"}
+            <div className="text-sm font-semibold text-[var(--text)] truncate max-w-[155px]">
+              {site.brand_name || site.website_title || "—"}
             </div>
-            <a href={site.input_url} target="_blank" rel="noopener noreferrer"
-              className="text-[11px] text-slate-400 hover:text-brand-500 truncate max-w-[160px] block">
+            <a
+              href={site.input_url} target="_blank" rel="noopener noreferrer"
+              className="text-[11px] text-[var(--text-3)] hover:text-[var(--accent)] truncate max-w-[155px] block"
+              onClick={e => e.stopPropagation()}
+            >
               {(site.input_url || "").replace(/^https?:\/\//, "").split("/")[0]}
             </a>
           </div>
         </div>
       </td>
 
-      {/* Description */}
-      <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 max-w-[200px]">
+      <td className="px-4 py-3 text-xs text-[var(--text-2)] max-w-[200px]">
         <p className="line-clamp-2">{site.short_description || "—"}</p>
       </td>
 
-      {/* Tech Stack */}
-      <td className="px-4 py-3">
-        {techParts.length > 0 ? (
+      <td className="px-4 py-3 min-w-[140px]">
+        {techs.length > 0 ? (
           <div className="flex flex-wrap gap-1">
-            {techParts.map((t, i) => <TechBadge key={i} label={t} />)}
-            {(site.framework_used) && <TechBadge label={site.framework_used} />}
+            {techs.map((t, i) => <TechBadge key={i} label={t} />)}
+            {site.framework_used && <TechBadge label={site.framework_used} />}
           </div>
-        ) : (
-          <span className="text-xs text-slate-300 dark:text-slate-600">—</span>
-        )}
+        ) : <span className="text-[var(--text-3)] text-xs">—</span>}
       </td>
 
-      {/* Contact */}
-      <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 min-w-[140px]">
+      <td className="px-4 py-3 text-xs text-[var(--text-2)] min-w-[150px]">
         <div className="space-y-1">
           {site.contact_email && (
             <div className="flex items-center gap-1">
-              <Mail size={10} className="text-slate-400 flex-shrink-0" />
-              <a href={`mailto:${site.contact_email}`} className="hover:text-brand-500 truncate max-w-[130px]">
+              <Mail size={10} className="text-[var(--teal)] flex-shrink-0" />
+              <a href={`mailto:${site.contact_email}`} className="hover:text-[var(--accent)] truncate max-w-[130px]">
                 {site.contact_email}
               </a>
             </div>
           )}
           {site.phone_number && (
             <div className="flex items-center gap-1">
-              <Phone size={10} className="text-slate-400 flex-shrink-0" />
-              <span>{site.phone_number}</span>
+              <Phone size={10} className="text-[var(--teal)] flex-shrink-0" />
+              <span className="truncate max-w-[130px]">{site.phone_number}</span>
             </div>
           )}
           {!site.contact_email && !site.phone_number && (
-            <span className="text-slate-300 dark:text-slate-600">—</span>
+            <span className="text-[var(--text-3)]">—</span>
           )}
         </div>
       </td>
 
-      {/* Country */}
       <td className="px-4 py-3 text-xs">
-        {site.country ? (
-          <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
-            <MapPin size={10} /> {site.country}
+        {site.country
+          ? <span className="flex items-center gap-1 text-[var(--text-2)]"><MapPin size={10} />{site.country}</span>
+          : <span className="text-[var(--text-3)]">—</span>
+        }
+      </td>
+
+      {dynKeys.map(k => (
+        <td key={k} className="px-4 py-3 text-xs text-[var(--text-2)] max-w-[150px]">
+          <span className="truncate block" title={site.extra_data?.custom_fields?.[k] || ""}>
+            {site.extra_data?.custom_fields?.[k] || "—"}
           </span>
-        ) : (
-          <span className="text-slate-300 dark:text-slate-600">—</span>
-        )}
-      </td>
+        </td>
+      ))}
 
-      {/* Dynamic Fields */}
-      <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400 max-w-[150px]">
-        {site.extra_data?.custom_fields && Object.keys(site.extra_data.custom_fields).length > 0 ? (
-          <div className="space-y-1">
-            {Object.entries(site.extra_data.custom_fields).map(([k, v]) => (
-              <div key={k} className="flex flex-col">
-                <span className="font-semibold text-[10px] uppercase text-brand-500 truncate" title={k}>{k}</span>
-                <span className="truncate" title={v}>{v || "—"}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <span className="text-slate-300 dark:text-slate-600">—</span>
-        )}
-      </td>
-
-      {/* Failed badge */}
       <td className="px-4 py-3 text-center">
-        {site.fetch_failed ? (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 dark:bg-red-900/20 text-red-500">Failed</span>
-        ) : (
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600">OK</span>
-        )}
+        {site.fetch_failed
+          ? <span className="badge badge-rose text-[10px]">Failed</span>
+          : <span className="badge badge-green text-[10px]">OK</span>
+        }
       </td>
 
-      {/* Open Link */}
       <td className="px-4 py-3 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-        <a href={site.input_url} target="_blank" rel="noopener noreferrer"
-          className="btn-secondary text-xs px-2 py-1 gap-1">
+        <a
+          href={site.input_url} target="_blank" rel="noopener noreferrer"
+          className="btn-secondary text-xs px-2 py-1 gap-1"
+        >
           <ExternalLink size={11} /> Open
         </a>
       </td>
@@ -136,268 +233,427 @@ function WebsiteRow({ site, index }) {
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
 export default function WebsitesPage() {
+  const [view, setView] = useState("list");
+  const [runs, setRuns] = useState([]);
+  const [runsLoading, setRunsLoading] = useState(true);
+  const [runsError, setRunsError] = useState(null);
+  const [selectedRun, setSelectedRun] = useState(null);
+
+  // Detail state
   const [websites, setWebsites] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [page, setPage] = useState(0);
-  const [hasMore, setHasMore] = useState(false);
   const [total, setTotal] = useState(0);
-  const [error, setError] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [page, setPage] = useState(0);
+  const [dynKeys, setDynKeys] = useState([]);
+  const [frameworkOptions, setFrameworkOptions] = useState([]);
 
-  const [showHistory, setShowHistory] = useState(false);
-  const [historyList, setHistoryList] = useState([]);
+  // Filters
+  const [showFilters, setShowFilters] = useState(false);
+  const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterMail, setFilterMail] = useState("all");
+  const [filterPhone, setFilterPhone] = useState("all");
+  const [filterFramework, setFilterFramework] = useState("");
 
-  // Load history on mount
-  useEffect(() => {
+  const loadRuns = useCallback(async () => {
+    setRunsLoading(true);
+    setRunsError(null);
     try {
-      const stored = JSON.parse(localStorage.getItem("website_intel_search_history") || "[]");
-      setHistoryList(stored);
-    } catch (e) {}
+      const { data } = await getCrawlRuns();
+      setRuns(Array.isArray(data) ? data : []);
+    } catch (e) {
+      setRunsError(e.response?.data?.error || "Could not load crawl runs");
+    } finally {
+      setRunsLoading(false);
+    }
   }, []);
 
-  // Debounce search
-  useEffect(() => {
-    const t = setTimeout(() => { setDebouncedQuery(query); setPage(0); }, 400);
-    return () => clearTimeout(t);
-  }, [query]);
+  useEffect(() => { loadRuns(); }, [loadRuns]);
 
-  // Fetch
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
+  useEffect(() => {
+    const t = setTimeout(() => { setDebouncedQ(q); setPage(0); }, 400);
+    return () => clearTimeout(t);
+  }, [q]);
+
+  const loadDetail = useCallback(async () => {
+    if (!selectedRun) return;
+    setDetailLoading(true);
     try {
       const params = { limit: PAGE_SIZE, offset: page * PAGE_SIZE };
-      if (debouncedQuery) params.q = debouncedQuery;
-      const { data } = await getWebsites(params);
-      const list = Array.isArray(data) ? data : [];
+      if (debouncedQ) params.q = debouncedQ;
+      if (filterStatus !== "all") params.status = filterStatus;
+      if (filterMail === "yes") params.hasMail = "true";
+      if (filterMail === "no") params.hasMail = "false";
+      if (filterPhone === "yes") params.hasPhone = "true";
+      if (filterPhone === "no") params.hasPhone = "false";
+      if (filterFramework) params.framework = filterFramework;
+
+      const { data } = await getCrawlRunWebsites(selectedRun.crawlRunId, params);
+      const list = data.websites || [];
       setWebsites(list);
-      setHasMore(list.length === PAGE_SIZE);
-      setTotal(prev => page === 0 ? list.length : prev + list.length);
+      setTotal(data.total || 0);
 
-      // Save to history
-      if (debouncedQuery.trim()) {
-        setHistoryList(prev => {
-          const updated = [
-            { query: debouncedQuery.trim(), timestamp: Date.now(), results: list.length },
-            ...prev.filter(h => h.query !== debouncedQuery.trim())
-          ].slice(0, 10);
-          localStorage.setItem("website_intel_search_history", JSON.stringify(updated));
-          return updated;
-        });
-      }
+      const keys = new Set();
+      list.forEach(s => {
+        if (s.extra_data?.custom_fields) Object.keys(s.extra_data.custom_fields).forEach(k => keys.add(k));
+      });
+      setDynKeys(Array.from(keys));
+
+      const fws = [...new Set(list.map(s => s.framework_used).filter(Boolean))];
+      if (fws.length > 0) setFrameworkOptions(prev => [...new Set([...prev, ...fws])]);
     } catch (e) {
-      const msg = e.response?.data?.error || "Could not reach crawler backend";
-      setError(msg);
+      toast.error("Could not load websites");
     } finally {
-      setLoading(false);
+      setDetailLoading(false);
     }
-  }, [page, debouncedQuery]);
+  }, [selectedRun, page, debouncedQ, filterStatus, filterMail, filterPhone, filterFramework]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { if (view === "detail") loadDetail(); }, [loadDetail, view]);
 
-  // Export CSV
+  const openRun = (run) => {
+    setSelectedRun(run);
+    setView("detail");
+    setPage(0);
+    setQ("");
+    setDebouncedQ("");
+    setFilterStatus("all");
+    setFilterMail("all");
+    setFilterPhone("all");
+    setFilterFramework("");
+    setFrameworkOptions([]);
+    setDynKeys([]);
+  };
+
+  const backToList = () => {
+    setView("list");
+    setSelectedRun(null);
+    setWebsites([]);
+    setTotal(0);
+  };
+
+  const activeFilterCount = [
+    filterStatus !== "all",
+    filterMail !== "all",
+    filterPhone !== "all",
+    !!filterFramework,
+  ].filter(Boolean).length;
+
   const handleExport = () => {
-    if (websites.length === 0) return;
-    
-    // Find all dynamic custom field keys used across the current dataset
-    const dynamicKeys = new Set();
-    websites.forEach(s => {
-      if (s.extra_data?.custom_fields) {
-        Object.keys(s.extra_data.custom_fields).forEach(k => dynamicKeys.add(k));
-      }
-    });
-    const dynamicHeaders = Array.from(dynamicKeys);
-    
-    const baseHeaders = ["URL", "Title", "Brand", "Company", "Tech Stack", "Framework", "Backend", "Email", "Phone", "Country", "Failed"];
-    const headers = [...baseHeaders, ...dynamicHeaders];
-    
-    const rows = websites.map(s => {
-      const baseData = [
-        s.input_url, s.website_title, s.brand_name, s.company_name,
-        s.technology_stack, s.framework_used, s.backend_language,
-        s.contact_email, s.phone_number, s.country, s.fetch_failed
-      ];
-      const dynamicData = dynamicHeaders.map(h => (s.extra_data?.custom_fields?.[h]) ?? "");
-      return [...baseData, ...dynamicData];
-    });
-    
-    const csv = [headers, ...rows].map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url;
-    a.download = `websites_intel_${Date.now()}.csv`; a.click();
-    URL.revokeObjectURL(url);
+    if (!websites.length) return;
+    const baseH = ["URL", "Title", "Brand", "Tech Stack", "Framework", "Email", "Phone", "Country", "Status"];
+    const headers = [...baseH, ...dynKeys];
+    const rows = websites.map(s => [
+      s.input_url, s.website_title, s.brand_name, s.technology_stack,
+      s.framework_used, s.contact_email, s.phone_number, s.country,
+      s.fetch_failed ? "Failed" : "OK",
+      ...dynKeys.map(k => s.extra_data?.custom_fields?.[k] ?? ""),
+    ]);
+    const csv = [headers, ...rows]
+      .map(r => r.map(c => `"${String(c ?? "").replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = `crawl_${selectedRun?.crawlRunId?.slice(0, 8)}_${Date.now()}.csv`;
+    a.click();
     toast.success(`Exported ${websites.length} records`);
   };
 
-  return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
+  const hasMore = (page + 1) * PAGE_SIZE < total;
 
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-            <Database size={22} className="text-brand-500" /> Website Intelligence
-          </h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Browse and search all crawled websites — tech stacks, contacts, companies.
-          </p>
+  // ── LIST VIEW ─────────────────────────────────────────────
+  if (view === "list") {
+    return (
+      <div className="flex flex-col gap-6 max-w-7xl mx-auto">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-[var(--text)] flex items-center gap-2">
+              <Database size={22} className="text-[var(--accent)]" /> Website Intelligence
+            </h2>
+            <p className="text-sm text-[var(--text-3)] mt-1">
+              Select a crawl run to explore its scraped data
+            </p>
+          </div>
+          <button onClick={loadRuns} disabled={runsLoading} className="btn-secondary gap-2">
+            <RefreshCw size={14} className={runsLoading ? "animate-spin" : ""} /> Refresh
+          </button>
         </div>
-        <div className="flex items-center gap-3 relative">
-          <button onClick={() => setShowHistory(!showHistory)} className="btn-secondary gap-2 relative">
-            <History size={14} /> History
-            {historyList.length > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-brand-500 text-[8px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-slate-900">
-                {historyList.length}
+
+        {runsError && (
+          <div className="card p-5 flex items-center gap-3" style={{ borderColor: "rgba(244,63,94,0.3)" }}>
+            <Server size={20} className="text-[var(--rose)] flex-shrink-0" />
+            <div>
+              <p className="font-semibold text-[var(--rose)] text-sm">Backend unavailable</p>
+              <p className="text-xs text-[var(--text-3)] mt-0.5">{runsError}</p>
+            </div>
+          </div>
+        )}
+
+        {runsLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="card p-5 space-y-4 animate-pulse">
+                <div className="flex gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-[var(--surface-3)]" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 bg-[var(--surface-3)] rounded w-3/4" />
+                    <div className="h-2.5 bg-[var(--surface-3)] rounded w-1/2" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {[...Array(3)].map((_, j) => (
+                    <div key={j} className="h-14 bg-[var(--surface-3)] rounded-xl" />
+                  ))}
+                </div>
+                <div className="h-1.5 bg-[var(--surface-3)] rounded-full" />
+              </div>
+            ))}
+          </div>
+        ) : runs.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            className="card card-glow p-20 flex flex-col items-center justify-center text-center"
+          >
+            <div className="w-20 h-20 rounded-2xl bg-[var(--accent)]/10 flex items-center justify-center mb-5 shadow-lg shadow-[var(--accent-glow)]">
+              <Layers size={36} className="text-[var(--accent)]" />
+            </div>
+            <h3 className="text-xl font-bold text-[var(--text)] mb-2">No crawl runs yet</h3>
+            <p className="text-sm text-[var(--text-3)] max-w-sm leading-relaxed">
+              Run a crawl from the <strong className="text-[var(--text-2)]">Website Crawler</strong> page.
+              Each run will appear here as a separate session you can explore and filter.
+            </p>
+          </motion.div>
+        ) : (
+          <>
+            <div className="flex items-center gap-2 text-sm text-[var(--text-3)]">
+              <Globe2 size={14} />
+              <span>{runs.length} crawl run{runs.length !== 1 ? "s" : ""} found</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {runs.map((run, i) => (
+                <RunCard key={run.crawlRunId || i} run={run} index={i} onClick={() => openRun(run)} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  // ── DETAIL VIEW ───────────────────────────────────────────
+  return (
+    <div className="flex flex-col gap-5 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-start justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-3">
+          <button onClick={backToList} className="btn-ghost px-2 py-2 rounded-xl">
+            <ArrowLeft size={18} />
+          </button>
+          <div>
+            <h2 className="text-xl font-bold text-[var(--text)] flex items-center gap-2">
+              <Globe size={18} className="text-[var(--accent)]" />
+              {selectedRun?.label || "Crawl Run"}
+            </h2>
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              <StatusBadge status={selectedRun?.status} />
+              <span className="text-[11px] text-[var(--text-3)] flex items-center gap-1">
+                <Clock size={9} /> {new Date(selectedRun?.createdAt).toLocaleString()}
+              </span>
+              {selectedRun?.keywords?.length > 0 && (
+                <span className="text-[11px] text-[var(--text-3)] flex items-center gap-1">
+                  <Tag size={9} /> {selectedRun.keywords.join(", ")}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowFilters(v => !v)}
+            className={`btn-secondary gap-2 ${showFilters ? "text-[var(--accent)] border-[var(--accent)]/40" : ""}`}
+          >
+            <Filter size={14} /> Filters
+            {activeFilterCount > 0 && (
+              <span className="w-4 h-4 rounded-full bg-[var(--accent)] text-white text-[9px] font-bold flex items-center justify-center">
+                {activeFilterCount}
               </span>
             )}
           </button>
-          <button onClick={fetchData} disabled={loading} className="btn-secondary gap-2">
-            <RefreshCw size={14} className={loading ? "animate-spin" : ""} /> Refresh
+          <button onClick={loadDetail} disabled={detailLoading} className="btn-secondary gap-2">
+            <RefreshCw size={14} className={detailLoading ? "animate-spin" : ""} />
           </button>
-          <button onClick={handleExport} disabled={websites.length === 0} className="btn-secondary gap-2">
+          <button onClick={handleExport} disabled={!websites.length} className="btn-secondary gap-2">
             <Download size={14} /> Export CSV
           </button>
-
-          {/* History Dropdown — anchored inside the relative container */}
-          <AnimatePresence>
-            {showHistory && (
-              <motion.div
-                initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="absolute right-0 top-full mt-2 w-[340px] z-50 glass-card p-2 shadow-xl border border-slate-200/50 dark:border-slate-700/50"
-              >
-                <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-2">
-                  <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <RotateCcw size={12} /> Search History
-                  </h4>
-                  <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                    <X size={14} />
-                  </button>
-                </div>
-                <div className="max-h-[280px] overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
-                  {historyList.length === 0 ? (
-                    <p className="text-xs text-center text-slate-400 py-4">No recent searches</p>
-                  ) : (
-                    historyList.map((item, idx) => (
-                      <div key={idx} className="group relative flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:border-brand-200 dark:hover:border-brand-800 transition-colors">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm text-slate-700 dark:text-slate-200 truncate">
-                            {item.query}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400 dark:text-slate-500">
-                            <span>{new Date(item.timestamp).toLocaleString()}</span>
-                            <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-                            <span>{item.results} found</span>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => { setQuery(item.query); setShowHistory(false); }}
-                          className="btn-secondary h-7 w-7 !p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Load Query"
-                        >
-                          <RotateCcw size={12} />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </div>
 
-      {/* Search bar */}
-      <div className="glass-card p-4 flex items-center gap-3">
+      {/* Search Bar */}
+      <div className="card p-3 flex items-center gap-3">
         <div className="relative flex-1">
-          <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input className="input pl-9 w-full" placeholder="Search by URL, title, brand, tech stack, hosting..."
-            value={query} onChange={e => setQuery(e.target.value)} />
+          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
+          <input
+            className="input pl-9 w-full text-sm"
+            placeholder="Search by URL, title, brand, tech stack, email..."
+            value={q}
+            onChange={e => { setQ(e.target.value); setPage(0); }}
+          />
         </div>
-        {loading && <Loader2 size={16} className="animate-spin text-slate-400 flex-shrink-0" />}
-        {websites.length > 0 && !loading && (
-          <span className="text-xs text-slate-400 whitespace-nowrap">{websites.length} results</span>
+        {q && (
+          <button onClick={() => { setQ(""); setPage(0); }} className="text-[var(--text-3)] hover:text-[var(--text)]">
+            <X size={16} />
+          </button>
         )}
+        {detailLoading && <Loader2 size={16} className="animate-spin text-[var(--text-3)] flex-shrink-0" />}
+        <span className="text-xs text-[var(--text-3)] whitespace-nowrap">
+          {total} record{total !== 1 ? "s" : ""}
+        </span>
       </div>
 
-      {/* Error state */}
+      {/* Filter Panel */}
       <AnimatePresence>
-        {error && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="glass-card p-5 flex items-center gap-3 border-red-200 dark:border-red-800 bg-red-50/50 dark:bg-red-900/10">
-            <Server size={20} className="text-red-400 flex-shrink-0" />
-            <div>
-              <p className="font-semibold text-red-600 dark:text-red-400 text-sm">Crawler backend unavailable</p>
-              <p className="text-xs text-red-500/80 dark:text-red-400/80 mt-0.5">{error} — Start the Python backend with <code className="font-mono bg-red-100 dark:bg-red-900/40 px-1 rounded">uvicorn app.main:app --port 8000</code></p>
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="card p-5 space-y-4 overflow-hidden"
+          >
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider flex items-center gap-1.5">
+                <SlidersHorizontal size={12} /> Filter Options
+              </h4>
+              {activeFilterCount > 0 && (
+                <button
+                  onClick={() => {
+                    setFilterStatus("all");
+                    setFilterMail("all");
+                    setFilterPhone("all");
+                    setFilterFramework("");
+                    setPage(0);
+                  }}
+                  className="text-xs text-[var(--accent)] hover:underline"
+                >
+                  Clear all ({activeFilterCount})
+                </button>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wider mb-2">Status</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { val: "all", label: "All" },
+                    { val: "ok", label: "✓ OK" },
+                    { val: "failed", label: "✗ Failed" },
+                  ].map(o => (
+                    <FilterChip key={o.val} label={o.label} active={filterStatus === o.val}
+                      onClick={() => { setFilterStatus(o.val); setPage(0); }} />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wider mb-2">Has Email</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {["all", "yes", "no"].map(v => (
+                    <FilterChip key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
+                      active={filterMail === v} onClick={() => { setFilterMail(v); setPage(0); }} />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wider mb-2">Has Phone</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {["all", "yes", "no"].map(v => (
+                    <FilterChip key={v} label={v.charAt(0).toUpperCase() + v.slice(1)}
+                      active={filterPhone === v} onClick={() => { setFilterPhone(v); setPage(0); }} />
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-semibold text-[var(--text-3)] uppercase tracking-wider mb-2">Framework</p>
+                <select
+                  value={filterFramework}
+                  onChange={e => { setFilterFramework(e.target.value); setPage(0); }}
+                  className="input text-xs py-1.5 w-full"
+                >
+                  <option value="">All Frameworks</option>
+                  {frameworkOptions.map(f => <option key={f} value={f}>{f}</option>)}
+                </select>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Table */}
-      {!error && (
-        <motion.div
-          className="glass-card overflow-hidden"
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          {loading && websites.length === 0 ? (
-            <div className="flex items-center justify-center py-24">
-              <Loader2 size={28} className="animate-spin text-brand-400" />
-            </div>
-          ) : websites.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-24 text-center">
-              <Database size={40} className="text-slate-300 dark:text-slate-600 mb-3" />
-              <p className="font-semibold text-slate-500 dark:text-slate-400">No websites crawled yet</p>
-              <p className="text-xs text-slate-400 mt-1">Run a crawl from the <strong>Website Crawler</strong> page first.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200 dark:border-gray-800 bg-slate-50/80 dark:bg-gray-900/40">
-                    {["Website", "Description", "Tech Stack", "Contact", "Country", "Dynamic Data", "Status", ""].map(h => (
-                      <th key={h} className="px-4 py-3 text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {websites.map((site, i) => (
-                    <WebsiteRow key={site.input_url || i} site={site} index={i} />
+      <motion.div className="card overflow-hidden" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        {detailLoading && websites.length === 0 ? (
+          <div className="flex items-center justify-center py-24">
+            <Loader2 size={28} className="animate-spin text-[var(--accent)]" />
+          </div>
+        ) : websites.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-24 text-center">
+            <Eye size={40} className="text-[var(--text-3)] mb-3" />
+            <p className="font-semibold text-[var(--text-2)]">No results match your filters</p>
+            <p className="text-xs text-[var(--text-3)] mt-1">Try adjusting or clearing filters</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
+                  {[
+                    "Website", "Description", "Tech Stack", "Contact", "Country",
+                    ...dynKeys,
+                    "Status", "",
+                  ].map((h, i) => (
+                    <th key={i} className="px-4 py-3 text-left text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider whitespace-nowrap">
+                      {h}
+                    </th>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                </tr>
+              </thead>
+              <tbody>
+                {websites.map((site, i) => (
+                  <WebsiteRow key={site._id || site.input_url || i} site={site} index={i} dynKeys={dynKeys} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-          {/* Pagination */}
-          {websites.length > 0 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 dark:border-gray-800 bg-slate-50/50 dark:bg-gray-900/20">
-              <p className="text-xs text-slate-400">
-                Page {page + 1} · Showing {websites.length} records
-              </p>
-              <div className="flex items-center gap-2">
-                <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0 || loading}
-                  className="btn-secondary px-2 py-1.5 text-xs disabled:opacity-40">
-                  <ChevronLeft size={14} />
-                </button>
-                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 px-2">{page + 1}</span>
-                <button onClick={() => setPage(p => p + 1)} disabled={!hasMore || loading}
-                  className="btn-secondary px-2 py-1.5 text-xs disabled:opacity-40">
-                  <ChevronRight size={14} />
-                </button>
-              </div>
+        {/* Pagination */}
+        {total > 0 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)] bg-[var(--surface-2)]">
+            <p className="text-xs text-[var(--text-3)]">
+              Showing {Math.min(page * PAGE_SIZE + 1, total)}–{Math.min((page + 1) * PAGE_SIZE, total)} of {total}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(0, p - 1))}
+                disabled={page === 0 || detailLoading}
+                className="btn-secondary px-2 py-1.5 text-xs disabled:opacity-40"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <span className="text-xs font-semibold text-[var(--text-2)] px-2">{page + 1}</span>
+              <button
+                onClick={() => setPage(p => p + 1)}
+                disabled={!hasMore || detailLoading}
+                className="btn-secondary px-2 py-1.5 text-xs disabled:opacity-40"
+              >
+                <ChevronRight size={14} />
+              </button>
             </div>
-          )}
-        </motion.div>
-      )}
+          </div>
+        )}
+      </motion.div>
     </div>
   );
 }
