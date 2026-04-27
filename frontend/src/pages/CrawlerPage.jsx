@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe, Upload, Tag, X, Play, Square, Clock, Wifi, WifiOff,
-  FileText, Link as LinkIcon, Loader2, History, RotateCcw
+  Link as LinkIcon, Loader2, History, RotateCcw
 } from "lucide-react";
 import { startCrawlFromUrls, startCrawlFromCsv, getCrawlerLogStreamUrl } from "../api";
 import toast from "react-hot-toast";
+
 
 // ── Tag input for keywords ────────────────────────────────────────────────────
 function KeywordInput({ tags, setTags }) {
@@ -76,14 +77,15 @@ export default function CrawlerPage() {
   const [customFields, setCustomFields] = useState([]);
 
   // Runtime state
-  const [logs, setLogs] = useState([]);
   const [running, setRunning] = useState(false);
   const [connected, setConnected] = useState(false);
   const [startTime, setStartTime] = useState(null);
   const [elapsed, setElapsed] = useState(0);
-  const logEndRef = useRef(null);
+  const [crawlStats, setCrawlStats] = useState({ current: null, done: 0, failed: 0, total: 0, finished: false });
   const evtRef = useRef(null);
   const timerRef = useRef(null);
+  // logEndRef kept for possible future use but logs are not displayed to user
+  const logEndRef = useRef(null);
 
   const [showHistory, setShowHistory] = useState(false);
   const [historyList, setHistoryList] = useState([]);
@@ -112,8 +114,20 @@ export default function CrawlerPage() {
     evt.onopen = () => setConnected(true);
     evt.onmessage = (e) => {
       const line = e.data;
-      setLogs(prev => [...prev.slice(-500), line]); // keep last 500 lines
-      if (line.includes("Pipeline complete") || line.includes("[DONE]") || line.includes("Finished")) {
+      // Parse log line to extract stats (never shown to user)
+      setCrawlStats(prev => {
+        const next = { ...prev };
+        const urlMatch = line.match(/Fetching HTML:\s*(https?:\/\/[^\s]+)/);
+        if (urlMatch) next.current = urlMatch[1];
+        if (line.includes('[BUILDER] Building record')) next.done = prev.done + 1;
+        if (line.includes('Fetch failed') || line.includes('fetch_failed')) next.failed = prev.failed + 1;
+        if (line.includes('Pipeline complete') || line.includes('[DONE]') || line.includes('Finished')) {
+          next.finished = true;
+          next.current = null;
+        }
+        return next;
+      });
+      if (line.includes('Pipeline complete') || line.includes('[DONE]') || line.includes('Finished')) {
         setRunning(false);
         clearInterval(timerRef.current);
       }
@@ -129,10 +143,7 @@ export default function CrawlerPage() {
     };
   }, []);
 
-  // ── Auto-scroll logs ────────────────────────────────────────────────────────
-  useEffect(() => {
-    logEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [logs]);
+  // logs are processed internally for stats only — not shown to the user
 
   // ── Timer ───────────────────────────────────────────────────────────────────
   const startTimer = () => {
@@ -152,13 +163,13 @@ export default function CrawlerPage() {
       .map(u => u.trim())
       .filter(Boolean);
     if (!urls.length || running) return;
-    setLogs([]);
+    setCrawlStats({ current: null, done: 0, failed: 0, total: 0, finished: false });
     setRunning(true);
     startTimer();
     try {
       await startCrawlFromUrls(urls, keywords, customFields);
       saveHistory({ mode: "urls", urlsText, keywords, customFields, count: urls.length });
-      toast.success(`Crawl started for ${urls.length} URLs! Watch the log stream below.`);
+      toast.success(`Crawl started for ${urls.length} URLs!`);
     } catch (e) {
       const msg = e.response?.data?.error || e.message || "Failed to start crawl";
       toast.error(msg);
@@ -170,7 +181,7 @@ export default function CrawlerPage() {
   // ── Start CSV crawl ─────────────────────────────────────────────────────────
   const handleCsvCrawl = async () => {
     if (!csvFile || running) return;
-    setLogs([]);
+    setCrawlStats({ current: null, done: 0, failed: 0, total: 0, finished: false });
     setRunning(true);
     startTimer();
     try {
@@ -180,7 +191,7 @@ export default function CrawlerPage() {
       formData.append("customFields", JSON.stringify(customFields));
       await startCrawlFromCsv(formData);
       saveHistory({ mode: "csv", filename: csvFile.name, keywords, customFields, count: 1 });
-      toast.success("CSV crawl started! Watch the log stream below.");
+      toast.success("CSV crawl started!");
     } catch (e) {
       const msg = e.response?.data?.error || e.message || "Failed to start CSV crawl";
       toast.error(msg);
@@ -401,52 +412,94 @@ export default function CrawlerPage() {
         </div>
       </motion.div>
 
-      {/* Log Terminal */}
-      <motion.div
-        className="glass-card flex flex-col overflow-hidden"
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100 dark:border-gray-800 bg-slate-50/50 dark:bg-gray-900/30">
-          <div className="flex items-center gap-2">
-            {/* Traffic light dots */}
-            <span className="w-3 h-3 rounded-full bg-red-400" />
-            <span className="w-3 h-3 rounded-full bg-amber-400" />
-            <span className="w-3 h-3 rounded-full bg-emerald-400" />
-            <span className="ml-3 text-xs font-semibold font-mono text-slate-500 dark:text-slate-400">crawler.log</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {logs.length > 0 && (
-              <span className="text-xs text-slate-400">{logs.length} lines</span>
-            )}
-            {logs.length > 0 && (
-              <button onClick={() => setLogs([])} className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                Clear
-              </button>
-            )}
-          </div>
-        </div>
+      {/* Processing Status Card */}
+      <AnimatePresence mode="wait">
+        {(running || crawlStats.finished) && (
+          <motion.div
+            key={crawlStats.finished ? 'done' : 'running'}
+            className="glass-card overflow-hidden"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.3 }}
+          >
+            {running ? (
+              <div className="p-6 space-y-5">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-brand-500/10">
+                      <Loader2 size={18} className="animate-spin text-brand-500" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-slate-800 dark:text-white text-sm">Crawling in progress</p>
+                      <p className="text-xs text-slate-400 mt-0.5 flex items-center gap-1"><Clock size={10} /> {fmt(elapsed)} elapsed</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800">Running</span>
+                </div>
 
-        <div className="bg-gray-950 rounded-b-2xl p-5 h-72 overflow-y-auto font-mono">
-          {logs.length === 0 ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center">
-                <FileText size={28} className="text-slate-600 mx-auto mb-2" />
-                <p className="text-slate-600 text-sm">Log stream will appear here when you start a crawl.</p>
-                {!connected && (
-                  <p className="text-slate-700 text-xs mt-1">
-                    ⚠ Crawler backend not detected — start it with <code className="bg-gray-900 px-1 rounded">uvicorn app.main:app --port 8000</code>
-                  </p>
+                {/* Animated progress bar */}
+                <div className="w-full h-1.5 bg-slate-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-brand-500 to-violet-500 rounded-full"
+                    animate={{ x: ["-100%", "100%"] }}
+                    transition={{ repeat: Infinity, duration: 1.4, ease: "easeInOut" }}
+                    style={{ width: "50%" }}
+                  />
+                </div>
+
+                {/* Current URL */}
+                {crawlStats.current && (
+                  <div className="flex items-center gap-2 p-3 rounded-xl bg-slate-50 dark:bg-gray-800/50 border border-slate-100 dark:border-gray-700">
+                    <Globe size={13} className="text-brand-500 flex-shrink-0" />
+                    <span className="text-xs font-mono text-slate-600 dark:text-slate-300 truncate">{crawlStats.current}</span>
+                  </div>
                 )}
+
+                {/* Stats row */}
+                <div className="grid grid-cols-3 gap-3">
+                  {[{label:'Processed', val: crawlStats.done, color:'text-emerald-600 dark:text-emerald-400', bg:'bg-emerald-50 dark:bg-emerald-900/20'},
+                    {label:'Failed',    val: crawlStats.failed, color:'text-red-500',                          bg:'bg-red-50 dark:bg-red-900/20'},
+                    {label:'Elapsed',   val: fmt(elapsed),        color:'text-brand-500',                        bg:'bg-brand-50 dark:bg-brand-900/20'},
+                  ].map(s => (
+                    <div key={s.label} className={`${s.bg} rounded-xl p-3 text-center`}>
+                      <p className={`text-lg font-bold ${s.color}`}>{s.val}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : (
-            logs.map((line, i) => <LogLine key={i} line={line} />)
-          )}
-          <div ref={logEndRef} />
-        </div>
-      </motion.div>
+            ) : (
+              /* Completion Card */
+              <div className="p-6 space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                    <Square size={18} className="text-emerald-500" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-slate-800 dark:text-white text-sm">Crawl complete!</p>
+                    <p className="text-xs text-slate-400 mt-0.5">Results saved to Website Intel</p>
+                  </div>
+                  <button onClick={() => setCrawlStats({ current: null, done: 0, failed: 0, total: 0, finished: false })} className="ml-auto text-slate-400 hover:text-slate-600">
+                    <X size={16} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-3 text-center">
+                    <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{crawlStats.done}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Successfully crawled</p>
+                  </div>
+                  <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-3 text-center">
+                    <p className="text-2xl font-bold text-red-500">{crawlStats.failed}</p>
+                    <p className="text-[10px] text-slate-400 mt-0.5">Failed / unreachable</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

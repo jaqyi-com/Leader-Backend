@@ -153,7 +153,7 @@ export default function WebsitesPage() {
   // Load history on mount
   useEffect(() => {
     try {
-      const stored = JSON.parse(localStorage.getItem("website_search_history") || "[]");
+      const stored = JSON.parse(localStorage.getItem("website_intel_search_history") || "[]");
       setHistoryList(stored);
     } catch (e) {}
   }, []);
@@ -184,7 +184,7 @@ export default function WebsitesPage() {
             { query: debouncedQuery.trim(), timestamp: Date.now(), results: list.length },
             ...prev.filter(h => h.query !== debouncedQuery.trim())
           ].slice(0, 10);
-          localStorage.setItem("website_search_history", JSON.stringify(updated));
+          localStorage.setItem("website_intel_search_history", JSON.stringify(updated));
           return updated;
         });
       }
@@ -261,55 +261,55 @@ export default function WebsitesPage() {
           <button onClick={handleExport} disabled={websites.length === 0} className="btn-secondary gap-2">
             <Download size={14} /> Export CSV
           </button>
-        </div>
-        
-        {/* History Dropdown */}
-        <AnimatePresence>
-          {showHistory && (
-            <motion.div
-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 10, scale: 0.95 }}
-              className="absolute right-0 top-full mt-2 w-[340px] z-50 glass-card p-2 shadow-xl border border-slate-200/50 dark:border-slate-700/50"
-            >
-              <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-2">
-                <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                  <RotateCcw size={12} /> Search History
-                </h4>
-                <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-                  <X size={14} />
-                </button>
-              </div>
-              <div className="max-h-[280px] overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
-                {historyList.length === 0 ? (
-                  <p className="text-xs text-center text-slate-400 py-4">No recent searches</p>
-                ) : (
-                  historyList.map((item, idx) => (
-                    <div key={idx} className="group relative flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:border-brand-200 dark:hover:border-brand-800 transition-colors">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm text-slate-700 dark:text-slate-200 truncate">
-                          {item.query}
+
+          {/* History Dropdown — anchored inside the relative container */}
+          <AnimatePresence>
+            {showHistory && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute right-0 top-full mt-2 w-[340px] z-50 glass-card p-2 shadow-xl border border-slate-200/50 dark:border-slate-700/50"
+              >
+                <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-2">
+                  <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <RotateCcw size={12} /> Search History
+                  </h4>
+                  <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <X size={14} />
+                  </button>
+                </div>
+                <div className="max-h-[280px] overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
+                  {historyList.length === 0 ? (
+                    <p className="text-xs text-center text-slate-400 py-4">No recent searches</p>
+                  ) : (
+                    historyList.map((item, idx) => (
+                      <div key={idx} className="group relative flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:border-brand-200 dark:hover:border-brand-800 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm text-slate-700 dark:text-slate-200 truncate">
+                            {item.query}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400 dark:text-slate-500">
+                            <span>{new Date(item.timestamp).toLocaleString()}</span>
+                            <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+                            <span>{item.results} found</span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400 dark:text-slate-500">
-                          <span>{new Date(item.timestamp).toLocaleString()}</span>
-                          <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
-                          <span>{item.results} found</span>
-                        </div>
+                        <button
+                          onClick={() => { setQuery(item.query); setShowHistory(false); }}
+                          className="btn-secondary h-7 w-7 !p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Load Query"
+                        >
+                          <RotateCcw size={12} />
+                        </button>
                       </div>
-                      <button
-                        onClick={() => { setQuery(item.query); setShowHistory(false); }}
-                        className="btn-secondary h-7 w-7 !p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Load Query"
-                      >
-                        <RotateCcw size={12} />
-                      </button>
-                    </div>
-                  ))
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Search bar */}

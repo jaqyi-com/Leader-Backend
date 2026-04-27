@@ -18,9 +18,9 @@ const MAIN_LINKS = [
 ];
 
 const CRAWLER_LINKS = [
-  { to: "/app/crawler",  label: "Web Crawler",  icon: Globe },
-  { to: "/app/places",   label: "Places",       icon: MapPin },
-  { to: "/app/websites", label: "Website Intel", icon: Database },
+  { to: "/app/crawler",  label: "Web Crawler",   icon: Globe },
+  { to: "/app/websites", label: "Website Intel",  icon: Database },
+  { to: "/app/places",   label: "Places Scraper", icon: MapPin },
 ];
 
 const SOCIAL_LINKS = [
