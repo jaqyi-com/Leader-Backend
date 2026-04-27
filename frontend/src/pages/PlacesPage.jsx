@@ -4,7 +4,7 @@ import {
   MapPin, Search, Loader2, Star, Phone, Globe, ExternalLink,
   Navigation, Download, AlertCircle, CheckCircle2, SlidersHorizontal, History, RotateCcw, X
 } from "lucide-react";
-import { searchPlaces, getStoredPlaces, exportPlacesCsv, getPlacesHistory, geocodePlacesAddress, autocompletePlaces } from "../api";
+import { searchPlaces, getStoredPlaces, exportPlacesCsv, getPlacesHistory, geocodePlacesAddress, autocompletePlaces, getPlaceDetails } from "../api";
 import toast from "react-hot-toast";
 
 // ── Rating stars ──────────────────────────────────────────────────────────────
@@ -171,10 +171,30 @@ export default function PlacesPage() {
     }, 300);
   };
 
-  const handleSuggestionClick = (suggestion) => {
+  const handleSuggestionClick = async (suggestion) => {
     setAddressInput(suggestion.description);
     setShowSuggestions(false);
-    handleAddressSearch(suggestion.description);
+    
+    // Instead of geocoding the string, use the place_id!
+    setError(null);
+    setGeocodingAddress(true);
+    try {
+      const { data } = await getPlaceDetails(suggestion.place_id);
+      if (data && data.geometry && data.geometry.location) {
+        setLat(data.geometry.location.lat.toFixed(6));
+        setLng(data.geometry.location.lng.toFixed(6));
+        toast.success(`Found: ${data.formatted_address || suggestion.description}`);
+        if (data.formatted_address) {
+          setAddressInput(data.formatted_address);
+        }
+      } else {
+        throw new Error("Location details not found");
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || "Failed to load location details.");
+    } finally {
+      setGeocodingAddress(false);
+    }
   };
 
   const handleGetLocation = () => {

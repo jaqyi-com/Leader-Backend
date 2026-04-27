@@ -84,6 +84,9 @@ export const geocodePlacesAddress = (address) =>
 export const autocompletePlaces = (input) =>
   crawlerApi.get("/places/autocomplete", { params: { input } });
 
+export const getPlaceDetails = (place_id) =>
+  crawlerApi.get("/places/details", { params: { place_id } });
+
 export const searchPlaces = (lat, lng, radius, keyword) =>
   crawlerApi.post("/places/search", { lat, lng, radius, keyword });
 

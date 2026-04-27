@@ -218,6 +218,21 @@ router.get("/places/geocode", async (req, res) => {
   }
 });
 
+router.get("/places/details", async (req, res) => {
+  try {
+    const { place_id } = req.query;
+    if (!place_id) return res.status(400).json({ error: "place_id is required" });
+    
+    const result = await placesService.getPlaceDetails(place_id);
+    if (!result) return res.status(404).json({ error: "Place details not found" });
+    
+    res.json(result);
+  } catch (err) {
+    logger.error(`[Places /details] ${err.message}`);
+    res.status(500).json({ error: "Failed to fetch place details", detail: err.message });
+  }
+});
+
 router.get("/places/autocomplete", async (req, res) => {
   try {
     const { input } = req.query;
