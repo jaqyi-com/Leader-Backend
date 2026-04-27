@@ -5,8 +5,9 @@
 
 const express = require("express");
 const multer  = require("multer");
+const { v4: uuidv4 } = (() => { try { return require("uuid"); } catch (_) { return { v4: () => require("crypto").randomUUID() }; } })();
 const crawler = require("../services/WebsiteCrawlerService");
-const { Website } = require("../db/mongoose");
+const { Website, CrawlRun } = require("../db/mongoose");
 const logger  = require("../utils/logger").forAgent("CrawlerAPI");
 const placesService = require("../services/GooglePlacesService");
 
@@ -55,14 +56,17 @@ router.post("/start", async (req, res) => {
     return res.status(422).json({ error: "'urls' must be a non-empty array of website URLs." });
   }
 
-  logger.info(`[API] Crawl started | urls=${urls.length} keywords=${keywords} customFields=${customFields.length}`);
+  const crawlRunId = require("crypto").randomUUID();
 
-  crawler.runPipeline({ urls, keywords, customFields }).catch(err => {
+  logger.info(`[API] Crawl started | runId=${crawlRunId} urls=${urls.length} keywords=${keywords} customFields=${customFields.length}`);
+
+  crawler.runPipeline({ urls, keywords, customFields, crawlRunId, source: "direct_urls" }).catch(err => {
     logger.error(`[PIPELINE] Unhandled error: ${err.message}`);
   });
 
   res.json({
     status: "started",
+    crawlRunId,
     source: "direct_urls",
     total_urls: urls.length,
     keywords,
@@ -111,15 +115,19 @@ router.post("/upload-csv", multipartMiddleware, async (req, res) => {
     customFields = typeof rawCf === "string" ? JSON.parse(rawCf) : rawCf;
   } catch (_) {}
 
-  logger.info(`[API] Crawl started from CSV | urls=${urls.length} | keywords=${keywords} | customFields=${customFields.length}`);
+  const crawlRunId = require("crypto").randomUUID();
+  const filename = file?.originalname || "upload.csv";
+
+  logger.info(`[API] Crawl started from CSV | runId=${crawlRunId} urls=${urls.length} | keywords=${keywords} | customFields=${customFields.length}`);
 
   // Fire-and-forget
-  crawler.runPipeline({ urls, keywords, customFields }).catch(err => {
+  crawler.runPipeline({ urls, keywords, customFields, crawlRunId, source: "csv_upload" }).catch(err => {
     logger.error(`[PIPELINE] Unhandled error: ${err.message}`);
   });
 
   res.json({
     status: "started",
+    crawlRunId,
     source: "csv_upload",
     total_urls: urls.length,
     keywords,
@@ -168,7 +176,6 @@ router.get("/websites", async (req, res) => {
 
     const projection = {
       dom_data: 0,   // omit large DOM text
-      extra_data: 0,
     };
 
     let filter = {};
@@ -195,6 +202,75 @@ router.get("/websites", async (req, res) => {
     res.json(websites);
   } catch (err) {
     logger.error(`[API /websites] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET /runs — List all crawl runs (newest first)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/runs", async (req, res) => {
+  try {
+    const runs = await CrawlRun.find()
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+    res.json(runs);
+  } catch (err) {
+    logger.error(`[API /runs] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET /runs/:runId/websites — Get websites for a specific run
+// Supports: q, framework, hasMail, hasPhone, status, limit, offset
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/runs/:runId/websites", async (req, res) => {
+  try {
+    const { runId } = req.params;
+    const limit  = Math.min(parseInt(req.query.limit  || "50"), 200);
+    const offset = parseInt(req.query.offset || "0");
+    const q           = req.query.q        || null;
+    const framework   = req.query.framework || null;
+    const hasMail     = req.query.hasMail;   // "true" | "false"
+    const hasPhone    = req.query.hasPhone;  // "true" | "false"
+    const statusFilter = req.query.status;   // "ok" | "failed"
+    const keyword     = req.query.keyword   || null;
+
+    const filter = { crawlRunId: runId };
+
+    if (q) {
+      const re = { $regex: q, $options: "i" };
+      filter.$or = [
+        { input_url:        re },
+        { website_title:    re },
+        { brand_name:       re },
+        { technology_stack: re },
+        { contact_email:    re },
+      ];
+    }
+    if (framework)              filter.framework_used   = { $regex: framework, $options: "i" };
+    if (hasMail === "true")     filter.contact_email    = { $exists: true, $ne: null, $ne: "" };
+    if (hasMail === "false")    filter.$and = [...(filter.$and || []), { $or: [{ contact_email: null }, { contact_email: "" }, { contact_email: { $exists: false } }] }];
+    if (hasPhone === "true")    filter.phone_number     = { $exists: true, $ne: null, $ne: "" };
+    if (hasPhone === "false")   filter.$and = [...(filter.$and || []), { $or: [{ phone_number: null }, { phone_number: "" }, { phone_number: { $exists: false } }] }];
+    if (statusFilter === "ok")  filter.fetch_failed     = false;
+    if (statusFilter === "failed") filter.fetch_failed  = true;
+    if (keyword)                filter.keyword_present  = { $in: [keyword] };
+
+    const [websites, total] = await Promise.all([
+      Website.find(filter, { dom_data: 0 })
+        .sort({ createdAt: -1 })
+        .skip(offset)
+        .limit(limit)
+        .lean(),
+      Website.countDocuments(filter),
+    ]);
+
+    res.json({ websites, total, limit, offset });
+  } catch (err) {
+    logger.error(`[API /runs/:runId/websites] ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });

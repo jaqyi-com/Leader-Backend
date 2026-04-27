@@ -577,9 +577,9 @@ async function crawlWithLevels(url, keywords, customFields = []) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // 12. MAIN PIPELINE RUNNER  (all data saved to MongoDB)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const { Website } = require("../db/mongoose");
+const { Website, CrawlRun } = require("../db/mongoose");
 
-async function runPipeline({ urls, keywords = [], customFields = [] }) {
+async function runPipeline({ urls, keywords = [], customFields = [], crawlRunId = null, source = "direct_urls" }) {
   if (pipelineRunning) {
     return { status: "error", reason: "A crawl is already running. Please wait." };
   }
@@ -591,8 +591,34 @@ async function runPipeline({ urls, keywords = [], customFields = [] }) {
   pipelineRunning = true;
   pipelineLogs = [];
 
+  const runId = crawlRunId || require("crypto").randomUUID();
+
+  // Create the CrawlRun record so the frontend can see it immediately
+  try {
+    const dateStr = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+    await CrawlRun.findOneAndUpdate(
+      { crawlRunId: runId },
+      {
+        $setOnInsert: {
+          crawlRunId: runId,
+          label: `${urls.length} URL${urls.length !== 1 ? "s" : ""} · ${dateStr}`,
+          source,
+          urlCount: urls.length,
+          keywords,
+          customFields,
+          status: "running",
+          successCount: 0,
+          failedCount: 0,
+        },
+      },
+      { upsert: true, new: true }
+    );
+  } catch (e) {
+    pushLog(`[PIPELINE] Warning: could not create CrawlRun record: ${e.message}`);
+  }
+
   pushLog("=".repeat(60));
-  pushLog("[PIPELINE] Crawl job started");
+  pushLog(`[PIPELINE] Crawl job started | runId=${runId}`);
   pushLog(`[PIPELINE] urls=${urls.length} keywords=${keywords.join(", ") || "default"}`);
   pushLog("=".repeat(60));
 
@@ -606,6 +632,7 @@ async function runPipeline({ urls, keywords = [], customFields = [] }) {
 
       try {
         const record = await crawlWithLevels(url, keywords, customFields);
+        record.crawlRunId = runId;
 
         // Upsert to MongoDB
         await Website.findOneAndUpdate(
@@ -619,7 +646,7 @@ async function runPipeline({ urls, keywords = [], customFields = [] }) {
         pushLog(`[PIPELINE] ❌ Error for ${url}: ${err.message}`);
         await Website.findOneAndUpdate(
           { input_url: url },
-          { $set: { input_url: url, fetch_failed: true, pipeline_error: err.message } },
+          { $set: { input_url: url, fetch_failed: true, pipeline_error: err.message, crawlRunId: runId } },
           { upsert: true }
         );
         failed++;
@@ -630,9 +657,25 @@ async function runPipeline({ urls, keywords = [], customFields = [] }) {
     pushLog(`[PIPELINE] Finished | total=${total} success=${success} failed=${failed}`);
     pushLog("=".repeat(60));
 
-    return { status: "completed", total, success, failed, keywords };
+    // Update CrawlRun with final counts
+    try {
+      await CrawlRun.findOneAndUpdate(
+        { crawlRunId: runId },
+        { $set: { status: "completed", successCount: success, failedCount: failed } }
+      );
+    } catch (e) {
+      pushLog(`[PIPELINE] Warning: could not update CrawlRun record: ${e.message}`);
+    }
+
+    return { status: "completed", total, success, failed, keywords, crawlRunId: runId };
   } catch (err) {
     pushLog(`[PIPELINE] Fatal error: ${err.message}`);
+    try {
+      await CrawlRun.findOneAndUpdate(
+        { crawlRunId: runId },
+        { $set: { status: "failed" } }
+      );
+    } catch (_) {}
     return { status: "failed", reason: err.message };
   } finally {
     pipelineRunning = false;

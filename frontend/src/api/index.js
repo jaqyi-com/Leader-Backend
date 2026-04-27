@@ -103,6 +103,13 @@ export const exportPlacesCsv = (places) =>
 export const getWebsites = (params = {}) =>
   crawlerApi.get("/websites", { params });
 
+// --- Crawl Runs ---
+export const getCrawlRuns = () =>
+  crawlerApi.get("/runs");
+
+export const getCrawlRunWebsites = (runId, params = {}) =>
+  crawlerApi.get(`/runs/${encodeURIComponent(runId)}/websites`, { params });
+
 // ============================================================
 // SOCIAL MEDIA API (Unified.to MCP Integration)
 // ============================================================

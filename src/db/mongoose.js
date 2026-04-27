@@ -123,6 +123,8 @@ const websiteSchema = new mongoose.Schema({
   fetch_failed:      { type: Boolean, default: false },
   pipeline_error:    String,
   _crawl_level:      String,
+  // Crawl session linkage
+  crawlRunId:        { type: String, index: true },
   // Content
   website_title:     String,
   short_description: String,
@@ -152,9 +154,25 @@ const websiteSchema = new mongoose.Schema({
   hosting_provider:  String,
   // Keywords
   keyword_present:   [String],
+  // Country
+  country:           String,
   // Extra
   extra_data:        mongoose.Schema.Types.Mixed,
   orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
+}, { timestamps: true });
+
+// Crawl Run — tracks each crawl session as a unit
+const crawlRunSchema = new mongoose.Schema({
+  crawlRunId:    { type: String, required: true, unique: true, index: true },
+  label:         String,          // human-readable name e.g. "5 URLs · 2026-04-27"
+  source:        { type: String, enum: ["direct_urls", "csv_upload"], default: "direct_urls" },
+  urlCount:      { type: Number, default: 0 },
+  keywords:      [String],
+  customFields:  [String],
+  status:        { type: String, enum: ["running", "completed", "failed"], default: "running" },
+  successCount:  { type: Number, default: 0 },
+  failedCount:   { type: Number, default: 0 },
+  orgId:         { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
 }, { timestamps: true });
 
 const placeSchema = new mongoose.Schema({
@@ -191,6 +209,7 @@ const AutonomousLead = mongoose.models.AutonomousLead || mongoose.model("Autonom
 const Place = mongoose.models.Place || mongoose.model("Place", placeSchema);
 const PlaceSearchHistory = mongoose.models.PlaceSearchHistory || mongoose.model("PlaceSearchHistory", placeSearchHistorySchema);
 const Website = mongoose.models.Website || mongoose.model("Website", websiteSchema);
+const CrawlRun = mongoose.models.CrawlRun || mongoose.model("CrawlRun", crawlRunSchema);
 
 // --- SOCIAL POST SCHEMA ---
 const socialPostSchema = new mongoose.Schema({
@@ -237,6 +256,7 @@ module.exports = {
   Place,
   PlaceSearchHistory,
   Website,
+  CrawlRun,
   SocialPost,
   // Auth / Org layer
   User,
