@@ -103,6 +103,9 @@ export const exportPlacesCsv = (places) =>
 export const getWebsites = (params = {}) =>
   crawlerApi.get("/websites", { params });
 
+export const getWebsitesByDateRange = (from, to, params = {}) =>
+  crawlerApi.get("/websites", { params: { from, to, ...params } });
+
 // --- Crawl Runs ---
 export const getCrawlRuns = () =>
   crawlerApi.get("/runs");

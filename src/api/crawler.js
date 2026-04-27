@@ -167,42 +167,50 @@ router.get("/logs/stream", (req, res) => {
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GET /websites — Query stored crawled websites
+// Supports: q, from (ISO), to (ISO), limit, offset
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/websites", async (req, res) => {
   try {
-    const q      = req.query.q     || null;
+    const q      = req.query.q    || null;
+    const from   = req.query.from || null;
+    const to     = req.query.to   || null;
     const limit  = Math.min(parseInt(req.query.limit  || "50"), 200);
     const offset = parseInt(req.query.offset || "0");
 
-    const projection = {
-      dom_data: 0,   // omit large DOM text
-    };
-
     let filter = {};
+
     if (q) {
       const re = { $regex: q, $options: "i" };
-      filter = {
-        $or: [
-          { input_url:        re },
-          { website_title:    re },
-          { brand_name:       re },
-          { technology_stack: re },
-          { hosting_provider: re },
-          { contact_email:    re },
-        ],
-      };
+      filter.$or = [
+        { input_url:        re },
+        { website_title:    re },
+        { brand_name:       re },
+        { technology_stack: re },
+        { hosting_provider: re },
+        { contact_email:    re },
+      ];
     }
 
-    const websites = await Website.find(filter, projection)
-      .sort({ createdAt: -1 })
-      .skip(offset)
-      .limit(limit)
-      .lean();
+    if (from || to) {
+      filter.createdAt = {};
+      if (from) filter.createdAt.$gte = new Date(from);
+      if (to)   filter.createdAt.$lte = new Date(to);
+    }
 
-    res.json(websites);
+    const [websites, total] = await Promise.all([
+      Website.find(filter, { dom_data: 0 })
+        .sort({ createdAt: -1 })
+        .skip(offset)
+        .limit(limit)
+        .lean(),
+      Website.countDocuments(filter),
+    ]);
+
+    res.json({ websites, total, limit, offset });
   } catch (err) {
     logger.error(`[API /websites] ${err.message}`);
     res.status(500).json({ error: err.message });
+
   }
 });
 
