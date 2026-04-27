@@ -63,7 +63,8 @@ async function runPipeline({ sessionId, keyword, location, lat, lng, source }) {
         pushLog(sessionId, `   Processed ${Math.min(i + chunkSize, placeIds.length)}/${placeIds.length} places, ${urls.length} URLs so far`);
       }
     } else {
-      // Use Google Custom Search
+      // Use Google Places Text Search (keyword → company websites, no location)
+      pushLog(sessionId, `🔍 Querying Google Places Text Search for "${keyword}"...`);
       urls = await googleSearch.discoverUrls(keyword, location || null, 80);
     }
   } catch (err) {

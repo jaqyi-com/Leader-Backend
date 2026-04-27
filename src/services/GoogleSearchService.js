@@ -1,30 +1,26 @@
+/**
+ * GoogleSearchService — discovers company website URLs by keyword using
+ * Google Places Text Search API.
+ *
+ * Uses GOOGLE_SEARCH_API_KEY (or falls back to GOOGLE_API_KEY).
+ * No CSE / Search Engine ID required.
+ *
+ * Flow:
+ *   1. Text Search: keyword → list of place_ids (up to 60 places, 3 pages)
+ *   2. Place Details: place_id → website URL
+ *   3. Returns deduplicated list of base URLs
+ */
+
 const axios = require("axios");
 const logger = require("../utils/logger").forAgent("GoogleSearch");
 
-// Domains to skip — social media, news, directories, etc.
-const SKIP_DOMAINS = [
-  "facebook.com","twitter.com","x.com","instagram.com","linkedin.com",
-  "youtube.com","tiktok.com","pinterest.com","reddit.com","wikipedia.org",
-  "yelp.com","trustpilot.com","g2.com","capterra.com","glassdoor.com",
-  "crunchbase.com","producthunt.com","medium.com","quora.com","github.com",
-  "amazon.com","ebay.com","shopify.com","wordpress.com","blogspot.com",
-  "indeed.com","monster.com","naukri.com","maps.google.com","google.com",
-  "bing.com","yahoo.com","apple.com","microsoft.com","gov","edu",
-];
+const TEXT_SEARCH_URL = "https://maps.googleapis.com/maps/api/place/textsearch/json";
+const DETAILS_URL     = "https://maps.googleapis.com/maps/api/place/details/json";
 
-function shouldSkip(url) {
-  try {
-    const host = new URL(url).hostname.replace("www.", "");
-    return SKIP_DOMAINS.some(d => host === d || host.endsWith("." + d));
-  } catch {
-    return true;
-  }
-}
-
-function normalizeUrl(url) {
+function normalizeBase(url) {
   try {
     const u = new URL(url);
-    return `${u.protocol}//${u.hostname}`;
+    return `${u.protocol}//${u.hostname}`.replace(/\/$/, "");
   } catch {
     return null;
   }
@@ -32,60 +28,99 @@ function normalizeUrl(url) {
 
 class GoogleSearchService {
   constructor() {
-    this.apiKey = process.env.GOOGLE_API_KEY;
-    this.cseId  = process.env.GOOGLE_CSE_ID;
-    this.endpoint = "https://www.googleapis.com/customsearch/v1";
+    // Prefer the dedicated search key, fall back to the Maps key
+    this.apiKey = process.env.GOOGLE_SEARCH_API_KEY || process.env.GOOGLE_API_KEY;
   }
 
   /**
    * Discover company website URLs for a keyword (and optional location string).
-   * Returns up to maxResults unique base URLs.
+   * @param {string} keyword  e.g. "saas companies"
+   * @param {string|null} location  e.g. "Mumbai" — appended to query if provided
+   * @param {number} maxResults  max unique base URLs to return (default 60)
+   * @returns {Promise<string[]>}  array of unique website origin URLs
    */
-  async discoverUrls(keyword, location = null, maxResults = 50) {
-    if (!this.apiKey) throw new Error("GOOGLE_API_KEY is not set in environment.");
-    if (!this.cseId)  throw new Error("GOOGLE_CSE_ID is not set in environment. Create a Programmable Search Engine at https://programmablesearchengine.google.com and add the cx ID to .env as GOOGLE_CSE_ID.");
+  async discoverUrls(keyword, location = null, maxResults = 60) {
+    if (!this.apiKey) {
+      throw new Error(
+        "No Google API key set. Add GOOGLE_SEARCH_API_KEY to .env."
+      );
+    }
 
-    const query = location ? `${keyword} companies in ${location}` : `${keyword} companies`;
-    logger.info(`[GoogleSearch] Searching: "${query}" (max ${maxResults})`);
+    const query = location
+      ? `${keyword} companies ${location}`
+      : `${keyword} companies`;
 
-    const urls = new Set();
-    let start = 1;
+    logger.info(`[GoogleSearch] Text Search: "${query}" (max ${maxResults})`);
 
-    while (urls.size < maxResults && start <= 91) {
+    // ── Step 1: Collect place_ids via Text Search (up to 3 pages × 20 = 60) ──
+    const placeIds = [];
+    let nextPageToken = null;
+    let pages = 0;
+
+    do {
       try {
-        const { data } = await axios.get(this.endpoint, {
-          params: {
-            key:   this.apiKey,
-            cx:    this.cseId,
-            q:     query,
-            num:   10,
-            start,
-          },
-          timeout: 10000,
-        });
-
-        const items = data.items || [];
-        if (!items.length) break;
-
-        for (const item of items) {
-          const base = normalizeUrl(item.link);
-          if (base && !shouldSkip(item.link)) urls.add(base);
-          if (urls.size >= maxResults) break;
+        const params = { query, key: this.apiKey };
+        if (nextPageToken) {
+          // Google requires a short delay before using next_page_token
+          await new Promise(r => setTimeout(r, 2000));
+          params.pagetoken = nextPageToken;
         }
 
-        if (!data.queries?.nextPage) break;
-        start += 10;
+        const { data } = await axios.get(TEXT_SEARCH_URL, { params, timeout: 10000 });
 
-        // Polite delay between pages
-        await new Promise(r => setTimeout(r, 300));
+        for (const place of (data.results || [])) {
+          placeIds.push(place.place_id);
+        }
+
+        nextPageToken = data.next_page_token || null;
+        pages++;
       } catch (err) {
-        logger.error(`[GoogleSearch] API error at start=${start}: ${err.message}`);
+        logger.error(`[GoogleSearch] Text Search page ${pages + 1} error: ${err.message}`);
         break;
+      }
+    } while (nextPageToken && placeIds.length < maxResults && pages < 3);
+
+    logger.info(`[GoogleSearch] Found ${placeIds.length} places, fetching websites...`);
+
+    // ── Step 2: Fetch Place Details in parallel batches to get website ──
+    const urls = new Set();
+    const batchSize = 10;
+
+    for (let i = 0; i < placeIds.length && urls.size < maxResults; i += batchSize) {
+      const batch = placeIds.slice(i, i + batchSize);
+
+      const results = await Promise.allSettled(
+        batch.map(placeId =>
+          axios.get(DETAILS_URL, {
+            params: {
+              place_id: placeId,
+              fields: "website",
+              key: this.apiKey,
+            },
+            timeout: 8000,
+          }).then(r => r.data?.result?.website || null)
+        )
+      );
+
+      for (const r of results) {
+        if (r.status === "fulfilled" && r.value) {
+          const base = normalizeBase(r.value);
+          if (base) urls.add(base);
+        }
+      }
+
+      logger.info(
+        `[GoogleSearch] Processed ${Math.min(i + batchSize, placeIds.length)}/${placeIds.length} places → ${urls.size} URLs`
+      );
+
+      // Polite delay between batches
+      if (i + batchSize < placeIds.length) {
+        await new Promise(r => setTimeout(r, 200));
       }
     }
 
     const result = Array.from(urls);
-    logger.info(`[GoogleSearch] Discovered ${result.length} URLs for "${query}"`);
+    logger.info(`[GoogleSearch] Discovered ${result.length} unique URLs for "${query}"`);
     return result;
   }
 }
