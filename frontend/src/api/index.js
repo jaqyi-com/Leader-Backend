@@ -81,6 +81,9 @@ export const getCrawlerLogStreamUrl = () => `${CRAWLER_BASE}/logs/stream`;
 export const geocodePlacesAddress = (address) =>
   crawlerApi.get("/places/geocode", { params: { address } });
 
+export const autocompletePlaces = (input) =>
+  crawlerApi.get("/places/autocomplete", { params: { input } });
+
 export const searchPlaces = (lat, lng, radius, keyword) =>
   crawlerApi.post("/places/search", { lat, lng, radius, keyword });
 

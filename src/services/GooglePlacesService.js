@@ -90,6 +90,31 @@ class GooglePlacesService {
     }
   }
 
+  async autocompleteAddress(input) {
+    if (!this.apiKey) throw new Error("GOOGLE_API_KEY not set");
+    if (!input) return [];
+
+    const params = {
+      input,
+      types: "(regions)", // usually for cities/locations
+      key: this.apiKey
+    };
+
+    try {
+      const response = await axios.get("https://maps.googleapis.com/maps/api/place/autocomplete/json", { params });
+      if (response.data.status === "OK") {
+        return response.data.predictions.map(p => ({
+          description: p.description,
+          place_id: p.place_id,
+        }));
+      }
+      return [];
+    } catch (error) {
+      logger.error(`[GOOGLE_PLACES] Error in autocomplete '${input}': ${error.message}`);
+      return [];
+    }
+  }
+
   normalizePlace(details, categoryKeyword) {
     const geom = details.geometry && details.geometry.location ? details.geometry.location : {};
     

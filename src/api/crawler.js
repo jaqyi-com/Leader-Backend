@@ -218,6 +218,19 @@ router.get("/places/geocode", async (req, res) => {
   }
 });
 
+router.get("/places/autocomplete", async (req, res) => {
+  try {
+    const { input } = req.query;
+    if (!input) return res.json([]);
+    
+    const result = await placesService.autocompleteAddress(input);
+    res.json(result);
+  } catch (err) {
+    logger.error(`[Places /autocomplete] ${err.message}`);
+    res.status(500).json({ error: "Failed to fetch autocomplete", detail: err.message });
+  }
+});
+
 router.post("/places/search", placesLimiter, async (req, res) => {
   try {
     const { lat, lng, radius, keyword } = req.body;

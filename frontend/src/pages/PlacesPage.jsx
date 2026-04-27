@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin, Search, Loader2, Star, Phone, Globe, ExternalLink,
   Navigation, Download, AlertCircle, CheckCircle2, SlidersHorizontal, History, RotateCcw, X
 } from "lucide-react";
-import { searchPlaces, getStoredPlaces, exportPlacesCsv, getPlacesHistory, geocodePlacesAddress } from "../api";
+import { searchPlaces, getStoredPlaces, exportPlacesCsv, getPlacesHistory, geocodePlacesAddress, autocompletePlaces } from "../api";
 import toast from "react-hot-toast";
 
 // ── Rating stars ──────────────────────────────────────────────────────────────
@@ -115,16 +115,23 @@ export default function PlacesPage() {
   const [historyList, setHistoryList] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  const [suggestions, setSuggestions] = useState([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const suggestionTimeout = useRef(null);
+
   // ── Geolocation & Address Search ─────────────────────────────────────────────
-  const handleAddressSearch = async () => {
-    if (!addressInput.trim()) {
+  const handleAddressSearch = async (addressToSearch) => {
+    const query = typeof addressToSearch === "string" ? addressToSearch : addressInput;
+    if (!query.trim()) {
       toast.error("Please enter a location to search");
       return;
     }
     setError(null);
     setGeocodingAddress(true);
+    setShowSuggestions(false);
     try {
-      const { data } = await geocodePlacesAddress(addressInput);
+      const { data } = await geocodePlacesAddress(query);
       if (data && data.lat && data.lng) {
         setLat(data.lat.toFixed(6));
         setLng(data.lng.toFixed(6));
@@ -136,6 +143,38 @@ export default function PlacesPage() {
     } finally {
       setGeocodingAddress(false);
     }
+  };
+
+  const handleAddressChange = (e) => {
+    const val = e.target.value;
+    setAddressInput(val);
+    
+    if (suggestionTimeout.current) clearTimeout(suggestionTimeout.current);
+    
+    if (!val.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    suggestionTimeout.current = setTimeout(async () => {
+      setLoadingSuggestions(true);
+      setShowSuggestions(true);
+      try {
+        const { data } = await autocompletePlaces(val);
+        setSuggestions(data || []);
+      } catch (err) {
+        setSuggestions([]);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    }, 300);
+  };
+
+  const handleSuggestionClick = (suggestion) => {
+    setAddressInput(suggestion.description);
+    setShowSuggestions(false);
+    handleAddressSearch(suggestion.description);
   };
 
   const handleGetLocation = () => {
@@ -378,18 +417,53 @@ export default function PlacesPage() {
             {/* Global Address Search */}
             <div>
               <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">Global Location Search</label>
-              <div className="flex gap-2">
-                <input className="input text-sm flex-1" type="text"
-                  value={addressInput} onChange={e => setAddressInput(e.target.value)}
-                  onKeyDown={e => e.key === "Enter" && handleAddressSearch()}
-                  placeholder="e.g. New York, London, Tokyo..." />
-                <button 
-                  onClick={handleAddressSearch} 
-                  disabled={geocodingAddress}
-                  className="btn-primary px-3 text-sm flex-shrink-0"
-                >
-                  {geocodingAddress ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-                </button>
+              <div className="relative">
+                <div className="flex gap-2">
+                  <input className="input text-sm flex-1" type="text"
+                    value={addressInput} onChange={handleAddressChange}
+                    onKeyDown={e => e.key === "Enter" && handleAddressSearch()}
+                    onFocus={() => addressInput.trim() && setShowSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowSuggestions(false), 200)}
+                    placeholder="e.g. New York, London, Tokyo..." />
+                  <button 
+                    onClick={() => handleAddressSearch()} 
+                    disabled={geocodingAddress}
+                    className="btn-primary px-3 text-sm flex-shrink-0"
+                  >
+                    {geocodingAddress ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+                  </button>
+                </div>
+
+                <AnimatePresence>
+                  {showSuggestions && (loadingSuggestions || suggestions.length > 0) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden z-50"
+                    >
+                      {loadingSuggestions && suggestions.length === 0 ? (
+                        <div className="p-3 text-center text-xs text-slate-500">
+                          <Loader2 size={14} className="animate-spin inline-block mr-2" />
+                          Searching...
+                        </div>
+                      ) : (
+                        <div className="max-h-48 overflow-y-auto">
+                          {suggestions.map((sugg, i) => (
+                            <button
+                              key={i}
+                              onClick={() => handleSuggestionClick(sugg)}
+                              className="w-full text-left px-3 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors border-b border-slate-100 dark:border-slate-700/50 last:border-0 flex items-start gap-2"
+                            >
+                              <MapPin size={14} className="mt-0.5 text-slate-400 flex-shrink-0" />
+                              <span className="truncate">{sugg.description}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
 
