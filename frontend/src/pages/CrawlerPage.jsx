@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe, Upload, Tag, X, Play, Square, Clock, Wifi, WifiOff,
-  FileText, Link as LinkIcon, Loader2,
+  FileText, Link as LinkIcon, Loader2, History, RotateCcw
 } from "lucide-react";
 import { startCrawlFromUrls, startCrawlFromCsv, getCrawlerLogStreamUrl } from "../api";
 import toast from "react-hot-toast";
@@ -85,6 +85,24 @@ export default function CrawlerPage() {
   const evtRef = useRef(null);
   const timerRef = useRef(null);
 
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyList, setHistoryList] = useState([]);
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("crawler_history") || "[]");
+      setHistoryList(stored);
+    } catch (e) {}
+  }, []);
+
+  const saveHistory = (payload) => {
+    setHistoryList(prev => {
+      const updated = [{ ...payload, timestamp: Date.now() }, ...prev].slice(0, 10);
+      localStorage.setItem("crawler_history", JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   // ── SSE connection ──────────────────────────────────────────────────────────
   useEffect(() => {
     const url = getCrawlerLogStreamUrl();
@@ -139,6 +157,7 @@ export default function CrawlerPage() {
     startTimer();
     try {
       await startCrawlFromUrls(urls, keywords, customFields);
+      saveHistory({ mode: "urls", urlsText, keywords, customFields, count: urls.length });
       toast.success(`Crawl started for ${urls.length} URLs! Watch the log stream below.`);
     } catch (e) {
       const msg = e.response?.data?.error || e.message || "Failed to start crawl";
@@ -160,6 +179,7 @@ export default function CrawlerPage() {
       formData.append("keywords", JSON.stringify(keywords));
       formData.append("customFields", JSON.stringify(customFields));
       await startCrawlFromCsv(formData);
+      saveHistory({ mode: "csv", filename: csvFile.name, keywords, customFields, count: 1 });
       toast.success("CSV crawl started! Watch the log stream below.");
     } catch (e) {
       const msg = e.response?.data?.error || e.message || "Failed to start CSV crawl";
@@ -184,8 +204,75 @@ export default function CrawlerPage() {
           Crawl websites by pasting URLs or uploading a CSV file — extracts tech stack, contacts, emails &amp; more.
           </p>
         </div>
-        <StatusPill running={running} connected={connected} />
-      </div>
+        <div className="flex items-center gap-3 relative z-50">
+          <button onClick={() => setShowHistory(!showHistory)} className="btn-secondary gap-2 relative h-8 px-3 text-xs">
+            <History size={14} /> History
+            {historyList.length > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-3 w-3 items-center justify-center rounded-full bg-brand-500 text-[8px] font-bold text-white shadow-sm ring-2 ring-white dark:ring-slate-900">
+                {historyList.length}
+              </span>
+            )}
+          </button>
+          <StatusPill running={running} connected={connected} />
+          
+          {/* History Dropdown */}
+          <AnimatePresence>
+            {showHistory && (
+              <motion.div
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                className="absolute right-0 top-full mt-2 w-[340px] z-[100] glass-card p-2 shadow-xl border border-slate-200/50 dark:border-slate-700/50"
+              >
+                <div className="flex items-center justify-between px-3 py-2 border-b border-slate-100 dark:border-slate-800 mb-2">
+                  <h4 className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <RotateCcw size={12} /> Crawl History
+                  </h4>
+                  <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <X size={14} />
+                  </button>
+                </div>
+                <div className="max-h-[280px] overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
+                  {historyList.length === 0 ? (
+                    <p className="text-xs text-center text-slate-400 py-4">No recent crawls</p>
+                  ) : (
+                    historyList.map((item, idx) => (
+                      <div key={idx} className="group relative flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:border-brand-200 dark:hover:border-brand-800 transition-colors">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm text-slate-700 dark:text-slate-200 truncate">
+                            {item.mode === "csv" ? `CSV: ${item.filename}` : `URLs (${item.count})`}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 text-[10px] text-slate-400 dark:text-slate-500">
+                            <span>{new Date(item.timestamp).toLocaleString()}</span>
+                            {item.keywords?.length > 0 && (
+                              <>
+                                <span className="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600" />
+                                <span>{item.keywords.length} keywords</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => { 
+                            setMode(item.mode);
+                            if (item.mode === "urls") setUrlsText(item.urlsText || "");
+                            setKeywords(item.keywords || []);
+                            setCustomFields(item.customFields || []);
+                            setShowHistory(false); 
+                          }}
+                          className="btn-secondary h-7 w-7 !p-0 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Load Parameters"
+                        >
+                          <RotateCcw size={12} />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
 
       {/* Mode Tabs */}
       <div className="glass-card p-1 inline-flex gap-1 self-start">
