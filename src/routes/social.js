@@ -160,7 +160,7 @@ async function sendApprovalEmail(post) {
 router.get("/connections", async (req, res) => {
   try {
     const response = await unifiedApi.get("/unified/connection", {
-      params: { categories: ["social"], env: "Production" },
+      params: { env: "Production" },
     });
     
     // Normalize provider types to match frontend PLATFORM_META keys
@@ -183,7 +183,7 @@ router.get("/connections", async (req, res) => {
 router.get("/integrations", async (req, res) => {
   try {
     const response = await unifiedApi.get("/unified/integration", {
-      params: { categories: ["social"], env: "Production" },
+      params: { env: "Production" },
     });
     
     // Normalize provider types
