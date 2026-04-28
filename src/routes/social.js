@@ -224,11 +224,10 @@ router.post("/connect/link", async (req, res) => {
 
     const finalRedirect = redirectUrl || `${FRONTEND_URL}/app/social?connected=${provider}`;
     
-    // Unified.to uses a static GET endpoint for initiating OAuth flows
-    // Map 'x' to 'twitter' and 'linkedin' to 'linkedin_v2' for the API if necessary
+    // Map 'x' → 'twitter' for Unified.to (linkedin stays as 'linkedin' — linkedin_v2 is deprecated)
     let unifiedProvider = provider;
     if (provider === "x") unifiedProvider = "twitter";
-    if (provider === "linkedin") unifiedProvider = "linkedin_v2";
+    // Note: use just 'linkedin' — linkedin_v2 was removed from Unified.to
 
     const authUrl = `${UNIFIED_BASE_URL}/unified/integration/auth/${workspaceId}/${unifiedProvider}?success_redirect=${encodeURIComponent(finalRedirect)}&scopes=${encodeURIComponent("social_post,social_profile")}`;
 
@@ -420,7 +419,7 @@ router.post("/posts/:id/publish", async (req, res) => {
         // Generic post — let Unified.to route it
         let postType = post.platform;
         if (postType === "x") postType = "twitter";
-        if (postType === "linkedin") postType = "linkedin_v2";
+        // linkedin stays as 'linkedin' — linkedin_v2 is deprecated in Unified.to
 
         unifiedResponse = await unifiedApi.post("/social/post", {
           ...unifiedPayload,
