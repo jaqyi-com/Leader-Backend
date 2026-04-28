@@ -215,6 +215,34 @@ router.get("/websites", async (req, res) => {
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET /websites/count — Fast stats for a date window (legacy runs)
+// Returns { total, success, failed } — no website data returned
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/websites/count", async (req, res) => {
+  try {
+    const from = req.query.from || null;
+    const to   = req.query.to   || null;
+
+    const dateFilter = {};
+    if (from || to) {
+      dateFilter.createdAt = {};
+      if (from) dateFilter.createdAt.$gte = new Date(from);
+      if (to)   dateFilter.createdAt.$lte = new Date(to);
+    }
+
+    const [total, failed] = await Promise.all([
+      Website.countDocuments(dateFilter),
+      Website.countDocuments({ ...dateFilter, fetch_failed: true }),
+    ]);
+
+    res.json({ total, failed, success: total - failed });
+  } catch (err) {
+    logger.error(`[API /websites/count] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GET /runs — List all crawl runs (newest first)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/runs", async (req, res) => {

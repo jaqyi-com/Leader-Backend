@@ -89,16 +89,32 @@ router.get("/sessions", async (req, res) => {
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// GET /geocode?q=<address> — Geocode a location string
+// GET /geocode?q=<address> — Resolve location to lat/lng
+// Uses Autocomplete → Place Details (Geocoding API not required)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/geocode", async (req, res) => {
   try {
     const q = req.query.q;
     if (!q) return res.status(400).json({ error: "q is required" });
-    const result = await googlePlaces.geocodeAddress(q);
-    if (!result) return res.status(404).json({ error: "Location not found" });
-    res.json(result);
+
+    // Step 1: autocomplete → get first place_id
+    const predictions = await googlePlaces.autocompleteAddress(q);
+    if (!predictions || predictions.length === 0) {
+      return res.status(404).json({ error: "Location not found" });
+    }
+
+    const { place_id, description } = predictions[0];
+
+    // Step 2: place details → get geometry (lat/lng)
+    const details = await googlePlaces.getPlaceDetails(place_id);
+    if (!details || !details.geometry) {
+      return res.status(404).json({ error: "Could not resolve coordinates" });
+    }
+
+    const { lat, lng } = details.geometry.location;
+    res.json({ lat, lng, formatted_address: description });
   } catch (err) {
+    logger.error(`[AutoScraper /geocode] ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });

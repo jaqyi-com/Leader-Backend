@@ -28,8 +28,8 @@ function normalizeBase(url) {
 
 class GoogleSearchService {
   constructor() {
-    // Prefer the dedicated search key, fall back to the Maps key
-    this.apiKey = process.env.GOOGLE_SEARCH_API_KEY || process.env.GOOGLE_API_KEY;
+    // GOOGLE_API_KEY has Places APIs enabled; GOOGLE_SEARCH_API_KEY is optional override
+    this.apiKey = process.env.GOOGLE_API_KEY || process.env.GOOGLE_SEARCH_API_KEY;
   }
 
   /**
