@@ -10,7 +10,7 @@ const logger = require("../utils/logger").forAgent("AutoScraperAPI");
 // Body: { keyword, location?, lat?, lng? }
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.post("/start", async (req, res) => {
-  const { keyword, location, lat, lng } = req.body;
+  const { keyword, location, lat, lng, radius } = req.body;
 
   if (!keyword || !keyword.trim()) {
     return res.status(422).json({ error: "keyword is required." });
@@ -29,9 +29,10 @@ router.post("/start", async (req, res) => {
     lat: hasLocation ? parseFloat(lat) : null,
     lng: hasLocation ? parseFloat(lng) : null,
     source,
+    radius: radius ? parseInt(radius) : 10000,
   }).catch(err => logger.error(`[AutoScraper] Unhandled: ${err.message}`));
 
-  res.json({ sessionId, keyword, source, location: location || null, status: "discovering" });
+  res.json({ sessionId, keyword, source, location: location || null, radius: radius || 10000, status: "discovering" });
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

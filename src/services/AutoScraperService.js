@@ -24,11 +24,12 @@ function cleanup(sessionId, delay = 10 * 60 * 1000) {
 /**
  * Run the full auto-scraper pipeline (fire-and-forget, use SSE to stream progress).
  */
-async function runPipeline({ sessionId, keyword, location, lat, lng, source }) {
+async function runPipeline({ sessionId, keyword, location, lat, lng, source, radius }) {
   sessionStatus[sessionId] = "running";
   sessionLogs[sessionId] = [];
 
-  pushLog(sessionId, `▶ Session started | keyword="${keyword}" location="${location || "none"}" source=${source}`);
+  const radiusM = Math.min(Math.max(parseInt(radius) || 10000, 1000), 150000); // 1–150 km in metres
+  pushLog(sessionId, `▶ Session started | keyword="${keyword}" location="${location || "none"}" source=${source} radius=${radiusM / 1000}km`);
 
   // Create DB record
   try {
@@ -47,25 +48,44 @@ async function runPipeline({ sessionId, keyword, location, lat, lng, source }) {
   pushLog(sessionId, `🔍 Phase 1: Discovering company URLs...`);
   try {
     if (source === "places_scraper") {
-      // Use Google Places to find companies with websites
-      pushLog(sessionId, `📍 Querying Google Places (lat=${lat}, lng=${lng}, keyword="${keyword}")`);
-      const radius = 50000; // 50 km
-      const placeIds = await googlePlaces.searchNearby(lat, lng, radius, keyword);
-      pushLog(sessionId, `   Found ${placeIds.length} places, fetching details...`);
+      // Split keywords and search each one separately for better coverage
+      const keywords = keyword.split(",").map(k => k.trim()).filter(Boolean);
+      pushLog(sessionId, `📍 Searching ${keywords.length} keyword(s) via Google Places Nearby (radius=${radiusM / 1000}km)`);
+
+      const allPlaceIds = new Set();
+      for (const kw of keywords) {
+        pushLog(sessionId, `   🔎 Searching for "${kw}"...`);
+        try {
+          const ids = await googlePlaces.searchNearby(lat, lng, radiusM, kw);
+          pushLog(sessionId, `   Found ${ids.length} places for "${kw}"`);
+          ids.forEach(id => allPlaceIds.add(id));
+        } catch (e) {
+          pushLog(sessionId, `   ⚠ Search failed for "${kw}": ${e.message}`);
+        }
+      }
+
+      const placeIdList = [...allPlaceIds];
+      pushLog(sessionId, `   Total ${placeIdList.length} unique places across all keywords, fetching website details...`);
 
       const chunkSize = 10;
-      for (let i = 0; i < placeIds.length; i += chunkSize) {
-        const chunk = placeIds.slice(i, i + chunkSize);
+      for (let i = 0; i < placeIdList.length; i += chunkSize) {
+        const chunk = placeIdList.slice(i, i + chunkSize);
         const details = await Promise.all(chunk.map(id => googlePlaces.getPlaceDetails(id)));
         for (const d of details) {
           if (d?.website) urls.push(d.website);
         }
-        pushLog(sessionId, `   Processed ${Math.min(i + chunkSize, placeIds.length)}/${placeIds.length} places, ${urls.length} URLs so far`);
+        pushLog(sessionId, `   Processed ${Math.min(i + chunkSize, placeIdList.length)}/${placeIdList.length} places → ${urls.length} URLs`);
       }
     } else {
-      // Use Google Places Text Search (keyword → company websites, no location)
-      pushLog(sessionId, `🔍 Querying Google Places Text Search for "${keyword}"...`);
-      urls = await googleSearch.discoverUrls(keyword, location || null, 80);
+      // Google Places Text Search (no location — keyword only)
+      const keywords = keyword.split(",").map(k => k.trim()).filter(Boolean);
+      pushLog(sessionId, `🔍 Querying Google Places Text Search for ${keywords.length} keyword(s)...`);
+      for (const kw of keywords) {
+        pushLog(sessionId, `   🔎 Searching "${kw}"...`);
+        const found = await googleSearch.discoverUrls(kw, location || null, 40);
+        pushLog(sessionId, `   Found ${found.length} URLs for "${kw}"`);
+        urls.push(...found);
+      }
     }
   } catch (err) {
     pushLog(sessionId, `❌ Discovery failed: ${err.message}`);

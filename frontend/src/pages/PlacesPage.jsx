@@ -92,7 +92,7 @@ function PlaceCard({ place, index }) {
 export default function PlacesPage() {
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
-  const [radius, setRadius] = useState(2000);
+  const [radius, setRadius] = useState(10000);
   const [keyword, setKeyword] = useState("");
   const [addressInput, setAddressInput] = useState("");
   const [geocodingAddress, setGeocodingAddress] = useState(false);
@@ -525,16 +525,15 @@ export default function PlacesPage() {
               placeholder="e.g. restaurant, software company" />
           </div>
 
-          {/* Radius */}
           <div>
             <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">
-              Radius: <span className="text-brand-600 dark:text-brand-400 font-bold">{(radius / 1000).toFixed(1)} km</span>
+              Radius: <span className="text-brand-600 dark:text-brand-400 font-bold">{(radius / 1000).toFixed(0)} km</span>
             </label>
-            <input type="range" min={500} max={10000} step={500} value={radius}
+            <input type="range" min={1000} max={150000} step={1000} value={radius}
               onChange={e => setRadius(Number(e.target.value))}
               className="w-full accent-brand-500 cursor-pointer" />
             <div className="flex justify-between text-xs text-slate-400 mt-1">
-              <span>0.5 km</span><span>10 km</span>
+              <span>1 km</span><span>50 km</span><span>150 km</span>
             </div>
           </div>
 

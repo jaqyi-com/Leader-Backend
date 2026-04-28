@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Sparkles, MapPin, Search, Play, X, Loader2, CheckCircle2,
-  AlertCircle, Navigation, Tag, Globe2, ChevronRight, Clock,
-  Database, ArrowRight, RefreshCw,
+  Sparkles, MapPin, Play, X, Loader2, CheckCircle2,
+  AlertCircle, Navigation, Tag, Globe2, Clock,
+  Database, ArrowRight, RefreshCw, SlidersHorizontal,
 } from "lucide-react";
 import { startAutoScraper, autocompleteLocation, geocodeLocation, getAutoScraperSessions } from "../api";
 import toast from "react-hot-toast";
@@ -205,6 +205,7 @@ export default function AutoScraperPage() {
   const [locationText, setLocationText] = useState("");
   const [lat, setLat] = useState(null);
   const [lng, setLng] = useState(null);
+  const [radius, setRadius] = useState(10); // km
   const [running, setRunning] = useState(false);
   const [sessionId, setSessionId] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -242,7 +243,7 @@ export default function AutoScraperPage() {
 
     try {
       const body = { keyword: keywords.join(", "), location: locationText || null };
-      if (lat && lng) { body.lat = lat; body.lng = lng; }
+      if (lat && lng) { body.lat = lat; body.lng = lng; body.radius = radius * 1000; }
       const { data } = await startAutoScraper(body);
       setSessionId(data.sessionId);
 
@@ -324,11 +325,56 @@ export default function AutoScraperPage() {
           <LocationInput value={locationText} onChange={handleLocationChange} onCoordsChange={handleCoordsChange} />
           <p className="text-[11px] text-[var(--text-3)] mt-1.5">
             {locationSet
-              ? `✅ Location resolved to (${lat?.toFixed(4)}, ${lng?.toFixed(4)}) — will use Google Places`
-              : "Without location, Google Search is used to find company URLs globally."
+              ? `✅ Location resolved to (${lat?.toFixed(4)}, ${lng?.toFixed(4)}) — will use Google Places Nearby`
+              : "Without location, Google Places Text Search is used to find companies globally."
             }
           </p>
         </div>
+
+        {/* Radius Slider — only when location is set */}
+        <AnimatePresence>
+          {locationSet && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider flex items-center gap-2">
+                    <SlidersHorizontal size={12} className="text-[var(--accent)]" /> Search Radius
+                  </label>
+                  <span className="text-sm font-bold text-[var(--accent)] tabular-nums">
+                    {radius < 1 ? `${radius * 1000}m` : `${radius} km`}
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="range"
+                    min={1} max={150} step={1}
+                    value={radius}
+                    onChange={e => setRadius(Number(e.target.value))}
+                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                    style={{
+                      background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${(radius - 1) / 149 * 100}%, var(--surface) ${(radius - 1) / 149 * 100}%, var(--surface) 100%)`,
+                    }}
+                  />
+                  <div className="flex justify-between text-[10px] text-[var(--text-3)] mt-1.5 px-0.5">
+                    <span>1 km</span>
+                    <span className="text-[var(--text-3)]">·</span>
+                    <span>25 km</span>
+                    <span className="text-[var(--text-3)]">·</span>
+                    <span>75 km</span>
+                    <span className="text-[var(--text-3)]">·</span>
+                    <span>150 km</span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-[var(--text-3)]">
+                  Will search for companies within <strong className="text-[var(--text-2)]">{radius} km</strong> of your selected location.
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Start Button */}
         <button

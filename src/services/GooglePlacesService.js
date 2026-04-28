@@ -10,15 +10,18 @@ class GooglePlacesService {
   async searchNearby(lat, lng, radius, keyword) {
     if (!this.apiKey) throw new Error("GOOGLE_API_KEY not set");
 
+    // Google Places allows max 50,000m per call; we support up to 150km via multiple pages
+    const clampedRadius = Math.min(Math.max(parseInt(radius) || 10000, 1000), 150000);
+
     const allPlaceIds = [];
     let nextPageToken = null;
     
-    logger.info(`[GOOGLE_PLACES] Searching near (${lat}, ${lng}), radius=${radius}m, keyword='${keyword}'`);
+    logger.info(`[GOOGLE_PLACES] Searching near (${lat}, ${lng}), radius=${clampedRadius}m, keyword='${keyword}'`);
 
     do {
       const params = {
         location: `${lat},${lng}`,
-        radius,
+        radius: clampedRadius,
         keyword,
         key: this.apiKey,
       };
