@@ -229,7 +229,25 @@ router.post("/connect/link", async (req, res) => {
     if (provider === "x") unifiedProvider = "twitter";
     // Note: use just 'linkedin' — linkedin_v2 was removed from Unified.to
 
-    const authUrlPath = `/unified/integration/auth/${workspaceId}/${unifiedProvider}?success_redirect=${encodeURIComponent(finalRedirect)}&scopes=social_post&env=Production`;
+    let providerScopes = "";
+    switch (unifiedProvider) {
+      case "linkedin":
+        providerScopes = "w_member_social,openid,profile,email";
+        break;
+      case "instagram":
+        providerScopes = "instagram_basic,instagram_content_publish";
+        break;
+      case "facebook":
+        providerScopes = "pages_show_list,pages_read_engagement,pages_manage_posts";
+        break;
+      case "twitter":
+        providerScopes = "tweet.read,tweet.write,users.read,offline.access";
+        break;
+      default:
+        providerScopes = "social_post,social_profile";
+    }
+
+    const authUrlPath = `/unified/integration/auth/${workspaceId}/${unifiedProvider}?success_redirect=${encodeURIComponent(finalRedirect)}&scopes=${encodeURIComponent(providerScopes)}&env=Production`;
 
     // Fetch the actual OAuth URL from Unified.to
     const response = await unifiedApi.get(authUrlPath);
