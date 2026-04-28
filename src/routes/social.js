@@ -229,9 +229,22 @@ router.post("/connect/link", async (req, res) => {
     if (provider === "x") unifiedProvider = "twitter";
     // Note: use just 'linkedin' — linkedin_v2 was removed from Unified.to
 
-    const authUrl = `${UNIFIED_BASE_URL}/unified/integration/auth/${workspaceId}/${unifiedProvider}?success_redirect=${encodeURIComponent(finalRedirect)}&scopes=${encodeURIComponent("social_post,social_profile")}`;
+    const authUrlPath = `/unified/integration/auth/${workspaceId}/${unifiedProvider}?success_redirect=${encodeURIComponent(finalRedirect)}&scopes=${encodeURIComponent("social_post,social_profile")}&env=Production`;
 
-    res.json({ success: true, url: authUrl });
+    // Fetch the actual OAuth URL from Unified.to
+    const response = await unifiedApi.get(authUrlPath);
+    let targetUrl = response.data;
+    
+    // If Unified wraps it in their test page, extract the real redirect URL
+    if (typeof targetUrl === 'string' && targetUrl.includes('/docs/test.html?redirect=')) {
+      const urlObj = new URL(targetUrl);
+      const realUrl = urlObj.searchParams.get('redirect');
+      if (realUrl) {
+        targetUrl = realUrl;
+      }
+    }
+
+    res.json({ success: true, url: targetUrl });
   } catch (err) {
     logger.error(`[Social] Failed to create OAuth link: ${err.message}`);
     res.status(500).json({ error: err.message });

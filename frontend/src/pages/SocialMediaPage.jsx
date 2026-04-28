@@ -404,9 +404,8 @@ export default function SocialMediaPage() {
       const res = await createSocialConnectLink(provider, `${window.location.origin}/app/social?connected=${provider}`);
       const url = res.data.url || res.data.data?.url;
       if (url) {
-        window.open(url, "_blank", "width=600,height=700");
-        toast.success(`Opening ${provider} OAuth…`);
-        setTimeout(loadConnections, 3000);
+        window.location.href = url;
+        toast.success(`Redirecting to ${provider} OAuth…`);
       } else {
         toast.error("Could not get OAuth URL. Check Unified.to configuration.");
       }
