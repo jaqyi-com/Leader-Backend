@@ -229,7 +229,7 @@ router.post("/connect/link", async (req, res) => {
     if (provider === "x") unifiedProvider = "twitter";
     // Note: use just 'linkedin' — linkedin_v2 was removed from Unified.to
 
-    const authUrlPath = `/unified/integration/auth/${workspaceId}/${unifiedProvider}?success_redirect=${encodeURIComponent(finalRedirect)}&scopes=${encodeURIComponent("social_post,social_profile")}&env=Production`;
+    const authUrlPath = `/unified/integration/auth/${workspaceId}/${unifiedProvider}?success_redirect=${encodeURIComponent(finalRedirect)}&env=Production`;
 
     // Fetch the actual OAuth URL from Unified.to
     const response = await unifiedApi.get(authUrlPath);
