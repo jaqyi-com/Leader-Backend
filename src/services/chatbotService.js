@@ -1,11 +1,12 @@
 // ============================================================
-// CHATBOT SERVICE — Core RAG (Retrieval-Augmented Generation)
+// CHATBOT SERVICE — Smart Intent-Gated RAG Pipeline
 // ============================================================
 // Flow:
-//  1. expandPrompt()  — enhance short/vague user prompt via LLM
-//  2. embedText()     — get 1536-dim embedding via OpenAI
-//  3. retrieveTopK()  — cosine similarity search in MongoDB chunks
-//  4. streamChat()    — assemble context + GPT-4o streaming → SSE
+//  1. classifyIntent()  — LLM decides: GENERAL_CHAT | KB_QUERY | MIXED
+//  2. expandPrompt()    — enhance KB queries for better retrieval
+//  3. embedText()       — get embedding via OpenAI (only for KB_QUERY)
+//  4. retrieveTopK()    — cosine similarity search, filtered by threshold
+//  5. streamChat()      — smart system prompt + GPT-4o streaming → SSE
 // ============================================================
 
 "use strict";
@@ -21,11 +22,14 @@ const { ingestText } = require("./knowledgeIngestService");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
 
-// ── Embedding model ────────────────────────────────────────────
-const EMBED_MODEL = "text-embedding-3-small"; // 1536 dims, cheap
+// ── Config ────────────────────────────────────────────────────
+const EMBED_MODEL = "text-embedding-3-small";
 const CHAT_MODEL = "gpt-4o";
-const TOP_K = 5; // number of chunks to retrieve
-const CHUNK_CHAR_LIMIT = 1800; // max chars per chunk in context
+const TOP_K = 5;
+const CHUNK_CHAR_LIMIT = 1800;
+// Minimum cosine similarity to consider a chunk "relevant"
+// Chunks below this score are discarded even if retrieved
+const SIMILARITY_THRESHOLD = 0.35;
 
 // ── Pure JS cosine similarity ──────────────────────────────────
 function cosineSimilarity(a, b) {
@@ -48,31 +52,95 @@ async function embedText(text) {
   return response.data[0].embedding;
 }
 
-// ── Retrieve top-K chunks for a query embedding ─────────────────
+// ── Intent classifier — decides if KB retrieval is needed ──────
+// Returns: "GENERAL_CHAT" | "KB_QUERY"
+// GENERAL_CHAT: greetings, chitchat, math, general world knowledge,
+//               coding help, writing help, anything not org-specific
+// KB_QUERY:     questions about the organization, its products,
+//               policies, team, data, clients, processes, etc.
+async function classifyIntent(userMessage, orgName, conversationHistory = []) {
+  try {
+    // Fast heuristic: very short greetings / chitchat → skip LLM call entirely
+    const normalized = userMessage.trim().toLowerCase();
+    const GREETINGS = ["hi", "hello", "hey", "good morning", "good afternoon",
+      "good evening", "how are you", "what's up", "sup", "yo", "hiya",
+      "greetings", "howdy", "thanks", "thank you", "bye", "goodbye",
+      "ok", "okay", "sure", "great", "cool", "nice", "awesome"];
+    if (GREETINGS.some(g => normalized === g || normalized === g + "!")) {
+      return "GENERAL_CHAT";
+    }
+
+    // Recent conversation context (last 4 messages) to help classify follow-ups
+    const historySnippet = conversationHistory.slice(-4)
+      .map(m => `${m.role}: ${m.content.slice(0, 80)}`)
+      .join("\n");
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      max_tokens: 10,
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: `You are an intent classifier for an AI assistant of the company "${orgName}".
+Classify the user's message into ONE of these two categories:
+
+KB_QUERY — the user is asking something that might be found in the company's knowledge base:
+  - Questions about the company, its products, services, team, processes, policies
+  - Questions about the company's clients, revenue, strategy, data
+  - Questions that reference "we", "our", "the company", "the organization"
+  - Follow-up questions in a business/company context
+
+GENERAL_CHAT — everything else:
+  - Greetings ("hello", "hi", "how are you")
+  - General world knowledge ("what is machine learning?", "who is Elon Musk?")
+  - Math, coding, writing help not related to the company
+  - Personal chitchat, opinions, jokes
+  - Venting or off-topic conversation
+
+Recent conversation:
+${historySnippet || "(none)"}
+
+Respond with ONLY one word: KB_QUERY or GENERAL_CHAT`
+        },
+        { role: "user", content: userMessage },
+      ],
+    });
+
+    const intent = response.choices[0]?.message?.content?.trim().toUpperCase();
+    if (intent === "KB_QUERY" || intent === "GENERAL_CHAT") return intent;
+    return "KB_QUERY"; // safe default: try KB first
+  } catch (err) {
+    logger.warn(`Intent classification failed: ${err.message}, defaulting to KB_QUERY`);
+    return "KB_QUERY";
+  }
+}
+
+// ── Retrieve top-K chunks and apply similarity threshold ────────
 async function retrieveTopK(orgId, queryEmbedding, k = TOP_K) {
-  // Load all chunks for this org (projection: skip the embedding array from wire if too large)
   const chunks = await ChatKnowledgeChunk.find({ orgId })
     .select("text embedding chunkIndex metadata sourceId")
     .lean();
 
   if (!chunks.length) return [];
 
-  // Score each chunk
   const scored = chunks.map((c) => ({
     ...c,
     similarity: cosineSimilarity(queryEmbedding, c.embedding),
   }));
 
-  // Sort descending and take top K
   scored.sort((a, b) => b.similarity - a.similarity);
-  return scored.slice(0, k);
+
+  // Apply similarity threshold — only return chunks that are actually relevant
+  const relevant = scored.filter(c => c.similarity >= SIMILARITY_THRESHOLD);
+  return relevant.slice(0, k);
 }
 
-// ── Expand a short/vague user prompt via LLM ──────────────────
+// ── Expand a KB query prompt for better retrieval ──────────────
+// ONLY called when intent is KB_QUERY
 async function expandPrompt(userPrompt, orgName = "the organization") {
-  // Only expand if the prompt is short (< 60 chars) or clearly under-specified
   const trimmed = userPrompt.trim();
-  if (trimmed.length > 80) return trimmed; // already descriptive enough
+  if (trimmed.length > 80) return trimmed;
 
   try {
     const response = await openai.chat.completions.create({
@@ -82,22 +150,21 @@ async function expandPrompt(userPrompt, orgName = "the organization") {
       messages: [
         {
           role: "system",
-          content: `You are a query expansion assistant for an organization chatbot called "${orgName} AI Assistant".
-When given a short, vague, or ambiguous user query, expand it into a clear, specific question that will help retrieve relevant information from the organization's knowledge base.
-Return ONLY the expanded question — no explanation, no quotes, no extra text.
-If the prompt is already clear and detailed, return it unchanged.`,
+          content: `You are a search query optimizer for "${orgName}"'s internal knowledge base.
+Rewrite the user's short question into a more specific, search-friendly query that will retrieve the most relevant documents.
+Return ONLY the rewritten query — no explanation, no quotes.
+If the question is already clear, return it unchanged.`,
         },
         {
           role: "user",
-          content: `Short prompt: "${trimmed}"\n\nExpand this into a clear, specific question about ${orgName}'s knowledge base:`,
+          content: `User question: "${trimmed}"\n\nRewrite for better search:`,
         },
       ],
     });
     const expanded = response.choices[0]?.message?.content?.trim() || trimmed;
-    // Don't return the expansion if it's the same as input
     return expanded === trimmed ? trimmed : expanded;
   } catch (err) {
-    logger.warn(`Prompt expansion failed: ${err.message}, using original`);
+    logger.warn(`Prompt expansion failed: ${err.message}`);
     return trimmed;
   }
 }
@@ -109,11 +176,10 @@ async function getConversationHistory(conversationId, limit = 10) {
     .limit(limit)
     .select("role content")
     .lean();
-  // Reverse to chronological order
   return messages.reverse().map((m) => ({ role: m.role, content: m.content }));
 }
 
-// ── Detect and silently ingest organizational knowledge ────────
+// ── Silently ingest organizational knowledge from user messages ─
 async function detectAndIngestKnowledge(orgId, userId, userMessage, orgName) {
   try {
     const response = await openai.chat.completions.create({
@@ -123,14 +189,9 @@ async function detectAndIngestKnowledge(orgId, userId, userMessage, orgName) {
         {
           role: "system",
           content: `You are a knowledge extraction agent for "${orgName}". 
-Your job is to detect if a user's chat message contains a factual statement, business rule, process, or context about the organization that should be permanently remembered in the knowledge base.
-If it is just a question, greeting, conversational filler, or prompt for the AI, do NOT extract it.
-Respond ONLY with a JSON object: 
-{ 
-  "containsKnowledge": boolean, 
-  "extractedKnowledge": "The standalone factual statement (if true, else empty string)",
-  "title": "A short 3-5 word title for this knowledge (if true, else empty string)"
-}`
+Detect if the user's message contains a factual statement about the organization that should be permanently remembered.
+Do NOT extract questions, greetings, or conversational messages.
+Respond ONLY with: { "containsKnowledge": boolean, "extractedKnowledge": "...", "title": "..." }`
         },
         { role: "user", content: userMessage }
       ],
@@ -147,25 +208,55 @@ Respond ONLY with a JSON object:
   }
 }
 
+// ── Build the right system prompt based on what was retrieved ───
+function buildSystemPrompt(orgName, intent, retrievedChunks) {
+  const hasContext = retrievedChunks.length > 0;
+  const context = hasContext
+    ? retrievedChunks
+        .map((c, i) => `[Source ${i + 1}: ${c.metadata?.sourceName || "Knowledge"}]\n${c.text.slice(0, CHUNK_CHAR_LIMIT)}`)
+        .join("\n\n---\n\n")
+    : null;
+
+  if (intent === "GENERAL_CHAT") {
+    // Pure conversational — no KB retrieval was done
+    return `You are a helpful, friendly AI assistant for "${orgName}". 
+Engage naturally in conversation. Answer general questions from your own knowledge.
+For company-specific questions you don't know the answer to, politely say you'd need to check the knowledge base.
+Keep answers concise and friendly.`;
+  }
+
+  if (hasContext) {
+    // KB was queried and found relevant results
+    return `You are the AI assistant for "${orgName}". You help team members find information quickly.
+
+You have retrieved the following relevant information from the knowledge base:
+
+${context}
+
+INSTRUCTIONS:
+- Use the retrieved context above to answer the user's question accurately.
+- If the context fully answers the question, answer directly and confidently.
+- If the context is partially relevant, use what's useful and note any gaps.
+- If none of the context is relevant to the specific question, say: "I couldn't find specific information about that in our knowledge base. You can add it via the Knowledge Base page."
+- Always answer in a friendly, professional tone.
+- Format responses with markdown (bold, bullets, etc.) where it improves readability.
+- You may use your general knowledge to explain concepts, but for org-specific facts, rely on the context above.`;
+  }
+
+  // KB was queried but nothing relevant was found (below threshold)
+  return `You are the AI assistant for "${orgName}". You help team members find information.
+
+The knowledge base was searched but no relevant information was found for this query.
+
+INSTRUCTIONS:
+- Let the user know you couldn't find relevant information in the knowledge base for their specific question.
+- Be specific about what you searched for.
+- Encourage them to add the relevant information via the Knowledge Base page so you can answer similar questions in the future.
+- For any general/factual aspects of their question, you can still help with your general knowledge.
+- Stay helpful and friendly — don't just give a flat "I don't know".`;
+}
+
 // ── Main streaming chat function ────────────────────────────────
-/**
- * streamChat — runs the full RAG pipeline and writes SSE events to res.
- *
- * SSE event format:
- *   data: {"type":"expanded","content":"..."}      ← prompt expansion (sent first)
- *   data: {"type":"sources","chunks":[...]}         ← retrieved sources
- *   data: {"type":"delta","content":"..."}          ← streamed answer tokens
- *   data: {"type":"done","conversationId":"..."}    ← completion signal
- *   data: {"type":"error","message":"..."}          ← error
- *
- * @param {Object} opts
- * @param {string} opts.orgId
- * @param {string} opts.userId
- * @param {string|null} opts.conversationId  — null to create new
- * @param {string} opts.userMessage
- * @param {string} opts.orgName
- * @param {Object} res — Express response object for SSE writing
- */
 async function streamChat({ orgId, userId, conversationId, userMessage, orgName, res }) {
   const sendEvent = (obj) => {
     try {
@@ -197,74 +288,58 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
       content: userMessage,
     });
 
-    // ── Trigger background knowledge detection ───────────────────
+    // ── Background: detect & ingest knowledge from user messages ─
     detectAndIngestKnowledge(orgId, userId, userMessage, orgName).catch(() => {});
 
-    // ── 3. Expand prompt ─────────────────────────────────────────
-    const expandedPrompt = await expandPrompt(userMessage, orgName);
-    const wasExpanded = expandedPrompt !== userMessage.trim();
+    // ── 3. Get conversation history (needed for intent + LLM) ────
+    const history = await getConversationHistory(conversation._id);
 
-    // Update user message with expanded prompt
-    if (wasExpanded) {
-      await ChatMessage.findByIdAndUpdate(userMsg._id, { expandedPrompt });
+    // ── 4. Classify intent — THE GATING STEP ─────────────────────
+    const intent = await classifyIntent(userMessage, orgName, history.slice(0, -1));
+    logger.info(`[Chat] Intent classified as: ${intent} for: "${userMessage.slice(0, 50)}"`);
+
+    let expandedPrompt = userMessage;
+    let wasExpanded = false;
+    let topChunks = [];
+
+    if (intent === "KB_QUERY") {
+      // ── 5a. Expand prompt for better retrieval ─────────────────
+      expandedPrompt = await expandPrompt(userMessage, orgName);
+      wasExpanded = expandedPrompt !== userMessage.trim();
+
+      if (wasExpanded) {
+        await ChatMessage.findByIdAndUpdate(userMsg._id, { expandedPrompt });
+      }
+
+      // ── 5b. Embed and retrieve relevant chunks ─────────────────
+      const queryEmbedding = await embedText(expandedPrompt);
+      topChunks = await retrieveTopK(orgId, queryEmbedding);
+
+      logger.info(`[Chat] Retrieved ${topChunks.length} relevant chunks (threshold: ${SIMILARITY_THRESHOLD})`);
+      if (topChunks.length > 0) {
+        logger.info(`[Chat] Top similarity: ${topChunks[0].similarity.toFixed(3)}`);
+      }
     }
 
+    // Send expanded prompt event (for UI badge display)
     sendEvent({ type: "expanded", content: expandedPrompt, wasExpanded });
 
-    // ── 4. Embed expanded prompt ─────────────────────────────────
-    const queryEmbedding = await embedText(expandedPrompt);
-
-    // ── 5. Retrieve top-K chunks ─────────────────────────────────
-    const topChunks = await retrieveTopK(orgId, queryEmbedding);
-
-    // Format source chunks for SSE event
+    // Send sources event (empty array for GENERAL_CHAT)
     const sourcesPayload = topChunks.map((c) => ({
       chunkId: c._id,
       sourceName: c.metadata?.sourceName || "Knowledge Base",
       similarity: Math.round(c.similarity * 100) / 100,
       textSnippet: c.text.slice(0, 120) + (c.text.length > 120 ? "…" : ""),
     }));
-
     sendEvent({ type: "sources", chunks: sourcesPayload });
 
-    // ── 6. Build context string ──────────────────────────────────
-    let context = "";
-    if (topChunks.length > 0) {
-      context = topChunks
-        .map(
-          (c, i) =>
-            `[Source ${i + 1}: ${c.metadata?.sourceName || "Knowledge"}]\n${c.text.slice(0, CHUNK_CHAR_LIMIT)}`
-        )
-        .join("\n\n---\n\n");
-    }
+    // ── 6. Build smart system prompt ────────────────────────────
+    const systemPrompt = buildSystemPrompt(orgName, intent, topChunks);
 
-    // ── 7. Get conversation history ──────────────────────────────
-    const history = await getConversationHistory(conversation._id);
-
-    // ── 8. Build system prompt ───────────────────────────────────
-    const systemPrompt = context
-      ? `You are the AI assistant for "${orgName}". You help all organization members answer questions.
-
-IMPORTANT RULES:
-- For organization-specific questions, answer ONLY using the provided knowledge base context below.
-- If an organization-specific question cannot be answered from the context, say "I don't have that information in the knowledge base yet. You can add it via the Knowledge Base page."
-- For general conversation, greetings (e.g., "hello", "hi"), or questions about who you are, answer naturally and politely as the AI assistant for "${orgName}". Do NOT give the fallback message for general greetings.
-- Be concise, clear, and helpful.
-- Format your response nicely using markdown when appropriate (bullet points, bold text, etc.)
-- If referencing specific knowledge, you can say "According to our knowledge base..." 
-- Always answer in a friendly, professional tone.
-
-ORGANIZATION KNOWLEDGE BASE CONTEXT:
-${context}`
-      : `You are the AI assistant for "${orgName}". You help all organization members.
-The knowledge base is currently empty.
-For general conversation and greetings, answer naturally and politely.
-For organization-specific questions, encourage the user to add knowledge via the Knowledge Base page.`;
-
-    // ── 9. Stream GPT-4o response ────────────────────────────────
+    // ── 7. Stream GPT-4o response ────────────────────────────────
     const messages = [
       { role: "system", content: systemPrompt },
-      ...history.slice(0, -1), // exclude the message we just saved
+      ...history.slice(0, -1),
       { role: "user", content: wasExpanded ? expandedPrompt : userMessage },
     ];
 
@@ -273,7 +348,7 @@ For organization-specific questions, encourage the user to add knowledge via the
       messages,
       stream: true,
       max_tokens: 1500,
-      temperature: 0.7,
+      temperature: intent === "GENERAL_CHAT" ? 0.8 : 0.5,
     });
 
     let fullContent = "";
@@ -285,7 +360,7 @@ For organization-specific questions, encourage the user to add knowledge via the
       }
     }
 
-    // ── 10. Save assistant message ───────────────────────────────
+    // ── 8. Save assistant message ─────────────────────────────────
     const assistantMsg = await ChatMessage.create({
       conversationId: conversation._id,
       orgId,
@@ -300,11 +375,10 @@ For organization-specific questions, encourage the user to add knowledge via the
       isComplete: true,
     });
 
-    // ── 11. Update conversation metadata ────────────────────────
+    // ── 9. Update conversation metadata ─────────────────────────
     await ChatConversation.findByIdAndUpdate(conversation._id, {
       lastMessageAt: new Date(),
-      $inc: { messageCount: 2 }, // user + assistant
-      // Auto-title from first real message (if still default)
+      $inc: { messageCount: 2 },
       ...(conversation.messageCount === 0
         ? { title: userMessage.slice(0, 60) }
         : {}),
@@ -321,4 +395,5 @@ For organization-specific questions, encourage the user to add knowledge via the
   }
 }
 
-module.exports = { embedText, retrieveTopK, expandPrompt, streamChat, cosineSimilarity };
+module.exports = { embedText, retrieveTopK, expandPrompt, classifyIntent, streamChat, cosineSimilarity };
+
