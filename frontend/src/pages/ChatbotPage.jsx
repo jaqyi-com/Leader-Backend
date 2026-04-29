@@ -405,17 +405,7 @@ export default function ChatbotPage() {
             <span style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>AI ChatBot</span>
           </div>
           <div style={{ display: "flex", gap: 6 }}>
-            <button
-              onClick={() => navigate("/app/chatbot/data")}
-              title="Knowledge Base"
-              style={{
-                background: "rgba(255,255,255,0.06)", border: "1px solid var(--border)",
-                borderRadius: 7, padding: "5px 7px", cursor: "pointer", color: "var(--text-2)",
-                display: "flex", alignItems: "center",
-              }}
-            >
-              <Database size={13} />
-            </button>
+
             <button
               onClick={handleNewChat}
               title="New Chat"
@@ -612,18 +602,7 @@ export default function ChatbotPage() {
               }}
             />
             <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate("/app/chatbot/data")}
-                title="Knowledge Base"
-                style={{
-                  background: "rgba(255,255,255,0.06)", border: "1px solid var(--border)",
-                  borderRadius: 10, padding: "8px 10px", cursor: "pointer", color: "var(--text-2)",
-                  display: "flex", alignItems: "center",
-                }}
-              >
-                <Database size={15} />
-              </motion.button>
+
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
