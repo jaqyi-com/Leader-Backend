@@ -452,7 +452,7 @@ export default function SocialMediaPage() {
     setSubmitting(true);
     const toastId = toast.loading("Saving post & sending approval email…");
     try {
-      await createSocialPost({
+      const res = await createSocialPost({
         keywords,
         platform,
         connectionId: connections.find(c => c.integration_type === platform)?.id || null,
@@ -461,7 +461,13 @@ export default function SocialMediaPage() {
         hashtags:         generated.hashtags,
         approvalEmail,
       });
-      toast.success("Approval email sent! Check your inbox.", { id: toastId });
+      
+      if (res.data && res.data.approvalEmailSent === false) {
+        toast.error("Post saved, but failed to send email. Check SMTP settings.", { id: toastId });
+      } else {
+        toast.success("Approval email sent! Check your inbox.", { id: toastId });
+      }
+      
       setPipelineStep(5);
       loadPosts();
     } catch (err) {

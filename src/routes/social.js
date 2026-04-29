@@ -328,17 +328,19 @@ router.post("/posts", async (req, res) => {
     });
 
     // Send approval email
+    let emailSent = true;
     try {
       await sendApprovalEmail(post);
       logger.info(`[Social] Approval email sent to ${approvalEmail} for post ${post._id}`);
     } catch (mailErr) {
       logger.error(`[Social] Failed to send approval email: ${mailErr.message}`);
+      emailSent = false;
       // Don't fail the whole request — post is saved, email is optional
     }
 
     const obj = post.toObject();
     obj.id = obj._id.toString();
-    res.json({ success: true, post: obj, approvalEmailSent: true });
+    res.json({ success: true, post: obj, approvalEmailSent: emailSent });
   } catch (err) {
     logger.error(`[Social] Failed to create post: ${err.message}`);
     res.status(500).json({ error: err.message });
