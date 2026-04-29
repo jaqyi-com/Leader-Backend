@@ -383,7 +383,7 @@ export default function ChatbotPage() {
   const isEmptyState = messages.length === 0;
 
   return (
-    <div style={{ display: "flex", height: "100vh", overflow: "hidden", background: "var(--bg)" }}>
+    <div style={{ display: "flex", height: "calc(100vh - 140px)", overflow: "hidden", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "16px" }}>
 
       {/* ── Left Panel: Conversations ── */}
       <div style={{
