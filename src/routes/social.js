@@ -238,7 +238,7 @@ router.post("/connect/link", async (req, res) => {
         providerScopes = "instagram_basic,instagram_content_publish";
         break;
       case "facebook":
-        providerScopes = "pages_show_list,pages_read_engagement,pages_manage_posts";
+        providerScopes = "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish";
         break;
       case "twitter":
         providerScopes = "tweet.read,tweet.write,users.read,offline.access";

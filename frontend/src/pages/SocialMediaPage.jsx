@@ -401,7 +401,8 @@ export default function SocialMediaPage() {
   async function handleConnect(provider) {
     setConnectingProvider(provider);
     try {
-      const res = await createSocialConnectLink(provider, `${window.location.origin}/app/social?connected=${provider}`);
+      const apiProvider = provider === "instagram" ? "facebook" : provider;
+      const res = await createSocialConnectLink(apiProvider, `${window.location.origin}/app/social?connected=${provider}`);
       const url = res.data.url || res.data.data?.url;
       if (url) {
         window.location.href = url;
@@ -505,7 +506,12 @@ export default function SocialMediaPage() {
 
   // Which platforms are connected
   const connectedMap = {};
-  connections.forEach(c => { connectedMap[c.integration_type] = c; });
+  connections.forEach(c => { 
+    connectedMap[c.integration_type] = c; 
+    if (c.integration_type === "facebook") {
+      connectedMap["instagram"] = c;
+    }
+  });
 
   return (
     <div className="flex flex-col gap-6 h-full max-w-7xl mx-auto">
