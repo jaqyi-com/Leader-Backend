@@ -217,17 +217,27 @@ function buildSystemPrompt(orgName, intent, retrievedChunks) {
         .join("\n\n---\n\n")
     : null;
 
+  // Always inject current date/time so the bot can answer date-related questions
+  const now = new Date();
+  const nowString = now.toLocaleString("en-US", {
+    weekday: "long", year: "numeric", month: "long", day: "numeric",
+    hour: "2-digit", minute: "2-digit", timeZoneName: "short",
+  });
+
   if (intent === "GENERAL_CHAT") {
     // Pure conversational — no KB retrieval was done
-    return `You are a helpful, friendly AI assistant for "${orgName}". 
+    return `You are a helpful, friendly AI assistant for "${orgName}".
+Current date and time: ${nowString}
 Engage naturally in conversation. Answer general questions from your own knowledge.
-For company-specific questions you don't know the answer to, politely say you'd need to check the knowledge base.
+You know the current date and time — use it when asked.
+For company-specific questions, let the user know you can look those up from the knowledge base.
 Keep answers concise and friendly.`;
   }
 
   if (hasContext) {
     // KB was queried and found relevant results
     return `You are the AI assistant for "${orgName}". You help team members find information quickly.
+Current date and time: ${nowString}
 
 You have retrieved the following relevant information from the knowledge base:
 
@@ -238,6 +248,7 @@ INSTRUCTIONS:
 - If the context fully answers the question, answer directly and confidently.
 - If the context is partially relevant, use what's useful and note any gaps.
 - If none of the context is relevant to the specific question, say: "I couldn't find specific information about that in our knowledge base. You can add it via the Knowledge Base page."
+- You know the current date and time — use it when asked.
 - Always answer in a friendly, professional tone.
 - Format responses with markdown (bold, bullets, etc.) where it improves readability.
 - You may use your general knowledge to explain concepts, but for org-specific facts, rely on the context above.`;
@@ -245,6 +256,7 @@ INSTRUCTIONS:
 
   // KB was queried but nothing relevant was found (below threshold)
   return `You are the AI assistant for "${orgName}". You help team members find information.
+Current date and time: ${nowString}
 
 The knowledge base was searched but no relevant information was found for this query.
 
@@ -253,6 +265,7 @@ INSTRUCTIONS:
 - Be specific about what you searched for.
 - Encourage them to add the relevant information via the Knowledge Base page so you can answer similar questions in the future.
 - For any general/factual aspects of their question, you can still help with your general knowledge.
+- You know the current date and time — use it when asked.
 - Stay helpful and friendly — don't just give a flat "I don't know".`;
 }
 
