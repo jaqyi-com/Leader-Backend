@@ -95,7 +95,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       initial={false}
       animate={{ width: collapsed ? 68 : 220 }}
       transition={{ type: "spring", stiffness: 280, damping: 26 }}
-      className="relative h-screen flex flex-col flex-shrink-0 overflow-hidden z-30"
+      className="relative h-screen flex flex-col flex-shrink-0 z-30"
       style={{
         background: "var(--surface)",
         borderRight: "1px solid var(--border)",
