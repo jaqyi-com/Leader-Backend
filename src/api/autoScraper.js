@@ -7,32 +7,63 @@ const logger = require("../utils/logger").forAgent("AutoScraperAPI");
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // POST /start — Begin a new auto-scraper session
-// Body: { keyword, location?, lat?, lng? }
+// Body (structured ICP):
+//   { industryKeywords[], techSignals[], targetPersonas[],
+//     disqualifiers[], location?, lat?, lng?, radius? }
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.post("/start", async (req, res) => {
-  const { keyword, location, lat, lng, radius } = req.body;
+  const {
+    // New structured ICP fields
+    industryKeywords, techSignals, targetPersonas, disqualifiers,
+    // Legacy flat field (backward-compat)
+    keyword,
+    // Location
+    location, lat, lng, radius,
+  } = req.body;
 
-  if (!keyword || !keyword.trim()) {
-    return res.status(422).json({ error: "keyword is required." });
+  // ── Build a rich, structured search keyword string ───────────
+  let searchKeyword = "";
+
+  if (industryKeywords && industryKeywords.length > 0) {
+    // Build ICP-aware query:
+    // Primary: industry keywords (required, OR-joined)
+    // Boost: tech signals and personas narrow the search
+    const industryPart = industryKeywords.join(" OR ");
+    const techPart     = techSignals?.length     ? techSignals.slice(0, 3).join(" ")       : "";
+    const personaPart  = targetPersonas?.length  ? `hiring ${targetPersonas[0]}`            : "";
+
+    searchKeyword = [industryPart, techPart, personaPart]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+    logger.info(`[API] ICP query built: "${searchKeyword}" | industry=${industryKeywords} | tech=${techSignals} | persona=${targetPersonas} | disqualify=${disqualifiers}`);
+  } else if (keyword && keyword.trim()) {
+    // Legacy fallback: flat keyword field
+    searchKeyword = keyword.trim();
+  } else {
+    return res.status(422).json({ error: "At least one industry keyword is required." });
   }
 
-  const sessionId = require("crypto").randomUUID();
+  const sessionId   = require("crypto").randomUUID();
   const hasLocation = !!(lat && lng);
-  const source = hasLocation ? "places_scraper" : "google_search";
+  const source      = hasLocation ? "places_scraper" : "google_search";
 
-  logger.info(`[API] Auto-scraper start | sessionId=${sessionId} keyword="${keyword}" location="${location || "none"}" source=${source}`);
-
-  // Fire and forget
   autoScraper.runPipeline({
-    sessionId, keyword: keyword.trim(),
-    location: location || null,
-    lat: hasLocation ? parseFloat(lat) : null,
-    lng: hasLocation ? parseFloat(lng) : null,
+    sessionId,
+    keyword:      searchKeyword,
+    industryKeywords: industryKeywords || [],
+    techSignals:      techSignals      || [],
+    targetPersonas:   targetPersonas   || [],
+    disqualifiers:    disqualifiers    || [],
+    location:  location  || null,
+    lat:       hasLocation ? parseFloat(lat) : null,
+    lng:       hasLocation ? parseFloat(lng) : null,
     source,
-    radius: radius ? parseInt(radius) : 10000,
+    radius:    radius ? parseInt(radius) : 10000,
   }).catch(err => logger.error(`[AutoScraper] Unhandled: ${err.message}`));
 
-  res.json({ sessionId, keyword, source, location: location || null, radius: radius || 10000, status: "discovering" });
+  res.json({ sessionId, keyword: searchKeyword, source, location: location || null, status: "discovering" });
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

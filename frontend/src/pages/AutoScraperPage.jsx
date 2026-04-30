@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, MapPin, Play, X, Loader2, CheckCircle2,
-  AlertCircle, Navigation, Tag, Globe2, Clock,
+  AlertCircle, Navigation, Globe2, Clock,
   Database, ArrowRight, RefreshCw, SlidersHorizontal,
+  Tag, ShieldX, Cpu, Briefcase, Search,
 } from "lucide-react";
 import { startAutoScraper, autocompleteLocation, geocodeLocation, getAutoScraperSessions } from "../api";
 import toast from "react-hot-toast";
@@ -11,33 +12,68 @@ import toast from "react-hot-toast";
 const CRAWLER_API_URL = import.meta.env.VITE_CRAWLER_API_URL || "http://localhost:3001/api/crawler";
 const AUTO_SCRAPER_SSE = `${CRAWLER_API_URL}/auto-scraper`;
 
-// ── KeywordInput ─────────────────────────────────────────────
-function KeywordInput({ tags, setTags }) {
+// ── Reusable ICP-style Tag Input ─────────────────────────────
+function TagSection({ icon: Icon, title, description, color, tags, setTags, placeholder, suggestions = [] }) {
   const [input, setInput] = useState("");
-  const add = () => {
-    const v = input.trim();
+  const [showSugg, setShowSugg] = useState(false);
+  const inputRef = useRef(null);
+
+  const add = (val) => {
+    const v = (val || input).trim();
     if (v && !tags.includes(v)) setTags(prev => [...prev, v]);
     setInput("");
+    setShowSugg(false);
   };
+
+  const filtered = suggestions.filter(s => s.toLowerCase().includes(input.toLowerCase()) && !tags.includes(s) && input.length > 0);
+
   return (
-    <div className="input flex flex-wrap gap-1.5 min-h-[46px] cursor-text" onClick={() => document.getElementById("kw-input")?.focus()}>
-      {tags.map(t => (
-        <span key={t} className="badge badge-purple text-xs flex items-center gap-1">
-          <Tag size={9} /> {t}
-          <button onClick={e => { e.stopPropagation(); setTags(p => p.filter(x => x !== t)); }} className="hover:text-white">
-            <X size={10} />
-          </button>
-        </span>
-      ))}
-      <input
-        id="kw-input"
-        className="flex-1 min-w-[120px] bg-transparent outline-none text-sm text-[var(--text)] placeholder:text-[var(--text-3)]"
-        placeholder={tags.length ? "Add more..." : "e.g. saas, fintech, healthcare..."}
-        value={input}
-        onChange={e => setInput(e.target.value)}
-        onKeyDown={e => { if (e.key === "Enter" || e.key === ",") { e.preventDefault(); add(); } if (e.key === "Backspace" && !input) setTags(p => p.slice(0, -1)); }}
-        onBlur={add}
-      />
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${color}`}>
+          <Icon size={12} className="text-white" />
+        </div>
+        <span className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider">{title}</span>
+        {tags.length > 0 && <span className="text-[10px] badge badge-purple">{tags.length}</span>}
+      </div>
+      {description && <p className="text-[11px] text-[var(--text-3)]">{description}</p>}
+      <div
+        className="relative bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-2.5 flex flex-wrap gap-1.5 min-h-[46px] cursor-text focus-within:border-[var(--accent)] transition-colors"
+        onClick={() => inputRef.current?.focus()}
+      >
+        {tags.map(t => (
+          <span key={t} className="flex items-center gap-1 badge badge-purple text-xs">
+            {t}
+            <button onClick={e => { e.stopPropagation(); setTags(p => p.filter(x => x !== t)); }}
+              className="hover:text-white ml-0.5"><X size={9} /></button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          className="flex-1 min-w-[140px] bg-transparent outline-none text-sm text-[var(--text)] placeholder:text-[var(--text-3)]"
+          placeholder={tags.length ? "Type and press enter..." : placeholder}
+          value={input}
+          onChange={e => { setInput(e.target.value); setShowSugg(true); }}
+          onKeyDown={e => {
+            if (e.key === "Enter" || e.key === ",") { e.preventDefault(); add(); }
+            if (e.key === "Backspace" && !input) setTags(p => p.slice(0, -1));
+          }}
+          onBlur={() => setTimeout(() => { add(); setShowSugg(false); }, 150)}
+        />
+        <AnimatePresence>
+          {showSugg && filtered.length > 0 && (
+            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="absolute top-full left-0 mt-1 w-full z-50 card p-1 shadow-2xl">
+              {filtered.slice(0, 6).map(s => (
+                <button key={s} onMouseDown={() => add(s)}
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm text-[var(--text-2)] hover:bg-[var(--surface-2)] flex items-center gap-2">
+                  <Tag size={10} className="text-[var(--accent)]" /> {s}
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -66,8 +102,7 @@ function LocationInput({ value, onChange, onCoordsChange }) {
 
   const selectSuggestion = async (s) => {
     onChange(s.description, null, null);
-    setSuggestions([]);
-    setShowSuggestions(false);
+    setSuggestions([]); setShowSuggestions(false);
     try {
       const { data } = await geocodeLocation(s.description);
       if (data?.lat && data?.lng) { onChange(s.description, data.lat, data.lng); onCoordsChange(data.lat, data.lng, s.description); }
@@ -81,8 +116,7 @@ function LocationInput({ value, onChange, onCoordsChange }) {
       pos => {
         const { latitude: lat, longitude: lng } = pos.coords;
         onChange(`${lat.toFixed(4)}, ${lng.toFixed(4)}`, lat, lng);
-        onCoordsChange(lat, lng, null);
-        setGeoLoading(false);
+        onCoordsChange(lat, lng, null); setGeoLoading(false);
         toast.success("Location detected");
       },
       () => { toast.error("Could not get location"); setGeoLoading(false); }
@@ -131,16 +165,6 @@ function LocationInput({ value, onChange, onCoordsChange }) {
 function LiveLog({ logs, status }) {
   const bottomRef = useRef(null);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [logs]);
-  const phaseIcon = (log) => {
-    if (log.startsWith("▶")) return "🚀";
-    if (log.startsWith("🔍") || log.startsWith("📍")) return null;
-    if (log.startsWith("✅")) return null;
-    if (log.startsWith("❌")) return null;
-    if (log.startsWith("🕷")) return null;
-    if (log.startsWith("📋")) return null;
-    if (log.startsWith("🎉")) return null;
-    return null;
-  };
   return (
     <div className="card bg-[var(--surface)] overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border)] bg-[var(--surface-2)]">
@@ -199,15 +223,39 @@ function SessionCard({ session, index }) {
   );
 }
 
+// ── Suggestion pools ─────────────────────────────────────────
+const INDUSTRY_SUGGESTIONS = [
+  "SaaS", "fintech", "healthcare", "e-commerce", "logistics", "manufacturing",
+  "real estate", "edtech", "legal tech", "HR tech", "cybersecurity", "AI startup",
+  "robotics", "biotech", "retail", "insurance", "construction", "media agency",
+];
+const TECH_SUGGESTIONS = [
+  "React", "Node.js", "Python", "AWS", "Salesforce", "HubSpot", "Stripe",
+  "Shopify", "Kubernetes", "Docker", "OpenAI", "PostgreSQL", "MongoDB",
+  "LiDAR", "computer vision", "ROS", "Kafka", "GraphQL",
+];
+const PERSONA_SUGGESTIONS = [
+  "CTO", "CEO", "VP Engineering", "Head of Product", "Director of Marketing",
+  "Founder", "Co-founder", "VP Sales", "Chief Revenue Officer", "Engineering Manager",
+  "Head of Growth", "CMO", "CFO", "Director of Operations",
+];
+const DISQUALIFY_SUGGESTIONS = [
+  "hobbyist", "non-profit", "educational", "student project", "toy", "agency",
+  "freelancer", "closed beta", "stealth mode", "government",
+];
+
 // ── Main Page ─────────────────────────────────────────────────
 export default function AutoScraperPage() {
-  const [keywords, setKeywords] = useState([]);
+  const [industryKeywords, setIndustryKeywords] = useState([]);
+  const [techSignals, setTechSignals]           = useState([]);
+  const [targetPersonas, setTargetPersonas]     = useState([]);
+  const [disqualifiers, setDisqualifiers]       = useState([]);
+
   const [locationText, setLocationText] = useState("");
   const [lat, setLat] = useState(null);
   const [lng, setLng] = useState(null);
-  const [radius, setRadius] = useState(10); // km
+  const [radius, setRadius] = useState(10);
   const [running, setRunning] = useState(false);
-  const [sessionId, setSessionId] = useState(null);
   const [logs, setLogs] = useState([]);
   const [pipelineStatus, setPipelineStatus] = useState("idle");
   const [sessions, setSessions] = useState([]);
@@ -225,29 +273,25 @@ export default function AutoScraperPage() {
   useEffect(() => { loadSessions(); }, [loadSessions]);
 
   const handleLocationChange = (text, newLat, newLng) => {
-    setLocationText(text);
-    setLat(newLat);
-    setLng(newLng);
-  };
-
-  const handleCoordsChange = (newLat, newLng) => {
-    setLat(newLat);
-    setLng(newLng);
+    setLocationText(text); setLat(newLat); setLng(newLng);
   };
 
   const handleStart = async () => {
-    if (!keywords.length) { toast.error("Please enter at least one keyword"); return; }
-    setRunning(true);
-    setLogs([]);
-    setPipelineStatus("running");
+    if (!industryKeywords.length) { toast.error("Add at least one Industry Keyword"); return; }
+    setRunning(true); setLogs([]); setPipelineStatus("running");
 
     try {
-      const body = { keyword: keywords.join(", "), location: locationText || null };
+      const body = {
+        industryKeywords,
+        techSignals,
+        targetPersonas,
+        disqualifiers,
+        location: locationText || null,
+      };
       if (lat && lng) { body.lat = lat; body.lng = lng; body.radius = radius * 1000; }
-      const { data } = await startAutoScraper(body);
-      setSessionId(data.sessionId);
 
-      // Connect SSE
+      const { data } = await startAutoScraper(body);
+
       if (sseRef.current) sseRef.current.close();
       const es = new EventSource(`${AUTO_SCRAPER_SSE}/status/${data.sessionId}`);
       sseRef.current = es;
@@ -256,10 +300,7 @@ export default function AutoScraperPage() {
         const msg = JSON.parse(e.data);
         if (msg.log) setLogs(prev => [...prev, msg.log]);
         if (msg.status === "done" || msg.status === "failed") {
-          setPipelineStatus(msg.status);
-          setRunning(false);
-          es.close();
-          loadSessions();
+          setPipelineStatus(msg.status); setRunning(false); es.close(); loadSessions();
           if (msg.status === "done") toast.success("Auto scraper completed!");
           else toast.error("Pipeline failed. See logs.");
         }
@@ -267,15 +308,15 @@ export default function AutoScraperPage() {
       es.onerror = () => { setPipelineStatus("failed"); setRunning(false); es.close(); };
     } catch (err) {
       toast.error(err.response?.data?.error || "Failed to start pipeline");
-      setRunning(false);
-      setPipelineStatus("idle");
+      setRunning(false); setPipelineStatus("idle");
     }
   };
 
   useEffect(() => () => sseRef.current?.close(), []);
 
-  const canStart = keywords.length > 0 && !running;
+  const canStart = industryKeywords.length > 0 && !running;
   const locationSet = !!(lat && lng);
+  const totalKeywords = industryKeywords.length + techSignals.length + targetPersonas.length;
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto">
@@ -285,107 +326,145 @@ export default function AutoScraperPage() {
           <Sparkles size={22} className="text-[var(--accent)]" /> Auto Scraper
         </h2>
         <p className="text-sm text-[var(--text-3)] mt-1">
-          Discover company websites by keyword · crawl them automatically · save leads with contact info
+          Define your Ideal Customer Profile → discover matching companies → crawl and save leads automatically
         </p>
       </div>
 
-      {/* Config Card */}
-      <motion.div className="card p-6 space-y-5" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
-        {/* Flow diagram */}
-        <div className="flex items-center gap-2 text-[11px] text-[var(--text-3)] font-medium flex-wrap">
-          <span className="badge badge-purple">Keywords</span>
-          <ArrowRight size={10} />
-          <span className="badge badge-purple">Google {locationSet ? "Places" : "Search"}</span>
-          <ArrowRight size={10} />
-          <span className="badge badge-purple">Web Crawler</span>
-          <ArrowRight size={10} />
-          <span className="badge badge-purple">Website Intel</span>
-          <ArrowRight size={10} />
-          <span className="badge badge-green">Leads (DB)</span>
+      {/* Pipeline Flow */}
+      <div className="flex items-center gap-2 text-[11px] text-[var(--text-3)] font-medium flex-wrap">
+        <span className="badge badge-purple">ICP Keywords</span>
+        <ArrowRight size={10} />
+        <span className="badge badge-purple">Smart Query Builder</span>
+        <ArrowRight size={10} />
+        <span className="badge badge-purple">Google {locationSet ? "Places" : "Search"}</span>
+        <ArrowRight size={10} />
+        <span className="badge badge-purple">Web Crawler</span>
+        <ArrowRight size={10} />
+        <span className="badge badge-green">Leads (DB)</span>
+      </div>
+
+      {/* ICP Keyword Config */}
+      <motion.div className="card p-6 space-y-6" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-sm font-bold text-[var(--text)]">Target Profile Keywords</h3>
+            <p className="text-[11px] text-[var(--text-3)] mt-0.5">These are combined to build highly accurate search queries</p>
+          </div>
+          {totalKeywords > 0 && (
+            <span className="badge badge-green text-[11px]">
+              ✓ {totalKeywords} keyword{totalKeywords !== 1 ? "s" : ""} configured
+            </span>
+          )}
         </div>
 
-        {/* Keywords */}
-        <div>
-          <label className="block text-xs font-bold text-[var(--text-2)] uppercase tracking-wider mb-2">
-            Keywords <span className="text-[var(--rose)] font-normal normal-case">* required</span>
-          </label>
-          <KeywordInput tags={keywords} setTags={setKeywords} />
-          <p className="text-[11px] text-[var(--text-3)] mt-1.5">
-            Press Enter or comma to add. Example: <em>saas</em>, <em>fintech</em>, <em>healthcare companies</em>
-          </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {/* Industry Keywords */}
+          <TagSection
+            icon={Search}
+            title="Industry / Business Type"
+            description="What industry or company type are you targeting? (Required)"
+            color="bg-violet-500"
+            tags={industryKeywords}
+            setTags={setIndustryKeywords}
+            placeholder="e.g. SaaS, fintech, healthcare..."
+            suggestions={INDUSTRY_SUGGESTIONS}
+          />
+
+          {/* Tech Signals */}
+          <TagSection
+            icon={Cpu}
+            title="Technology Signals"
+            description="What technologies should target companies use? (Optional)"
+            color="bg-blue-500"
+            tags={techSignals}
+            setTags={setTechSignals}
+            placeholder="e.g. React, AWS, Salesforce..."
+            suggestions={TECH_SUGGESTIONS}
+          />
+
+          {/* Target Personas */}
+          <TagSection
+            icon={Briefcase}
+            title="Target Personas / Job Titles"
+            description="Who are you trying to reach? Narrows search to relevant companies. (Optional)"
+            color="bg-emerald-500"
+            tags={targetPersonas}
+            setTags={setTargetPersonas}
+            placeholder="e.g. CTO, VP Engineering, Founder..."
+            suggestions={PERSONA_SUGGESTIONS}
+          />
+
+          {/* Disqualifiers */}
+          <TagSection
+            icon={ShieldX}
+            title="Disqualifying Keywords"
+            description="Exclude companies matching these terms. (Optional)"
+            color="bg-rose-500"
+            tags={disqualifiers}
+            setTags={setDisqualifiers}
+            placeholder="e.g. hobbyist, non-profit, student..."
+            suggestions={DISQUALIFY_SUGGESTIONS}
+          />
         </div>
 
-        {/* Location */}
+        {/* Smart Query Preview */}
+        {industryKeywords.length > 0 && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+            className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3">
+            <p className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+              <Search size={10} className="text-[var(--accent)]" /> Search Query Preview
+            </p>
+            <p className="text-xs font-mono text-[var(--accent)] break-all">
+              "{industryKeywords.join(" OR ")}
+              {techSignals.length ? ` + ${techSignals.slice(0, 2).join(", ")}` : ""}
+              {targetPersonas.length ? ` + hiring ${targetPersonas[0]}` : ""}"
+              {disqualifiers.length ? <span className="text-[var(--rose)]"> -"{disqualifiers.join("\" -\"")}"</span> : ""}
+            </p>
+          </motion.div>
+        )}
+      </motion.div>
+
+      {/* Location + Radius */}
+      <motion.div className="card p-6 space-y-5" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
         <div>
           <label className="block text-xs font-bold text-[var(--text-2)] uppercase tracking-wider mb-2 flex items-center gap-2">
             Location
             <span className="font-normal normal-case text-[var(--text-3)]">(optional — uses Google Places if provided)</span>
             {locationSet && <span className="badge badge-green text-[10px]">📍 Coords set</span>}
           </label>
-          <LocationInput value={locationText} onChange={handleLocationChange} onCoordsChange={handleCoordsChange} />
+          <LocationInput value={locationText} onChange={handleLocationChange} onCoordsChange={(lat, lng) => { setLat(lat); setLng(lng); }} />
           <p className="text-[11px] text-[var(--text-3)] mt-1.5">
             {locationSet
               ? `✅ Location resolved to (${lat?.toFixed(4)}, ${lng?.toFixed(4)}) — will use Google Places Nearby`
-              : "Without location, Google Places Text Search is used to find companies globally."
-            }
+              : "Without location, Google Places Text Search is used to find companies globally."}
           </p>
         </div>
 
-        {/* Radius Slider — only when location is set */}
         <AnimatePresence>
           {locationSet && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
+            <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
               <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-[var(--text-2)] uppercase tracking-wider flex items-center gap-2">
                     <SlidersHorizontal size={12} className="text-[var(--accent)]" /> Search Radius
                   </label>
-                  <span className="text-sm font-bold text-[var(--accent)] tabular-nums">
-                    {radius < 1 ? `${radius * 1000}m` : `${radius} km`}
-                  </span>
+                  <span className="text-sm font-bold text-[var(--accent)] tabular-nums">{radius} km</span>
                 </div>
-                <div className="relative">
-                  <input
-                    type="range"
-                    min={1} max={150} step={1}
-                    value={radius}
-                    onChange={e => setRadius(Number(e.target.value))}
-                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-                    style={{
-                      background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${(radius - 1) / 149 * 100}%, var(--surface) ${(radius - 1) / 149 * 100}%, var(--surface) 100%)`,
-                    }}
-                  />
-                  <div className="flex justify-between text-[10px] text-[var(--text-3)] mt-1.5 px-0.5">
-                    <span>1 km</span>
-                    <span className="text-[var(--text-3)]">·</span>
-                    <span>25 km</span>
-                    <span className="text-[var(--text-3)]">·</span>
-                    <span>75 km</span>
-                    <span className="text-[var(--text-3)]">·</span>
-                    <span>150 km</span>
-                  </div>
+                <input type="range" min={1} max={150} step={1} value={radius} onChange={e => setRadius(Number(e.target.value))}
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                  style={{ background: `linear-gradient(to right, var(--accent) 0%, var(--accent) ${(radius - 1) / 149 * 100}%, var(--surface) ${(radius - 1) / 149 * 100}%, var(--surface) 100%)` }}
+                />
+                <div className="flex justify-between text-[10px] text-[var(--text-3)] px-0.5">
+                  <span>1 km</span><span>50 km</span><span>100 km</span><span>150 km</span>
                 </div>
-                <p className="text-[11px] text-[var(--text-3)]">
-                  Will search for companies within <strong className="text-[var(--text-2)]">{radius} km</strong> of your selected location.
-                </p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Start Button */}
-        <button
-          onClick={handleStart}
-          disabled={!canStart}
-          className="btn-primary w-full gap-2 py-3 text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          {running
-            ? <><Loader2 size={16} className="animate-spin" /> Pipeline running...</>
-            : <><Play size={16} /> Start Pipeline</>
-          }
+        <button onClick={handleStart} disabled={!canStart}
+          className="btn-primary w-full gap-2 py-3 text-sm font-bold disabled:opacity-40 disabled:cursor-not-allowed">
+          {running ? <><Loader2 size={16} className="animate-spin" /> Pipeline running...</> : <><Play size={16} /> Start Pipeline</>}
         </button>
       </motion.div>
 
@@ -408,11 +487,8 @@ export default function AutoScraperPage() {
             <RefreshCw size={11} className={sessionsLoading ? "animate-spin" : ""} /> Refresh
           </button>
         </div>
-
         {sessionsLoading ? (
-          <div className="card p-6 flex items-center justify-center">
-            <Loader2 size={20} className="animate-spin text-[var(--accent)]" />
-          </div>
+          <div className="card p-6 flex items-center justify-center"><Loader2 size={20} className="animate-spin text-[var(--accent)]" /></div>
         ) : sessions.length === 0 ? (
           <div className="card p-8 text-center">
             <Globe2 size={32} className="text-[var(--text-3)] mx-auto mb-2" />
