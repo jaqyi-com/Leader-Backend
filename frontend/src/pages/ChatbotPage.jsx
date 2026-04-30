@@ -3,14 +3,21 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare, Plus, Trash2, Send, Database, ChevronDown,
-  ChevronRight, Bot, User, Sparkles, BookOpen, X, Loader2
+  ChevronRight, Bot, User, Sparkles, BookOpen, X, Loader2,
+  Copy, Check, Cpu, Shield, Zap
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import toast from "react-hot-toast";
 import {
-  fetchConversations, createConversation, fetchMessages,
+  fetchConversations, fetchMessages,
   deleteConversation, sendMessage
 } from "../api/chatbot";
+
+const MODELS = [
+  { id: "gpt-4o",      label: "GPT-4o",      desc: "Most capable" },
+  { id: "gpt-4o-mini", label: "GPT-4o Mini",  desc: "Faster & cheaper" },
+];
+const MAX_CONTEXT = 100000;
 
 const SUGGESTIONS = [
   "What does our organization do?",
@@ -128,6 +135,39 @@ function SourceCitations({ chunks }) {
   );
 }
 
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button onClick={copy} title="Copy" style={{
+      background: "none", border: "none", cursor: "pointer",
+      color: copied ? "var(--emerald)" : "var(--text-3)",
+      padding: "2px 4px", borderRadius: 4, transition: "color 0.2s",
+    }}>
+      {copied ? <Check size={12} /> : <Copy size={12} />}
+    </button>
+  );
+}
+
+function TokenBar({ count, max = MAX_CONTEXT }) {
+  if (!count) return null;
+  const pct = Math.min(100, (count / max) * 100);
+  const color = pct > 80 ? "var(--rose)" : pct > 60 ? "var(--ember)" : "var(--emerald)";
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "var(--text-3)" }}>
+      <Cpu size={11} />
+      <div style={{ width: 80, height: 4, background: "var(--border)", borderRadius: 4, overflow: "hidden" }}>
+        <motion.div animate={{ width: `${pct}%` }} style={{ height: "100%", background: color, borderRadius: 4 }} />
+      </div>
+      <span style={{ color }}>{Math.round(count / 1000)}k / {Math.round(max / 1000)}k tokens</span>
+    </div>
+  );
+}
+
 function MessageBubble({ msg, isStreaming }) {
   const isUser = msg.role === "user";
   return (
@@ -189,8 +229,13 @@ function MessageBubble({ msg, isStreaming }) {
             )}
           </div>
 
-          {/* Source citations (assistant messages) */}
-          {!isUser && <SourceCitations chunks={msg.sourceChunks} />}
+          {/* Source citations + copy (assistant messages) */}
+          {!isUser && (
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <SourceCitations chunks={msg.sourceChunks} />
+              {msg.content && <CopyButton text={msg.content} />}
+            </div>
+          )}
         </div>
       </div>
     </motion.div>
@@ -254,9 +299,20 @@ export default function ChatbotPage() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
+  const [model, setModel] = useState("gpt-4o");
+  const [tokenCount, setTokenCount] = useState(0);
+  const [showModelPicker, setShowModelPicker] = useState(false);
+  const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const abortRef = useRef(false);
+
+  // Countdown timer for rate limit
+  useEffect(() => {
+    if (rateLimitCountdown <= 0) return;
+    const t = setTimeout(() => setRateLimitCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [rateLimitCountdown]);
 
   // Load conversations on mount
   useEffect(() => {
@@ -324,51 +380,42 @@ export default function ChatbotPage() {
 
     await sendMessage(convId, text, {
       onExpanded: (expandedPrompt, wasExpanded) => {
-        if (wasExpanded) {
-          setMessages((prev) =>
-            prev.map((m) => m._id === userMsg._id ? { ...m, expandedPrompt } : m)
-          );
-        }
+        if (wasExpanded) setMessages(prev => prev.map(m => m._id === userMsg._id ? { ...m, expandedPrompt } : m));
       },
       onSources: (chunks) => {
-        setMessages((prev) =>
-          prev.map((m) => m._id === "streaming" ? { ...m, sourceChunks: chunks } : m)
-        );
+        setMessages(prev => prev.map(m => m._id === "streaming" ? { ...m, sourceChunks: chunks } : m));
       },
       onDelta: (token) => {
-        setMessages((prev) =>
-          prev.map((m) => m._id === "streaming" ? { ...m, content: m.content + token } : m)
-        );
+        setMessages(prev => prev.map(m => m._id === "streaming" ? { ...m, content: m.content + token } : m));
+      },
+      onTokens: (count) => setTokenCount(count),
+      onModerated: (categories) => {
+        toast.error(`⚠️ Message flagged: ${categories.join(", ")}`, { duration: 5000 });
+      },
+      onRateLimit: (retryAfter) => {
+        setRateLimitCountdown(retryAfter);
+        toast.error(`Rate limit reached. Try again in ${retryAfter}s`, { icon: "⏱️" });
       },
       onDone: ({ conversationId, messageId }) => {
         finalConvId = conversationId;
-        setMessages((prev) =>
-          prev.map((m) => m._id === "streaming" ? { ...m, _id: messageId } : m)
-        );
-        // Update or add conversation in list
+        setMessages(prev => prev.map(m => m._id === "streaming" ? { ...m, _id: messageId } : m));
         if (convId === "new") {
           setActiveConvId(conversationId);
-          fetchConversations()
-            .then(({ conversations }) => setConversations(conversations || []))
-            .catch(console.error);
+          fetchConversations().then(({ conversations }) => setConversations(conversations || [])).catch(console.error);
         } else {
-          setConversations((prev) =>
-            prev.map((c) =>
-              c._id === conversationId
-                ? { ...c, messageCount: (c.messageCount || 0) + 2, lastMessageAt: new Date() }
-                : c
-            )
-          );
+          setConversations(prev => prev.map(c =>
+            c._id === conversationId ? { ...c, messageCount: (c.messageCount || 0) + 2, lastMessageAt: new Date() } : c
+          ));
         }
       },
       onError: (msg) => {
-        setMessages((prev) => prev.filter((m) => m._id !== "streaming"));
-        setMessages((prev) => [...prev, {
+        setMessages(prev => prev.filter(m => m._id !== "streaming"));
+        setMessages(prev => [...prev, {
           _id: `err-${Date.now()}`, role: "assistant",
-          content: `❌ Error: ${msg}`, sourceChunks: [], createdAt: new Date().toISOString(),
+          content: `❌ ${msg}`, sourceChunks: [], createdAt: new Date().toISOString(),
         }]);
       },
-    });
+    }, model);
 
     setIsStreaming(false);
   };
@@ -470,15 +517,15 @@ export default function ChatbotPage() {
 
         {/* Chat header */}
         <div style={{
-          padding: "14px 24px", borderBottom: "1px solid var(--border)",
+          padding: "12px 20px", borderBottom: "1px solid var(--border)",
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          background: "var(--surface)",
+          background: "var(--surface)", gap: 12,
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
               width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center",
               justifyContent: "center", background: "linear-gradient(135deg,var(--accent),#8b5cf6)",
-              boxShadow: "0 0 12px rgba(108,99,255,0.4)",
+              boxShadow: "0 0 12px rgba(108,99,255,0.4)", flexShrink: 0,
             }}>
               <Bot size={15} color="white" />
             </div>
@@ -486,22 +533,76 @@ export default function ChatbotPage() {
               <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>Organization AI Assistant</div>
               <div style={{ fontSize: 11, color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-                RAG · Powered by GPT-4o
+                RAG · Streaming · Moderated
               </div>
             </div>
           </div>
-          {activeConvId && activeConvId !== "new" && (
-            <button
-              onClick={() => { setActiveConvId(null); setMessages([]); }}
-              style={{
-                background: "none", border: "1px solid var(--border)", borderRadius: 7,
-                padding: "5px 10px", cursor: "pointer", color: "var(--text-2)", fontSize: 12,
-                display: "flex", alignItems: "center", gap: 4,
-              }}
-            >
-              <X size={12} /> Close
-            </button>
-          )}
+
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginLeft: "auto" }}>
+            {/* Token bar */}
+            <TokenBar count={tokenCount} />
+
+            {/* Rate limit warning */}
+            {rateLimitCountdown > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11,
+                color: "var(--rose)", background: "rgba(244,63,94,0.1)",
+                border: "1px solid rgba(244,63,94,0.3)", borderRadius: 8, padding: "3px 8px"
+              }}>
+                <Shield size={11} /> Rate limit: {rateLimitCountdown}s
+              </div>
+            )}
+
+            {/* Model selector */}
+            <div style={{ position: "relative" }}>
+              <button onClick={() => setShowModelPicker(p => !p)} style={{
+                display: "flex", alignItems: "center", gap: 6, background: "var(--surface-3)",
+                border: "1px solid var(--border)", borderRadius: 8, padding: "5px 10px",
+                cursor: "pointer", color: "var(--text-2)", fontSize: 12, fontWeight: 500,
+              }}>
+                <Zap size={11} style={{ color: "var(--accent)" }} />
+                {MODELS.find(m => m.id === model)?.label}
+                <ChevronDown size={11} />
+              </button>
+              <AnimatePresence>
+                {showModelPicker && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
+                    style={{
+                      position: "absolute", top: "calc(100% + 6px)", right: 0,
+                      background: "var(--surface-2)", border: "1px solid var(--border)",
+                      borderRadius: 10, padding: 4, zIndex: 100, minWidth: 160,
+                      boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
+                    }}
+                  >
+                    {MODELS.map(m => (
+                      <button key={m.id} onClick={() => { setModel(m.id); setShowModelPicker(false); }}
+                        style={{
+                          width: "100%", display: "flex", flexDirection: "column", alignItems: "flex-start",
+                          gap: 1, padding: "8px 12px", borderRadius: 7, border: "none",
+                          background: model === m.id ? "rgba(108,99,255,0.15)" : "transparent",
+                          cursor: "pointer", color: model === m.id ? "var(--accent-2)" : "var(--text-2)",
+                        }}
+                      >
+                        <span style={{ fontSize: 12, fontWeight: 600 }}>{m.label}</span>
+                        <span style={{ fontSize: 10, opacity: 0.6 }}>{m.desc}</span>
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {activeConvId && activeConvId !== "new" && (
+              <button onClick={() => { setActiveConvId(null); setMessages([]); setTokenCount(0); }}
+                style={{
+                  background: "none", border: "1px solid var(--border)", borderRadius: 7,
+                  padding: "5px 10px", cursor: "pointer", color: "var(--text-2)", fontSize: 12,
+                  display: "flex", alignItems: "center", gap: 4,
+                }}>
+                <X size={12} /> Close
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Messages area */}

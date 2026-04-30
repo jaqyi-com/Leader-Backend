@@ -11,6 +11,7 @@ const express = require("express");
 const router = express.Router();
 const multer = require("multer");
 const { auth } = require("../middleware/auth");
+const { chatRateLimit, ingestRateLimit } = require("../middleware/rateLimit");
 const { streamChat } = require("../services/chatbotService");
 const {
   ingestText,
@@ -154,11 +155,15 @@ router.delete("/conversations/:id", auth, async (req, res) => {
 
 // POST /api/chatbot/conversations/:id/chat — send a message (SSE stream)
 // conversationId can be "new" to auto-create one
-router.post("/conversations/:id/chat", auth, async (req, res) => {
-  const { message } = req.body;
+// Body: { message: string, model?: "gpt-4o" | "gpt-4o-mini" }
+router.post("/conversations/:id/chat", auth, chatRateLimit, async (req, res) => {
+  const { message, model } = req.body;
   if (!message || !message.trim()) {
     return res.status(400).json({ error: "Message is required" });
   }
+
+  const ALLOWED_MODELS = ["gpt-4o", "gpt-4o-mini"];
+  const selectedModel = ALLOWED_MODELS.includes(model) ? model : "gpt-4o";
 
   try {
     const orgId = await getOrgFromUser(req);
@@ -183,6 +188,7 @@ router.post("/conversations/:id/chat", auth, async (req, res) => {
       conversationId,
       userMessage: message.trim(),
       orgName,
+      model: selectedModel,
       res,
     });
 
@@ -237,7 +243,7 @@ router.get("/knowledge/:id", auth, async (req, res) => {
 });
 
 // POST /api/chatbot/knowledge/text — add a text knowledge block
-router.post("/knowledge/text", auth, async (req, res) => {
+router.post("/knowledge/text", auth, ingestRateLimit, async (req, res) => {
   const { name, text } = req.body;
   if (!name || !text) {
     return res.status(400).json({ error: "name and text are required" });
@@ -257,9 +263,11 @@ router.post("/knowledge/text", auth, async (req, res) => {
 });
 
 // POST /api/chatbot/knowledge/file — upload a file
+// Returns 202 Accepted immediately — embedding runs in background
 router.post(
   "/knowledge/file",
   auth,
+  ingestRateLimit,
   upload.single("file"),
   async (req, res) => {
     if (!req.file) {

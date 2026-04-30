@@ -61,8 +61,8 @@ export async function deleteConversation(conversationId) {
  *   - onDone({ conversationId, messageId })
  *   - onError(message)
  */
-export async function sendMessage(conversationId, message, callbacks = {}) {
-  const { onExpanded, onSources, onDelta, onDone, onError } = callbacks;
+export async function sendMessage(conversationId, message, callbacks = {}, model = "gpt-4o") {
+  const { onExpanded, onSources, onDelta, onDone, onError, onTokens, onModerated, onRateLimit } = callbacks;
 
   const response = await fetch(
     `${BASE}/chatbot/conversations/${conversationId}/chat`,
@@ -72,9 +72,17 @@ export async function sendMessage(conversationId, message, callbacks = {}) {
         "Content-Type": "application/json",
         ...getAuthHeader(),
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, model }),
     }
   );
+
+  // Handle rate limit before reading body as stream
+  if (response.status === 429) {
+    const err = await response.json().catch(() => ({}));
+    onRateLimit?.(err.retryAfter || 60);
+    onError?.(err.error || "Rate limit exceeded");
+    return;
+  }
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({ error: "Request failed" }));
@@ -102,21 +110,13 @@ export async function sendMessage(conversationId, message, callbacks = {}) {
         try {
           const event = JSON.parse(jsonStr);
           switch (event.type) {
-            case "expanded":
-              onExpanded?.(event.content, event.wasExpanded);
-              break;
-            case "sources":
-              onSources?.(event.chunks);
-              break;
-            case "delta":
-              onDelta?.(event.content);
-              break;
-            case "done":
-              onDone?.(event);
-              break;
-            case "error":
-              onError?.(event.message);
-              break;
+            case "expanded":   onExpanded?.(event.content, event.wasExpanded); break;
+            case "sources":    onSources?.(event.chunks); break;
+            case "delta":      onDelta?.(event.content); break;
+            case "tokens":     onTokens?.(event.count, event.model); break;
+            case "moderated":  onModerated?.(event.categories); break;
+            case "done":       onDone?.(event); break;
+            case "error":      onError?.(event.message); break;
           }
         } catch (_) {}
       }
