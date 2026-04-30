@@ -205,7 +205,6 @@ async function sendInviteEmail({ email, org, inviteToken }) {
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
   const link = `${frontendUrl}/invite?token=${inviteToken}`;
 
-  try {
     const nodemailer = require("nodemailer");
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST,
@@ -227,9 +226,6 @@ async function sendInviteEmail({ email, org, inviteToken }) {
         </div>
       `,
     });
-  } catch (e) {
-    console.error("[OrgService] Failed to send invite email:", e.message);
-  }
 }
 
 module.exports = {
