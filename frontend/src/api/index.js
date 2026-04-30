@@ -132,7 +132,12 @@ export const analyzeScraperDescription = (description) =>
 // ============================================================
 // LEAD GENERATOR API
 // ============================================================
-const lgApi = axios.create({ baseURL: BASE, timeout: 120000 });
+// BASE ends in /api (e.g. https://backend.vercel.app/api)
+// Strip it so lgApi can call /api/lead-generator/... cleanly
+const BACKEND_ROOT = BASE.replace(/\/api$/, "");
+export { BACKEND_ROOT };
+
+const lgApi = axios.create({ baseURL: BACKEND_ROOT, timeout: 120000 });
 
 export const lgAnalyzeProspect      = (description)  => lgApi.post("/api/lead-generator/analyze-prospect", { description });
 export const lgLinkedInSearch       = (params)        => lgApi.post("/api/lead-generator/linkedin/search", params);

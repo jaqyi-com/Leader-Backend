@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot, Play, Loader2, CheckCircle2, AlertCircle, Sparkles, Database, Send, ChevronRight } from "lucide-react";
-import { lgResearchStart } from "../../api";
+import { lgResearchStart, BACKEND_ROOT } from "../../api";
 import toast from "react-hot-toast";
 
-const BACKEND_URL = import.meta.env.VITE_API_URL?.replace("/api", "") || "http://localhost:3001";
 
 const EXAMPLE_PROMPTS = [
   "Find me 15 B2B SaaS companies in India with 50-200 employees that are hiring a Head of Sales",
@@ -36,7 +35,7 @@ export default function AIResearchAgentPage() {
       setSessionId(data.sessionId);
 
       if (sseRef.current) sseRef.current.close();
-      const es = new EventSource(`${BACKEND_URL}/api/lead-generator/research/status/${data.sessionId}`);
+      const es = new EventSource(`${BACKEND_ROOT}/api/lead-generator/research/status/${data.sessionId}`);
       sseRef.current = es;
 
       es.onmessage = (e) => {
