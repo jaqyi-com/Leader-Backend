@@ -281,6 +281,51 @@ const autoScraperLeadSchema = new mongoose.Schema({
 const AutoScraperSession = mongoose.models.AutoScraperSession || mongoose.model("AutoScraperSession", autoScraperSessionSchema);
 const AutoScraperLead    = mongoose.models.AutoScraperLead    || mongoose.model("AutoScraperLead",    autoScraperLeadSchema);
 
+// ─── Unified Lead Generator ──────────────────────────────────────────────────
+const generatedLeadSchema = new mongoose.Schema({
+  // Identity
+  fullName:       String,
+  firstName:      String,
+  lastName:       String,
+  jobTitle:       String,
+  // Contact
+  email:          String,
+  emailConfidence: Number,  // 0–100 from Hunter.io
+  emailVerified:  { type: Boolean, default: false },
+  phone:          String,
+  linkedinUrl:    String,
+  // Company
+  companyName:    String,
+  companyDomain:  String,
+  companyWebsite: String,
+  industry:       String,
+  employeeCount:  String,
+  country:        String,
+  city:           String,
+  // Source tracking
+  source: {
+    type: String,
+    enum: ["linkedin_finder", "email_finder", "company_intel", "ai_research", "auto_scraper", "places_scraper", "manual"],
+    default: "manual",
+  },
+  sourceQuery:    String,   // the query/prompt that generated this lead
+  // Status workflow
+  status: {
+    type: String,
+    enum: ["new", "contacted", "replied", "qualified", "rejected"],
+    default: "new",
+  },
+  // AI Research
+  researchNotes:  String,
+  outreachDraft:  String,
+  // Tags
+  tags:           [String],
+  orgId:          { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
+}, { timestamps: true });
+
+const GeneratedLead = mongoose.models.GeneratedLead || mongoose.model("GeneratedLead", generatedLeadSchema);
+
+
 module.exports = {
   connectDB,
   Company,
@@ -296,6 +341,7 @@ module.exports = {
   SocialPost,
   AutoScraperSession,
   AutoScraperLead,
+  GeneratedLead,
   // Auth / Org layer
   User,
   Organization,

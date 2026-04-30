@@ -29,6 +29,13 @@ import SettingsPage from "./pages/SettingsPage";
 import SocialMediaPage from "./pages/SocialMediaPage";
 import ChatbotPage from "./pages/ChatbotPage";
 import ChatbotDataPage from "./pages/ChatbotDataPage";
+// Lead Generator
+import LeadDatabasePage   from "./pages/lg/LeadDatabasePage";
+import LinkedInFinderPage from "./pages/lg/LinkedInFinderPage";
+import EmailFinderPage    from "./pages/lg/EmailFinderPage";
+import CompanyIntelPage   from "./pages/lg/CompanyIntelPage";
+import AIResearchAgentPage from "./pages/lg/AIResearchAgentPage";
+
 
 export default function App() {
   return (
@@ -72,6 +79,13 @@ export default function App() {
           {/* AI ChatBot */}
           <Route path="chatbot" element={<ChatbotPage />} />
           <Route path="chatbot/data" element={<ChatbotDataPage />} />
+          {/* Lead Generator */}
+          <Route path="lg/database"  element={<LeadDatabasePage />} />
+          <Route path="lg/linkedin"  element={<LinkedInFinderPage />} />
+          <Route path="lg/email"     element={<EmailFinderPage />} />
+          <Route path="lg/companies" element={<CompanyIntelPage />} />
+          <Route path="lg/research"  element={<AIResearchAgentPage />} />
+
         </Route>
 
         {/* ── 404 catch-all → redirect to login ─────────────── */}

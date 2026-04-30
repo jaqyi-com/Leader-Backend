@@ -130,6 +130,22 @@ export const analyzeScraperDescription = (description) =>
   crawlerApi.post("/auto-scraper/analyze", { description });
 
 // ============================================================
+// LEAD GENERATOR API
+// ============================================================
+const lgApi = axios.create({ baseURL: BASE, timeout: 120000 });
+
+export const lgAnalyzeProspect      = (description)  => lgApi.post("/api/lead-generator/analyze-prospect", { description });
+export const lgLinkedInSearch       = (params)        => lgApi.post("/api/lead-generator/linkedin/search", params);
+export const lgEmailFind            = (params)        => lgApi.post("/api/lead-generator/email/find", params);
+export const lgCompanySearch        = (params)        => lgApi.post("/api/lead-generator/companies/search", params);
+export const lgGetDatabase          = (params = {})   => lgApi.get("/api/lead-generator/database", { params });
+export const lgSaveLead             = (data)          => lgApi.post("/api/lead-generator/database", data);
+export const lgUpdateLead           = (id, data)      => lgApi.patch(`/api/lead-generator/database/${id}`, data);
+export const lgDeleteLead           = (id)            => lgApi.delete(`/api/lead-generator/database/${id}`);
+export const lgImportAutoScraper    = ()              => lgApi.post("/api/lead-generator/database/import-auto-scraper");
+export const lgResearchStart        = (prompt)        => lgApi.post("/api/lead-generator/research/start", { prompt });
+
+// ============================================================
 // SOCIAL MEDIA API (Unified.to MCP Integration)
 // ============================================================
 

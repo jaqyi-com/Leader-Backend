@@ -725,10 +725,13 @@ app.get("/api/sheets/runs/:tabName", async (req, res) => {
 // ============================================================
 // CRAWLER API (Native Express Routes)
 // ============================================================
-const crawlerRouter     = require("./api/crawler");
-const autoScraperRouter = require("./api/autoScraper");
+const crawlerRouter        = require("./api/crawler");
+const autoScraperRouter    = require("./api/autoScraper");
+const leadGeneratorRouter  = require("./routes/leadGenerator");
 app.use("/api/crawler",              crawlerRouter);
 app.use("/api/crawler/auto-scraper", autoScraperRouter);
+app.use("/api/lead-generator",       leadGeneratorRouter);
+
 
 // Export for Vercel / serverless environments
 module.exports = app;
