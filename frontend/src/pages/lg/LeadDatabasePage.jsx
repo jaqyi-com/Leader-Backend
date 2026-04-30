@@ -6,7 +6,7 @@ import {
   MapPin, Tag, UserCheck, UserX, MessageSquare, Clock,
   Upload, ChevronDown, X, ExternalLink,
 } from "lucide-react";
-import { lgGetDatabase, lgUpdateLead, lgDeleteLead, lgImportAutoScraper } from "../api";
+import { lgGetDatabase, lgUpdateLead, lgDeleteLead, lgImportAutoScraper } from "../../api";
 import toast from "react-hot-toast";
 
 const STATUS_CONFIG = {
