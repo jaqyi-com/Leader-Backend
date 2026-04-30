@@ -1,22 +1,13 @@
 import { NavLink } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  LayoutDashboard, Cpu, CalendarClock, Sheet, Trophy,
-  Target, Globe, MapPin, Database, Bot, ChevronLeft, ChevronRight,
+  Globe, MapPin, Database, ChevronLeft, ChevronRight,
   Zap, Settings, Share2, MessageSquare, Sparkles,
-  Users2, Mail, Building2, BrainCircuit, BookUser,
+  Users2, Mail, Building2, BrainCircuit,
 } from "lucide-react";
 
-const MAIN_LINKS = [
-  { to: "/app",              label: "Overview",       icon: LayoutDashboard, end: true },
-  { to: "/app/pipeline",     label: "Pipeline",       icon: Cpu },
-  { to: "/app/icp",          label: "ICP Config",     icon: Target },
-  { to: "/app/scheduler",    label: "Scheduler",      icon: CalendarClock },
-  { to: "/app/sheets",       label: "Data",           icon: Sheet },
-  { to: "/app/leads",        label: "Lead Scores",    icon: Trophy },
-  { to: "/app/autonomousagents", label: "Autonomous SDR", icon: Bot },
-  { to: "/app/settings",     label: "Settings",       icon: Settings },
-];
+
+
 
 const CRAWLER_LINKS = [
   { to: "/app/crawler",      label: "Web Crawler",   icon: Globe     },
@@ -157,9 +148,6 @@ export default function Sidebar({ collapsed, onToggle }) {
 
       {/* Nav */}
       <nav className="flex-1 px-2 py-4 flex flex-col gap-0.5 overflow-y-auto no-scrollbar">
-        {MAIN_LINKS.map(({ to, label, icon, end }) => (
-          <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={end} />
-        ))}
 
         <SectionLabel label="Crawler" collapsed={collapsed} />
 
@@ -186,28 +174,31 @@ export default function Sidebar({ collapsed, onToggle }) {
         ))}
       </nav>
 
-      {/* Status dot */}
+      {/* Status dot + Settings at bottom */}
       <div
-        className="px-4 py-4 flex items-center gap-3"
+        className="px-2 py-3 flex flex-col gap-1"
         style={{ borderTop: "1px solid var(--border)" }}
       >
-        <span
-          className="w-2 h-2 rounded-full flex-shrink-0 pulse-dot"
-          style={{ background: "var(--emerald)" }}
-        />
-        <AnimatePresence initial={false}>
-          {!collapsed && (
-            <motion.span
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-xs font-medium"
-              style={{ color: "var(--text-3)" }}
-            >
-              API Online
-            </motion.span>
-          )}
-        </AnimatePresence>
+        <NavItem to="/app/settings" label="Settings" icon={Settings} collapsed={collapsed} end={false} />
+        <div className="flex items-center gap-3 px-2 py-1.5">
+          <span
+            className="w-2 h-2 rounded-full flex-shrink-0 pulse-dot"
+            style={{ background: "var(--emerald)" }}
+          />
+          <AnimatePresence initial={false}>
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="text-xs font-medium"
+                style={{ color: "var(--text-3)" }}
+              >
+                API Online
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Collapse toggle */}
