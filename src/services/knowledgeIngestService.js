@@ -192,6 +192,10 @@ async function _processFileInBackground(orgId, userId, sourceId, name, mimeType,
   try {
     let rawText = "";
     if (mimeType === "application/pdf" || name.toLowerCase().endsWith(".pdf")) {
+      // Polyfill DOMMatrix for Node environments (pdf.js dependency)
+      if (typeof global.DOMMatrix === "undefined") {
+        global.DOMMatrix = class DOMMatrix {};
+      }
       const pdfParse = require("pdf-parse");
       const pdfData = await pdfParse(buffer);
       rawText = pdfData.text;

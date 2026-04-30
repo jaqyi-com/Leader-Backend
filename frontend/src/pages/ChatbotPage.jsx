@@ -13,10 +13,6 @@ import {
   deleteConversation, sendMessage
 } from "../api/chatbot";
 
-const MODELS = [
-  { id: "gpt-4o",      label: "GPT-4o",      desc: "Most capable" },
-  { id: "gpt-4o-mini", label: "GPT-4o Mini",  desc: "Faster & cheaper" },
-];
 const MAX_CONTEXT = 100000;
 
 const SUGGESTIONS = [
@@ -299,9 +295,8 @@ export default function ChatbotPage() {
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [loadingConvs, setLoadingConvs] = useState(true);
-  const [model, setModel] = useState("gpt-4o");
+  const [model] = useState("gpt-4o-mini");
   const [tokenCount, setTokenCount] = useState(0);
-  const [showModelPicker, setShowModelPicker] = useState(false);
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -551,46 +546,6 @@ export default function ChatbotPage() {
                 <Shield size={11} /> Rate limit: {rateLimitCountdown}s
               </div>
             )}
-
-            {/* Model selector */}
-            <div style={{ position: "relative" }}>
-              <button onClick={() => setShowModelPicker(p => !p)} style={{
-                display: "flex", alignItems: "center", gap: 6, background: "var(--surface-3)",
-                border: "1px solid var(--border)", borderRadius: 8, padding: "5px 10px",
-                cursor: "pointer", color: "var(--text-2)", fontSize: 12, fontWeight: 500,
-              }}>
-                <Zap size={11} style={{ color: "var(--accent)" }} />
-                {MODELS.find(m => m.id === model)?.label}
-                <ChevronDown size={11} />
-              </button>
-              <AnimatePresence>
-                {showModelPicker && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}
-                    style={{
-                      position: "absolute", top: "calc(100% + 6px)", right: 0,
-                      background: "var(--surface-2)", border: "1px solid var(--border)",
-                      borderRadius: 10, padding: 4, zIndex: 100, minWidth: 160,
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.4)",
-                    }}
-                  >
-                    {MODELS.map(m => (
-                      <button key={m.id} onClick={() => { setModel(m.id); setShowModelPicker(false); }}
-                        style={{
-                          width: "100%", display: "flex", flexDirection: "column", alignItems: "flex-start",
-                          gap: 1, padding: "8px 12px", borderRadius: 7, border: "none",
-                          background: model === m.id ? "rgba(108,99,255,0.15)" : "transparent",
-                          cursor: "pointer", color: model === m.id ? "var(--accent-2)" : "var(--text-2)",
-                        }}
-                      >
-                        <span style={{ fontSize: 12, fontWeight: 600 }}>{m.label}</span>
-                        <span style={{ fontSize: 10, opacity: 0.6 }}>{m.desc}</span>
-                      </button>
-                    ))}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
 
             {activeConvId && activeConvId !== "new" && (
               <button onClick={() => { setActiveConvId(null); setMessages([]); setTokenCount(0); }}

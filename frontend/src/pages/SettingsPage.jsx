@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Building2, Users, Key, ShieldAlert, Mail, UserPlus, Trash2,
-  AlertCircle, Save, Loader2, Eye, EyeOff, Crown, Shield, User,
+  Building2, Users, ShieldAlert, Mail, UserPlus, Trash2,
+  AlertCircle, Save, Loader2, Crown, Shield, User,
   CheckCircle, X, ChevronDown, Check,
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -37,10 +37,9 @@ const ROLE_META = {
 
 // ── TABS ───────────────────────────────────────────────────────────────────
 const TABS = [
-  { id: "org",   label: "Organization",  icon: <Building2 size={15} /> },
-  { id: "members", label: "Members",     icon: <Users     size={15} /> },
-  { id: "creds", label: "Credentials",  icon: <Key       size={15} /> },
-  { id: "danger", label: "Danger Zone", icon: <ShieldAlert size={15} /> },
+  { id: "org",    label: "Organization", icon: <Building2  size={15} /> },
+  { id: "members",label: "Members",      icon: <Users      size={15} /> },
+  { id: "danger", label: "Danger Zone",  icon: <ShieldAlert size={15} /> },
 ];
 
 export default function SettingsPage() {
@@ -77,7 +76,6 @@ export default function SettingsPage() {
         <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
           {tab === "org"     && <OrgTab />}
           {tab === "members" && <MembersTab />}
-          {tab === "creds"   && <CredsTab />}
           {tab === "danger"  && <DangerTab />}
         </motion.div>
       </AnimatePresence>
@@ -381,89 +379,6 @@ function MembersTab() {
           ))}
         </div>
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// CREDENTIALS TAB (preserved from original)
-// ══════════════════════════════════════════════════════════════════════════════
-function CredsTab() {
-  const [envData, setEnvData] = useState({});
-  const [loadingEnv, setLoadingEnv] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [showKeys, setShowKeys] = useState({});
-
-  useEffect(() => {
-    getEnv().then(({ data }) => setEnvData(data || {})).catch(() => toast.error("Failed to load credentials")).finally(() => setLoadingEnv(false));
-  }, []);
-
-  async function handleSave() {
-    setSaving(true);
-    try { await saveEnv(envData); toast.success("Credentials saved!"); }
-    catch { toast.error("Failed to save credentials"); }
-    finally { setSaving(false); }
-  }
-
-  const ENV_GROUPS = [
-    { title: "OpenAI Config",    keys: ["OPENAI_API_KEY", "OPENAI_MODEL"] },
-    { title: "Apollo Enrichment", keys: ["APOLLO_API_KEY"] },
-    { title: "SMTP Email",       keys: ["SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM_NAME", "SMTP_FROM_EMAIL"] },
-    { title: "Google Places",    keys: ["GOOGLE_API_KEY"] },
-    { title: "Database",         keys: ["MONGO_URI"] },
-  ];
-
-  return (
-    <div className="card" style={{ padding: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <div>
-          <h2 style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
-            <Key size={16} style={{ color: "var(--accent)" }} /> API Credentials
-          </h2>
-          <p style={{ fontSize: 12, color: "var(--text-3)", margin: "4px 0 0" }}>Manage your integration keys without leaving the dashboard.</p>
-        </div>
-        <button className="btn-primary" onClick={handleSave} disabled={saving || loadingEnv} style={{ gap: 8 }}>
-          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />} Save
-        </button>
-      </div>
-      {loadingEnv ? (
-        <div style={{ textAlign: "center", padding: 40 }}><Loader2 size={22} style={{ color: "var(--text-3)", animation: "spin 0.8s linear infinite" }} /></div>
-      ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-          {ENV_GROUPS.map((group) => (
-            <div key={group.title}>
-              <p style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--text-3)", marginBottom: 10 }}>{group.title}</p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {group.keys.map(key => {
-                  const isSecret = key.includes("KEY") || key.includes("PASS") || key.includes("URI");
-                  return (
-                    <div key={key}>
-                      <label style={{ display: "block", fontSize: 11, fontWeight: 600, color: "var(--text-3)", marginBottom: 4 }}>{key}</label>
-                      <div style={{ position: "relative" }}>
-                        <input
-                          type={isSecret && !showKeys[key] ? "password" : "text"}
-                          className="input"
-                          value={envData[key] || ""}
-                          onChange={e => setEnvData(p => ({ ...p, [key]: e.target.value }))}
-                          placeholder={`Enter ${key}…`}
-                          style={{ paddingRight: isSecret ? 40 : 12, fontFamily: "monospace", fontSize: 13 }}
-                        />
-                        {isSecret && (
-                          <button onClick={() => setShowKeys(p => ({ ...p, [key]: !p[key] }))}
-                            style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-3)", cursor: "pointer" }}>
-                            {showKeys[key] ? <EyeOff size={14} /> : <Eye size={14} />}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );
