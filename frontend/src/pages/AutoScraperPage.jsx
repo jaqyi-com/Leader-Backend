@@ -4,9 +4,9 @@ import {
   Sparkles, MapPin, Play, X, Loader2, CheckCircle2,
   AlertCircle, Navigation, Globe2, Clock,
   Database, ArrowRight, RefreshCw, SlidersHorizontal,
-  Tag, ShieldX, Cpu, Briefcase, Search,
+  Tag, ShieldX, Cpu, Briefcase, Search, Wand2, ChevronDown,
 } from "lucide-react";
-import { startAutoScraper, autocompleteLocation, geocodeLocation, getAutoScraperSessions } from "../api";
+import { startAutoScraper, autocompleteLocation, geocodeLocation, getAutoScraperSessions, analyzeScraperDescription } from "../api";
 import toast from "react-hot-toast";
 
 const CRAWLER_API_URL = import.meta.env.VITE_CRAWLER_API_URL || "http://localhost:3001/api/crawler";
@@ -251,6 +251,30 @@ export default function AutoScraperPage() {
   const [targetPersonas, setTargetPersonas]     = useState([]);
   const [disqualifiers, setDisqualifiers]       = useState([]);
 
+  // AI natural language mode
+  const [aiDescription, setAiDescription]   = useState("");
+  const [aiAnalyzing, setAiAnalyzing]       = useState(false);
+  const [aiRationale, setAiRationale]       = useState("");
+  const [showManual, setShowManual]         = useState(false);
+
+  const analyzeWithAI = async () => {
+    if (!aiDescription.trim()) { toast.error("Please describe what businesses you're looking for"); return; }
+    setAiAnalyzing(true); setAiRationale("");
+    try {
+      const { data } = await analyzeScraperDescription(aiDescription);
+      if (data.industryKeywords?.length) setIndustryKeywords(data.industryKeywords);
+      if (data.techSignals?.length)      setTechSignals(data.techSignals);
+      if (data.targetPersonas?.length)   setTargetPersonas(data.targetPersonas);
+      if (data.disqualifiers?.length)    setDisqualifiers(data.disqualifiers);
+      if (data.suggestedLocation && !locationText) setLocationText(data.suggestedLocation);
+      if (data.rationale)                setAiRationale(data.rationale);
+      setShowManual(true);
+      toast.success("AI extracted your search profile! Review and adjust below.");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Analysis failed. Please try again.");
+    } finally { setAiAnalyzing(false); }
+  };
+
   const [locationText, setLocationText] = useState("");
   const [lat, setLat] = useState(null);
   const [lng, setLng] = useState(null);
@@ -332,7 +356,7 @@ export default function AutoScraperPage() {
 
       {/* Pipeline Flow */}
       <div className="flex items-center gap-2 text-[11px] text-[var(--text-3)] font-medium flex-wrap">
-        <span className="badge badge-purple">ICP Keywords</span>
+        <span className="badge badge-purple">AI Analysis</span>
         <ArrowRight size={10} />
         <span className="badge badge-purple">Smart Query Builder</span>
         <ArrowRight size={10} />
@@ -343,8 +367,65 @@ export default function AutoScraperPage() {
         <span className="badge badge-green">Leads (DB)</span>
       </div>
 
-      {/* ICP Keyword Config */}
-      <motion.div className="card p-6 space-y-6" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+      {/* ── AI Natural Language Input ── */}
+      <motion.div className="card p-6 space-y-4" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center flex-shrink-0">
+            <Wand2 size={16} className="text-white" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-[var(--text)]">Describe Your Target in Plain English</h3>
+            <p className="text-[11px] text-[var(--text-3)]">AI will analyze your description and auto-fill the search profile below</p>
+          </div>
+        </div>
+
+        <div className="relative">
+          <textarea
+            className="input w-full text-sm resize-none"
+            rows={3}
+            placeholder='e.g. "I need details of businesses that need a CRM tool — small retail shops and service companies still managing customers in Excel or spreadsheets"'
+            value={aiDescription}
+            onChange={e => setAiDescription(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) analyzeWithAI(); }}
+            style={{ paddingRight: 120 }}
+          />
+          <button
+            onClick={analyzeWithAI}
+            disabled={aiAnalyzing || !aiDescription.trim()}
+            className="absolute right-2 bottom-2 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed"
+            style={{ background: "linear-gradient(135deg,var(--accent),#8b5cf6)", color: "white" }}
+          >
+            {aiAnalyzing ? <><Loader2 size={12} className="animate-spin" /> Analyzing...</> : <><Wand2 size={12} /> Analyze with AI</>}
+          </button>
+        </div>
+
+        {/* AI Rationale */}
+        <AnimatePresence>
+          {aiRationale && (
+            <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+              className="bg-violet-500/10 border border-violet-500/20 rounded-xl p-3 flex items-start gap-2">
+              <Sparkles size={13} className="text-violet-400 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-[var(--text-2)]">{aiRationale}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Toggle to show/hide manual sections */}
+        {(industryKeywords.length > 0 || showManual) && (
+          <button
+            onClick={() => setShowManual(p => !p)}
+            className="flex items-center gap-1.5 text-xs text-[var(--accent)] font-semibold hover:underline"
+          >
+            <ChevronDown size={13} className={`transition-transform ${showManual ? "rotate-180" : ""}`} />
+            {showManual ? "Hide" : "Review & Edit"} extracted profile ({industryKeywords.length + techSignals.length + targetPersonas.length} keywords)
+          </button>
+        )}
+      </motion.div>
+
+      {/* ICP Keyword Config — shown after AI analysis or manually */}
+      <AnimatePresence>
+      {(showManual || (!aiDescription && industryKeywords.length === 0)) && (
+      <motion.div className="card p-6 space-y-6" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-[var(--text)]">Target Profile Keywords</h3>
@@ -423,6 +504,8 @@ export default function AutoScraperPage() {
           </motion.div>
         )}
       </motion.div>
+      )}
+      </AnimatePresence>
 
       {/* Location + Radius */}
       <motion.div className="card p-6 space-y-5" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>

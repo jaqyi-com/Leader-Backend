@@ -126,6 +126,9 @@ export const geocodeLocation = (q) =>
 export const autocompleteLocation = (q) =>
   crawlerApi.get("/auto-scraper/autocomplete", { params: { q } });
 
+export const analyzeScraperDescription = (description) =>
+  crawlerApi.post("/auto-scraper/analyze", { description });
+
 // ============================================================
 // SOCIAL MEDIA API (Unified.to MCP Integration)
 // ============================================================

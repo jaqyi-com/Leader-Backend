@@ -4,6 +4,65 @@ const autoScraper = require("../services/AutoScraperService");
 const googlePlaces = require("../services/GooglePlacesService");
 const { AutoScraperSession } = require("../db/mongoose");
 const logger = require("../utils/logger").forAgent("AutoScraperAPI");
+const OpenAI = require("openai");
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// POST /analyze — Parse a natural language description into ICP fields
+// Body: { description: "I need businesses that need a CRM tool" }
+// Returns: { industryKeywords, techSignals, targetPersonas, disqualifiers, rationale }
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.post("/analyze", async (req, res) => {
+  const { description } = req.body;
+  if (!description || !description.trim()) {
+    return res.status(422).json({ error: "description is required." });
+  }
+
+  try {
+    logger.info(`[AutoScraper /analyze] Analyzing: "${description.slice(0, 80)}..."`);
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert B2B lead generation analyst. Your job is to analyze a user's natural language description of the businesses they want to find, and extract a structured search profile.
+
+Return ONLY a valid JSON object with these exact fields:
+{
+  "industryKeywords": ["string"],        // 2-6 industry types or business categories to search for (e.g. "retail store", "manufacturing company")
+  "techSignals": ["string"],             // 0-4 technologies, tools, or signals that indicate a good match (e.g. "Salesforce", "Excel", "spreadsheets")
+  "targetPersonas": ["string"],          // 0-3 job titles of decision makers to target (e.g. "CEO", "Sales Manager")
+  "disqualifiers": ["string"],           // 0-3 keywords to EXCLUDE (e.g. "enterprise", "Fortune 500" if targeting SMBs)
+  "suggestedLocation": "string or null", // a city/country if the user mentioned one, else null
+  "rationale": "string"                  // 1-2 sentences explaining the search strategy in plain English
+}
+
+IMPORTANT RULES:
+- industryKeywords must be Google-searchable business types (e.g. "small business", "dental clinic", "logistics company", NOT abstract concepts)
+- techSignals should reveal pain points (e.g. if they need CRM, add "Excel" or "spreadsheets" as signals — companies still using those need CRM)
+- Be specific and practical — these will be used as Google search queries
+- Keep arrays concise (fewer, more targeted keywords = better results)`
+        },
+        {
+          role: "user",
+          content: `Analyze this lead generation requirement and extract structured ICP fields:\n\n"${description.trim()}"`
+        }
+      ],
+    });
+
+    const result = JSON.parse(response.choices[0].message.content);
+    logger.info(`[AutoScraper /analyze] Extracted: industry=${result.industryKeywords} | tech=${result.techSignals} | persona=${result.targetPersonas}`);
+
+    res.json(result);
+  } catch (err) {
+    logger.error(`[AutoScraper /analyze] ${err.message}`);
+    res.status(500).json({ error: "Failed to analyze description. Please try again." });
+  }
+});
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // POST /start — Begin a new auto-scraper session
