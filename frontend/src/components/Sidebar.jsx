@@ -180,25 +180,6 @@ export default function Sidebar({ collapsed, onToggle }) {
         style={{ borderTop: "1px solid var(--border)" }}
       >
         <NavItem to="/app/settings" label="Settings" icon={Settings} collapsed={collapsed} end={false} />
-        <div className="flex items-center gap-3 px-2 py-1.5">
-          <span
-            className="w-2 h-2 rounded-full flex-shrink-0 pulse-dot"
-            style={{ background: "var(--emerald)" }}
-          />
-          <AnimatePresence initial={false}>
-            {!collapsed && (
-              <motion.span
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="text-xs font-medium"
-                style={{ color: "var(--text-3)" }}
-              >
-                API Online
-              </motion.span>
-            )}
-          </AnimatePresence>
-        </div>
       </div>
 
       {/* Collapse toggle */}
