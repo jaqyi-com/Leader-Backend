@@ -204,15 +204,15 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* Collapse toggle */}
       <button
         onClick={onToggle}
-        className="absolute -right-3 top-[72px] w-6 h-6 rounded-full flex items-center justify-center z-50 transition-all duration-200 hover:scale-110"
+        className="absolute -right-3.5 top-[72px] w-7 h-7 rounded-full flex items-center justify-center z-50 transition-all duration-200 hover:scale-110 hover:brightness-110"
         style={{
-          background: "var(--surface-2)",
-          border: "1.5px solid rgba(255,255,255,0.25)",
-          color: "var(--text)",
-          boxShadow: "0 0 8px rgba(0,0,0,0.5)",
+          background: "linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%)",
+          border: "2px solid rgba(255,255,255,0.35)",
+          color: "#ffffff",
+          boxShadow: "0 0 12px var(--accent-glow), 0 2px 8px rgba(0,0,0,0.6)",
         }}
       >
-        {collapsed ? <ChevronRight size={13} strokeWidth={2.5} /> : <ChevronLeft size={13} strokeWidth={2.5} />}
+        {collapsed ? <ChevronRight size={14} strokeWidth={3} /> : <ChevronLeft size={14} strokeWidth={3} />}
       </button>
     </motion.aside>
   );
