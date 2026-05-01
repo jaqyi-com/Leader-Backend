@@ -5,38 +5,44 @@ const { Organization } = require("../db/mongoose");
 
 const router = express.Router();
 
-const oauth2Client = new google.auth.OAuth2(
-  process.env.GOOGLE_CLIENT_ID,
-  process.env.GOOGLE_CLIENT_SECRET,
-  process.env.GOOGLE_OAUTH_REDIRECT || "http://localhost:3001/api/gmail/callback"
-);
+function getOAuthClient(req) {
+  let redirectUri = process.env.GOOGLE_OAUTH_REDIRECT;
+  if (!redirectUri && req) {
+    const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+    const host = req.headers.host;
+    redirectUri = `${protocol}://${host}/api/gmail/callback`;
+  } else if (!redirectUri) {
+    redirectUri = "http://localhost:3001/api/gmail/callback";
+  }
+
+  return new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    redirectUri
+  );
+}
 
 // ── GET /api/gmail/auth ───────────────────────────────────────────────────────
-// Step 1: Redirect to Google's OAuth consent screen
-// We expect this to be called from the frontend, but we need the user's token or orgId.
-// The frontend can pass the token as a query param, or we can use cookies.
-// Alternatively, since it's a redirect, the frontend can fetch an auth URL from us first.
 router.get("/auth-url", auth, (req, res) => {
-  // Pass the orgId in the 'state' parameter so we get it back in the callback
   const state = req.user.orgId;
-  
   const scopes = [
     "https://www.googleapis.com/auth/gmail.send",
     "https://www.googleapis.com/auth/userinfo.email"
   ];
 
+  const oauth2Client = getOAuthClient(req);
+
   const url = oauth2Client.generateAuthUrl({
     access_type: "offline",
     scope: scopes,
     state: state,
-    prompt: "consent", // Force consent to ensure we get a refresh token
+    prompt: "consent", 
   });
 
   res.json({ success: true, url });
 });
 
 // ── GET /api/gmail/callback ───────────────────────────────────────────────────
-// Step 2: Handle the OAuth callback
 router.get("/callback", async (req, res) => {
   const { code, state, error } = req.query;
 
@@ -49,6 +55,7 @@ router.get("/callback", async (req, res) => {
   }
 
   const orgId = state;
+  const oauth2Client = getOAuthClient(req);
 
   try {
     const { tokens } = await oauth2Client.getToken(code);
