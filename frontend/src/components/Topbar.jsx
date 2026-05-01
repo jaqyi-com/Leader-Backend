@@ -57,7 +57,7 @@ export default function Topbar() {
     <header
       className="sticky top-0 z-20 flex items-center justify-between h-16 px-6 flex-shrink-0"
       style={{
-        background: "rgba(10,10,15,0.85)",
+        background: "var(--topbar-bg)",
         backdropFilter: "blur(20px) saturate(180%)",
         WebkitBackdropFilter: "blur(20px) saturate(180%)",
         borderBottom: "1px solid var(--border)",
