@@ -109,7 +109,7 @@ function SourceCitations({ chunks }) {
               <div
                 key={i}
                 style={{
-                  background: "rgba(255,255,255,0.04)",
+                  background: "var(--overlay-1)",
                   border: "1px solid var(--border)",
                   borderRadius: 8,
                   padding: "6px 10px",
@@ -191,7 +191,7 @@ function MessageBubble({ msg, isStreaming }) {
           display: "flex", alignItems: "center", justifyContent: "center",
           background: isUser
             ? "linear-gradient(135deg,var(--accent),#8b5cf6)"
-            : "rgba(255,255,255,0.06)",
+            : "var(--overlay-2)",
           border: "1px solid var(--border)",
         }}>
           {isUser ? <User size={14} color="white" /> : <Bot size={14} color="var(--accent)" />}
@@ -207,7 +207,7 @@ function MessageBubble({ msg, isStreaming }) {
           <div style={{
             background: isUser
               ? "linear-gradient(135deg,var(--accent) 0%,#8b5cf6 100%)"
-              : "rgba(255,255,255,0.05)",
+              : "var(--overlay-2)",
             border: isUser ? "none" : "1px solid var(--border)",
             borderRadius: isUser ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
             padding: "12px 16px",
@@ -598,7 +598,7 @@ export default function ChatbotPage() {
                       handleSend(s);
                     }}
                     style={{
-                      background: "rgba(255,255,255,0.05)",
+                      background: "var(--overlay-1)",
                       border: "1px solid var(--border)",
                       borderRadius: 12, padding: "10px 16px",
                       cursor: "pointer", color: "var(--text-2)",
@@ -634,7 +634,7 @@ export default function ChatbotPage() {
         }}>
           <div style={{
             display: "flex", gap: 10, alignItems: "flex-end",
-            background: "rgba(255,255,255,0.04)",
+            background: "var(--overlay-1)",
             border: "1px solid var(--border)",
             borderRadius: 16, padding: "8px 8px 8px 16px",
             transition: "border-color 0.2s",
@@ -667,7 +667,7 @@ export default function ChatbotPage() {
                 style={{
                   background: input.trim() && !isStreaming
                     ? "linear-gradient(135deg,var(--accent),#8b5cf6)"
-                    : "rgba(255,255,255,0.06)",
+                    : "var(--overlay-2)",
                   border: "none", borderRadius: 10, padding: "8px 12px",
                   cursor: input.trim() && !isStreaming ? "pointer" : "not-allowed",
                   color: input.trim() && !isStreaming ? "white" : "var(--text-3)",
@@ -693,7 +693,7 @@ export default function ChatbotPage() {
         .markdown-content ul, .markdown-content ol { padding-left: 18px; margin: 4px 0 8px; }
         .markdown-content li { margin-bottom: 3px; }
         .markdown-content strong { font-weight: 700; }
-        .markdown-content code { background: rgba(255,255,255,0.1); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+        .markdown-content code { background: var(--overlay-border); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
         .markdown-content pre { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; overflow-x: auto; }
       `}</style>
     </div>

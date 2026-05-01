@@ -24,8 +24,8 @@ export default function Layout() {
             className="fixed inset-0 pointer-events-none z-0"
             style={{
               backgroundImage: `
-                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)
+                linear-gradient(var(--overlay-1) 1px, transparent 1px),
+                linear-gradient(90deg, var(--overlay-1) 1px, transparent 1px)
               `,
               backgroundSize: "40px 40px",
             }}

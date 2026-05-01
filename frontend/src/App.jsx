@@ -38,62 +38,66 @@ import CompanyIntelPage   from "./pages/lg/CompanyIntelPage";
 import AIResearchAgentPage from "./pages/lg/AIResearchAgentPage";
 
 
+import { ThemeProvider } from "./context/ThemeContext";
+
 export default function App() {
   return (
-    <AuthProvider>
-      <Routes>
-        {/* ── Public routes ─────────────────────────────────── */}
-        <Route path="/"                element={<LandingPage />} />
-        <Route path="/login"           element={<LoginPage />} />
-        <Route path="/register"        element={<RegisterPage />} />
-        <Route path="/auth/callback"   element={<AuthCallbackPage />} />
-        <Route path="/verify-email"    element={<VerifyEmailPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password"  element={<ResetPasswordPage />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <Routes>
+          {/* ── Public routes ─────────────────────────────────── */}
+          <Route path="/"                element={<LandingPage />} />
+          <Route path="/login"           element={<LoginPage />} />
+          <Route path="/register"        element={<RegisterPage />} />
+          <Route path="/auth/callback"   element={<AuthCallbackPage />} />
+          <Route path="/verify-email"    element={<VerifyEmailPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
-        {/* ── Protected app routes ───────────────────────────── */}
-        <Route
-          path="/app"
-          element={
-            <ProtectedRoute>
-              <Layout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index                   element={<DashboardPage />} />
-          <Route path="pipeline"         element={<PipelinePage />} />
-          <Route path="icp"              element={<IcpPage />} />
-          <Route path="scheduler"        element={<SchedulerPage />} />
-          <Route path="sheets"           element={<SheetsPage />} />
-          <Route path="leads"            element={<LeadsPage />} />
-          <Route path="settings"         element={<SettingsPage />} />
-          {/* Crawler */}
-          <Route path="crawler"       element={<CrawlerPage />} />
-          <Route path="places"        element={<PlacesPage />} />
-          <Route path="websites"      element={<WebsitesPage />} />
-          <Route path="auto-scraper"  element={<AutoScraperPage />} />
-          {/* Autonomous SDR */}
-          <Route path="autonomousagents"      element={<AutonomousAgentsPage />} />
-          <Route path="autonomousagents/:id"  element={<AutonomousAgentDetailPage />} />
-          {/* Social Media */}
-          <Route path="social" element={<SocialMediaPage />} />
-          {/* Smart Outreach */}
-          <Route path="outreach" element={<SmartOutreachPage />} />
-          {/* AI ChatBot */}
-          <Route path="chatbot" element={<ChatbotPage />} />
-          <Route path="chatbot/data" element={<ChatbotDataPage />} />
-          {/* Lead Generator */}
-          <Route path="lg/database"  element={<LeadDatabasePage />} />
-          <Route path="lg/linkedin"  element={<LinkedInFinderPage />} />
-          <Route path="lg/email"     element={<EmailFinderPage />} />
-          <Route path="lg/companies" element={<CompanyIntelPage />} />
-          <Route path="lg/research"  element={<AIResearchAgentPage />} />
+          {/* ── Protected app routes ───────────────────────────── */}
+          <Route
+            path="/app"
+            element={
+              <ProtectedRoute>
+                <Layout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index                   element={<DashboardPage />} />
+            <Route path="pipeline"         element={<PipelinePage />} />
+            <Route path="icp"              element={<IcpPage />} />
+            <Route path="scheduler"        element={<SchedulerPage />} />
+            <Route path="sheets"           element={<SheetsPage />} />
+            <Route path="leads"            element={<LeadsPage />} />
+            <Route path="settings"         element={<SettingsPage />} />
+            {/* Crawler */}
+            <Route path="crawler"       element={<CrawlerPage />} />
+            <Route path="places"        element={<PlacesPage />} />
+            <Route path="websites"      element={<WebsitesPage />} />
+            <Route path="auto-scraper"  element={<AutoScraperPage />} />
+            {/* Autonomous SDR */}
+            <Route path="autonomousagents"      element={<AutonomousAgentsPage />} />
+            <Route path="autonomousagents/:id"  element={<AutonomousAgentDetailPage />} />
+            {/* Social Media */}
+            <Route path="social" element={<SocialMediaPage />} />
+            {/* Smart Outreach */}
+            <Route path="outreach" element={<SmartOutreachPage />} />
+            {/* AI ChatBot */}
+            <Route path="chatbot" element={<ChatbotPage />} />
+            <Route path="chatbot/data" element={<ChatbotDataPage />} />
+            {/* Lead Generator */}
+            <Route path="lg/database"  element={<LeadDatabasePage />} />
+            <Route path="lg/linkedin"  element={<LinkedInFinderPage />} />
+            <Route path="lg/email"     element={<EmailFinderPage />} />
+            <Route path="lg/companies" element={<CompanyIntelPage />} />
+            <Route path="lg/research"  element={<AIResearchAgentPage />} />
 
-        </Route>
+          </Route>
 
-        {/* ── 404 catch-all → redirect to login ─────────────── */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </AuthProvider>
+          {/* ── 404 catch-all → redirect to login ─────────────── */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

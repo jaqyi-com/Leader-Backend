@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, ChevronDown, LogOut, Settings, Building2, MessageSquare } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Settings, Building2, MessageSquare, Sun, Moon } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 
 const PAGE_META = {
   "/app":                { title: "Overview",       sub: "Real-time pipeline intelligence" },
@@ -22,6 +23,7 @@ export default function Topbar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, org, logout } = useAuth();
+  const { dark, toggle } = useTheme();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -252,6 +254,11 @@ export default function Topbar() {
 
                 {/* Menu items */}
                 <div style={{ padding: 6 }}>
+                  <MenuButton
+                    icon={dark ? <Sun size={14} /> : <Moon size={14} />}
+                    label={dark ? "Light Mode" : "Dark Mode"}
+                    onClick={() => { setMenuOpen(false); toggle(); }}
+                  />
                   <MenuButton
                     icon={<Settings size={14} />}
                     label="Settings"

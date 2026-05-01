@@ -94,7 +94,7 @@ function SourceCard({ source, onEdit, onDelete, onRefresh }) {
       {source.preview && (
         <div style={{
           fontSize: 12, color: "var(--text-3)", lineHeight: 1.6,
-          background: "rgba(255,255,255,0.03)", borderRadius: 8, padding: "8px 10px",
+          background: "var(--overlay-1)", borderRadius: 8, padding: "8px 10px",
           overflow: "hidden", display: "-webkit-box",
           WebkitLineClamp: 2, WebkitBoxOrient: "vertical",
         }}>
@@ -121,7 +121,7 @@ function SourceCard({ source, onEdit, onDelete, onRefresh }) {
             onClick={() => onEdit(source)}
             style={{
               display: "flex", alignItems: "center", gap: 5,
-              background: "rgba(255,255,255,0.06)", border: "1px solid var(--border)",
+              background: "var(--overlay-2)", border: "1px solid var(--border)",
               borderRadius: 8, padding: "5px 10px", cursor: "pointer", color: "var(--text-2)", fontSize: 12,
             }}
           >
@@ -206,7 +206,7 @@ function EditModal({ source, onClose, onSaved }) {
             value={name}
             onChange={(e) => setName(e.target.value)}
             style={{
-              width: "100%", padding: "8px 12px", background: "rgba(255,255,255,0.04)",
+              width: "100%", padding: "8px 12px", background: "var(--overlay-1)",
               border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)",
               fontSize: 13, outline: "none", boxSizing: "border-box",
             }}
@@ -224,7 +224,7 @@ function EditModal({ source, onClose, onSaved }) {
               onChange={(e) => setText(e.target.value)}
               rows={10}
               style={{
-                width: "100%", padding: "10px 12px", background: "rgba(255,255,255,0.04)",
+                width: "100%", padding: "10px 12px", background: "var(--overlay-1)",
                 border: "1px solid var(--border)", borderRadius: 8, color: "var(--text)",
                 fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit",
                 lineHeight: 1.6, boxSizing: "border-box",
@@ -236,7 +236,7 @@ function EditModal({ source, onClose, onSaved }) {
           <button
             onClick={onClose}
             style={{
-              padding: "8px 16px", background: "rgba(255,255,255,0.06)", border: "1px solid var(--border)",
+              padding: "8px 16px", background: "var(--overlay-2)", border: "1px solid var(--border)",
               borderRadius: 8, cursor: "pointer", color: "var(--text-2)", fontSize: 13,
             }}
           >
@@ -337,7 +337,7 @@ export default function ChatbotDataPage() {
             onClick={() => navigate("/app/chatbot")}
             style={{
               display: "flex", alignItems: "center", gap: 6,
-              background: "rgba(255,255,255,0.06)", border: "1px solid var(--border)",
+              background: "var(--overlay-2)", border: "1px solid var(--border)",
               borderRadius: 10, padding: "8px 14px", cursor: "pointer", color: "var(--text-2)", fontSize: 13, fontWeight: 500,
             }}
           >
@@ -384,7 +384,7 @@ export default function ChatbotDataPage() {
                   onChange={(e) => setTextName(e.target.value)}
                   placeholder="e.g. Company Overview, Product FAQ..."
                   style={{
-                    width: "100%", padding: "9px 12px", background: "rgba(255,255,255,0.04)",
+                    width: "100%", padding: "9px 12px", background: "var(--overlay-1)",
                     border: "1px solid var(--border)", borderRadius: 9, color: "var(--text)",
                     fontSize: 13, outline: "none", boxSizing: "border-box",
                   }}
@@ -400,7 +400,7 @@ export default function ChatbotDataPage() {
                   placeholder="Paste your organization's knowledge here — facts, FAQs, processes, team info, products..."
                   rows={7}
                   style={{
-                    width: "100%", padding: "10px 12px", background: "rgba(255,255,255,0.04)",
+                    width: "100%", padding: "10px 12px", background: "var(--overlay-1)",
                     border: "1px solid var(--border)", borderRadius: 9, color: "var(--text)",
                     fontSize: 13, outline: "none", resize: "vertical", fontFamily: "inherit",
                     lineHeight: 1.6, boxSizing: "border-box",
@@ -418,7 +418,7 @@ export default function ChatbotDataPage() {
                 style={{
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                   background: addingText || !textName.trim() || !textContent.trim()
-                    ? "rgba(255,255,255,0.06)"
+                    ? "var(--overlay-2)"
                     : "linear-gradient(135deg,var(--accent),#8b5cf6)",
                   border: "none", borderRadius: 10, padding: "11px",
                   cursor: "pointer", color: "white", fontSize: 14, fontWeight: 600,
@@ -448,7 +448,7 @@ export default function ChatbotDataPage() {
                 border: `2px dashed ${dragOver ? "var(--accent)" : "var(--border)"}`,
                 borderRadius: 12, padding: "32px 20px",
                 textAlign: "center", cursor: uploadingFile ? "not-allowed" : "pointer",
-                background: dragOver ? "rgba(108,99,255,0.06)" : "rgba(255,255,255,0.02)",
+                background: dragOver ? "rgba(108,99,255,0.06)" : "var(--overlay-1)",
                 transition: "all 0.2s",
               }}
             >
