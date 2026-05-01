@@ -259,19 +259,32 @@ Return ONLY valid JSON:
 }
 
 // ─── EMAIL SENDER ──────────────────────────────────────────────────────────
-async function sendEmail({ to, subject, body, fromName, fromEmail }) {
+async function sendEmail({ to, subject, body, fromName, fromEmail, orgId }) {
+  if (!orgId) {
+    throw new Error("orgId is required to send emails.");
+  }
+
+  const { Organization } = require("../db/mongoose");
+  const org = await Organization.findById(orgId).lean();
+
+  if (!org || !org.smtpCredentials || !org.smtpCredentials.user || !org.smtpCredentials.pass) {
+    throw new Error("Email sending failed: Organization has not configured SMTP credentials. Please connect Gmail in Settings.");
+  }
+
+  const creds = org.smtpCredentials;
+
   const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.gmail.com",
-    port: parseInt(process.env.SMTP_PORT || "465"),
-    secure: process.env.SMTP_SECURE !== "false",
+    host: creds.host || "smtp.gmail.com",
+    port: creds.port || 465,
+    secure: creds.secure !== false, // default true
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: creds.user,
+      pass: creds.pass,
     },
   });
 
-  const senderName = fromName || process.env.SMTP_FROM_NAME || "Leader";
-  const senderEmail = fromEmail || process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER;
+  const senderName = fromName || creds.fromName || org.name || "Leader";
+  const senderEmail = fromEmail || creds.fromEmail || creds.user;
 
   const info = await transporter.sendMail({
     from: `"${senderName}" <${senderEmail}>`,

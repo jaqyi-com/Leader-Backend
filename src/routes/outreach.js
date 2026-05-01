@@ -245,6 +245,7 @@ async function _sendSequenceStep(campaign, day) {
           to: contact.email,
           subject: contact.personalizedSubject || `Quick question for ${contact.companyName || "you"}`,
           body,
+          orgId: campaign.orgId,
         });
         result.status = "sent";
         contact.status = "contacted";

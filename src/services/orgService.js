@@ -8,6 +8,9 @@ async function getOrgById(orgId) {
     err.statusCode = 404;
     throw err;
   }
+  if (org && org.smtpCredentials && org.smtpCredentials.pass) {
+    org.smtpCredentials.pass = "********";
+  }
   return org;
 }
 

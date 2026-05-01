@@ -38,6 +38,7 @@ const ROLE_META = {
 // ── TABS ───────────────────────────────────────────────────────────────────
 const TABS = [
   { id: "org",    label: "Organization", icon: <Building2  size={15} /> },
+  { id: "email",  label: "Email & Outreach", icon: <Mail size={15} /> },
   { id: "members",label: "Members",      icon: <Users      size={15} /> },
   { id: "danger", label: "Danger Zone",  icon: <ShieldAlert size={15} /> },
 ];
@@ -75,6 +76,7 @@ export default function SettingsPage() {
       <AnimatePresence mode="wait">
         <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
           {tab === "org"     && <OrgTab />}
+          {tab === "email"   && <EmailOutreachTab />}
           {tab === "members" && <MembersTab />}
           {tab === "danger"  && <DangerTab />}
         </motion.div>
@@ -134,6 +136,128 @@ function OrgTab() {
           <button type="submit" className="btn-primary" disabled={saving} style={{ gap: 8 }}>
             {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
             Save Changes
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// EMAIL & OUTREACH TAB
+// ══════════════════════════════════════════════════════════════════════════════
+function EmailOutreachTab() {
+  const apiFetch = useApi();
+  const { org } = useAuth();
+  const [form, setForm] = useState({ host: "smtp.gmail.com", port: "465", secure: "true", user: "", pass: "", fromName: "", fromEmail: "" });
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await apiFetch("/org");
+        if (data.org?.smtpCredentials) {
+          const creds = data.org.smtpCredentials;
+          setForm({
+            host: creds.host || "smtp.gmail.com",
+            port: creds.port ? String(creds.port) : "465",
+            secure: creds.secure !== false ? "true" : "false",
+            user: creds.user || "",
+            pass: creds.pass || "",
+            fromName: creds.fromName || "",
+            fromEmail: creds.fromEmail || "",
+          });
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    load();
+  }, []);
+
+  async function handleSave(e) {
+    if (e) e.preventDefault();
+    setSaving(true);
+    try {
+      await apiFetch("/org/settings/smtp", { method: "PUT", body: JSON.stringify(form) });
+      toast.success("Email configuration saved");
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleTest() {
+    setTesting(true);
+    try {
+      const res = await apiFetch("/org/settings/smtp/test", { method: "POST", body: JSON.stringify(form) });
+      toast.success(res.message || "Connection successful!");
+    } catch (err) {
+      toast.error(err.message || "Connection failed");
+    } finally {
+      setTesting(false);
+    }
+  }
+
+  return (
+    <div className="card" style={{ padding: 28 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
+        <div style={{ width: 38, height: 38, borderRadius: 12, background: "linear-gradient(135deg,#0ea5e9,#3b82f6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Mail size={18} color="#fff" />
+        </div>
+        <div>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", margin: 0 }}>Connect Gmail for Outreach</h2>
+          <p style={{ fontSize: 12, color: "var(--text-3)", margin: 0, marginTop: 4 }}>
+            Send hyper-personalized emails directly from your address. <br/>
+            You must use an <b>App Password</b>. <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ color: "var(--accent-2)", textDecoration: "none" }}>Create one here</a>.
+          </p>
+        </div>
+      </div>
+      
+      <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+          <Field label="Sender Name">
+            <input className="input" placeholder="e.g. John from Acme" value={form.fromName} onChange={e => setForm({...form, fromName: e.target.value})} style={{ width: "100%" }} />
+          </Field>
+          <Field label="Gmail Address" required>
+            <input className="input" type="email" placeholder="you@company.com" required value={form.user} onChange={e => setForm({...form, user: e.target.value, fromEmail: form.fromEmail || e.target.value})} style={{ width: "100%" }} />
+          </Field>
+        </div>
+        
+        <Field label="Gmail App Password" required>
+          <input className="input" type="password" placeholder="16-character app password" required={!form.pass} value={form.pass} onChange={e => setForm({...form, pass: e.target.value})} style={{ width: "100%" }} />
+        </Field>
+
+        <details>
+          <summary style={{ fontSize: 12, fontWeight: 600, color: "var(--text-3)", cursor: "pointer", marginTop: 8 }}>Advanced Settings (Custom SMTP)</summary>
+          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 12, paddingLeft: 12, borderLeft: "2px solid var(--border)" }}>
+            <Field label="SMTP Host">
+              <input className="input" value={form.host} onChange={e => setForm({...form, host: e.target.value})} style={{ width: "100%" }} />
+            </Field>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <Field label="Port">
+                <input className="input" type="number" value={form.port} onChange={e => setForm({...form, port: e.target.value})} style={{ width: "100%" }} />
+              </Field>
+              <Field label="Secure">
+                <select className="input" value={form.secure} onChange={e => setForm({...form, secure: e.target.value})} style={{ width: "100%" }}>
+                  <option value="true">Yes (SSL/TLS)</option>
+                  <option value="false">No</option>
+                </select>
+              </Field>
+            </div>
+          </div>
+        </details>
+
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 8 }}>
+          <button type="button" onClick={handleTest} disabled={testing || !form.user} className="btn-secondary" style={{ gap: 8 }}>
+            {testing ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+            Test Connection
+          </button>
+          <button type="submit" disabled={saving || !form.user} className="btn-primary" style={{ gap: 8 }}>
+            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            Save Configuration
           </button>
         </div>
       </form>
