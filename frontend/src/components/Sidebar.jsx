@@ -162,12 +162,6 @@ export default function Sidebar({ collapsed, onToggle }) {
           <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
         ))}
 
-        <SectionLabel label="AI" collapsed={collapsed} />
-
-        {AI_LINKS.map(({ to, label, icon }) => (
-          <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
-        ))}
-
         <SectionLabel label="Lead Generator" collapsed={collapsed} />
 
         {LEAD_GEN_LINKS.map(({ to, label, icon }) => (

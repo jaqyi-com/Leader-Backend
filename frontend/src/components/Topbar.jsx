@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bell, ChevronDown, LogOut, Settings, Building2 } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Settings, Building2, MessageSquare } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const PAGE_META = {
@@ -88,18 +88,22 @@ export default function Topbar() {
 
       {/* Right actions */}
       <div className="flex items-center gap-2">
-        {/* Notifications */}
+        {/* AI ChatBot Button */}
         <motion.button
+          onClick={() => navigate("/app/chatbot")}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          className="w-9 h-9 rounded-xl flex items-center justify-center relative"
+          className="h-9 px-3 rounded-xl flex items-center justify-center gap-2 relative"
           style={{
             background: "var(--surface-2)",
             border: "1px solid var(--border)",
-            color: "var(--text-2)",
+            color: "var(--text)",
+            fontSize: 13,
+            fontWeight: 600,
           }}
         >
-          <Bell size={15} />
+          <MessageSquare size={15} style={{ color: "var(--accent)" }} />
+          AI ChatBot
           <span
             className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
             style={{ background: "var(--accent)" }}
