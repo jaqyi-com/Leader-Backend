@@ -36,6 +36,9 @@ const organizationSchema = new mongoose.Schema(
       default: null,
     },
     industry: {
+      type: String,
+      default: null,
+    },
     gmailIntegration: {
       email: { type: String, default: null },
       accessToken: { type: String, default: null },
