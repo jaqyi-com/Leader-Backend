@@ -282,6 +282,45 @@ const AutoScraperSession = mongoose.models.AutoScraperSession || mongoose.model(
 const AutoScraperLead    = mongoose.models.AutoScraperLead    || mongoose.model("AutoScraperLead",    autoScraperLeadSchema);
 
 // ─── Unified Lead Generator ──────────────────────────────────────────────────
+// ─── Outreach Campaign ──────────────────────────────────────────────────────
+const outreachContactDeliverySchema = new mongoose.Schema({
+  day:     Number,
+  channel: String,
+  status:  { type: String, enum: ["sent", "failed", "skipped"], default: "sent" },
+  error:   String,
+  sentAt:  Date,
+}, { _id: false });
+
+const outreachCampaignContactSchema = new mongoose.Schema({
+  contactId:          String,
+  contactSource:      String,
+  name:               String,
+  email:              String,
+  phone:              String,
+  companyName:        String,
+  score:              Number,
+  icebreaker:         String,
+  personalizedSubject:String,
+  personalizedEmail:  String,
+  whatsappMessage:    String,
+  status: { type: String, enum: ["pending", "contacted", "replied", "bounced"], default: "pending" },
+  deliveries:         [outreachContactDeliverySchema],
+}, { _id: true });
+
+const outreachCampaignSchema = new mongoose.Schema({
+  name:         { type: String, required: true },
+  status:       { type: String, enum: ["draft", "active", "paused", "completed"], default: "draft" },
+  channels:     [{ type: String, enum: ["email", "whatsapp", "sms"] }],
+  sequence:     [{ day: Number, channel: String, label: String }],
+  contacts:     [outreachCampaignContactSchema],
+  sentCount:    { type: Number, default: 0 },
+  repliedCount: { type: Number, default: 0 },
+  launchedAt:   Date,
+  orgId:        { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
+}, { timestamps: true });
+
+const OutreachCampaign = mongoose.models.OutreachCampaign || mongoose.model("OutreachCampaign", outreachCampaignSchema);
+
 const generatedLeadSchema = new mongoose.Schema({
   // Identity
   fullName:       String,
@@ -342,6 +381,7 @@ module.exports = {
   AutoScraperSession,
   AutoScraperLead,
   GeneratedLead,
+  OutreachCampaign,
   // Auth / Org layer
   User,
   Organization,

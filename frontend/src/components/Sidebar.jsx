@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe, MapPin, Database, ChevronLeft, ChevronRight,
   Zap, Settings, Share2, MessageSquare, Sparkles,
-  Users2, Mail, Building2, BrainCircuit,
+  Users2, Mail, Building2, BrainCircuit, Rocket,
 } from "lucide-react";
 
 
@@ -16,8 +16,9 @@ const CRAWLER_LINKS = [
   { to: "/app/places",      label: "Places Scraper", icon: MapPin    },
 ];
 
-const SOCIAL_LINKS = [
-  { to: "/app/social", label: "Social Media", icon: Share2 },
+const OUTREACH_LINKS = [
+  { to: "/app/social",    label: "Social Media",    icon: Share2 },
+  { to: "/app/outreach",  label: "Smart Outreach",  icon: Rocket },
 ];
 
 const AI_LINKS = [
@@ -157,7 +158,7 @@ export default function Sidebar({ collapsed, onToggle }) {
 
         <SectionLabel label="Outreach" collapsed={collapsed} />
 
-        {SOCIAL_LINKS.map(({ to, label, icon }) => (
+        {OUTREACH_LINKS.map(({ to, label, icon }) => (
           <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
         ))}
 

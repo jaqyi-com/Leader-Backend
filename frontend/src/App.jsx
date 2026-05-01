@@ -27,6 +27,7 @@ import AutonomousAgentDetailPage from "./pages/AutonomousAgentDetailPage";
 import LandingPage from "./pages/LandingPage";
 import SettingsPage from "./pages/SettingsPage";
 import SocialMediaPage from "./pages/SocialMediaPage";
+import SmartOutreachPage from "./pages/SmartOutreachPage";
 import ChatbotPage from "./pages/ChatbotPage";
 import ChatbotDataPage from "./pages/ChatbotDataPage";
 // Lead Generator
@@ -76,6 +77,8 @@ export default function App() {
           <Route path="autonomousagents/:id"  element={<AutonomousAgentDetailPage />} />
           {/* Social Media */}
           <Route path="social" element={<SocialMediaPage />} />
+          {/* Smart Outreach */}
+          <Route path="outreach" element={<SmartOutreachPage />} />
           {/* AI ChatBot */}
           <Route path="chatbot" element={<ChatbotPage />} />
           <Route path="chatbot/data" element={<ChatbotDataPage />} />

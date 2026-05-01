@@ -20,6 +20,7 @@ const authRouter = require("./routes/auth");
 const orgRouter = require("./routes/org");
 const socialRouter = require("./routes/social");
 const chatbotRouter = require("./routes/chatbot");
+const outreachRouter = require("./routes/outreach");
 const { configurePassport } = require("./config/passport");
 
 connectDB();
@@ -123,6 +124,7 @@ const pipeline = new PipelineOrchestrator();
 app.use("/api/auth", authRouter);
 app.use("/api/org", orgRouter);
 app.use("/api/social", socialRouter);
+app.use("/api/outreach", outreachRouter);
 
 // ------------------------------------------------------------
 // CHATBOT / RAG ROUTES (protected — auth enforced in router)
