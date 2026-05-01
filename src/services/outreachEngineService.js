@@ -51,18 +51,20 @@ function scoreContact(contact) {
 
 // ─── AGGREGATE ALL CONTACTS WITH CONTACT INFO ──────────────────────────────
 async function aggregateContacts(orgId) {
-  const filter = orgId ? { orgId } : {};
   const results = [];
 
   // 1. Website Intel
-  const websites = await Website.find({
-    ...filter,
-    $or: [
-      { contact_email: { $exists: true, $ne: "" } },
-      { developer_email: { $exists: true, $ne: "" } },
-      { phone_number: { $exists: true, $ne: "" } },
+  const websiteQuery = {
+    $and: [
+      ...(orgId ? [{ $or: [{ orgId }, { orgId: null }, { orgId: { $exists: false } }] }] : []),
+      { $or: [
+        { contact_email: { $exists: true, $ne: "" } },
+        { developer_email: { $exists: true, $ne: "" } },
+        { phone_number: { $exists: true, $ne: "" } },
+      ]},
     ],
-  }).lean().limit(500);
+  };
+  const websites = await Website.find(websiteQuery).lean().limit(500);
 
   websites.forEach(w => {
     const email = w.contact_email || w.developer_email || "";
@@ -89,14 +91,17 @@ async function aggregateContacts(orgId) {
   });
 
   // 2. Auto Scraper Leads
-  const scraperLeads = await AutoScraperLead.find({
-    ...filter,
-    $or: [
-      { contact_email: { $exists: true, $ne: "" } },
-      { developer_email: { $exists: true, $ne: "" } },
-      { phone_number: { $exists: true, $ne: "" } },
+  const scraperQuery = {
+    $and: [
+      ...(orgId ? [{ $or: [{ orgId }, { orgId: null }, { orgId: { $exists: false } }] }] : []),
+      { $or: [
+        { contact_email: { $exists: true, $ne: "" } },
+        { developer_email: { $exists: true, $ne: "" } },
+        { phone_number: { $exists: true, $ne: "" } },
+      ]},
     ],
-  }).lean().limit(500);
+  };
+  const scraperLeads = await AutoScraperLead.find(scraperQuery).lean().limit(500);
 
   scraperLeads.forEach(l => {
     const email = l.contact_email || l.developer_email || "";
@@ -124,13 +129,16 @@ async function aggregateContacts(orgId) {
   });
 
   // 3. Generated Leads (LinkedIn Finder, Email Finder, Company Intel)
-  const generatedLeads = await GeneratedLead.find({
-    ...filter,
-    $or: [
-      { email: { $exists: true, $ne: "" } },
-      { phone: { $exists: true, $ne: "" } },
+  const leadsQuery = {
+    $and: [
+      ...(orgId ? [{ $or: [{ orgId }, { orgId: null }, { orgId: { $exists: false } }] }] : []),
+      { $or: [
+        { email: { $exists: true, $ne: "" } },
+        { phone: { $exists: true, $ne: "" } },
+      ]},
     ],
-  }).lean().limit(500);
+  };
+  const generatedLeads = await GeneratedLead.find(leadsQuery).lean().limit(500);
 
   generatedLeads.forEach(l => {
     if (!l.email && !l.phone) return;
@@ -156,10 +164,13 @@ async function aggregateContacts(orgId) {
   });
 
   // 4. Places Scraper (those with phone)
-  const places = await Place.find({
-    ...filter,
-    phone: { $exists: true, $ne: "" },
-  }).lean().limit(300);
+  const placesQuery = {
+    $and: [
+      ...(orgId ? [{ $or: [{ orgId }, { orgId: null }, { orgId: { $exists: false } }] }] : []),
+      { phone: { $exists: true, $ne: "" } },
+    ],
+  };
+  const places = await Place.find(placesQuery).lean().limit(300);
 
   places.forEach(p => {
     if (!p.phone && !p.website) return;
