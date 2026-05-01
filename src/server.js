@@ -125,6 +125,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/org", orgRouter);
 app.use("/api/social", socialRouter);
 app.use("/api/outreach", outreachRouter);
+app.use("/api/gmail", require("./routes/gmailAuth"));
 
 // ------------------------------------------------------------
 // CHATBOT / RAG ROUTES (protected — auth enforced in router)

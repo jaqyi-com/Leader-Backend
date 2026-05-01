@@ -46,6 +46,19 @@ const TABS = [
 export default function SettingsPage() {
   const [tab, setTab] = useState("org");
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") === "gmail_connected") {
+      setTab("email");
+      toast.success("Successfully connected to Gmail!");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (params.get("error") === "gmail_auth_failed") {
+      setTab("email");
+      toast.error("Failed to connect to Gmail.");
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", paddingBottom: 60 }}>
       <div style={{ marginBottom: 28 }}>
@@ -148,119 +161,102 @@ function OrgTab() {
 // ══════════════════════════════════════════════════════════════════════════════
 function EmailOutreachTab() {
   const apiFetch = useApi();
-  const { org } = useAuth();
-  const [form, setForm] = useState({ host: "smtp.gmail.com", port: "465", secure: "true", user: "", pass: "", fromName: "", fromEmail: "" });
-  const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
+  const [status, setStatus] = useState({ connected: false, email: null, loading: true });
+  const [disconnecting, setDisconnecting] = useState(false);
 
   useEffect(() => {
-    async function load() {
+    async function loadStatus() {
       try {
-        const data = await apiFetch("/org");
-        if (data.org?.smtpCredentials) {
-          const creds = data.org.smtpCredentials;
-          setForm({
-            host: creds.host || "smtp.gmail.com",
-            port: creds.port ? String(creds.port) : "465",
-            secure: creds.secure !== false ? "true" : "false",
-            user: creds.user || "",
-            pass: creds.pass || "",
-            fromName: creds.fromName || "",
-            fromEmail: creds.fromEmail || "",
-          });
-        }
+        const res = await apiFetch("/gmail/status");
+        setStatus({ connected: res.connected, email: res.email, loading: false });
       } catch (err) {
-        console.error(err);
+        setStatus({ connected: false, email: null, loading: false });
       }
     }
-    load();
+    loadStatus();
   }, []);
 
-  async function handleSave(e) {
-    if (e) e.preventDefault();
-    setSaving(true);
+  async function handleConnect() {
     try {
-      await apiFetch("/org/settings/smtp", { method: "PUT", body: JSON.stringify(form) });
-      toast.success("Email configuration saved");
+      const res = await apiFetch("/gmail/auth-url");
+      if (res.url) {
+        window.location.href = res.url;
+      }
     } catch (err) {
       toast.error(err.message);
-    } finally {
-      setSaving(false);
     }
   }
 
-  async function handleTest() {
-    setTesting(true);
+  async function handleDisconnect() {
+    if (!confirm("Are you sure you want to disconnect your Gmail?")) return;
+    setDisconnecting(true);
     try {
-      const res = await apiFetch("/org/settings/smtp/test", { method: "POST", body: JSON.stringify(form) });
-      toast.success(res.message || "Connection successful!");
+      await apiFetch("/gmail/disconnect", { method: "DELETE" });
+      setStatus({ connected: false, email: null, loading: false });
+      toast.success("Gmail disconnected");
     } catch (err) {
-      toast.error(err.message || "Connection failed");
+      toast.error(err.message);
     } finally {
-      setTesting(false);
+      setDisconnecting(false);
     }
   }
 
   return (
     <div className="card" style={{ padding: 28 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-        <div style={{ width: 38, height: 38, borderRadius: 12, background: "linear-gradient(135deg,#0ea5e9,#3b82f6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 38, height: 38, borderRadius: 12, background: "linear-gradient(135deg,#ea4335,#fbbc05)", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Mail size={18} color="#fff" />
         </div>
         <div>
-          <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", margin: 0 }}>Connect Gmail for Outreach</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 700, color: "var(--text)", margin: 0 }}>Seamless Gmail Integration</h2>
           <p style={{ fontSize: 12, color: "var(--text-3)", margin: 0, marginTop: 4 }}>
-            Send hyper-personalized emails directly from your address. <br/>
-            You must use an <b>App Password</b>. <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" style={{ color: "var(--accent-2)", textDecoration: "none" }}>Create one here</a>.
+            Connect your Google Workspace or Gmail account to send outreach emails directly. No App Passwords required.
           </p>
         </div>
       </div>
       
-      <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-          <Field label="Sender Name">
-            <input className="input" placeholder="e.g. John from Acme" value={form.fromName} onChange={e => setForm({...form, fromName: e.target.value})} style={{ width: "100%" }} />
-          </Field>
-          <Field label="Gmail Address" required>
-            <input className="input" type="email" placeholder="you@company.com" required value={form.user} onChange={e => setForm({...form, user: e.target.value, fromEmail: form.fromEmail || e.target.value})} style={{ width: "100%" }} />
-          </Field>
-        </div>
-        
-        <Field label="Gmail App Password" required>
-          <input className="input" type="password" placeholder="16-character app password" required={!form.pass} value={form.pass} onChange={e => setForm({...form, pass: e.target.value})} style={{ width: "100%" }} />
-        </Field>
-
-        <details>
-          <summary style={{ fontSize: 12, fontWeight: 600, color: "var(--text-3)", cursor: "pointer", marginTop: 8 }}>Advanced Settings (Custom SMTP)</summary>
-          <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 12, paddingLeft: 12, borderLeft: "2px solid var(--border)" }}>
-            <Field label="SMTP Host">
-              <input className="input" value={form.host} onChange={e => setForm({...form, host: e.target.value})} style={{ width: "100%" }} />
-            </Field>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-              <Field label="Port">
-                <input className="input" type="number" value={form.port} onChange={e => setForm({...form, port: e.target.value})} style={{ width: "100%" }} />
-              </Field>
-              <Field label="Secure">
-                <select className="input" value={form.secure} onChange={e => setForm({...form, secure: e.target.value})} style={{ width: "100%" }}>
-                  <option value="true">Yes (SSL/TLS)</option>
-                  <option value="false">No</option>
-                </select>
-              </Field>
-            </div>
+      <div style={{ padding: 20, background: "var(--surface-2)", borderRadius: 12, border: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 16 }}>
+        {status.loading ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, color: "var(--text-3)" }}>
+            <Loader2 size={16} className="animate-spin" /> Checking connection...
           </div>
-        </details>
-
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 8 }}>
-          <button type="button" onClick={handleTest} disabled={testing || !form.user} className="btn-secondary" style={{ gap: 8 }}>
-            {testing ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
-            Test Connection
-          </button>
-          <button type="submit" disabled={saving || !form.user} className="btn-primary" style={{ gap: 8 }}>
-            {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-            Save Configuration
-          </button>
-        </div>
-      </form>
+        ) : status.connected ? (
+          <>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 40, height: 40, borderRadius: "50%", background: "var(--surface-3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <CheckCircle size={20} color="var(--success)" />
+              </div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Connected to Gmail</div>
+                <div style={{ fontSize: 12, color: "var(--text-2)" }}>{status.email}</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button onClick={handleDisconnect} disabled={disconnecting} className="btn-secondary" style={{ color: "var(--danger)" }}>
+                {disconnecting ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
+                Disconnect
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontSize: 13, color: "var(--text-2)", lineHeight: 1.5 }}>
+              By connecting your Gmail, the Outreach Engine will be able to send hyper-personalized drip campaigns on your behalf. We will never read your personal emails.
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-start" }}>
+              <button onClick={handleConnect} className="btn-primary" style={{ background: "#ea4335", borderColor: "#ea4335" }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ marginRight: 8 }}>
+                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.13v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.13C1.43 8.55 1 10.22 1 12s.43 3.45 1.13 4.93l3.71-2.84z" fill="#FBBC05"/>
+                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.13 7.07l3.71 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                </svg>
+                Continue with Google
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }

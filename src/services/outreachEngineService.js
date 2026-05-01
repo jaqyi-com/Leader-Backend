@@ -259,32 +259,52 @@ Return ONLY valid JSON:
 }
 
 // ─── EMAIL SENDER ──────────────────────────────────────────────────────────
-async function sendEmail({ to, subject, body, fromName, fromEmail, orgId }) {
+async function sendEmail({ to, subject, body, fromName, orgId }) {
   if (!orgId) {
     throw new Error("orgId is required to send emails.");
   }
 
   const { Organization } = require("../db/mongoose");
+  const { google } = require("googleapis");
   const org = await Organization.findById(orgId).lean();
 
-  if (!org || !org.smtpCredentials || !org.smtpCredentials.user || !org.smtpCredentials.pass) {
-    throw new Error("Email sending failed: Organization has not configured SMTP credentials. Please connect Gmail in Settings.");
+  if (!org || !org.gmailIntegration || !org.gmailIntegration.refreshToken) {
+    throw new Error("Email sending failed: Organization has not connected Gmail. Please connect Gmail in Settings.");
   }
 
-  const creds = org.smtpCredentials;
+  const integration = org.gmailIntegration;
+
+  const oauth2Client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_OAUTH_REDIRECT || "http://localhost:3001/api/gmail/callback"
+  );
+
+  oauth2Client.setCredentials({
+    refresh_token: integration.refreshToken,
+  });
+
+  // Get a fresh access token (nodemailer needs this for the oauth2 config)
+  const { token } = await oauth2Client.getAccessToken();
+
+  if (!token) {
+    throw new Error("Failed to get Gmail access token from refresh token.");
+  }
 
   const transporter = nodemailer.createTransport({
-    host: creds.host || "smtp.gmail.com",
-    port: creds.port || 465,
-    secure: creds.secure !== false, // default true
+    service: "gmail",
     auth: {
-      user: creds.user,
-      pass: creds.pass,
+      type: "OAuth2",
+      user: integration.email,
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      refreshToken: integration.refreshToken,
+      accessToken: token,
     },
   });
 
-  const senderName = fromName || creds.fromName || org.name || "Leader";
-  const senderEmail = fromEmail || creds.fromEmail || creds.user;
+  const senderName = fromName || org.name || "Leader";
+  const senderEmail = integration.email;
 
   const info = await transporter.sendMail({
     from: `"${senderName}" <${senderEmail}>`,

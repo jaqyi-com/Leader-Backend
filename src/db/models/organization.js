@@ -36,17 +36,11 @@ const organizationSchema = new mongoose.Schema(
       default: null,
     },
     industry: {
-      type: String,
-      default: null,
-    },
-    smtpCredentials: {
-      host: { type: String, default: null },
-      port: { type: Number, default: 465 },
-      secure: { type: Boolean, default: true },
-      user: { type: String, default: null },
-      pass: { type: String, default: null },
-      fromName: { type: String, default: null },
-      fromEmail: { type: String, default: null },
+    gmailIntegration: {
+      email: { type: String, default: null },
+      accessToken: { type: String, default: null },
+      refreshToken: { type: String, default: null },
+      expiryDate: { type: Number, default: null }, // Timestamp
     },
   },
   {
