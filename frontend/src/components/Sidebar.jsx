@@ -10,15 +10,15 @@ import {
 
 
 const CRAWLER_LINKS = [
-  { to: "/app/crawler",      label: "Web Crawler",   icon: Globe     },
-  { to: "/app/websites",    label: "Website Intel",  icon: Database  },
-  { to: "/app/auto-scraper",label: "Auto Scraper",   icon: Sparkles  },
-  { to: "/app/places",      label: "Places Scraper", icon: MapPin    },
+  { to: "/app/crawler", label: "Web Crawler", icon: Globe },
+  { to: "/app/websites", label: "Website Intel", icon: Database },
+  { to: "/app/auto-scraper", label: "Auto Scraper", icon: Sparkles },
+  { to: "/app/places", label: "Places Scraper", icon: MapPin },
 ];
 
 const OUTREACH_LINKS = [
-  { to: "/app/social",    label: "Social Media",    icon: Share2 },
-  { to: "/app/outreach",  label: "Smart Outreach",  icon: Rocket },
+  { to: "/app/social", label: "Social Media", icon: Share2 },
+  { to: "/app/outreach", label: "Smart Outreach", icon: Rocket },
 ];
 
 const AI_LINKS = [
@@ -26,11 +26,11 @@ const AI_LINKS = [
 ];
 
 const LEAD_GEN_LINKS = [
-  { to: "/app/lg/database",  label: "Lead Database",  icon: Database    },
-  { to: "/app/lg/linkedin",  label: "LinkedIn Finder", icon: Users2      },
-  { to: "/app/lg/email",     label: "Email Finder",    icon: Mail        },
-  { to: "/app/lg/companies", label: "Company Intel",   icon: Building2   },
-  { to: "/app/lg/research",  label: "AI Research",     icon: BrainCircuit},
+  { to: "/app/lg/database", label: "Lead Database", icon: Database },
+  { to: "/app/lg/linkedin", label: "LinkedIn Finder", icon: Users2 },
+  { to: "/app/lg/email", label: "Email Finder", icon: Mail },
+  { to: "/app/lg/companies", label: "Company Intel", icon: Building2 },
+  { to: "/app/lg/research", label: "AI Research", icon: BrainCircuit },
 ];
 
 function NavItem({ to, label, icon: Icon, collapsed, end }) {
@@ -159,12 +159,6 @@ export default function Sidebar({ collapsed, onToggle }) {
         <SectionLabel label="Outreach" collapsed={collapsed} />
 
         {OUTREACH_LINKS.map(({ to, label, icon }) => (
-          <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
-        ))}
-
-        <SectionLabel label="AI Tools" collapsed={collapsed} />
-
-        {AI_LINKS.map(({ to, label, icon }) => (
           <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
         ))}
 
