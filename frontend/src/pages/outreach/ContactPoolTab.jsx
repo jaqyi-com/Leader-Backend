@@ -5,6 +5,7 @@ import {
   CheckSquare, Square, ArrowUpDown, Zap, Globe, MapPin, Database, Sparkles,
 } from "lucide-react";
 import { fetchContacts } from "../../api/outreach";
+import SweepLoader from "../../components/SweepLoader";
 
 const SOURCE_ICONS = {
   website_intel: Globe,
@@ -87,7 +88,7 @@ export default function ContactPoolTab({ onCreateCampaign }) {
   if (loading) {
     return (
       <div style={{ display: "flex", justifyContent: "center", alignItems: "center", height: 300 }}>
-        <Loader2 size={28} style={{ color: "var(--accent)", animation: "spin 0.8s linear infinite" }} />
+        <SweepLoader width={200} height={4} />
       </div>
     );
   }
@@ -260,7 +261,7 @@ export default function ContactPoolTab({ onCreateCampaign }) {
       <div style={{ fontSize: 12, color: "var(--text-3)", textAlign: "right" }}>
         Showing {filtered.length} of {contacts.length} contacts
       </div>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+
     </div>
   );
 }
