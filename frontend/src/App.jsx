@@ -2,7 +2,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
-import PageProgressBar from "./components/PageProgressBar";
 
 // Auth pages
 import LoginPage from "./pages/LoginPage";
@@ -46,7 +45,6 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <PageProgressBar />
         <Routes>
           {/* ── Public routes ─────────────────────────────────── */}
           <Route path="/"                element={<LandingPage />} />

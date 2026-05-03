@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import App from "./App.jsx";
 import "./index.css";
 import { Toaster } from "react-hot-toast";
+import PageProgressBar from "./components/PageProgressBar";
 
 // Always dark
 document.documentElement.classList.add("dark");
@@ -11,6 +12,8 @@ document.documentElement.classList.add("dark");
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
+      {/* Global progress bar — fires on every route change across the entire app */}
+      <PageProgressBar />
       <App />
       <Toaster
         position="bottom-right"
