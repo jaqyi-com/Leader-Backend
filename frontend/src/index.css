@@ -269,4 +269,49 @@
     0%, 100% { opacity: 1; transform: scale(1); }
     50%       { opacity: 0.5; transform: scale(0.8); }
   }
+
+  /* ── Global sweep-bar loading override ───────────────────────
+     Replaces ALL Loader2 / lucide animate-spin icons with a
+     gradient sweep bar for consistent loading UX site-wide.
+  ──────────────────────────────────────────────────────────── */
+  @keyframes sweep-bar-global {
+    0%   { width: 0%;  margin-left: 0%; }
+    50%  { width: 65%; margin-left: 17%; }
+    100% { width: 0%;  margin-left: 100%; }
+  }
+
+  /* Any SVG with animate-spin class gets hidden; its parent gets bar treatment */
+  svg.animate-spin {
+    display: none !important;
+  }
+  /* Inject the sweep bar via a pseudo-element on the parent */
+  *:has(> svg.animate-spin) {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+    min-height: 4px;
+    background: transparent !important;
+  }
+  *:has(> svg.animate-spin)::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--surface-3, #1d1d28);
+    border-radius: 9999px;
+    overflow: hidden;
+  }
+  *:has(> svg.animate-spin)::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #6c63ff, #a78bfa, #22d3ee);
+    box-shadow: 0 0 8px rgba(108,99,255,0.7);
+    border-radius: 9999px;
+    z-index: 1;
+    animation: sweep-bar-global 1s cubic-bezier(0.4,0,0.2,1) infinite;
+  }
 }
+

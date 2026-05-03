@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { lgGetDatabase, lgUpdateLead, lgDeleteLead, lgImportAutoScraper } from "../../api";
 import toast from "react-hot-toast";
+import SweepLoader from "../../components/SweepLoader";
 
 const STATUS_CONFIG = {
   new:       { label: "New",       color: "badge-purple",  icon: Clock },
@@ -175,8 +176,8 @@ export default function LeadDatabasePage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="text-center py-16">
-                  <Loader2 size={24} className="animate-spin text-[var(--accent)] mx-auto" />
+                <tr><td colSpan={8} className="py-10">
+                  <SweepLoader width={220} height={4} fullPage />
                 </td></tr>
               ) : leads.length === 0 ? (
                 <tr><td colSpan={8} className="text-center py-16 text-[var(--text-3)]">
