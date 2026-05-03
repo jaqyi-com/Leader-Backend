@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe, MapPin, Database, ChevronLeft, ChevronRight,
   Zap, Settings, Share2, MessageSquare, Sparkles,
-  Users2, Mail, Building2, BrainCircuit, Rocket,
+  Users2, Mail, Building2, BrainCircuit, Rocket, BookOpen,
 } from "lucide-react";
 
 
@@ -22,7 +22,7 @@ const OUTREACH_LINKS = [
 ];
 
 const AI_LINKS = [
-  { to: "/app/chatbot", label: "AI ChatBot", icon: MessageSquare },
+  { to: "/app/chatbot", label: "Personal Chat Bot", icon: MessageSquare },
 ];
 
 const LEAD_GEN_LINKS = [
@@ -162,6 +162,12 @@ export default function Sidebar({ collapsed, onToggle }) {
           <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
         ))}
 
+        <SectionLabel label="AI Tools" collapsed={collapsed} />
+
+        {AI_LINKS.map(({ to, label, icon }) => (
+          <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
+        ))}
+
         <SectionLabel label="Lead Generator" collapsed={collapsed} />
 
         {LEAD_GEN_LINKS.map(({ to, label, icon }) => (
@@ -169,11 +175,12 @@ export default function Sidebar({ collapsed, onToggle }) {
         ))}
       </nav>
 
-      {/* Status dot + Settings at bottom */}
+      {/* Docs + Settings at bottom */}
       <div
         className="px-2 py-3 flex flex-col gap-1"
         style={{ borderTop: "1px solid var(--border)" }}
       >
+        <NavItem to="/app/docs" label="How It Works" icon={BookOpen} collapsed={collapsed} end={false} />
         <NavItem to="/app/settings" label="Settings" icon={Settings} collapsed={collapsed} end={false} />
       </div>
 

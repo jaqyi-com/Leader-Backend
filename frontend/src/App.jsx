@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
+import PageProgressBar from "./components/PageProgressBar";
 
 // Auth pages
 import LoginPage from "./pages/LoginPage";
@@ -30,6 +31,7 @@ import SocialMediaPage from "./pages/SocialMediaPage";
 import SmartOutreachPage from "./pages/SmartOutreachPage";
 import ChatbotPage from "./pages/ChatbotPage";
 import ChatbotDataPage from "./pages/ChatbotDataPage";
+import DocumentationPage from "./pages/DocumentationPage";
 // Lead Generator
 import LeadDatabasePage   from "./pages/lg/LeadDatabasePage";
 import LinkedInFinderPage from "./pages/lg/LinkedInFinderPage";
@@ -44,6 +46,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <PageProgressBar />
         <Routes>
           {/* ── Public routes ─────────────────────────────────── */}
           <Route path="/"                element={<LandingPage />} />
@@ -82,6 +85,8 @@ export default function App() {
             <Route path="social" element={<SocialMediaPage />} />
             {/* Smart Outreach */}
             <Route path="outreach" element={<SmartOutreachPage />} />
+            {/* Documentation */}
+            <Route path="docs"           element={<DocumentationPage />} />
             {/* AI ChatBot */}
             <Route path="chatbot" element={<ChatbotPage />} />
             <Route path="chatbot/data" element={<ChatbotDataPage />} />

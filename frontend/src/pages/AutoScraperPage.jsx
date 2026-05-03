@@ -4,7 +4,7 @@ import {
   Sparkles, MapPin, Play, X, Loader2, CheckCircle2,
   AlertCircle, Navigation, Globe2, Clock,
   Database, ArrowRight, RefreshCw, SlidersHorizontal,
-  Tag, ShieldX, Cpu, Briefcase, Search, Wand2, ChevronDown,
+  Tag, Briefcase, Search, Wand2, ChevronDown,
 } from "lucide-react";
 import { startAutoScraper, autocompleteLocation, geocodeLocation, getAutoScraperSessions, analyzeScraperDescription } from "../api";
 import toast from "react-hot-toast";
@@ -229,27 +229,16 @@ const INDUSTRY_SUGGESTIONS = [
   "real estate", "edtech", "legal tech", "HR tech", "cybersecurity", "AI startup",
   "robotics", "biotech", "retail", "insurance", "construction", "media agency",
 ];
-const TECH_SUGGESTIONS = [
-  "React", "Node.js", "Python", "AWS", "Salesforce", "HubSpot", "Stripe",
-  "Shopify", "Kubernetes", "Docker", "OpenAI", "PostgreSQL", "MongoDB",
-  "LiDAR", "computer vision", "ROS", "Kafka", "GraphQL",
-];
 const PERSONA_SUGGESTIONS = [
   "CTO", "CEO", "VP Engineering", "Head of Product", "Director of Marketing",
   "Founder", "Co-founder", "VP Sales", "Chief Revenue Officer", "Engineering Manager",
   "Head of Growth", "CMO", "CFO", "Director of Operations",
 ];
-const DISQUALIFY_SUGGESTIONS = [
-  "hobbyist", "non-profit", "educational", "student project", "toy", "agency",
-  "freelancer", "closed beta", "stealth mode", "government",
-];
 
 // ── Main Page ─────────────────────────────────────────────────
 export default function AutoScraperPage() {
   const [industryKeywords, setIndustryKeywords] = useState([]);
-  const [techSignals, setTechSignals]           = useState([]);
   const [targetPersonas, setTargetPersonas]     = useState([]);
-  const [disqualifiers, setDisqualifiers]       = useState([]);
 
   // AI natural language mode
   const [aiDescription, setAiDescription]   = useState("");
@@ -263,9 +252,7 @@ export default function AutoScraperPage() {
     try {
       const { data } = await analyzeScraperDescription(aiDescription);
       if (data.industryKeywords?.length) setIndustryKeywords(data.industryKeywords);
-      if (data.techSignals?.length)      setTechSignals(data.techSignals);
       if (data.targetPersonas?.length)   setTargetPersonas(data.targetPersonas);
-      if (data.disqualifiers?.length)    setDisqualifiers(data.disqualifiers);
       if (data.suggestedLocation && !locationText) setLocationText(data.suggestedLocation);
       if (data.rationale)                setAiRationale(data.rationale);
       setShowManual(true);
@@ -307,9 +294,7 @@ export default function AutoScraperPage() {
     try {
       const body = {
         industryKeywords,
-        techSignals,
         targetPersonas,
-        disqualifiers,
         location: locationText || null,
       };
       if (lat && lng) { body.lat = lat; body.lng = lng; body.radius = radius * 1000; }
@@ -340,7 +325,7 @@ export default function AutoScraperPage() {
 
   const canStart = industryKeywords.length > 0 && !running;
   const locationSet = !!(lat && lng);
-  const totalKeywords = industryKeywords.length + techSignals.length + targetPersonas.length;
+  const totalKeywords = industryKeywords.length + targetPersonas.length;
 
   return (
     <div className="flex flex-col gap-6 max-w-4xl mx-auto">
@@ -417,7 +402,7 @@ export default function AutoScraperPage() {
             className="flex items-center gap-1.5 text-xs text-[var(--accent)] font-semibold hover:underline"
           >
             <ChevronDown size={13} className={`transition-transform ${showManual ? "rotate-180" : ""}`} />
-            {showManual ? "Hide" : "Review & Edit"} extracted profile ({industryKeywords.length + techSignals.length + targetPersonas.length} keywords)
+            {showManual ? "Hide" : "Review & Edit"} extracted profile ({industryKeywords.length + targetPersonas.length} keywords)
           </button>
         )}
       </motion.div>
@@ -451,18 +436,6 @@ export default function AutoScraperPage() {
             suggestions={INDUSTRY_SUGGESTIONS}
           />
 
-          {/* Tech Signals */}
-          <TagSection
-            icon={Cpu}
-            title="Technology Signals"
-            description="What technologies should target companies use? (Optional)"
-            color="bg-blue-500"
-            tags={techSignals}
-            setTags={setTechSignals}
-            placeholder="e.g. React, AWS, Salesforce..."
-            suggestions={TECH_SUGGESTIONS}
-          />
-
           {/* Target Personas */}
           <TagSection
             icon={Briefcase}
@@ -473,18 +446,6 @@ export default function AutoScraperPage() {
             setTags={setTargetPersonas}
             placeholder="e.g. CTO, VP Engineering, Founder..."
             suggestions={PERSONA_SUGGESTIONS}
-          />
-
-          {/* Disqualifiers */}
-          <TagSection
-            icon={ShieldX}
-            title="Disqualifying Keywords"
-            description="Exclude companies matching these terms. (Optional)"
-            color="bg-rose-500"
-            tags={disqualifiers}
-            setTags={setDisqualifiers}
-            placeholder="e.g. hobbyist, non-profit, student..."
-            suggestions={DISQUALIFY_SUGGESTIONS}
           />
         </div>
 
@@ -497,9 +458,7 @@ export default function AutoScraperPage() {
             </p>
             <p className="text-xs font-mono text-[var(--accent)] break-all">
               "{industryKeywords.join(" OR ")}
-              {techSignals.length ? ` + ${techSignals.slice(0, 2).join(", ")}` : ""}
               {targetPersonas.length ? ` + hiring ${targetPersonas[0]}` : ""}"
-              {disqualifiers.length ? <span className="text-[var(--rose)]"> -"{disqualifiers.join("\" -\"")}"</span> : ""}
             </p>
           </motion.div>
         )}

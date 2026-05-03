@@ -358,6 +358,46 @@ export default function CrawlerPage() {
                     <X size={11} /> Remove file
                   </button>
                 )}
+
+                {/* CSV Format Info */}
+                <div className="mt-3 rounded-xl border border-slate-200 dark:border-gray-700 overflow-hidden">
+                  <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 dark:bg-gray-800 border-b border-slate-200 dark:border-gray-700">
+                    <Tag size={11} className="text-brand-500" />
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Required CSV Format</span>
+                  </div>
+                  <div className="p-3 space-y-2">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Your CSV <strong className="font-semibold text-slate-700 dark:text-slate-200">must have a column named <code className="font-mono bg-slate-100 dark:bg-gray-700 px-1 rounded">url</code></strong> (lowercase). Any other columns are optional and will be preserved in the output.
+                    </p>
+                    <div className="rounded-lg overflow-hidden border border-slate-200 dark:border-gray-700">
+                      <table className="w-full text-xs font-mono">
+                        <thead>
+                          <tr className="bg-brand-50 dark:bg-brand-900/20">
+                            {["url", "company_name", "notes"].map(h => (
+                              <th key={h} className="px-3 py-1.5 text-left font-bold text-brand-700 dark:text-brand-300 border-r border-slate-200 dark:border-gray-700 last:border-r-0">{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {[
+                            ["https://stripe.com", "Stripe", "fintech leader"],
+                            ["https://vercel.com", "Vercel", "deployment platform"],
+                            ["https://linear.app", "Linear", "project management"],
+                          ].map((row, i) => (
+                            <tr key={i} className="border-t border-slate-100 dark:border-gray-800">
+                              {row.map((cell, j) => (
+                                <td key={j} className="px-3 py-1.5 text-slate-600 dark:text-slate-300 border-r border-slate-100 dark:border-gray-800 last:border-r-0">{cell}</td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      💡 Tip: Export from Google Sheets or Excel as <strong>.csv</strong> — ensure the first row is the header row and the <code className="font-mono bg-slate-100 dark:bg-gray-700 px-1 rounded">url</code> column exists.
+                    </p>
+                  </div>
+                </div>
               </div>
             </motion.div>
           )}
@@ -391,6 +431,28 @@ export default function CrawlerPage() {
           <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-2">
             Dynamic Fields <span className="px-1.5 py-0.5 rounded bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-400 text-[10px] font-bold">AI Extracted</span>
           </label>
+
+          {/* Dynamic Fields explanation */}
+          <div className="mb-2 rounded-xl border border-slate-200 dark:border-gray-700 overflow-hidden">
+            <div className="flex items-start gap-2.5 px-3 py-2.5 bg-amber-50/60 dark:bg-amber-900/10 border-b border-amber-100 dark:border-amber-900/20">
+              <span className="text-amber-500 mt-0.5 flex-shrink-0">💡</span>
+              <div className="space-y-1">
+                <p className="text-xs font-semibold text-slate-700 dark:text-slate-200">What are Dynamic Fields?</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Dynamic Fields are <strong className="text-slate-700 dark:text-slate-200 font-semibold">custom data points</strong> you want our AI to extract from each website it crawls. The AI reads the full page content and tries to find or infer the value for each field you specify.
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  <strong className="font-semibold text-brand-600 dark:text-brand-400">Examples you can add:</strong>
+                </p>
+                <div className="flex flex-wrap gap-1.5 mt-1">
+                  {["Founder Name", "Pricing Model", "LinkedIn URL", "Number of Employees", "Funding Stage", "HQ Location", "Year Founded"].map(ex => (
+                    <span key={ex} className="text-[11px] px-2 py-0.5 rounded-full bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-800 font-medium">{ex}</span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
           <KeywordInput tags={customFields} setTags={setCustomFields} />
           <p className="text-xs text-slate-400 mt-1">Add custom data points to extract (e.g. "LinkedIn URL", "Pricing Model", "Founder Name").</p>
         </div>

@@ -17,6 +17,8 @@ const PAGE_META = {
   "/app/places":         { title: "Places Scraper", sub: "Discover local businesses near any location" },
   "/app/websites":       { title: "Website Intel",  sub: "Technology & contact data from crawled sites" },
   "/app/settings":       { title: "Settings",       sub: "Manage org, members and credentials" },
+  "/app/docs":           { title: "How It Works",   sub: "Complete platform documentation" },
+  "/app/chatbot":        { title: "Personal Chat Bot", sub: "Your AI assistant powered by your knowledge base" },
 };
 
 export default function Topbar() {
@@ -90,7 +92,7 @@ export default function Topbar() {
 
       {/* Right actions */}
       <div className="flex items-center gap-2">
-        {/* AI ChatBot Button */}
+        {/* Personal Chat Bot Button */}
         <motion.button
           onClick={() => navigate("/app/chatbot")}
           whileHover={{ scale: 1.05 }}
@@ -105,7 +107,7 @@ export default function Topbar() {
           }}
         >
           <MessageSquare size={15} style={{ color: "var(--accent)" }} />
-          AI ChatBot
+          Personal Chat Bot
           <span
             className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
             style={{ background: "var(--accent)" }}
