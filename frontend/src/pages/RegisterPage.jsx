@@ -17,7 +17,7 @@ export default function RegisterPage() {
   const [success, setSuccess] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) navigate("/app", { replace: true });
+    if (isAuthenticated) navigate("/app/chatbot", { replace: true });
   }, [isAuthenticated]);
 
   function handleChange(e) {

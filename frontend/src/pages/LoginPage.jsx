@@ -21,7 +21,7 @@ export default function LoginPage() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendDone, setResendDone] = useState(false);
 
-  const from = location.state?.from?.pathname || "/app";
+  const from = location.state?.from?.pathname || "/app/chatbot";
 
   // Redirect if already logged in
   useEffect(() => {
