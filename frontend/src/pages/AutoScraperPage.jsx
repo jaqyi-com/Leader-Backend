@@ -96,7 +96,7 @@ function LocationInput({ value, onChange, onCoordsChange }) {
         const { data } = await autocompleteLocation(v);
         setSuggestions(data || []);
         setShowSuggestions(true);
-      } catch {} finally { setLoading(false); }
+      } catch { } finally { setLoading(false); }
     }, 350);
   };
 
@@ -106,7 +106,7 @@ function LocationInput({ value, onChange, onCoordsChange }) {
     try {
       const { data } = await geocodeLocation(s.description);
       if (data?.lat && data?.lng) { onChange(s.description, data.lat, data.lng); onCoordsChange(data.lat, data.lng, s.description); }
-    } catch {}
+    } catch { }
   };
 
   const useMyLocation = () => {
@@ -178,13 +178,12 @@ function LiveLog({ logs, status }) {
         {logs.length === 0 && <p className="text-[var(--text-3)] italic">Waiting for logs...</p>}
         {logs.map((log, i) => (
           <motion.p key={i} initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
-            className={`leading-relaxed ${
-              log.includes("✅") || log.includes("🎉") ? "text-[var(--emerald)]"
+            className={`leading-relaxed ${log.includes("✅") || log.includes("🎉") ? "text-[var(--emerald)]"
               : log.includes("❌") ? "text-[var(--rose)]"
-              : log.includes("⚠") ? "text-amber-400"
-              : log.includes("Phase") || log.includes("▶") ? "text-[var(--accent)] font-semibold"
-              : "text-[var(--text-2)]"
-            }`}>
+                : log.includes("⚠") ? "text-amber-400"
+                  : log.includes("Phase") || log.includes("▶") ? "text-[var(--accent)] font-semibold"
+                    : "text-[var(--text-2)]"
+              }`}>
             {log}
           </motion.p>
         ))}
@@ -238,13 +237,13 @@ const PERSONA_SUGGESTIONS = [
 // ── Main Page ─────────────────────────────────────────────────
 export default function AutoScraperPage() {
   const [industryKeywords, setIndustryKeywords] = useState([]);
-  const [targetPersonas, setTargetPersonas]     = useState([]);
+  const [targetPersonas, setTargetPersonas] = useState([]);
 
   // AI natural language mode
-  const [aiDescription, setAiDescription]   = useState("");
-  const [aiAnalyzing, setAiAnalyzing]       = useState(false);
-  const [aiRationale, setAiRationale]       = useState("");
-  const [showManual, setShowManual]         = useState(false);
+  const [aiDescription, setAiDescription] = useState("");
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiRationale, setAiRationale] = useState("");
+  const [showManual, setShowManual] = useState(false);
 
   const analyzeWithAI = async () => {
     if (!aiDescription.trim()) { toast.error("Please describe what businesses you're looking for"); return; }
@@ -252,9 +251,9 @@ export default function AutoScraperPage() {
     try {
       const { data } = await analyzeScraperDescription(aiDescription);
       if (data.industryKeywords?.length) setIndustryKeywords(data.industryKeywords);
-      if (data.targetPersonas?.length)   setTargetPersonas(data.targetPersonas);
+      if (data.targetPersonas?.length) setTargetPersonas(data.targetPersonas);
       if (data.suggestedLocation && !locationText) setLocationText(data.suggestedLocation);
-      if (data.rationale)                setAiRationale(data.rationale);
+      if (data.rationale) setAiRationale(data.rationale);
       setShowManual(true);
       toast.success("AI extracted your search profile! Review and adjust below.");
     } catch (err) {
@@ -278,7 +277,7 @@ export default function AutoScraperPage() {
     try {
       const { data } = await getAutoScraperSessions();
       setSessions(Array.isArray(data) ? data : []);
-    } catch {} finally { setSessionsLoading(false); }
+    } catch { } finally { setSessionsLoading(false); }
   }, []);
 
   useEffect(() => { loadSessions(); }, [loadSessions]);
@@ -349,7 +348,7 @@ export default function AutoScraperPage() {
         <ArrowRight size={10} />
         <span className="badge badge-purple">Web Crawler</span>
         <ArrowRight size={10} />
-        <span className="badge badge-green">Leads (DB)</span>
+        <span className="badge badge-green">Save To Website Intel</span>
       </div>
 
       {/* ── AI Natural Language Input ── */}
@@ -409,61 +408,61 @@ export default function AutoScraperPage() {
 
       {/* ICP Keyword Config — shown after AI analysis or manually */}
       <AnimatePresence>
-      {(showManual || (!aiDescription && industryKeywords.length === 0)) && (
-      <motion.div className="card p-6 space-y-6" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-[var(--text)]">Target Profile Keywords</h3>
-            <p className="text-[11px] text-[var(--text-3)] mt-0.5">These are combined to build highly accurate search queries</p>
-          </div>
-          {totalKeywords > 0 && (
-            <span className="badge badge-green text-[11px]">
-              ✓ {totalKeywords} keyword{totalKeywords !== 1 ? "s" : ""} configured
-            </span>
-          )}
-        </div>
+        {(showManual || (!aiDescription && industryKeywords.length === 0)) && (
+          <motion.div className="card p-6 space-y-6" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-[var(--text)]">Target Profile Keywords</h3>
+                <p className="text-[11px] text-[var(--text-3)] mt-0.5">These are combined to build highly accurate search queries</p>
+              </div>
+              {totalKeywords > 0 && (
+                <span className="badge badge-green text-[11px]">
+                  ✓ {totalKeywords} keyword{totalKeywords !== 1 ? "s" : ""} configured
+                </span>
+              )}
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {/* Industry Keywords */}
-          <TagSection
-            icon={Search}
-            title="Industry / Business Type"
-            description="What industry or company type are you targeting? (Required)"
-            color="bg-violet-500"
-            tags={industryKeywords}
-            setTags={setIndustryKeywords}
-            placeholder="e.g. SaaS, fintech, healthcare..."
-            suggestions={INDUSTRY_SUGGESTIONS}
-          />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Industry Keywords */}
+              <TagSection
+                icon={Search}
+                title="Industry / Business Type"
+                description="What industry or company type are you targeting? (Required)"
+                color="bg-violet-500"
+                tags={industryKeywords}
+                setTags={setIndustryKeywords}
+                placeholder="e.g. SaaS, fintech, healthcare..."
+                suggestions={INDUSTRY_SUGGESTIONS}
+              />
 
-          {/* Target Personas */}
-          <TagSection
-            icon={Briefcase}
-            title="Target Personas / Job Titles"
-            description="Who are you trying to reach? Narrows search to relevant companies. (Optional)"
-            color="bg-emerald-500"
-            tags={targetPersonas}
-            setTags={setTargetPersonas}
-            placeholder="e.g. CTO, VP Engineering, Founder..."
-            suggestions={PERSONA_SUGGESTIONS}
-          />
-        </div>
+              {/* Target Personas */}
+              <TagSection
+                icon={Briefcase}
+                title="Target Personas / Job Titles"
+                description="Who are you trying to reach? Narrows search to relevant companies. (Optional)"
+                color="bg-emerald-500"
+                tags={targetPersonas}
+                setTags={setTargetPersonas}
+                placeholder="e.g. CTO, VP Engineering, Founder..."
+                suggestions={PERSONA_SUGGESTIONS}
+              />
+            </div>
 
-        {/* Smart Query Preview */}
-        {industryKeywords.length > 0 && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-            className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3">
-            <p className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Search size={10} className="text-[var(--accent)]" /> Search Query Preview
-            </p>
-            <p className="text-xs font-mono text-[var(--accent)] break-all">
-              "{industryKeywords.join(" OR ")}
-              {targetPersonas.length ? ` + hiring ${targetPersonas[0]}` : ""}"
-            </p>
+            {/* Smart Query Preview */}
+            {industryKeywords.length > 0 && (
+              <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
+                className="bg-[var(--surface-2)] border border-[var(--border)] rounded-xl p-3">
+                <p className="text-[11px] font-bold text-[var(--text-3)] uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                  <Search size={10} className="text-[var(--accent)]" /> Search Query Preview
+                </p>
+                <p className="text-xs font-mono text-[var(--accent)] break-all">
+                  "{industryKeywords.join(" OR ")}
+                  {targetPersonas.length ? ` + hiring ${targetPersonas[0]}` : ""}"
+                </p>
+              </motion.div>
+            )}
           </motion.div>
         )}
-      </motion.div>
-      )}
       </AnimatePresence>
 
       {/* Location + Radius */}

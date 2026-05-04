@@ -19,18 +19,6 @@ export default function Layout() {
           className="flex-1 overflow-y-auto p-6"
           style={{ background: "var(--bg)" }}
         >
-          {/* Subtle background grid */}
-          <div
-            className="fixed inset-0 pointer-events-none z-0"
-            style={{
-              backgroundImage: `
-                linear-gradient(var(--overlay-1) 1px, transparent 1px),
-                linear-gradient(90deg, var(--overlay-1) 1px, transparent 1px)
-              `,
-              backgroundSize: "40px 40px",
-            }}
-          />
-
           {/* Aurora glow blobs in background */}
           <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
             <div
