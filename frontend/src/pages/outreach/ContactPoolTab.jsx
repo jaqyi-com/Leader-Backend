@@ -100,7 +100,7 @@ export default function ContactPoolTab({ onCreateCampaign }) {
         {[
           { label: "Total Contacts", val: contacts.length, color: "var(--accent)" },
           { label: "Hot Leads (7+)", val: contacts.filter(c => c.tier === "hot").length, color: "#22c55e" },
-          { label: "With Email", val: contacts.filter(c => c.email).length, color: "#1a1a1a" },
+          { label: "With Email", val: contacts.filter(c => c.email).length, color: "#6c63ff" },
           { label: "With Phone", val: contacts.filter(c => c.phone).length, color: "#fbbf24" },
         ].map(s => (
           <div key={s.label} style={{
@@ -155,8 +155,8 @@ export default function ContactPoolTab({ onCreateCampaign }) {
             style={{
               display: "flex", alignItems: "center", justifyContent: "space-between",
               padding: "12px 18px", borderRadius: 14,
-              background: "linear-gradient(135deg, rgba(0,0,0,0.09), rgba(0,0,0,0.09))",
-              border: "1px solid rgba(0,0,0,0.14)",
+              background: "linear-gradient(135deg, rgba(108,99,255,0.15), rgba(139,92,246,0.15))",
+              border: "1px solid rgba(108,99,255,0.3)",
             }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: "var(--accent-2)" }}>
               {selected.size} contact{selected.size > 1 ? "s" : ""} selected
@@ -209,7 +209,7 @@ export default function ContactPoolTab({ onCreateCampaign }) {
                 style={{
                   display: "grid", gridTemplateColumns: "36px 1.5fr 1fr 1.2fr 80px 80px 70px 80px",
                   padding: "10px 16px", cursor: "pointer",
-                  background: selected.has(c._id) ? "rgba(0,0,0,0.05)" : i % 2 ? "var(--surface-2)" : "transparent",
+                  background: selected.has(c._id) ? "rgba(108,99,255,0.06)" : i % 2 ? "var(--surface-2)" : "transparent",
                   borderBottom: "1px solid var(--border)",
                   transition: "background 0.1s",
                 }}>

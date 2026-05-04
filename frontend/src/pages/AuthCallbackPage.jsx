@@ -103,7 +103,7 @@ const ERROR_CONFIG = {
     color: "text-violet-400",
     bg: "bg-violet-500/10",
     border: "border-violet-500/20",
-    glow: "rgba(0,0,0,0.09)",
+    glow: "rgba(139,92,246,0.15)",
   },
   default: {
     Icon: AlertTriangle,
@@ -417,7 +417,7 @@ export default function AuthCallbackPage() {
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center"
             style={{
-              background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%)",
+              background: "linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%)",
               boxShadow: "0 0 16px var(--accent-glow)",
             }}
           >

@@ -70,7 +70,7 @@ function SourceCard({ source, onEdit, onDelete, onRefresh }) {
         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
-            background: "rgba(0,0,0,0.07)", border: "1px solid rgba(0,0,0,0.10)", flexShrink: 0,
+            background: "rgba(108,99,255,0.1)", border: "1px solid rgba(108,99,255,0.2)", flexShrink: 0,
           }}>
             <Icon size={16} color="var(--accent)" />
           </div>
@@ -247,8 +247,8 @@ function EditModal({ source, onClose, onSaved }) {
             disabled={saving || !text.trim()}
             style={{
               padding: "8px 20px",
-              background: "linear-gradient(135deg,var(--accent),var(--accent-2))",
-              border: "none", borderRadius: 8, cursor: "pointer", color: "var(--bg)", fontSize: 13, fontWeight: 600,
+              background: "linear-gradient(135deg,var(--accent),#8b5cf6)",
+              border: "none", borderRadius: 8, cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600,
               display: "flex", alignItems: "center", gap: 6, opacity: saving ? 0.7 : 1,
             }}
           >
@@ -419,9 +419,9 @@ export default function ChatbotDataPage() {
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                   background: addingText || !textName.trim() || !textContent.trim()
                     ? "var(--overlay-2)"
-                    : "linear-gradient(135deg,var(--accent),var(--accent-2))",
+                    : "linear-gradient(135deg,var(--accent),#8b5cf6)",
                   border: "none", borderRadius: 10, padding: "11px",
-                  cursor: "pointer", color: "var(--bg)", fontSize: 14, fontWeight: 600,
+                  cursor: "pointer", color: "white", fontSize: 14, fontWeight: 600,
                 }}
               >
                 {addingText
@@ -448,7 +448,7 @@ export default function ChatbotDataPage() {
                 border: `2px dashed ${dragOver ? "var(--accent)" : "var(--border)"}`,
                 borderRadius: 12, padding: "32px 20px",
                 textAlign: "center", cursor: uploadingFile ? "not-allowed" : "pointer",
-                background: dragOver ? "rgba(0,0,0,0.05)" : "var(--overlay-1)",
+                background: dragOver ? "rgba(108,99,255,0.06)" : "var(--overlay-1)",
                 transition: "all 0.2s",
               }}
             >
