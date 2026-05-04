@@ -171,17 +171,17 @@ export default function DashboardPage() {
   const CARDS = [
     {
       label: "Companies Found", value: s_companies(stats), icon: Building2,
-      gradient: "linear-gradient(135deg, #6c63ff, #8b5cf6)",
+      gradient: "linear-gradient(135deg, #1a1a1a, #3d3d3d)",
       change: "+12%", sparkData: [2, 5, 4, 8, 6, 12, 10], delay: 0,
     },
     {
       label: "Contacts Enriched", value: s_contacts(stats), icon: Users,
-      gradient: "linear-gradient(135deg, #22d3ee, #06b6d4)",
+      gradient: "linear-gradient(135deg, #888888, #06b6d4)",
       change: "+8%", sparkData: [1, 3, 5, 4, 7, 6, 9], delay: 0.05,
     },
     {
       label: "Emails Sent", value: stats?.outreach?.totalSent ?? 0, icon: Mail,
-      gradient: "linear-gradient(135deg, #a78bfa, #7c3aed)",
+      gradient: "linear-gradient(135deg, #707070, #2a2a2a)",
       change: "+24%", sparkData: [3, 6, 4, 9, 7, 11, 8], delay: 0.1,
     },
     {
@@ -217,9 +217,9 @@ export default function DashboardPage() {
 
   const totalLeads = s_companies(stats) || 1;
   const PHASES = [
-    { phase: "Scrape",   val: s_companies(stats) || "—",          unit: "companies", color: "linear-gradient(90deg, #6c63ff, #8b5cf6)", progress: 100, delay: 0 },
-    { phase: "Enrich",   val: s_contacts(stats) || "—",           unit: "contacts",  color: "linear-gradient(90deg, #22d3ee, #06b6d4)", progress: s_contacts(stats) / totalLeads * 100, delay: 0.05 },
-    { phase: "Qualify",  val: s_qualified(stats) || "—",          unit: "qualified", color: "linear-gradient(90deg, #a78bfa, #7c3aed)", progress: s_qualified(stats) / totalLeads * 100, delay: 0.10 },
+    { phase: "Scrape",   val: s_companies(stats) || "—",          unit: "companies", color: "linear-gradient(90deg, #1a1a1a, #3d3d3d)", progress: 100, delay: 0 },
+    { phase: "Enrich",   val: s_contacts(stats) || "—",           unit: "contacts",  color: "linear-gradient(90deg, #888888, #06b6d4)", progress: s_contacts(stats) / totalLeads * 100, delay: 0.05 },
+    { phase: "Qualify",  val: s_qualified(stats) || "—",          unit: "qualified", color: "linear-gradient(90deg, #707070, #2a2a2a)", progress: s_qualified(stats) / totalLeads * 100, delay: 0.10 },
     { phase: "Outreach", val: stats?.outreach?.totalSent ?? "—",  unit: "sent",      color: "linear-gradient(90deg, #10b981, #059669)", progress: (stats?.outreach?.totalSent ?? 0) / totalLeads * 100, delay: 0.15 },
     { phase: "Score",    val: s_highPri(stats) + s_medPri(stats) || "—", unit: "scored", color: "linear-gradient(90deg, #f59e0b, #d97706)", progress: (s_highPri(stats) + s_medPri(stats)) / totalLeads * 100, delay: 0.20 },
     { phase: "Replies",  val: stats?.outreach?.totalResponses ?? "—", unit: "responses", color: "linear-gradient(90deg, #f43f5e, #e11d48)", progress: (stats?.outreach?.totalResponses ?? 0) / totalLeads * 100, delay: 0.25 },
@@ -312,20 +312,20 @@ export default function DashboardPage() {
             <AreaChart data={areaData} margin={{ top: 4, right: 4, bottom: 0, left: -24 }}>
               <defs>
                 <linearGradient id="g1" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#6c63ff" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#6c63ff" stopOpacity={0} />
+                  <stop offset="5%"  stopColor="#1a1a1a" stopOpacity={0.25} />
+                  <stop offset="95%" stopColor="#1a1a1a" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="g2" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#22d3ee" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#22d3ee" stopOpacity={0} />
+                  <stop offset="5%"  stopColor="#888888" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#888888" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 11, fill: "var(--text-3)" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 11, fill: "var(--text-3)" }} axisLine={false} tickLine={false} />
               <Tooltip content={<ChartTooltip />} />
-              <Area type="monotone" dataKey="companies" stroke="#6c63ff" fill="url(#g1)" strokeWidth={2} dot={false} name="Companies" />
-              <Area type="monotone" dataKey="contacts"  stroke="#22d3ee" fill="url(#g2)" strokeWidth={2} dot={false} name="Contacts" />
+              <Area type="monotone" dataKey="companies" stroke="#1a1a1a" fill="url(#g1)" strokeWidth={2} dot={false} name="Companies" />
+              <Area type="monotone" dataKey="contacts"  stroke="#888888" fill="url(#g2)" strokeWidth={2} dot={false} name="Contacts" />
             </AreaChart>
           </ResponsiveContainer>
         </motion.div>

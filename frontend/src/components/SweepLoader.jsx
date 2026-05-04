@@ -27,8 +27,8 @@ export default function SweepLoader({ width, height = 4, fullPage = false, class
           top: 0,
           left: 0,
           height: "100%",
-          background: "linear-gradient(90deg, #6c63ff, #a78bfa, #22d3ee)",
-          boxShadow: "0 0 10px rgba(108,99,255,0.7)",
+          background: "linear-gradient(90deg, #1a1a1a, #707070, #888888)",
+          boxShadow: "0 0 10px rgba(0,0,0,0.40)",
           borderRadius: 9999,
           animation: "sweep-loader 1s cubic-bezier(0.4,0,0.2,1) infinite",
         }}

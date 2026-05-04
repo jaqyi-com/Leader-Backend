@@ -158,7 +158,7 @@ export default function RegisterPage() {
           width: 500,
           height: 500,
           borderRadius: "50%",
-          background: "radial-gradient(ellipse, rgba(108,99,255,0.1) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse, rgba(0,0,0,0.07) 0%, transparent 70%)",
           pointerEvents: "none",
         }}
       />
@@ -188,7 +188,7 @@ export default function RegisterPage() {
               width: 52,
               height: 52,
               borderRadius: 16,
-              background: "linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%)",
+              background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%)",
               boxShadow: "0 0 32px var(--accent-glow)",
               display: "flex",
               alignItems: "center",

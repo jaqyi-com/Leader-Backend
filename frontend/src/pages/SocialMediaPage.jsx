@@ -60,7 +60,7 @@ function TagInput({ tags, setTags, placeholder, disabled }) {
         <span
           key={i}
           className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold"
-          style={{ background: "rgba(108,99,255,0.15)", color: "var(--accent-2)" }}
+          style={{ background: "rgba(0,0,0,0.09)", color: "var(--accent-2)" }}
         >
           <Hash size={10} /> {t}
           {!disabled && (
@@ -218,9 +218,9 @@ function StepBar({ step }) {
             <div
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all"
               style={{
-                background: done ? "rgba(16,185,129,0.15)" : current ? "rgba(108,99,255,0.2)" : "var(--surface-2)",
+                background: done ? "rgba(16,185,129,0.15)" : current ? "rgba(0,0,0,0.10)" : "var(--surface-2)",
                 color:      done ? "var(--emerald)"        : current ? "var(--accent-2)"       : "var(--text-3)",
-                border:     `1px solid ${done ? "rgba(16,185,129,0.3)" : current ? "rgba(108,99,255,0.35)" : "var(--border)"}`,
+                border:     `1px solid ${done ? "rgba(16,185,129,0.3)" : current ? "rgba(0,0,0,0.18)" : "var(--border)"}`,
               }}
             >
               {done ? <Check size={10} /> : <span className="w-4 text-center">{i + 1}</span>}
@@ -315,7 +315,7 @@ function PostRow({ post, onPublish, onDelete, publishing }) {
               {post.hashtags?.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {post.hashtags.map((h, i) => (
-                    <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(108,99,255,0.1)", color: "var(--accent-2)" }}>
+                    <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(0,0,0,0.07)", color: "var(--accent-2)" }}>
                       #{h.replace(/^#/, "")}
                     </span>
                   ))}
@@ -527,7 +527,7 @@ export default function SocialMediaPage() {
         <div className="flex items-center gap-3">
           <div
             className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #6c63ff 0%, #a78bfa 100%)", boxShadow: "0 0 20px rgba(108,99,255,0.35)" }}
+            style={{ background: "linear-gradient(135deg, #1a1a1a 0%, #707070 100%)", boxShadow: "0 0 20px rgba(0,0,0,0.18)" }}
           >
             <Share2 size={18} className="text-white" />
           </div>
@@ -574,7 +574,7 @@ export default function SocialMediaPage() {
 
             <div
               className="mt-4 p-3 rounded-xl text-xs"
-              style={{ background: "rgba(108,99,255,0.05)", border: "1px solid rgba(108,99,255,0.15)", color: "var(--text-3)" }}
+              style={{ background: "rgba(0,0,0,0.04)", border: "1px solid rgba(0,0,0,0.09)", color: "var(--text-3)" }}
             >
               <Globe size={12} className="inline mr-1.5" style={{ color: "var(--accent-2)" }} />
               Connect via Unified.to secure OAuth. Your credentials are never stored.
@@ -668,7 +668,7 @@ export default function SocialMediaPage() {
                         <p className="text-xs font-semibold mb-1.5" style={{ color: "var(--text-3)" }}>KEYWORDS</p>
                         <div className="flex flex-wrap gap-1.5">
                           {keywords.map((k, i) => (
-                            <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(108,99,255,0.15)", color: "var(--accent-2)" }}>#{k}</span>
+                            <span key={i} className="text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(0,0,0,0.09)", color: "var(--accent-2)" }}>#{k}</span>
                           ))}
                         </div>
                       </div>
@@ -687,7 +687,7 @@ export default function SocialMediaPage() {
                       "Generate relevant hashtags to maximize reach",
                     ].map((step, i) => (
                       <div key={i} className="flex items-center gap-2.5 text-xs" style={{ color: "var(--text-2)" }}>
-                        <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(108,99,255,0.15)", color: "var(--accent-2)" }}>
+                        <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(0,0,0,0.09)", color: "var(--accent-2)" }}>
                           {i + 1}
                         </div>
                         {step}
@@ -725,7 +725,7 @@ export default function SocialMediaPage() {
                   {generated.trendSummary && (
                     <div
                       className="rounded-xl p-4 text-sm"
-                      style={{ background: "rgba(34,211,238,0.05)", border: "1px solid rgba(34,211,238,0.2)", color: "var(--teal)" }}
+                      style={{ background: "rgba(34,211,238,0.05)", border: "1px solid rgba(0,0,0,0.08)", color: "var(--teal)" }}
                     >
                       <p className="text-xs font-semibold uppercase tracking-widest mb-1.5 opacity-70">Trend Analysis</p>
                       {generated.trendSummary}
@@ -756,7 +756,7 @@ export default function SocialMediaPage() {
                       <p className="text-xs font-semibold uppercase tracking-widest mb-2" style={{ color: "var(--text-3)" }}>Hashtags</p>
                       <div className="flex flex-wrap gap-1.5">
                         {generated.hashtags.map((h, i) => (
-                          <span key={i} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: "rgba(108,99,255,0.12)", color: "var(--accent-2)" }}>
+                          <span key={i} className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: "rgba(0,0,0,0.08)", color: "var(--accent-2)" }}>
                             #{h.replace(/^#/, "")}
                           </span>
                         ))}
@@ -865,7 +865,7 @@ export default function SocialMediaPage() {
                 <Clock size={14} style={{ color: "var(--accent)" }} />
                 Post History
                 {posts.length > 0 && (
-                  <span className="ml-1 text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(108,99,255,0.15)", color: "var(--accent-2)" }}>
+                  <span className="ml-1 text-xs px-2 py-0.5 rounded-full" style={{ background: "rgba(0,0,0,0.09)", color: "var(--accent-2)" }}>
                     {posts.length}
                   </span>
                 )}

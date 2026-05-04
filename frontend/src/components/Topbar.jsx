@@ -147,7 +147,7 @@ export default function Topbar() {
                   width: 28,
                   height: 28,
                   borderRadius: 8,
-                  background: "linear-gradient(135deg, var(--accent), #8b5cf6)",
+                  background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
                   color: "#fff",
                   fontSize: 11,
                   fontWeight: 700,
@@ -245,7 +245,7 @@ export default function Topbar() {
                         letterSpacing: "0.06em",
                         padding: "2px 7px",
                         borderRadius: 20,
-                        background: "rgba(108,99,255,0.15)",
+                        background: "rgba(0,0,0,0.09)",
                         color: "var(--accent-2)",
                       }}
                     >

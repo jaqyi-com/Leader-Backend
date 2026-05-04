@@ -53,8 +53,8 @@ export default function PageProgressBar() {
             top: 0,
             left: 0,
             height: "100%",
-            background: "linear-gradient(90deg, #6c63ff, #a78bfa, #22d3ee)",
-            boxShadow: "0 0 12px rgba(108,99,255,0.8), 0 0 24px rgba(108,99,255,0.4)",
+            background: "linear-gradient(90deg, #1a1a1a, #707070, #888888)",
+            boxShadow: "0 0 12px rgba(0,0,0,0.5), 0 0 24px rgba(0,0,0,0.2)",
             borderRadius: 9999,
             animation: "ppb-sweep 1s cubic-bezier(0.4, 0, 0.2, 1) infinite",
           }}

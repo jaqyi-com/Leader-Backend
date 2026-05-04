@@ -72,7 +72,7 @@ export default function VerifyEmailPage() {
             width: 52,
             height: 52,
             borderRadius: 16,
-            background: "linear-gradient(135deg, var(--accent), #8b5cf6)",
+            background: "linear-gradient(135deg, var(--accent), var(--accent-2))",
             boxShadow: "0 0 32px var(--accent-glow)",
             display: "flex",
             alignItems: "center",

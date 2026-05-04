@@ -11,12 +11,12 @@ import {
 } from "../../api/outreach";
 
 const CH_ICON = { email: Mail, whatsapp: MessageSquare, sms: Smartphone };
-const CH_COLOR = { email: "#6c63ff", whatsapp: "#25d366", sms: "#fbbf24" };
+const CH_COLOR = { email: "#1a1a1a", whatsapp: "#25d366", sms: "#fbbf24" };
 const STATUS_STYLE = {
   draft: { bg: "rgba(148,163,184,0.12)", color: "#94a3b8", label: "Draft" },
   active: { bg: "rgba(34,197,94,0.12)", color: "#22c55e", label: "Active" },
   paused: { bg: "rgba(251,191,36,0.12)", color: "#fbbf24", label: "Paused" },
-  completed: { bg: "rgba(108,99,255,0.12)", color: "#6c63ff", label: "Completed" },
+  completed: { bg: "rgba(0,0,0,0.08)", color: "#1a1a1a", label: "Completed" },
 };
 
 export default function CampaignsDashboardTab() {

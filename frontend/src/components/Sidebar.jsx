@@ -106,7 +106,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       <div
         className="absolute top-0 left-0 right-0 h-32 pointer-events-none"
         style={{
-          background: "radial-gradient(ellipse at 50% 0%, rgba(108,99,255,0.12) 0%, transparent 70%)",
+          background: "radial-gradient(ellipse at 50% 0%, rgba(0,0,0,0.08) 0%, transparent 70%)",
         }}
       />
 
@@ -118,7 +118,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         <div
           className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
           style={{
-            background: "linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%)",
+            background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%)",
             boxShadow: "0 0 16px var(--accent-glow)",
           }}
         >
@@ -183,7 +183,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         onClick={onToggle}
         className="absolute -right-3.5 top-[72px] w-7 h-7 rounded-full flex items-center justify-center z-50 transition-all duration-200 hover:scale-110 hover:brightness-110"
         style={{
-          background: "linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%)",
+          background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%)",
           border: "2px solid var(--overlay-border)",
           color: "#ffffff",
           boxShadow: "0 0 12px var(--accent-glow), 0 2px 8px rgba(0,0,0,0.6)",
