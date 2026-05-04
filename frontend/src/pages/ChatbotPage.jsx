@@ -12,6 +12,10 @@ import {
   fetchConversations, fetchMessages,
   deleteConversation, sendMessage
 } from "../api/chatbot";
+import { classifyIntent } from "../lib/intentClassifier";
+import MentionDropdown from "../components/chatbot/MentionDropdown";
+import FeatureDropdown from "../components/chatbot/FeatureDropdown";
+import FeatureInvocationPanel from "../components/chatbot/FeatureInvocationPanel";
 
 const MAX_CONTEXT = 100000;
 
@@ -298,6 +302,11 @@ export default function ChatbotPage() {
   const [model] = useState("gpt-4o-mini");
   const [tokenCount, setTokenCount] = useState(0);
   const [rateLimitCountdown, setRateLimitCountdown] = useState(0);
+  // ── AI Command Center state ──
+  const [mentionActive, setMentionActive] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [selectedFeature, setSelectedFeature] = useState(null); // from @mention or dropdown
+  const inputWrapRef = useRef(null);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const abortRef = useRef(false);
@@ -356,7 +365,37 @@ export default function ChatbotPage() {
     const text = (messageText || input).trim();
     if (!text || isStreaming) return;
     setInput("");
+    setMentionActive(false);
 
+    // ── AI Command Center: feature invocation ──────────────
+    const featureToInvoke = selectedFeature || (!text.startsWith("@") ? null : null);
+    const intent = featureToInvoke ? { feature: featureToInvoke, params: {}, confidence: 100, explanation: `Invoking **${featureToInvoke.name}** as requested.` } : classifyIntent(text);
+
+    if (intent && intent.confidence >= 22) {
+      // Show user message
+      const userMsg = { _id: `tmp-${Date.now()}`, role: "user", content: text, createdAt: new Date().toISOString() };
+      // Show feature panel message
+      const featureMsg = {
+        _id: `feat-${Date.now()}`, role: "assistant", type: "feature_invocation",
+        feature: intent.feature, params: intent.params,
+        explanation: intent.explanation,
+        content: "", createdAt: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, userMsg, featureMsg]);
+      setSelectedFeature(null);
+      if (activeConvId === null) setActiveConvId("new");
+      return;
+    }
+
+    // ── Suggestion (medium confidence) ──
+    if (intent && intent.isSuggestion) {
+      toast(
+        <span>💡 Did you mean to use <b>{intent.feature.name}</b>? Type <code>@{intent.feature.mention}</code> to invoke it.</span>,
+        { duration: 5000, icon: "🔍" }
+      );
+    }
+
+    setSelectedFeature(null);
     const convId = activeConvId === "new" || !activeConvId ? "new" : activeConvId;
 
     // Add user message optimistically
@@ -415,7 +454,35 @@ export default function ChatbotPage() {
     setIsStreaming(false);
   };
 
+  // ── @mention detection ─────────────────────────────────
+  const handleInputChange = (e) => {
+    const val = e.target.value;
+    setInput(val);
+    // Resize
+    e.target.style.height = "auto";
+    e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
+    // Detect @ at start or after space
+    const atIdx = val.lastIndexOf("@");
+    if (atIdx !== -1 && (atIdx === 0 || val[atIdx - 1] === " ")) {
+      setMentionActive(true);
+      setMentionQuery(val.slice(atIdx));
+    } else {
+      setMentionActive(false);
+      setMentionQuery("");
+    }
+  };
+
+  const handleMentionSelect = (feature) => {
+    setSelectedFeature(feature);
+    setMentionActive(false);
+    // Replace the @... in input with @featurename 
+    const atIdx = input.lastIndexOf("@");
+    setInput(atIdx !== -1 ? input.slice(0, atIdx) + `@${feature.mention} ` : `@${feature.mention} `);
+    inputRef.current?.focus();
+  };
+
   const handleKeyDown = (e) => {
+    if (mentionActive && (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Escape")) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -615,11 +682,38 @@ export default function ChatbotPage() {
             /* ── Messages ── */
             <>
               {messages.map((msg) => (
-                <MessageBubble
-                  key={msg._id}
-                  msg={msg}
-                  isStreaming={msg._id === "streaming" && isStreaming}
-                />
+                msg.type === "feature_invocation" ? (
+                  <motion.div
+                    key={msg._id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{ marginBottom: 20, maxWidth: "88%" }}
+                  >
+                    <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+                      <div style={{
+                        width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        background: "linear-gradient(135deg,var(--accent),#8b5cf6)",
+                        border: "1px solid var(--border)", fontSize: 14,
+                      }}>
+                        {msg.feature.emoji}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <FeatureInvocationPanel
+                          feature={msg.feature}
+                          params={msg.params}
+                          explanation={msg.explanation}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <MessageBubble
+                    key={msg._id}
+                    msg={msg}
+                    isStreaming={msg._id === "streaming" && isStreaming}
+                  />
+                )
               ))}
               <div ref={messagesEndRef} />
             </>
@@ -632,56 +726,91 @@ export default function ChatbotPage() {
           borderTop: "1px solid var(--border)",
           background: "var(--surface)",
         }}>
-          <div style={{
-            display: "flex", gap: 10, alignItems: "flex-end",
-            background: "var(--overlay-1)",
-            border: "1px solid var(--border)",
-            borderRadius: 16, padding: "8px 8px 8px 16px",
-            transition: "border-color 0.2s",
-          }}>
-            <textarea
-              ref={inputRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask anything about your organization..."
-              rows={1}
-              disabled={isStreaming}
-              style={{
-                flex: 1, background: "transparent", border: "none", outline: "none",
-                color: "var(--text)", fontSize: 14, lineHeight: 1.5, resize: "none",
-                padding: "4px 0", fontFamily: "inherit", maxHeight: 120,
-              }}
-              onInput={(e) => {
-                e.target.style.height = "auto";
-                e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
-              }}
-            />
-            <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>
-
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleSend()}
-                disabled={!input.trim() || isStreaming}
+          {/* Selected feature chip */}
+          <AnimatePresence>
+            {selectedFeature && (
+              <motion.div
+                initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
                 style={{
-                  background: input.trim() && !isStreaming
-                    ? "linear-gradient(135deg,var(--accent),#8b5cf6)"
-                    : "var(--overlay-2)",
-                  border: "none", borderRadius: 10, padding: "8px 12px",
-                  cursor: input.trim() && !isStreaming ? "pointer" : "not-allowed",
-                  color: input.trim() && !isStreaming ? "white" : "var(--text-3)",
-                  display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600,
-                  transition: "all 0.2s",
+                  display: "inline-flex", alignItems: "center", gap: 6,
+                  background: "rgba(108,99,255,0.15)", border: "1px solid rgba(108,99,255,0.3)",
+                  borderRadius: 20, padding: "3px 10px 3px 6px",
+                  fontSize: 12, color: "var(--accent)", fontWeight: 600, marginBottom: 8,
                 }}
               >
-                {isStreaming ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Send size={14} />}
-                {isStreaming ? "Thinking…" : "Send"}
-              </motion.button>
+                <span>{selectedFeature.emoji}</span>
+                <span>{selectedFeature.name}</span>
+                <button onClick={() => setSelectedFeature(null)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: "inherit", padding: 0 }}>
+                  <X size={10} />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Textarea wrapper — relative for MentionDropdown */}
+          <div ref={inputWrapRef} style={{ position: "relative" }}>
+            <AnimatePresence>
+              {mentionActive && (
+                <MentionDropdown
+                  query={mentionQuery}
+                  onSelect={handleMentionSelect}
+                  onClose={() => setMentionActive(false)}
+                />
+              )}
+            </AnimatePresence>
+
+            <div style={{
+              display: "flex", gap: 10, alignItems: "flex-end",
+              background: "var(--overlay-1)",
+              border: `1px solid ${selectedFeature ? "var(--accent)" : "var(--border)"}`,
+              borderRadius: 16, padding: "8px 8px 8px 16px",
+              transition: "border-color 0.2s",
+            }}>
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                placeholder={selectedFeature ? `Describe your ${selectedFeature.name} request…` : "Ask anything, or type @ to invoke a feature…"}
+                rows={1}
+                disabled={isStreaming}
+                style={{
+                  flex: 1, background: "transparent", border: "none", outline: "none",
+                  color: "var(--text)", fontSize: 14, lineHeight: 1.5, resize: "none",
+                  padding: "4px 0", fontFamily: "inherit", maxHeight: 120,
+                }}
+              />
+              <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
+                {/* ⚡ Feature Dropdown */}
+                <FeatureDropdown onSelect={(f) => { setSelectedFeature(f); inputRef.current?.focus(); }} />
+
+                {/* Send button */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleSend()}
+                  disabled={!input.trim() || isStreaming}
+                  style={{
+                    background: input.trim() && !isStreaming
+                      ? "linear-gradient(135deg,var(--accent),#8b5cf6)"
+                      : "var(--overlay-2)",
+                    border: "none", borderRadius: 10, padding: "8px 12px",
+                    cursor: input.trim() && !isStreaming ? "pointer" : "not-allowed",
+                    color: input.trim() && !isStreaming ? "white" : "var(--text-3)",
+                    display: "flex", alignItems: "center", gap: 5, fontSize: 13, fontWeight: 600,
+                    transition: "all 0.2s",
+                  }}
+                >
+                  {isStreaming ? <Loader2 size={14} style={{ animation: "spin 1s linear infinite" }} /> : <Send size={14} />}
+                  {isStreaming ? "Thinking…" : "Send"}
+                </motion.button>
+              </div>
             </div>
           </div>
+
           <p style={{ margin: "8px 0 0", fontSize: 11, color: "var(--text-3)", textAlign: "center" }}>
-            Answers are generated from your organization's knowledge base · Short prompts are automatically enhanced
+            Type <code style={{ background: "var(--overlay-2)", padding: "0 4px", borderRadius: 3 }}>@feature</code> to invoke · Click <b>⚡ Features</b> to browse · Or just describe what you need
           </p>
         </div>
       </div>
