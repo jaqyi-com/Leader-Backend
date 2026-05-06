@@ -25,8 +25,10 @@ const SOURCE_LABELS = {
   ai_research:     "AI Research",
   auto_scraper:    "Auto Scraper",
   places_scraper:  "Places",
+  auto_lead_gen:   "Auto Lead Gen",
   manual:          "Manual",
 };
+
 
 function StatusBadge({ status, onChange }) {
   const [open, setOpen] = useState(false);

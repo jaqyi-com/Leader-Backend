@@ -344,9 +344,10 @@ const generatedLeadSchema = new mongoose.Schema({
   // Source tracking
   source: {
     type: String,
-    enum: ["linkedin_finder", "email_finder", "company_intel", "ai_research", "auto_scraper", "places_scraper", "manual"],
+    enum: ["linkedin_finder", "email_finder", "company_intel", "ai_research", "auto_scraper", "places_scraper", "auto_lead_gen", "manual"],
     default: "manual",
   },
+
   sourceQuery:    String,   // the query/prompt that generated this lead
   // Status workflow
   status: {

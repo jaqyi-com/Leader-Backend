@@ -37,6 +37,7 @@ import LinkedInFinderPage from "./pages/lg/LinkedInFinderPage";
 import EmailFinderPage    from "./pages/lg/EmailFinderPage";
 import CompanyIntelPage   from "./pages/lg/CompanyIntelPage";
 import AIResearchAgentPage from "./pages/lg/AIResearchAgentPage";
+import AutoLeadGenPage    from "./pages/lg/AutoLeadGenPage";
 
 
 import { ThemeProvider } from "./context/ThemeContext";
@@ -90,11 +91,12 @@ export default function App() {
             <Route path="chatbot" element={<ChatbotPage />} />
             <Route path="chatbot/data" element={<ChatbotDataPage />} />
             {/* Lead Generator */}
-            <Route path="lg/database"  element={<LeadDatabasePage />} />
-            <Route path="lg/linkedin"  element={<LinkedInFinderPage />} />
-            <Route path="lg/email"     element={<EmailFinderPage />} />
-            <Route path="lg/companies" element={<CompanyIntelPage />} />
-            <Route path="lg/research"  element={<AIResearchAgentPage />} />
+            <Route path="lg/database"       element={<LeadDatabasePage />} />
+            <Route path="lg/linkedin"       element={<LinkedInFinderPage />} />
+            <Route path="lg/email"          element={<EmailFinderPage />} />
+            <Route path="lg/companies"      element={<CompanyIntelPage />} />
+            <Route path="lg/research"       element={<AIResearchAgentPage />} />
+            <Route path="lg/auto-lead-gen"  element={<AutoLeadGenPage />} />
 
           </Route>
 

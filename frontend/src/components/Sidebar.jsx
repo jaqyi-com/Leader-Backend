@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe, MapPin, Database, ChevronLeft, ChevronRight,
   Zap, Settings, Share2, MessageSquare, Sparkles,
-  Users2, Mail, Building2, BrainCircuit, Rocket, BookOpen,
+  Users2, Mail, Building2, BrainCircuit, Rocket, BookOpen, Target,
 } from "lucide-react";
 
 
@@ -26,10 +26,12 @@ const AI_LINKS = [
 ];
 
 const LEAD_GEN_LINKS = [
-  { to: "/app/lg/database", label: "Lead Database", icon: Database },
-  { to: "/app/lg/linkedin", label: "LinkedIn Finder", icon: Users2 },
-  { to: "/app/lg/email", label: "Email Finder", icon: Mail },
-  { to: "/app/lg/companies", label: "Company Intel", icon: Building2 },
+  { to: "/app/lg/database",      label: "Lead Database",    icon: Database },
+  { to: "/app/lg/auto-lead-gen", label: "Auto Lead Gen",    icon: Target },
+  { to: "/app/lg/linkedin",      label: "LinkedIn Finder",  icon: Users2 },
+  { to: "/app/lg/email",         label: "Email Finder",     icon: Mail },
+  { to: "/app/lg/companies",     label: "Company Intel",    icon: Building2 },
+  { to: "/app/lg/research",      label: "AI Research",      icon: BrainCircuit },
 ];
 
 function NavItem({ to, label, icon: Icon, collapsed, end }) {

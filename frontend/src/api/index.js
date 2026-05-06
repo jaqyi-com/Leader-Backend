@@ -170,3 +170,12 @@ export const getSocialPosts         = ()             => api.get("/social/posts")
 export const createSocialPost       = (data)         => api.post("/social/posts", data);
 export const publishSocialPost      = (id)           => api.post(`/social/posts/${id}/publish`);
 export const deleteSocialPost       = (id)           => api.delete(`/social/posts/${id}`);
+
+// ============================================================
+// AUTO LEAD GENERATOR
+// ============================================================
+export const startAutoLeadGen = (body) =>
+  api.post("/lead-generator/auto-gen/start", body);
+export const getAutoLeadGenStatus = (sessionId) =>
+  `${API}/lead-generator/auto-gen/status/${sessionId}`;  // returns raw URL for SSE EventSource
+

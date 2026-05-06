@@ -730,10 +730,13 @@ app.get("/api/sheets/runs/:tabName", async (req, res) => {
 // ============================================================
 const crawlerRouter        = require("./api/crawler");
 const autoScraperRouter    = require("./api/autoScraper");
+const autoLeadGenRouter    = require("./api/autoLeadGen");
 const leadGeneratorRouter  = require("./routes/leadGenerator");
 app.use("/api/crawler",              crawlerRouter);
 app.use("/api/crawler/auto-scraper", autoScraperRouter);
+app.use("/api/lead-generator/auto-gen", autoLeadGenRouter);
 app.use("/api/lead-generator",       leadGeneratorRouter);
+
 
 
 // Export for Vercel / serverless environments
