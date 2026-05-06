@@ -177,5 +177,5 @@ export const deleteSocialPost       = (id)           => api.delete(`/social/post
 export const startAutoLeadGen = (body) =>
   api.post("/lead-generator/auto-gen/start", body);
 export const getAutoLeadGenStatus = (sessionId) =>
-  `${API}/lead-generator/auto-gen/status/${sessionId}`;  // returns raw URL for SSE EventSource
+  `${BASE}/lead-generator/auto-gen/status/${sessionId}`;  // returns raw URL for SSE EventSource
 
