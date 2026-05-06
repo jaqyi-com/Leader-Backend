@@ -170,15 +170,21 @@ router.get("/status/:sessionId", (req, res) => {
 async function runPipeline(sessionId, userDescription, maxAgeHours, resultCount) {
   const session = sessions[sessionId];
   const log = (msg) => session.logs.push(msg);
-  const hasGoogle = !!(process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX);
   const dateRestrict = AGE_TO_DATE_RESTRICT[maxAgeHours] || null;
+
+  const hasGoogle = !!(process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX);
+
+  if (!hasGoogle) {
+    log(`❌ Google Search API keys are not configured.`);
+    log(`   Add GOOGLE_SEARCH_API_KEY and GOOGLE_SEARCH_CX to your .env file.`);
+    log(`   Get your Search Engine ID at: https://programmablesearchengine.google.com`);
+    session.status = "failed";
+    return;
+  }
 
   log(`🚀 Auto Lead Generator started`);
   log(`📋 Goal: "${userDescription}"`);
-  log(hasGoogle
-    ? `🌐 Mode: Web Search + AI Extraction`
-    : `🤖 Mode: AI Knowledge Base (no Google key — add GOOGLE_SEARCH_API_KEY for web search)`
-  );
+  log(`🌐 Mode: Web Search + AI Extraction`);
   if (dateRestrict) log(`📅 Date filter: results from last ${maxAgeHours}h`);
   log(`🎯 Target: ${resultCount} leads`);
 
@@ -236,8 +242,7 @@ CRITICAL RULES for searchQueries:
 
   const allLeads = [];
 
-  if (hasGoogle) {
-    // ── STAGE 2: Google Search + Page Fetch ──────────────────
+  // ── STAGE 2: Google Search + Page Fetch ──────────────────
     log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     log(`🌐 Stage 2: Searching the web...`);
 
@@ -291,23 +296,6 @@ CRITICAL RULES for searchQueries:
         break;
       }
     }
-
-    // If we got fewer than 50% of target, supplement with GPT
-    if (allLeads.length < resultCount * 0.5) {
-      log(`\n🤖 Supplementing with AI knowledge base...`);
-      const gpLeads = await generateLeadsFromGPT(userDescription, plan, resultCount - allLeads.length, log);
-      allLeads.push(...gpLeads);
-    }
-
-  } else {
-    // ── STAGE 2 (Fallback): Pure GPT generation ──────────────
-    log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    log(`🤖 Stage 2: Generating leads from AI knowledge base...`);
-    log(`   💡 Tip: Add GOOGLE_SEARCH_API_KEY to .env for real-time web search`);
-
-    const gpLeads = await generateLeadsFromGPT(userDescription, plan, resultCount, log);
-    allLeads.push(...gpLeads);
-  }
 
   // ── STAGE 3: Save to database ─────────────────────────────
   log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
@@ -428,82 +416,6 @@ CRITICAL:
   }
 }
 
-// ── GPT-only lead generation (no Google key / supplement) ───
-async function generateLeadsFromGPT(userGoal, plan, count, log) {
-  try {
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      temperature: 0.3,
-      response_format: { type: "json_object" },
-      messages: [{
-        role: "system",
-        content: `You are an expert B2B lead researcher with encyclopedic knowledge of businesses globally.
 
-The user wants to find: "${userGoal}"
-Customer type: ${plan.customerType}
-Industry: ${plan.industry}  
-Pain point: ${plan.painPoint}
-Decision maker roles: ${plan.contactRoles?.join(", ")}
-
-Generate ${count} REAL, SPECIFIC companies and contacts that perfectly match this profile.
-
-CRITICAL RULES:
-- Use ONLY real, verifiable companies (you must have high confidence they exist)
-- For emails: construct plausible professional emails (firstname@companydomain.com) 
-- Focus on small-to-mid size businesses (NOT Fortune 500 unless specifically asked)
-- Pick companies across different geographies for diversity
-- Every lead must have at minimum: companyName AND (email OR companyWebsite)
-
-Return ONLY valid JSON:
-{
-  "leads": [
-    {
-      "fullName": "string",
-      "jobTitle": "string",
-      "companyName": "string",
-      "companyWebsite": "string",
-      "companyDomain": "string",
-      "email": "string",
-      "phone": "string or null",
-      "industry": "string",
-      "country": "string",
-      "city": "string or null",
-      "relevanceReason": "string"
-    }
-  ]
-}`,
-      }, {
-        role: "user",
-        content: `Generate ${count} leads for: ${userGoal}`,
-      }],
-    });
-
-    const result = JSON.parse(response.choices[0].message.content);
-    const leads = result.leads || [];
-    log(`   ✅ AI generated ${leads.length} leads from knowledge base`);
-
-    for (const l of leads) {
-      log(`   • ${l.companyName} (${l.country}) — ${l.jobTitle || "Decision Maker"}`);
-    }
-
-    return leads.map(l => ({
-      fullName: l.fullName || null,
-      jobTitle: l.jobTitle || null,
-      companyName: l.companyName || null,
-      companyWebsite: l.companyWebsite || null,
-      companyDomain: l.companyDomain || null,
-      email: l.email || null,
-      phone: l.phone || null,
-      industry: l.industry || plan.industry || null,
-      country: l.country || null,
-      city: l.city || null,
-      researchNotes: l.relevanceReason || null,
-    }));
-
-  } catch (e) {
-    log(`⚠ GPT lead generation error: ${e.message}`);
-    return [];
-  }
-}
 
 module.exports = router;
