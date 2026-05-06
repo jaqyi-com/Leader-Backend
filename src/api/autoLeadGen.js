@@ -384,7 +384,7 @@ Return ONLY valid JSON:
             researchNotes:  `${s.reason} (Score: ${s.score}/100, Source: ${c._source})`,
           };
           scoredLeads.push(lead);
-          log(`   ✅ ${c.companyName || "Lead"} — ${s.score}/100 | ${s.reason}`);
+          log(`   ✅ [Source: ${c._source}] ${c.companyName || "Lead"} — ${s.score}/100 | ${s.reason}`);
         }
       }
     } catch (err) {
