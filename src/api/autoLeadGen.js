@@ -1,71 +1,67 @@
 "use strict";
 // ============================================================
-// AUTO LEAD GENERATOR API
-// ============================================================
-// Three-stage AI pipeline:
-//   Stage 1 — GPT-4o converts user intent into targeted search queries
-//   Stage 2 — Google Custom Search API fetches articles, then
-//              WebsiteCrawlerService.buildWebsiteRecord() scrapes each page
-//              (extracts real emails, phones, social links, tech stack, etc.)
-//   Stage 3 — GPT-4o scores & enriches leads from structured crawler data
-//
-// Routes:
-//   POST /start          { description, maxAgeHours, resultCount }  → { sessionId }
-//   GET  /status/:id     SSE stream → { log, leads, status }
-//   GET  /sessions        list of past sessions
+// AUTO LEAD GENERATOR — Multi-Source Pipeline
+// Stage 1: GPT-4o → ICP + search strategy
+// Stage 2: 3 parallel sources:
+//   A. Apollo.io     — B2B contacts DB (verified emails + job titles)
+//   B. Google Places — real local businesses (phone, address, website)
+//   C. Google CSE    — open web search + full page scraper
+// Stage 3: Hunter.io email enrichment for leads missing emails
+// Stage 4: GPT-4o-mini strict relevance scoring (0-100)
+// Stage 5: Save to database
 // ============================================================
 
 const express = require("express");
 const router  = express.Router();
-const { URL } = require("url");
 const OpenAI  = require("openai");
-const { GeneratedLead }       = require("../db/mongoose");
+const axios   = require("axios");
+
+const { GeneratedLead }      = require("../db/mongoose");
+const apollo                  = require("../integrations/ApolloIntegration");
+const googlePlaces            = require("../services/GoogleSearchService");
 const { buildWebsiteRecord }  = require("../services/WebsiteCrawlerService");
-const logger  = require("../utils/logger").forAgent("AutoLeadGen");
+const logger                  = require("../utils/logger").forAgent("AutoLeadGen");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
 
-// In-memory sessions — { [sessionId]: { logs[], status, leads[] } }
+// In-memory sessions
 const sessions = {};
 
-// ── Date restrict mapping for Google Custom Search API ──────
-const AGE_TO_DATE_RESTRICT = {
-  1:    "d1",    // last 1 hour  → d[n] = last n days (min granularity is day)
-  6:    "d1",    // last 6 hours → d1 (closest available)
-  24:   "d1",    // last 24 hours
-  72:   "d3",    // last 3 days
-  168:  "w1",    // last 7 days
-  720:  "m1",    // last 30 days
-  // 0 = no restriction (Any time)
-};
+// ── Hunter.io email finder ───────────────────────────────────
+async function hunterFindEmail(domain, firstName, lastName) {
+  const key = process.env.HUNTER_API_KEY;
+  if (!key || !domain) return null;
+  try {
+    const url = `https://api.hunter.io/v2/email-finder?domain=${encodeURIComponent(domain)}&first_name=${encodeURIComponent(firstName || "")}&last_name=${encodeURIComponent(lastName || "")}&api_key=${key}`;
+    const res  = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const data = await res.json();
+    return data?.data?.email || null;
+  } catch { return null; }
+}
 
-// ── Google Custom Search API call ───────────────────────────
-async function googleSearch(query, dateRestrict, num = 8) {
+// ── Hunter.io domain search (get all emails for a domain) ───
+async function hunterDomainSearch(domain) {
+  const key = process.env.HUNTER_API_KEY;
+  if (!key || !domain) return [];
+  try {
+    const url  = `https://api.hunter.io/v2/domain-search?domain=${encodeURIComponent(domain)}&limit=5&api_key=${key}`;
+    const res  = await fetch(url, { signal: AbortSignal.timeout(8000) });
+    const data = await res.json();
+    return (data?.data?.emails || []).map(e => e.value).filter(Boolean);
+  } catch { return []; }
+}
+
+// ── Google Custom Search (fallback web search) ───────────────
+async function googleCSE(query, num = 8) {
   const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
   const cx     = process.env.GOOGLE_SEARCH_CX;
-
-  if (!apiKey || !cx) return null; // signal "no key → fail early"
-
-  const params = new URLSearchParams({
-    key: apiKey,
-    cx,
-    q: query,
-    num: Math.min(num, 10),
-  });
-  if (dateRestrict) params.append("dateRestrict", dateRestrict);
-
+  if (!apiKey || !cx) return [];
   try {
-    const res = await fetch(`https://www.googleapis.com/customsearch/v1?${params}`);
+    const params = new URLSearchParams({ key: apiKey, cx, q: query, num: Math.min(num, 10) });
+    const res  = await fetch(`https://www.googleapis.com/customsearch/v1?${params}`, { signal: AbortSignal.timeout(10000) });
     const data = await res.json();
-    return (data.items || []).map(item => ({
-      title:   item.title,
-      url:     item.link,
-      snippet: item.snippet,
-    }));
-  } catch (err) {
-    logger.warn(`[AutoLeadGen] Google search failed: ${err.message}`);
-    return [];
-  }
+    return (data.items || []).map(i => ({ title: i.title, url: i.link, snippet: i.snippet }));
+  } catch { return []; }
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -73,373 +69,348 @@ async function googleSearch(query, dateRestrict, num = 8) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.post("/start", async (req, res) => {
   const { description, maxAgeHours = 0, resultCount = 20 } = req.body;
-  if (!description?.trim()) {
-    return res.status(422).json({ error: "description is required" });
-  }
+  if (!description?.trim()) return res.status(422).json({ error: "description is required" });
 
   const sessionId = require("crypto").randomUUID();
   sessions[sessionId] = { logs: [], status: "running", leads: [] };
 
-  runPipeline(sessionId, description.trim(), parseInt(maxAgeHours) || 0, parseInt(resultCount) || 20)
+  runPipeline(sessionId, description.trim(), parseInt(resultCount) || 20)
     .catch(err => {
-      sessions[sessionId].status = "failed";
-      sessions[sessionId].logs.push(`❌ Fatal error: ${err.message}`);
-      logger.error(`[AutoLeadGen] Pipeline crashed: ${err.message}`);
+      if (sessions[sessionId]) {
+        sessions[sessionId].status = "failed";
+        sessions[sessionId].logs.push(`❌ Fatal error: ${err.message}`);
+      }
+      logger.error(`Pipeline crashed: ${err.message}`);
     });
 
   res.json({ sessionId });
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// GET /status/:sessionId — SSE stream
+// GET /status/:sessionId — SSE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/status/:sessionId", (req, res) => {
   const session = sessions[req.params.sessionId];
   if (!session) return res.status(404).json({ error: "Session not found" });
 
-  res.setHeader("Content-Type",  "text/event-stream");
+  res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection",    "keep-alive");
+  res.setHeader("Connection", "keep-alive");
   res.flushHeaders();
 
-  let lastIdx = 0;
+  let idx = 0;
   const flush = () => {
-    while (lastIdx < session.logs.length) {
-      res.write(`data: ${JSON.stringify({ log: session.logs[lastIdx] })}\n\n`);
-      lastIdx++;
+    while (idx < session.logs.length) {
+      res.write(`data: ${JSON.stringify({ log: session.logs[idx] })}\n\n`);
+      idx++;
     }
     if (session.status === "done" || session.status === "failed") {
       res.write(`data: ${JSON.stringify({ status: session.status, leads: session.leads })}\n\n`);
-      clearInterval(timer);
-      clearInterval(hb);
-      res.end();
+      clearInterval(timer); clearInterval(hb); res.end();
     }
   };
-
-  const timer = setInterval(flush, 500);
+  const timer = setInterval(flush, 400);
   flush();
-  const hb = setInterval(() => res.write(": heartbeat\n\n"), 15000);
+  const hb = setInterval(() => res.write(": hb\n\n"), 15000);
   req.on("close", () => { clearInterval(timer); clearInterval(hb); });
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Core Pipeline
+// MAIN PIPELINE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function runPipeline(sessionId, userDescription, maxAgeHours, resultCount) {
+async function runPipeline(sessionId, userDescription, resultCount) {
   const session = sessions[sessionId];
-  const log = (msg) => session.logs.push(msg);
-  const dateRestrict = AGE_TO_DATE_RESTRICT[maxAgeHours] || null;
-
-  const hasGoogle = !!(process.env.GOOGLE_SEARCH_API_KEY && process.env.GOOGLE_SEARCH_CX);
-
-  if (!hasGoogle) {
-    log(`❌ Google Search API keys are not configured.`);
-    log(`   Add GOOGLE_SEARCH_API_KEY and GOOGLE_SEARCH_CX to your .env file.`);
-    log(`   Get your Search Engine ID at: https://programmablesearchengine.google.com`);
-    session.status = "failed";
-    return;
-  }
+  const log = msg => session.logs.push(msg);
 
   log(`🚀 Auto Lead Generator started`);
   log(`📋 Goal: "${userDescription}"`);
-  log(`🌐 Mode: Web Search + Full Page Scraper + AI Extraction`);
-  if (dateRestrict) log(`📅 Date filter: results from last ${maxAgeHours}h`);
+  log(`🌐 Sources: Apollo.io · Google Places · Web Scraper · Hunter.io`);
   log(`🎯 Target: ${resultCount} leads`);
 
-  // ── STAGE 1: Build search queries ──────────────────────────
+  // ── STAGE 1: AI → ICP ──────────────────────────────────────
   log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  log(`🧠 Stage 1: Analyzing your requirement with AI...`);
+  log(`🧠 Stage 1: Building Ideal Customer Profile...`);
 
-  const stage1Response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    temperature: 0.1,
-    response_format: { type: "json_object" },
-    messages: [{
-      role: "system",
-      content: `You are a world-class B2B lead generation expert and search strategist.
-
-A user will describe a type of customer/business they want to find. Your job is to:
-1. Deeply understand the ACTUAL need (not just surface words)
-2. Generate highly targeted search queries to find real prospects online
-3. Extract a crystal-clear Ideal Customer Profile (ICP)
+  let plan;
+  try {
+    const r = await openai.chat.completions.create({
+      model: "gpt-4o", temperature: 0.1,
+      response_format: { type: "json_object" },
+      messages: [{
+        role: "system",
+        content: `You are a world-class B2B lead generation strategist. Analyze the user's prospect description and produce a detailed ICP.
 
 Return ONLY valid JSON:
 {
   "customerType": "string",
   "industry": "string",
   "painPoint": "string",
-  "searchQueries": ["string"],
-  "identifierKeywords": ["string"],
-  "disqualifierKeywords": ["string"],
+  "apolloKeywords": ["string"],        // 3-5 industry/tech keywords for Apollo company search (e.g. "restaurant", "retail")
+  "apolloTitles": ["string"],          // 2-4 decision-maker job titles (e.g. "CEO", "Owner", "Founder")
+  "placesQueries": ["string"],         // 2-4 Google Places queries (e.g. "restaurant", "retail store", "dental clinic")
+  "webSearchQueries": ["string"],      // 2-3 open-web queries (NO site: operators) targeting company contact pages
+  "disqualifiers": ["string"],         // 3-5 words that disqualify a lead (e.g. if looking for "website buyers" → disqualify "web agency", "web designer", "web developer")
   "contactRoles": ["string"],
   "rationale": "string"
 }
 
-CRITICAL RULES for searchQueries — follow exactly:
-- NEVER use "site:" operators (site:linkedin.com, site:reddit.com, etc.) — they return ZERO results with our search engine
-- NEVER target LinkedIn, Twitter, Facebook, Reddit, Indeed, Glassdoor or any login-required site
-- Target OPEN WEB pages: company homepages, business directories, "contact us" pages, industry listings
-- Queries must lead to real company websites a scraper can crawl and extract emails/phones from
-- Use terms like: "contact us", "hire us", "request a quote", "get in touch", "email", "phone"
+IMPORTANT for disqualifiers: Think carefully about who you do NOT want.
+Example: user wants "businesses that need a website" → disqualify ["web agency", "web designer", "web developer", "digital agency", "website builder"]
+Example: user wants "people who need CRM" → disqualify ["CRM vendor", "CRM provider", "Salesforce", "HubSpot"]`,
+      }, { role: "user", content: userDescription }],
+    });
+    plan = JSON.parse(r.choices[0].message.content);
+  } catch (err) {
+    log(`❌ Stage 1 failed: ${err.message}`);
+    session.status = "failed"; return;
+  }
 
-GOOD examples for "I need a salesperson for hire":
-  "freelance sales consultant available for hire contact",
-  "independent sales representative services contact us",
-  "B2B sales professional portfolio website email",
-  "commission sales agent directory phone",
-  "outsourced sales team small business contact page"
-
-GOOD examples for "I need businesses that need CRM software":
-  "small business customer management software contact us",
-  "retail store owner spreadsheet tracking alternative inquiry",
-  "local business sales pipeline tool free trial",
-  "SMB contact management solution request demo",
-  "small team CRM software sign up email"
-
-AVOID: job boards, social media, paywalled sites, login-required pages, news articles.`,
-    }, {
-      role: "user",
-      content: userDescription,
-    }],
-  });
-
-  const plan = JSON.parse(stage1Response.choices[0].message.content);
   log(`✅ Customer type: ${plan.customerType}`);
   log(`🏭 Industry: ${plan.industry}`);
   log(`💡 Pain point: ${plan.painPoint}`);
-  log(`🔍 Generated ${plan.searchQueries?.length || 0} search queries`);
+  log(`🚫 Will disqualify: ${(plan.disqualifiers || []).join(", ")}`);
   log(`📌 Strategy: ${plan.rationale}`);
 
-  const allLeads = [];
+  const candidateLeads = []; // raw candidates before scoring
+  const seenDomains = new Set();
 
-  // ── STAGE 2: Google Search → Full Page Scraper ─────────────
+  // ── STAGE 2A: Apollo.io ────────────────────────────────────
   log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  log(`🌐 Stage 2: Searching the web & scraping pages...`);
-  log(`🕷 Using full web scraper (emails, phones, social links, tech stack)`);
+  log(`🔵 Stage 2A: Apollo.io — Searching B2B contact database...`);
+  try {
+    const companies = await apollo.searchCompanies(plan.apolloKeywords || [plan.industry]);
+    log(`   Found ${companies.length} companies in Apollo`);
 
-  const queries  = (plan.searchQueries || []).slice(0, 5);
-  const seenUrls = new Set();
+    for (const company of companies.slice(0, 15)) {
+      if (!company.domain || seenDomains.has(company.domain)) continue;
+      seenDomains.add(company.domain);
 
-  for (let qi = 0; qi < queries.length; qi++) {
-    const query = queries[qi];
-    log(`\n🔎 Query ${qi + 1}/${queries.length}: "${query}"`);
-
-    const results = await googleSearch(query, dateRestrict, 8);
-    if (!results || results.length === 0) {
-      log(`   ⚠ No results for this query`);
-      continue;
-    }
-    log(`   📄 Found ${results.length} pages`);
-
-    for (const result of results) {
-      if (seenUrls.has(result.url)) continue;
-      seenUrls.add(result.url);
-
-      log(`   🕷 Scraping: ${result.url.slice(0, 70)}...`);
-
-      // ── Use WebsiteCrawlerService for rich structured extraction ──
-      let crawledData = null;
-      try {
-        crawledData = await buildWebsiteRecord(result.url, plan.identifierKeywords || []);
-      } catch (e) {
-        log(`   ⚠ Scraper error: ${e.message}`);
+      // Get decision makers
+      const people = await apollo.searchPeople(company.domain, plan.apolloTitles || ["CEO", "Owner", "Founder"]);
+      for (const person of people.slice(0, 2)) {
+        // Try Hunter.io to get/verify email if Apollo didn't provide one
+        let email = person.email;
+        if (!email && person.firstName && company.domain) {
+          email = await hunterFindEmail(company.domain, person.firstName, person.lastName);
+        }
+        candidateLeads.push({
+          _source: "apollo",
+          fullName:       person.name,
+          jobTitle:       person.title,
+          companyName:    company.name,
+          companyWebsite: company.website || `https://${company.domain}`,
+          email:          email || null,
+          phone:          person.phone || null,
+          linkedin:       person.linkedinUrl || null,
+          industry:       company.industry || plan.industry,
+          country:        person.country || company.headquarters?.split(",").pop()?.trim() || null,
+          city:           person.city || null,
+          techStack:      (company.technologies || []).slice(0, 5).join(", ") || null,
+          _context:       `${company.description || ""} | ${company.keywords?.join(", ") || ""}`,
+        });
       }
 
-      if (!crawledData || crawledData.fetch_failed) {
-        log(`   ⚠ Could not scrape page (blocked/timeout)`);
-        continue;
-      }
-
-      // Log what the scraper found
-      const found = [];
-      if (crawledData.contact_email)  found.push(`📧 ${crawledData.contact_email}`);
-      if (crawledData.phone_number)   found.push(`📞 ${crawledData.phone_number}`);
-      if (crawledData.linkedin_url)   found.push(`🔗 LinkedIn`);
-      if (crawledData.framework_used) found.push(`⚙ ${crawledData.framework_used}`);
-      if (found.length) log(`   ✨ Scraped: ${found.join(" | ")}`);
-
-      // ── Stage 3: Score & enrich with AI ──────────────────────
-      const pageLeads = await extractLeadsFromPage(
-        crawledData,
-        result.url,
-        result.title,
-        result.snippet,
-        userDescription,
-        plan,
-        log
-      );
-
-      for (const lead of pageLeads) {
-        allLeads.push(lead);
-        if (allLeads.length >= resultCount) break;
-      }
-
-      if (allLeads.length >= resultCount) break;
+      if (candidateLeads.length >= resultCount * 3) break;
     }
-
-    if (allLeads.length >= resultCount) {
-      log(`\n✅ Reached target of ${resultCount} leads`);
-      break;
-    }
+    log(`   ✅ Apollo collected ${candidateLeads.length} candidates`);
+  } catch (err) {
+    log(`   ⚠ Apollo search error: ${err.message}`);
   }
 
-  // ── STAGE 3: Save to database ─────────────────────────────
-  log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-  log(`💾 Stage 3: Saving ${allLeads.length} leads to database...`);
-
-  let savedCount = 0;
-  const toSave = allLeads.map(lead => ({
-    ...lead,
-    source: "auto_lead_gen",
-    sourceQuery: userDescription,
-    status: "new",
-  }));
-
+  // ── STAGE 2B: Google Places ────────────────────────────────
+  log(`\n🟢 Stage 2B: Google Places — Searching real local businesses...`);
   try {
-    const inserted = await GeneratedLead.insertMany(toSave, { ordered: false });
-    savedCount = Array.isArray(inserted) ? inserted.length : 0;
-    log(`✅ ${savedCount} leads saved to Lead Database`);
-  } catch (e) {
-    // Partial duplicates are OK
-    savedCount = allLeads.length;
-    log(`✅ Leads saved (some may have been deduplicated)`);
+    const queries = (plan.placesQueries || [plan.industry]).slice(0, 3);
+    for (const q of queries) {
+      log(`   📍 Places search: "${q}"`);
+      const urls = await googlePlaces.discoverUrls(q, null, 20);
+      log(`   Found ${urls.length} business URLs`);
+
+      for (const url of urls.slice(0, 10)) {
+        let domain;
+        try { domain = new URL(url).hostname.replace(/^www\./, ""); } catch { continue; }
+        if (seenDomains.has(domain)) continue;
+        seenDomains.add(domain);
+
+        log(`   🕷 Scraping: ${url.slice(0, 60)}...`);
+        let scraped = null;
+        try { scraped = await buildWebsiteRecord(url, plan.apolloKeywords || []); } catch {}
+        if (!scraped || scraped.fetch_failed) { log(`   ⚠ Blocked/empty`); continue; }
+
+        // Try Hunter.io for email if scraper didn't find one
+        let email = scraped.contact_email;
+        if (!email) {
+          const hunterEmails = await hunterDomainSearch(domain);
+          email = hunterEmails[0] || null;
+          if (email) log(`   📧 Hunter found: ${email}`);
+        }
+
+        if (email || scraped.phone_number) {
+          log(`   ✨ Got: ${[email, scraped.phone_number].filter(Boolean).join(" | ")}`);
+        }
+
+        candidateLeads.push({
+          _source: "google_places",
+          fullName:       scraped.developer_name && scraped.developer_name !== "data is not present" ? scraped.developer_name : null,
+          companyName:    scraped.brand_name || domain,
+          companyWebsite: url,
+          email,
+          phone:          scraped.phone_number || null,
+          linkedin:       scraped.linkedin_url || null,
+          industry:       plan.industry,
+          techStack:      scraped.technology_stack || null,
+          _context:       `${scraped.website_title || ""} ${scraped.short_description || ""} ${scraped.html_text?.slice(0, 500) || ""}`,
+        });
+
+        if (candidateLeads.length >= resultCount * 4) break;
+      }
+      if (candidateLeads.length >= resultCount * 4) break;
+    }
+    log(`   ✅ Places collected ${candidateLeads.length} total candidates so far`);
+  } catch (err) {
+    log(`   ⚠ Google Places error: ${err.message}`);
   }
 
-  session.leads = allLeads;
-  session.status = "done";
-
-  log(`\n🎉 Done! ${allLeads.length} leads found · ${savedCount} saved to database`);
-  log(`📊 View them in Lead Database → filter by source "Auto Lead Gen"`);
-
-  // Cleanup session after 30 min
-  setTimeout(() => delete sessions[sessionId], 30 * 60 * 1000);
-}
-
-// ── Extract & score leads from a single scraped page ────────
-async function extractLeadsFromPage(crawledData, url, title, snippet, userGoal, plan, log) {
+  // ── STAGE 2C: Google CSE + Web Scraper ────────────────────
+  log(`\n🟡 Stage 2C: Web Scraper — Open web search...`);
   try {
-    // Build a rich context string combining crawler-extracted structured data + page text
-    const structuredContext = [
-      crawledData.brand_name       ? `Company: ${crawledData.brand_name}`           : null,
-      crawledData.website_title    ? `Page Title: ${crawledData.website_title}`      : null,
-      crawledData.short_description? `Description: ${crawledData.short_description}` : null,
-      crawledData.contact_email    ? `Email: ${crawledData.contact_email}`            : null,
-      crawledData.phone_number     ? `Phone: ${crawledData.phone_number}`             : null,
-      crawledData.developer_name && crawledData.developer_name !== "data is not present"
-                                   ? `Developer/Attribution: ${crawledData.developer_name}` : null,
-      crawledData.developer_email && crawledData.developer_email !== "data is not present"
-                                   ? `Developer Email: ${crawledData.developer_email}`      : null,
-      crawledData.linkedin_url     ? `LinkedIn: ${crawledData.linkedin_url}`          : null,
-      crawledData.twitter_url      ? `Twitter: ${crawledData.twitter_url}`            : null,
-      crawledData.facebook_url     ? `Facebook: ${crawledData.facebook_url}`          : null,
-      crawledData.framework_used   ? `Framework: ${crawledData.framework_used}`       : null,
-      crawledData.technology_stack ? `Tech Stack: ${crawledData.technology_stack}`    : null,
-      crawledData.hosting_provider ? `Hosting: ${crawledData.hosting_provider}`       : null,
-      crawledData.website_language ? `Language: ${crawledData.website_language}`      : null,
-    ].filter(Boolean).join("\n");
+    const webQueries = (plan.webSearchQueries || []).slice(0, 3);
+    for (const q of webQueries) {
+      log(`   🔎 Search: "${q}"`);
+      const results = await googleCSE(q, 8);
+      if (!results.length) { log(`   ⚠ No results`); continue; }
+      log(`   📄 ${results.length} pages found`);
 
-    // Page text for GPT context (trimmed)
-    const pageText = (crawledData.html_text || crawledData.dom_data || "").slice(0, 3000);
+      for (const result of results) {
+        let domain;
+        try { domain = new URL(result.url).hostname.replace(/^www\./, ""); } catch { continue; }
+        if (seenDomains.has(domain)) continue;
+        seenDomains.add(domain);
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.1,
-      response_format: { type: "json_object" },
-      messages: [{
-        role: "system",
-        content: `You are a lead extraction expert. A user wants to find: "${userGoal}"
+        log(`   🕷 Scraping: ${result.url.slice(0, 60)}...`);
+        let scraped = null;
+        try { scraped = await buildWebsiteRecord(result.url, plan.apolloKeywords || []); } catch {}
+        if (!scraped || scraped.fetch_failed) continue;
 
-Target customer profile:
-- Customer type: ${plan.customerType}
-- Industry: ${plan.industry}
+        let email = scraped.contact_email;
+        if (!email) {
+          const hEmails = await hunterDomainSearch(domain);
+          email = hEmails[0] || null;
+        }
+
+        const found = [email, scraped.phone_number].filter(Boolean);
+        if (found.length) log(`   ✨ Found: ${found.join(" | ")}`);
+
+        candidateLeads.push({
+          _source: "web_scraper",
+          fullName:       null,
+          companyName:    scraped.brand_name || domain,
+          companyWebsite: result.url,
+          email,
+          phone:          scraped.phone_number || null,
+          linkedin:       scraped.linkedin_url || null,
+          industry:       plan.industry,
+          techStack:      scraped.technology_stack || null,
+          _context:       `${result.title || ""} ${result.snippet || ""} ${scraped.html_text?.slice(0, 500) || ""}`,
+        });
+        if (candidateLeads.length >= resultCount * 5) break;
+      }
+      if (candidateLeads.length >= resultCount * 5) break;
+    }
+  } catch (err) {
+    log(`   ⚠ Web scraper error: ${err.message}`);
+  }
+
+  log(`\n📦 Total candidates collected: ${candidateLeads.length}`);
+
+  // ── STAGE 3: GPT Strict Scoring ───────────────────────────
+  log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  log(`🤖 Stage 3: AI scoring & strict filtering...`);
+  log(`   Evaluating ${candidateLeads.length} candidates...`);
+
+  const scoredLeads = [];
+  // Score in batches of 5 to save tokens
+  const batchSize = 5;
+  for (let i = 0; i < candidateLeads.length && scoredLeads.length < resultCount; i += batchSize) {
+    const batch = candidateLeads.slice(i, i + batchSize);
+    try {
+      const r = await openai.chat.completions.create({
+        model: "gpt-4o-mini", temperature: 0,
+        response_format: { type: "json_object" },
+        messages: [{
+          role: "system",
+          content: `You are a strict lead qualification expert. The user wants: "${userDescription}"
+
+Customer profile:
+- Type: ${plan.customerType}
+- Industry: ${plan.industry}  
 - Pain point: ${plan.painPoint}
-- Decision maker roles: ${plan.contactRoles?.join(", ")}
-- DISQUALIFY if these words appear: ${plan.disqualifierKeywords?.join(", ")}
+- DISQUALIFY any lead matching: ${(plan.disqualifiers || []).join(", ")}
 
-You will receive BOTH:
-1. STRUCTURED DATA — already extracted from the page by a web scraper (emails, phones, social links, tech stack, etc.)
-2. PAGE TEXT — raw text content from the page
-
-Your job:
-- Determine if this page/company is a GENUINE match for the user's requirement
-- Extract any additional contact/company details NOT already in the structured data
-- Score the lead on relevance (0-100)
+Score each candidate 0-100 for how well they match the user's ACTUAL need.
+Be VERY strict — only score ≥ 60 if the candidate genuinely matches.
+If the candidate is in the disqualifier list, score = 0.
 
 Return ONLY valid JSON:
 {
-  "leads": [
-    {
-      "fullName": "string or null",
-      "jobTitle": "string or null",
-      "companyName": "string or null",
-      "companyWebsite": "string or null",
-      "email": "string or null",
-      "phone": "string or null",
-      "linkedin": "string or null",
-      "industry": "string or null",
-      "country": "string or null",
-      "city": "string or null",
-      "techStack": "string or null",
-      "relevanceScore": 0-100,
-      "relevanceReason": "string (1 sentence why this is a good lead)",
-      "sourceUrl": "string"
-    }
+  "scores": [
+    { "idx": 0, "score": 0-100, "reason": "1 sentence", "jobTitle": "inferred or null", "country": "inferred or null", "city": "inferred or null" }
   ]
-}
+}`,
+        }, {
+          role: "user",
+          content: `Evaluate these ${batch.length} candidates:\n\n` + batch.map((c, idx) =>
+            `[${idx}] Company: ${c.companyName} | Title: ${c.jobTitle || "?"} | Industry: ${c.industry} | Source: ${c._source}\nContext: ${(c._context || "").slice(0, 300)}`
+          ).join("\n\n"),
+        }],
+      });
 
-CRITICAL:
-- Only include leads with relevanceScore >= 55
-- If no genuine match found, return { "leads": [] }
-- Maximum 5 leads per page
-- For email/phone/linkedin: use the STRUCTURED DATA values first, only override if page text has something better
-- Set sourceUrl to the page URL`
-      }, {
-        role: "user",
-        content: `Page URL: ${url}
-Page Title: ${title}
-Snippet: ${snippet}
-
-=== STRUCTURED DATA (from web scraper) ===
-${structuredContext || "(none extracted)"}
-
-=== PAGE TEXT ===
-${pageText}`,
-      }],
-    });
-
-    const result = JSON.parse(response.choices[0].message.content);
-    const leads  = (result.leads || []).filter(l => l.relevanceScore >= 55);
-
-    if (leads.length > 0) {
-      log(`   ✅ Found ${leads.length} qualified lead(s) from this page`);
-      for (const l of leads) {
-        const name = l.fullName || l.companyName || "Unknown";
-        log(`      • ${name} — Score: ${l.relevanceScore}/100 | ${l.relevanceReason}`);
+      const result = JSON.parse(r.choices[0].message.content);
+      for (const s of (result.scores || [])) {
+        if (s.score >= 60 && s.idx < batch.length) {
+          const c = batch[s.idx];
+          const lead = {
+            fullName:       c.fullName || null,
+            jobTitle:       c.jobTitle || s.jobTitle || null,
+            companyName:    c.companyName,
+            companyWebsite: c.companyWebsite,
+            email:          c.email || null,
+            phone:          c.phone || null,
+            linkedin:       c.linkedin || null,
+            industry:       c.industry,
+            country:        c.country || s.country || null,
+            city:           c.city || s.city || null,
+            techStack:      c.techStack || null,
+            researchNotes:  `${s.reason} (Score: ${s.score}/100, Source: ${c._source})`,
+          };
+          scoredLeads.push(lead);
+          log(`   ✅ ${c.companyName || "Lead"} — ${s.score}/100 | ${s.reason}`);
+        }
       }
+    } catch (err) {
+      log(`   ⚠ Scoring batch failed: ${err.message}`);
     }
-
-    return leads.map(l => ({
-      fullName:        l.fullName        || null,
-      jobTitle:        l.jobTitle        || null,
-      companyName:     l.companyName     || crawledData.brand_name || null,
-      companyWebsite:  l.companyWebsite  || url,
-      // Prefer scraper-extracted contact info — it's more reliable than GPT guesses
-      email:           crawledData.contact_email   || crawledData.developer_email?.replace("data is not present", "") || l.email || null,
-      phone:           crawledData.phone_number    || crawledData.developer_phone?.replace("data is not present", "") || l.phone || null,
-      linkedin:        crawledData.linkedin_url    || l.linkedin  || null,
-      industry:        l.industry        || plan.industry || null,
-      country:         l.country         || null,
-      city:            l.city            || null,
-      techStack:       l.techStack       || crawledData.technology_stack || null,
-      researchNotes: `${l.relevanceReason} (Score: ${l.relevanceScore}/100, Source: ${l.sourceUrl || url})`,
-    }));
-
-  } catch (e) {
-    log(`   ⚠ Extraction error for page: ${e.message}`);
-    return [];
+    if (scoredLeads.length >= resultCount) break;
   }
+
+  // ── STAGE 4: Save ─────────────────────────────────────────
+  log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  log(`💾 Saving ${scoredLeads.length} qualified leads...`);
+
+  const toSave = scoredLeads.map(l => ({ ...l, source: "auto_lead_gen", sourceQuery: userDescription, status: "new" }));
+  try {
+    await GeneratedLead.insertMany(toSave, { ordered: false });
+    log(`✅ ${scoredLeads.length} leads saved to Lead Database`);
+  } catch {
+    log(`✅ Leads saved (some deduplicated)`);
+  }
+
+  session.leads = scoredLeads;
+  session.status = "done";
+  log(`\n🎉 Done! ${scoredLeads.length} qualified leads found`);
+  log(`📊 View them in Lead Database → filter by source "Auto Lead Gen"`);
+
+  setTimeout(() => delete sessions[sessionId], 30 * 60 * 1000);
 }
-
-
 
 module.exports = router;
