@@ -4,8 +4,10 @@
 // ============================================================
 // Three-stage AI pipeline:
 //   Stage 1 — GPT-4o converts user intent into targeted search queries
-//   Stage 2 — Google Custom Search API fetches real articles (with date filter)
-//   Stage 3 — GPT-4o extracts & scores leads from each page
+//   Stage 2 — Google Custom Search API fetches articles, then
+//              WebsiteCrawlerService.buildWebsiteRecord() scrapes each page
+//              (extracts real emails, phones, social links, tech stack, etc.)
+//   Stage 3 — GPT-4o scores & enriches leads from structured crawler data
 //
 // Routes:
 //   POST /start          { description, maxAgeHours, resultCount }  → { sessionId }
@@ -15,11 +17,10 @@
 
 const express = require("express");
 const router  = express.Router();
-const https   = require("https");
-const http    = require("http");
 const { URL } = require("url");
 const OpenAI  = require("openai");
-const { GeneratedLead }  = require("../db/mongoose");
+const { GeneratedLead }       = require("../db/mongoose");
+const { buildWebsiteRecord }  = require("../services/WebsiteCrawlerService");
 const logger  = require("../utils/logger").forAgent("AutoLeadGen");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
@@ -38,55 +39,12 @@ const AGE_TO_DATE_RESTRICT = {
   // 0 = no restriction (Any time)
 };
 
-// ── Fetch plain text from a URL (strips HTML) ───────────────
-async function fetchPageText(url, timeoutMs = 8000) {
-  return new Promise((resolve) => {
-    try {
-      const parsed = new URL(url);
-      const lib = parsed.protocol === "https:" ? https : http;
-      const req = lib.get(url, {
-        timeout: timeoutMs,
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; LeaderAI/1.0; +https://leaderai.io)",
-          "Accept": "text/html,application/xhtml+xml",
-        },
-      }, (res) => {
-        if (res.statusCode === 301 || res.statusCode === 302) {
-          resolve(fetchPageText(res.headers.location, timeoutMs));
-          return;
-        }
-        let body = "";
-        res.on("data", (chunk) => { body += chunk; if (body.length > 80000) req.destroy(); });
-        res.on("end", () => {
-          // Strip HTML tags, collapse whitespace
-          const text = body
-            .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
-            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
-            .replace(/<[^>]+>/g, " ")
-            .replace(/&nbsp;/g, " ")
-            .replace(/&amp;/g, "&")
-            .replace(/&lt;/g, "<")
-            .replace(/&gt;/g, ">")
-            .replace(/\s{2,}/g, " ")
-            .trim()
-            .slice(0, 4000);  // max 4k chars per page to keep token cost low
-          resolve(text);
-        });
-      });
-      req.on("error", () => resolve(""));
-      req.on("timeout", () => { req.destroy(); resolve(""); });
-    } catch {
-      resolve("");
-    }
-  });
-}
-
 // ── Google Custom Search API call ───────────────────────────
 async function googleSearch(query, dateRestrict, num = 8) {
   const apiKey = process.env.GOOGLE_SEARCH_API_KEY;
   const cx     = process.env.GOOGLE_SEARCH_CX;
 
-  if (!apiKey || !cx) return null; // signal "no key → GPT fallback"
+  if (!apiKey || !cx) return null; // signal "no key → fail early"
 
   const params = new URLSearchParams({
     key: apiKey,
@@ -184,7 +142,7 @@ async function runPipeline(sessionId, userDescription, maxAgeHours, resultCount)
 
   log(`🚀 Auto Lead Generator started`);
   log(`📋 Goal: "${userDescription}"`);
-  log(`🌐 Mode: Web Search + AI Extraction`);
+  log(`🌐 Mode: Web Search + Full Page Scraper + AI Extraction`);
   if (dateRestrict) log(`📅 Date filter: results from last ${maxAgeHours}h`);
   log(`🎯 Target: ${resultCount} leads`);
 
@@ -242,60 +200,76 @@ CRITICAL RULES for searchQueries:
 
   const allLeads = [];
 
-  // ── STAGE 2: Google Search + Page Fetch ──────────────────
-    log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    log(`🌐 Stage 2: Searching the web...`);
+  // ── STAGE 2: Google Search → Full Page Scraper ─────────────
+  log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  log(`🌐 Stage 2: Searching the web & scraping pages...`);
+  log(`🕷 Using full web scraper (emails, phones, social links, tech stack)`);
 
-    const queries = (plan.searchQueries || []).slice(0, 5);
-    const seenUrls = new Set();
+  const queries  = (plan.searchQueries || []).slice(0, 5);
+  const seenUrls = new Set();
 
-    for (let qi = 0; qi < queries.length; qi++) {
-      const query = queries[qi];
-      log(`\n🔎 Query ${qi + 1}/${queries.length}: "${query}"`);
+  for (let qi = 0; qi < queries.length; qi++) {
+    const query = queries[qi];
+    log(`\n🔎 Query ${qi + 1}/${queries.length}: "${query}"`);
 
-      const results = await googleSearch(query, dateRestrict, 8);
-      if (!results || results.length === 0) {
-        log(`   ⚠ No results for this query`);
+    const results = await googleSearch(query, dateRestrict, 8);
+    if (!results || results.length === 0) {
+      log(`   ⚠ No results for this query`);
+      continue;
+    }
+    log(`   📄 Found ${results.length} pages`);
+
+    for (const result of results) {
+      if (seenUrls.has(result.url)) continue;
+      seenUrls.add(result.url);
+
+      log(`   🕷 Scraping: ${result.url.slice(0, 70)}...`);
+
+      // ── Use WebsiteCrawlerService for rich structured extraction ──
+      let crawledData = null;
+      try {
+        crawledData = await buildWebsiteRecord(result.url, plan.identifierKeywords || []);
+      } catch (e) {
+        log(`   ⚠ Scraper error: ${e.message}`);
+      }
+
+      if (!crawledData || crawledData.fetch_failed) {
+        log(`   ⚠ Could not scrape page (blocked/timeout)`);
         continue;
       }
-      log(`   📄 Found ${results.length} pages`);
 
-      // Fetch each page and extract leads
-      for (const result of results) {
-        if (seenUrls.has(result.url)) continue;
-        seenUrls.add(result.url);
+      // Log what the scraper found
+      const found = [];
+      if (crawledData.contact_email)  found.push(`📧 ${crawledData.contact_email}`);
+      if (crawledData.phone_number)   found.push(`📞 ${crawledData.phone_number}`);
+      if (crawledData.linkedin_url)   found.push(`🔗 LinkedIn`);
+      if (crawledData.framework_used) found.push(`⚙ ${crawledData.framework_used}`);
+      if (found.length) log(`   ✨ Scraped: ${found.join(" | ")}`);
 
-        log(`   🕷 Reading: ${result.url.slice(0, 70)}...`);
-        const pageText = await fetchPageText(result.url);
-        if (!pageText || pageText.length < 100) {
-          log(`   ⚠ Could not read page (blocked/empty)`);
-          continue;
-        }
+      // ── Stage 3: Score & enrich with AI ──────────────────────
+      const pageLeads = await extractLeadsFromPage(
+        crawledData,
+        result.url,
+        result.title,
+        result.snippet,
+        userDescription,
+        plan,
+        log
+      );
 
-        // Stage 3 extraction for this page
-        const pageLeads = await extractLeadsFromPage(
-          pageText,
-          result.url,
-          result.title,
-          result.snippet,
-          userDescription,
-          plan,
-          log
-        );
-
-        for (const lead of pageLeads) {
-          allLeads.push(lead);
-          if (allLeads.length >= resultCount) break;
-        }
-
+      for (const lead of pageLeads) {
+        allLeads.push(lead);
         if (allLeads.length >= resultCount) break;
       }
 
-      if (allLeads.length >= resultCount) {
-        log(`\n✅ Reached target of ${resultCount} leads`);
-        break;
-      }
+      if (allLeads.length >= resultCount) break;
     }
+
+    if (allLeads.length >= resultCount) {
+      log(`\n✅ Reached target of ${resultCount} leads`);
+      break;
+    }
+  }
 
   // ── STAGE 3: Save to database ─────────────────────────────
   log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
@@ -329,9 +303,32 @@ CRITICAL RULES for searchQueries:
   setTimeout(() => delete sessions[sessionId], 30 * 60 * 1000);
 }
 
-// ── Extract leads from a single web page (Stage 3) ──────────
-async function extractLeadsFromPage(pageText, url, title, snippet, userGoal, plan, log) {
+// ── Extract & score leads from a single scraped page ────────
+async function extractLeadsFromPage(crawledData, url, title, snippet, userGoal, plan, log) {
   try {
+    // Build a rich context string combining crawler-extracted structured data + page text
+    const structuredContext = [
+      crawledData.brand_name       ? `Company: ${crawledData.brand_name}`           : null,
+      crawledData.website_title    ? `Page Title: ${crawledData.website_title}`      : null,
+      crawledData.short_description? `Description: ${crawledData.short_description}` : null,
+      crawledData.contact_email    ? `Email: ${crawledData.contact_email}`            : null,
+      crawledData.phone_number     ? `Phone: ${crawledData.phone_number}`             : null,
+      crawledData.developer_name && crawledData.developer_name !== "data is not present"
+                                   ? `Developer/Attribution: ${crawledData.developer_name}` : null,
+      crawledData.developer_email && crawledData.developer_email !== "data is not present"
+                                   ? `Developer Email: ${crawledData.developer_email}`      : null,
+      crawledData.linkedin_url     ? `LinkedIn: ${crawledData.linkedin_url}`          : null,
+      crawledData.twitter_url      ? `Twitter: ${crawledData.twitter_url}`            : null,
+      crawledData.facebook_url     ? `Facebook: ${crawledData.facebook_url}`          : null,
+      crawledData.framework_used   ? `Framework: ${crawledData.framework_used}`       : null,
+      crawledData.technology_stack ? `Tech Stack: ${crawledData.technology_stack}`    : null,
+      crawledData.hosting_provider ? `Hosting: ${crawledData.hosting_provider}`       : null,
+      crawledData.website_language ? `Language: ${crawledData.website_language}`      : null,
+    ].filter(Boolean).join("\n");
+
+    // Page text for GPT context (trimmed)
+    const pageText = (crawledData.html_text || crawledData.dom_data || "").slice(0, 3000);
+
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.1,
@@ -347,12 +344,14 @@ Target customer profile:
 - Decision maker roles: ${plan.contactRoles?.join(", ")}
 - DISQUALIFY if these words appear: ${plan.disqualifierKeywords?.join(", ")}
 
-From the web page content provided, extract any genuine business leads that MATCH the user's requirement.
+You will receive BOTH:
+1. STRUCTURED DATA — already extracted from the page by a web scraper (emails, phones, social links, tech stack, etc.)
+2. PAGE TEXT — raw text content from the page
 
-A "genuine lead" means:
-- A real business/person who clearly needs or is interested in the product/service the user offers
-- Has identifiable contact information OR enough company details to look them up
-- NOT a competitor, NOT an enterprise giant, NOT already a customer of a similar tool
+Your job:
+- Determine if this page/company is a GENUINE match for the user's requirement
+- Extract any additional contact/company details NOT already in the structured data
+- Score the lead on relevance (0-100)
 
 Return ONLY valid JSON:
 {
@@ -364,9 +363,11 @@ Return ONLY valid JSON:
       "companyWebsite": "string or null",
       "email": "string or null",
       "phone": "string or null",
+      "linkedin": "string or null",
       "industry": "string or null",
       "country": "string or null",
       "city": "string or null",
+      "techStack": "string or null",
       "relevanceScore": 0-100,
       "relevanceReason": "string (1 sentence why this is a good lead)",
       "sourceUrl": "string"
@@ -376,21 +377,29 @@ Return ONLY valid JSON:
 
 CRITICAL:
 - Only include leads with relevanceScore >= 55
-- If no leads found, return { "leads": [] }
+- If no genuine match found, return { "leads": [] }
 - Maximum 5 leads per page
-- Prefer leads with ANY contact info (email, website, phone) over anonymous mentions
+- For email/phone/linkedin: use the STRUCTURED DATA values first, only override if page text has something better
 - Set sourceUrl to the page URL`
       }, {
         role: "user",
-        content: `Page URL: ${url}\nPage title: ${title}\nSnippet: ${snippet}\n\nPage content:\n${pageText}`,
+        content: `Page URL: ${url}
+Page Title: ${title}
+Snippet: ${snippet}
+
+=== STRUCTURED DATA (from web scraper) ===
+${structuredContext || "(none extracted)"}
+
+=== PAGE TEXT ===
+${pageText}`,
       }],
     });
 
     const result = JSON.parse(response.choices[0].message.content);
-    const leads = (result.leads || []).filter(l => l.relevanceScore >= 55);
+    const leads  = (result.leads || []).filter(l => l.relevanceScore >= 55);
 
     if (leads.length > 0) {
-      log(`   ✅ Extracted ${leads.length} lead(s) from this page`);
+      log(`   ✅ Found ${leads.length} qualified lead(s) from this page`);
       for (const l of leads) {
         const name = l.fullName || l.companyName || "Unknown";
         log(`      • ${name} — Score: ${l.relevanceScore}/100 | ${l.relevanceReason}`);
@@ -398,15 +407,18 @@ CRITICAL:
     }
 
     return leads.map(l => ({
-      fullName: l.fullName || null,
-      jobTitle: l.jobTitle || null,
-      companyName: l.companyName || null,
-      companyWebsite: l.companyWebsite || url,
-      email: l.email || null,
-      phone: l.phone || null,
-      industry: l.industry || plan.industry || null,
-      country: l.country || null,
-      city: l.city || null,
+      fullName:        l.fullName        || null,
+      jobTitle:        l.jobTitle        || null,
+      companyName:     l.companyName     || crawledData.brand_name || null,
+      companyWebsite:  l.companyWebsite  || url,
+      // Prefer scraper-extracted contact info — it's more reliable than GPT guesses
+      email:           crawledData.contact_email   || crawledData.developer_email?.replace("data is not present", "") || l.email || null,
+      phone:           crawledData.phone_number    || crawledData.developer_phone?.replace("data is not present", "") || l.phone || null,
+      linkedin:        crawledData.linkedin_url    || l.linkedin  || null,
+      industry:        l.industry        || plan.industry || null,
+      country:         l.country         || null,
+      city:            l.city            || null,
+      techStack:       l.techStack       || crawledData.technology_stack || null,
       researchNotes: `${l.relevanceReason} (Score: ${l.relevanceScore}/100, Source: ${l.sourceUrl || url})`,
     }));
 

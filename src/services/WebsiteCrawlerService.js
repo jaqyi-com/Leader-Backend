@@ -688,6 +688,7 @@ async function runPipeline({ urls, keywords = [], customFields = [], crawlRunId 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 module.exports = {
   runPipeline,
+  buildWebsiteRecord,   // exported for use by AutoLeadGen and other modules
   isRunning: () => pipelineRunning,
   getRecentLogs: () => [...pipelineLogs],
   onLog: (cb) => pipelineListeners.add(cb),
