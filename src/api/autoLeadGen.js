@@ -160,31 +160,43 @@ async function runPipeline(sessionId, userDescription, maxAgeHours, resultCount)
 
 A user will describe a type of customer/business they want to find. Your job is to:
 1. Deeply understand the ACTUAL need (not just surface words)
-2. Generate highly targeted search queries to find these exact prospects online
+2. Generate highly targeted search queries to find real prospects online
 3. Extract a crystal-clear Ideal Customer Profile (ICP)
 
 Return ONLY valid JSON:
 {
-  "customerType": "string",           // e.g. "Small business owners managing customers in Excel"
-  "industry": "string",               // primary industry e.g. "Retail & E-commerce"  
-  "painPoint": "string",              // core pain being solved e.g. "Needs CRM to replace spreadsheets"
-  "searchQueries": ["string"],        // 4-6 Google search queries that would surface these prospects
-  "identifierKeywords": ["string"],   // 3-5 keywords that IDENTIFY a qualified lead in article text
-  "disqualifierKeywords": ["string"], // 2-3 keywords that mean NOT a good fit (e.g. "enterprise", "Fortune 500")
-  "contactRoles": ["string"],         // 2-3 decision-maker titles e.g. ["CEO", "Operations Manager"]
-  "rationale": "string"              // 2 sentences explaining the search strategy
+  "customerType": "string",
+  "industry": "string",
+  "painPoint": "string",
+  "searchQueries": ["string"],
+  "identifierKeywords": ["string"],
+  "disqualifierKeywords": ["string"],
+  "contactRoles": ["string"],
+  "rationale": "string"
 }
 
-CRITICAL RULES for searchQueries:
-- Each query must be a realistic Google search that returns articles/directories/forums with REAL companies
-- Use quotes for exact phrases where needed
-- Mix different angles: pain-based, intent-based, forum-based, directory-based
-- Examples for "solar panels for home": 
-  "homeowners interested in solar installation site:reddit.com OR site:quora.com",
-  "residential solar panel leads database 2024",
-  "solar energy leads homeowners contact list",
-  "people asking about home solar installation",
-  "solar panel inquiry form companies"`,
+CRITICAL RULES for searchQueries — follow exactly:
+- NEVER use "site:" operators (site:linkedin.com, site:reddit.com, etc.) — they return ZERO results with our search engine
+- NEVER target LinkedIn, Twitter, Facebook, Reddit, Indeed, Glassdoor or any login-required site
+- Target OPEN WEB pages: company homepages, business directories, "contact us" pages, industry listings
+- Queries must lead to real company websites a scraper can crawl and extract emails/phones from
+- Use terms like: "contact us", "hire us", "request a quote", "get in touch", "email", "phone"
+
+GOOD examples for "I need a salesperson for hire":
+  "freelance sales consultant available for hire contact",
+  "independent sales representative services contact us",
+  "B2B sales professional portfolio website email",
+  "commission sales agent directory phone",
+  "outsourced sales team small business contact page"
+
+GOOD examples for "I need businesses that need CRM software":
+  "small business customer management software contact us",
+  "retail store owner spreadsheet tracking alternative inquiry",
+  "local business sales pipeline tool free trial",
+  "SMB contact management solution request demo",
+  "small team CRM software sign up email"
+
+AVOID: job boards, social media, paywalled sites, login-required pages, news articles.`,
     }, {
       role: "user",
       content: userDescription,
