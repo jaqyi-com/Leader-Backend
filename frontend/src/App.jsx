@@ -64,7 +64,8 @@ export default function App() {
               </ProtectedRoute>
             }
           >
-            <Route index                   element={<DashboardPage />} />
+            <Route index element={<Navigate to="/app/chatbot" replace />} />
+
             <Route path="pipeline"         element={<PipelinePage />} />
             <Route path="icp"              element={<IcpPage />} />
             <Route path="scheduler"        element={<SchedulerPage />} />
