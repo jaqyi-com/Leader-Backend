@@ -21,6 +21,11 @@ export default {
         ember: "var(--ember)",
         rose: "var(--rose)",
         violet: "var(--violet)",
+        // Primary / secondary (landing page + buttons)
+        primary: "var(--accent)",
+        "primary-foreground": "#ffffff",
+        secondary: "var(--surface-2)",
+        "secondary-foreground": "var(--text)",
         // Legacy compat
         muted: "var(--surface-2)",
         "muted-foreground": "var(--text-2)",
@@ -29,7 +34,7 @@ export default {
         foreground: "var(--text)",
         "brand-500": "var(--accent)",
         "brand-400": "var(--accent-2)",
-        "brand-600": "#5b52d9",
+        "brand-600": "#c4202e",
         "accent-cyan": "var(--teal)",
         "accent-green": "var(--emerald)",
         "accent-orange": "#f97316",

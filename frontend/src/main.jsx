@@ -6,8 +6,7 @@ import "./index.css";
 import { Toaster } from "react-hot-toast";
 import PageProgressBar from "./components/PageProgressBar";
 
-// Always dark
-document.documentElement.classList.add("dark");
+// Theme is managed by ThemeContext (respects localStorage + system preference)
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

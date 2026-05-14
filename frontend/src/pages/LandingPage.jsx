@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Network, Database, Target, Bot, RotateCcw } from "lucide-react";
+import { Network, Database, Target, Bot, RotateCcw, Sun, Moon } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 
 const agents = [
   {
@@ -59,6 +60,8 @@ export default function LandingPage() {
 }
 
 function Nav() {
+  const { dark, toggle } = useTheme();
+
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
@@ -71,12 +74,23 @@ function Nav() {
           <a href="#agents" className="transition hover:text-foreground">Agents</a>
           <Link to="/app" className="transition hover:text-foreground">Sign in</Link>
         </nav>
-        <Link
-          to="/app"
-          className="inline-flex h-9 items-center rounded-none bg-primary px-4 font-mono text-[11px] uppercase tracking-[0.18em] text-primary-foreground transition hover:opacity-90"
-        >
-          Open App →
-        </Link>
+        <div className="flex items-center gap-3">
+          {/* Dark / Light toggle */}
+          <button
+            onClick={toggle}
+            aria-label="Toggle theme"
+            className="flex h-9 w-9 items-center justify-center border border-border bg-transparent transition hover:bg-secondary"
+            style={{ borderRadius: 6 }}
+          >
+            {dark ? <Sun size={15} /> : <Moon size={15} />}
+          </button>
+          <Link
+            to="/app"
+            className="inline-flex h-9 items-center rounded-none bg-primary px-4 font-mono text-[11px] uppercase tracking-[0.18em] text-primary-foreground transition hover:opacity-90"
+          >
+            Open App →
+          </Link>
+        </div>
       </div>
     </header>
   );
