@@ -365,7 +365,7 @@ export default function DocumentationPage() {
         <div>
           <h2 className="text-2xl font-bold flex items-center gap-2.5" style={{ color: "var(--text)" }}>
             <div className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, var(--accent), #8b5cf6)" }}>
+              style={{ background: "linear-gradient(135deg, var(--accent), #f4576a)" }}>
               <BookOpen size={18} className="text-white" />
             </div>
             How It Works

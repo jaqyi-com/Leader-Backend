@@ -70,7 +70,7 @@ function SourceCard({ source, onEdit, onDelete, onRefresh }) {
         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center",
-            background: "rgba(108,99,255,0.1)", border: "1px solid rgba(108,99,255,0.2)", flexShrink: 0,
+            background: "rgba(226,55,68,0.1)", border: "1px solid rgba(226,55,68,0.2)", flexShrink: 0,
           }}>
             <Icon size={16} color="var(--accent)" />
           </div>
@@ -247,7 +247,7 @@ function EditModal({ source, onClose, onSaved }) {
             disabled={saving || !text.trim()}
             style={{
               padding: "8px 20px",
-              background: "linear-gradient(135deg,var(--accent),#8b5cf6)",
+              background: "linear-gradient(135deg,var(--accent),#f4576a)",
               border: "none", borderRadius: 8, cursor: "pointer", color: "white", fontSize: 13, fontWeight: 600,
               display: "flex", alignItems: "center", gap: 6, opacity: saving ? 0.7 : 1,
             }}
@@ -419,7 +419,7 @@ export default function ChatbotDataPage() {
                   display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
                   background: addingText || !textName.trim() || !textContent.trim()
                     ? "var(--overlay-2)"
-                    : "linear-gradient(135deg,var(--accent),#8b5cf6)",
+                    : "linear-gradient(135deg,var(--accent),#f4576a)",
                   border: "none", borderRadius: 10, padding: "11px",
                   cursor: "pointer", color: "white", fontSize: 14, fontWeight: 600,
                 }}
@@ -448,7 +448,7 @@ export default function ChatbotDataPage() {
                 border: `2px dashed ${dragOver ? "var(--accent)" : "var(--border)"}`,
                 borderRadius: 12, padding: "32px 20px",
                 textAlign: "center", cursor: uploadingFile ? "not-allowed" : "pointer",
-                background: dragOver ? "rgba(108,99,255,0.06)" : "var(--overlay-1)",
+                background: dragOver ? "rgba(226,55,68,0.06)" : "var(--overlay-1)",
                 transition: "all 0.2s",
               }}
             >

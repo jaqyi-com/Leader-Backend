@@ -31,7 +31,7 @@ function TagInput({ tags, onChange, placeholder }) {
       {tags.map((t) => (
         <span key={t} style={{
           display: "flex", alignItems: "center", gap: 4,
-          background: "rgba(108,99,255,0.15)", color: "var(--accent)",
+          background: "rgba(226,55,68,0.15)", color: "var(--accent)",
           borderRadius: 20, padding: "2px 8px", fontSize: 11, fontWeight: 600,
         }}>
           {t}
@@ -88,7 +88,7 @@ function PlatformPicker({ value, onChange }) {
           style={{
             padding: "4px 12px", borderRadius: 20, fontSize: 11, fontWeight: 600,
             border: `1px solid ${value === p ? "var(--accent)" : "var(--border)"}`,
-            background: value === p ? "rgba(108,99,255,0.15)" : "var(--overlay-1)",
+            background: value === p ? "rgba(226,55,68,0.15)" : "var(--overlay-1)",
             color: value === p ? "var(--accent)" : "var(--text-2)",
             cursor: "pointer", textTransform: "capitalize",
           }}>
@@ -429,14 +429,14 @@ export default function FeatureInvocationPanel({ feature, params: initialParams,
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "12px 16px",
-        background: "linear-gradient(135deg, rgba(108,99,255,0.12), rgba(139,92,246,0.08))",
+        background: "linear-gradient(135deg, rgba(226,55,68,0.12), rgba(139,92,246,0.08))",
         borderBottom: "1px solid var(--border)",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10,
             display: "flex", alignItems: "center", justifyContent: "center",
-            background: "linear-gradient(135deg,var(--accent),#8b5cf6)",
+            background: "linear-gradient(135deg,var(--accent),#f4576a)",
             fontSize: 18,
           }}>
             {feature.emoji}
@@ -458,7 +458,7 @@ export default function FeatureInvocationPanel({ feature, params: initialParams,
       {explanation && (
         <div style={{
           padding: "10px 16px",
-          background: "rgba(108,99,255,0.05)",
+          background: "rgba(226,55,68,0.05)",
           borderBottom: "1px solid var(--border)",
           fontSize: 12, color: "var(--text-2)", lineHeight: 1.5,
         }}>
@@ -504,7 +504,7 @@ export default function FeatureInvocationPanel({ feature, params: initialParams,
               disabled={status === "running"}
               style={{
                 flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                background: "linear-gradient(135deg,var(--accent),#8b5cf6)",
+                background: "linear-gradient(135deg,var(--accent),#f4576a)",
                 border: "none", borderRadius: 10, padding: "9px 14px",
                 cursor: status === "running" ? "not-allowed" : "pointer",
                 color: "white", fontSize: 13, fontWeight: 600,

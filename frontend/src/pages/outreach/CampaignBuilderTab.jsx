@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { personalizeBatch, createCampaign } from "../../api/outreach";
 
 const CHANNELS = [
-  { id: "email", label: "Email", icon: Mail, color: "#6c63ff" },
+  { id: "email", label: "Email", icon: Mail, color: "#E23744" },
   { id: "whatsapp", label: "WhatsApp", icon: MessageSquare, color: "#25d366" },
   { id: "sms", label: "SMS", icon: Smartphone, color: "#fbbf24" },
 ];
@@ -155,7 +155,7 @@ export default function CampaignBuilderTab({ contacts, onBack, onCampaignCreated
                   }}>
                     <div style={{
                       width: 32, height: 32, borderRadius: 10,
-                      background: `${ch?.color || "#6c63ff"}20`,
+                      background: `${ch?.color || "#E23744"}20`,
                       display: "flex", alignItems: "center", justifyContent: "center",
                     }}>
                       <Icon size={16} style={{ color: ch?.color || "var(--accent)" }} />
@@ -206,7 +206,7 @@ export default function CampaignBuilderTab({ contacts, onBack, onCampaignCreated
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
                     <div style={{
                       width: 32, height: 32, borderRadius: 10,
-                      background: "linear-gradient(135deg, var(--accent), #8b5cf6)",
+                      background: "linear-gradient(135deg, var(--accent), #f4576a)",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       color: "#fff", fontSize: 12, fontWeight: 700,
                     }}>{(c.name || "?")[0].toUpperCase()}</div>
@@ -219,7 +219,7 @@ export default function CampaignBuilderTab({ contacts, onBack, onCampaignCreated
                     <div style={{
                       fontSize: 12, color: "var(--accent-2)", fontStyle: "italic",
                       padding: "8px 12px", borderRadius: 8, marginBottom: 8,
-                      background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.2)",
+                      background: "rgba(226,55,68,0.08)", border: "1px solid rgba(226,55,68,0.2)",
                     }}>💡 {p.icebreaker}</div>
                   )}
                   <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-2)", marginBottom: 2 }}>

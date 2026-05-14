@@ -6,7 +6,7 @@ import { FEATURE_REGISTRY } from "../../lib/intentClassifier";
 const CATEGORIES = ["Lead Gen", "Outreach", "Tools"];
 
 const CATEGORY_STYLE = {
-  "Lead Gen": { bg: "rgba(108,99,255,0.12)", color: "var(--accent)" },
+  "Lead Gen": { bg: "rgba(226,55,68,0.12)", color: "var(--accent)" },
   "Outreach": { bg: "rgba(14,165,233,0.12)", color: "#0ea5e9" },
   "Tools": { bg: "rgba(16,185,129,0.12)", color: "#10b981" },
 };

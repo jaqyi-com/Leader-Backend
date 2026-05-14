@@ -125,7 +125,7 @@ function OrgTab() {
   return (
     <div className="card" style={{ padding: 28 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
-        <div style={{ width: 38, height: 38, borderRadius: 12, background: "linear-gradient(135deg,var(--accent),#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{ width: 38, height: 38, borderRadius: 12, background: "linear-gradient(135deg,var(--accent),#f4576a)", display: "flex", alignItems: "center", justifyContent: "center" }}>
           <Building2 size={18} color="#fff" />
         </div>
         <div>
@@ -412,7 +412,7 @@ function MembersTab() {
                   ) : (
                     <div style={{
                       width: 36, height: 36, borderRadius: 10,
-                      background: m.status === "invited" ? "var(--surface-3)" : "linear-gradient(135deg,var(--accent),#8b5cf6)",
+                      background: m.status === "invited" ? "var(--surface-3)" : "linear-gradient(135deg,var(--accent),#f4576a)",
                       display: "flex", alignItems: "center", justifyContent: "center",
                       color: "#fff", fontSize: 13, fontWeight: 700,
                     }}>
@@ -424,7 +424,7 @@ function MembersTab() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", display: "flex", alignItems: "center", gap: 6 }}>
                       {m.user?.name || m.inviteEmail || "Invited user"}
-                      {isMe && <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", background: "rgba(108,99,255,0.12)", padding: "1px 6px", borderRadius: 20 }}>You</span>}
+                      {isMe && <span style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", background: "rgba(226,55,68,0.12)", padding: "1px 6px", borderRadius: 20 }}>You</span>}
                     </div>
                     <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 1 }}>
                       {m.user?.email || m.inviteEmail}

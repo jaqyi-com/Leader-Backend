@@ -52,8 +52,8 @@ function ExpandedPromptBadge({ expandedPrompt, original }) {
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       style={{
-        background: "rgba(108,99,255,0.08)",
-        border: "1px solid rgba(108,99,255,0.2)",
+        background: "rgba(226,55,68,0.08)",
+        border: "1px solid rgba(226,55,68,0.2)",
         borderRadius: 10,
         padding: "6px 12px",
         marginBottom: 6,
@@ -194,7 +194,7 @@ function MessageBubble({ msg, isStreaming }) {
           width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
           display: "flex", alignItems: "center", justifyContent: "center",
           background: isUser
-            ? "linear-gradient(135deg,var(--accent),#8b5cf6)"
+            ? "linear-gradient(135deg,var(--accent),#f4576a)"
             : "var(--overlay-2)",
           border: "1px solid var(--border)",
         }}>
@@ -210,7 +210,7 @@ function MessageBubble({ msg, isStreaming }) {
           {/* Bubble */}
           <div style={{
             background: isUser
-              ? "linear-gradient(135deg,var(--accent) 0%,#8b5cf6 100%)"
+              ? "linear-gradient(135deg,var(--accent) 0%,#f4576a 100%)"
               : "var(--overlay-2)",
             border: isUser ? "none" : "1px solid var(--border)",
             borderRadius: isUser ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
@@ -255,8 +255,8 @@ function ConversationItem({ conv, isActive, onClick, onDelete }) {
       style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
         padding: "10px 12px", borderRadius: 10, cursor: "pointer",
-        background: isActive ? "rgba(108,99,255,0.15)" : "transparent",
-        border: isActive ? "1px solid rgba(108,99,255,0.3)" : "1px solid transparent",
+        background: isActive ? "rgba(226,55,68,0.15)" : "transparent",
+        border: isActive ? "1px solid rgba(226,55,68,0.3)" : "1px solid transparent",
         marginBottom: 2, transition: "all 0.15s",
       }}
     >
@@ -507,7 +507,7 @@ export default function ChatbotPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div style={{
               width: 28, height: 28, borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center",
-              background: "linear-gradient(135deg,var(--accent),#8b5cf6)",
+              background: "linear-gradient(135deg,var(--accent),#f4576a)",
             }}>
               <Bot size={14} color="white" />
             </div>
@@ -519,7 +519,7 @@ export default function ChatbotPage() {
               onClick={handleNewChat}
               title="New Chat"
               style={{
-                background: "linear-gradient(135deg,var(--accent),#8b5cf6)",
+                background: "linear-gradient(135deg,var(--accent),#f4576a)",
                 border: "none", borderRadius: 7, padding: "5px 8px", cursor: "pointer",
                 color: "white", display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 600,
               }}
@@ -560,7 +560,7 @@ export default function ChatbotPage() {
             onClick={() => navigate("/app/chatbot/data")}
             style={{
               width: "100%", display: "flex", alignItems: "center", gap: 8,
-              background: "rgba(108,99,255,0.08)", border: "1px solid rgba(108,99,255,0.2)",
+              background: "rgba(226,55,68,0.08)", border: "1px solid rgba(226,55,68,0.2)",
               borderRadius: 10, padding: "10px 12px", cursor: "pointer",
               color: "var(--accent)", fontSize: 12, fontWeight: 500,
             }}
@@ -586,8 +586,8 @@ export default function ChatbotPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
               width: 32, height: 32, borderRadius: "50%", display: "flex", alignItems: "center",
-              justifyContent: "center", background: "linear-gradient(135deg,var(--accent),#8b5cf6)",
-              boxShadow: "0 0 12px rgba(108,99,255,0.4)", flexShrink: 0,
+              justifyContent: "center", background: "linear-gradient(135deg,var(--accent),#f4576a)",
+              boxShadow: "0 0 12px rgba(226,55,68,0.4)", flexShrink: 0,
             }}>
               <Bot size={15} color="white" />
             </div>
@@ -637,9 +637,9 @@ export default function ChatbotPage() {
                 transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                 style={{
                   width: 80, height: 80, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center",
-                  background: "linear-gradient(135deg,rgba(108,99,255,0.2),rgba(139,92,246,0.2))",
-                  border: "2px solid rgba(108,99,255,0.3)",
-                  boxShadow: "0 0 40px rgba(108,99,255,0.2)",
+                  background: "linear-gradient(135deg,rgba(226,55,68,0.2),rgba(139,92,246,0.2))",
+                  border: "2px solid rgba(226,55,68,0.3)",
+                  boxShadow: "0 0 40px rgba(226,55,68,0.2)",
                 }}
               >
                 <Sparkles size={32} color="var(--accent)" />
@@ -693,7 +693,7 @@ export default function ChatbotPage() {
                       <div style={{
                         width: 32, height: 32, borderRadius: "50%", flexShrink: 0,
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        background: "linear-gradient(135deg,var(--accent),#8b5cf6)",
+                        background: "linear-gradient(135deg,var(--accent),#f4576a)",
                         border: "1px solid var(--border)", fontSize: 14,
                       }}>
                         {msg.feature.emoji}
@@ -733,7 +733,7 @@ export default function ChatbotPage() {
                 initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 4 }}
                 style={{
                   display: "inline-flex", alignItems: "center", gap: 6,
-                  background: "rgba(108,99,255,0.15)", border: "1px solid rgba(108,99,255,0.3)",
+                  background: "rgba(226,55,68,0.15)", border: "1px solid rgba(226,55,68,0.3)",
                   borderRadius: 20, padding: "3px 10px 3px 6px",
                   fontSize: 12, color: "var(--accent)", fontWeight: 600, marginBottom: 8,
                 }}
@@ -793,7 +793,7 @@ export default function ChatbotPage() {
                   disabled={!input.trim() || isStreaming}
                   style={{
                     background: input.trim() && !isStreaming
-                      ? "linear-gradient(135deg,var(--accent),#8b5cf6)"
+                      ? "linear-gradient(135deg,var(--accent),#f4576a)"
                       : "var(--overlay-2)",
                     border: "none", borderRadius: 10, padding: "8px 12px",
                     cursor: input.trim() && !isStreaming ? "pointer" : "not-allowed",

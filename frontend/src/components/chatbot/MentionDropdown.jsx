@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { searchFeaturesByMention, FEATURE_REGISTRY } from "../../lib/intentClassifier";
 
 const CATEGORY_COLORS = {
-  "Lead Gen": "rgba(108,99,255,0.15)",
+  "Lead Gen": "rgba(226,55,68,0.15)",
   "Outreach": "rgba(14,165,233,0.15)",
   "Tools": "rgba(16,185,129,0.15)",
 };

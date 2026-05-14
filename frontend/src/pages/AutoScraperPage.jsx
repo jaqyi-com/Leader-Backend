@@ -377,7 +377,7 @@ export default function AutoScraperPage() {
             onClick={analyzeWithAI}
             disabled={aiAnalyzing || !aiDescription.trim()}
             className="absolute right-2 bottom-2 flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-40 disabled:cursor-not-allowed"
-            style={{ background: "linear-gradient(135deg,var(--accent),#8b5cf6)", color: "white" }}
+            style={{ background: "linear-gradient(135deg,var(--accent),#f4576a)", color: "white" }}
           >
             {aiAnalyzing ? <><Loader2 size={12} className="animate-spin" /> Analyzing...</> : <><Wand2 size={12} /> Analyze with AI</>}
           </button>

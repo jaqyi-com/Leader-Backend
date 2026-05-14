@@ -30,7 +30,7 @@ export default function ProtectedRoute({ children }) {
         <div style={{
           position: "absolute", top: "-20%", left: "-10%",
           width: 500, height: 500, borderRadius: "50%",
-          background: "radial-gradient(circle, rgba(108,99,255,0.08) 0%, transparent 70%)",
+          background: "radial-gradient(circle, rgba(226,55,68,0.08) 0%, transparent 70%)",
           filter: "blur(60px)", pointerEvents: "none",
         }} />
         <div style={{
@@ -46,15 +46,15 @@ export default function ProtectedRoute({ children }) {
           <div style={{
             position: "absolute", inset: -12,
             borderRadius: "50%",
-            border: "1px solid rgba(108,99,255,0.3)",
+            border: "1px solid rgba(226,55,68,0.3)",
             animation: "ring-pulse 2s ease-in-out infinite",
           }} />
           {/* Logo circle */}
           <div style={{
             width: 64, height: 64, borderRadius: 20,
-            background: "linear-gradient(135deg, #6c63ff 0%, #8b5cf6 100%)",
+            background: "linear-gradient(135deg, #E23744 0%, #f4576a 100%)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 0 32px rgba(108,99,255,0.4), 0 0 64px rgba(108,99,255,0.15)",
+            boxShadow: "0 0 32px rgba(226,55,68,0.4), 0 0 64px rgba(226,55,68,0.15)",
             animation: "logo-float 3s ease-in-out infinite",
           }}>
             <Zap size={28} color="#fff" />
@@ -81,7 +81,7 @@ export default function ProtectedRoute({ children }) {
         }}>
           <div style={{
             position: "absolute", top: 0, left: 0, height: "100%",
-            background: "linear-gradient(90deg, #6c63ff, #a78bfa, #22d3ee)",
+            background: "linear-gradient(90deg, #E23744, #f47a88, #22d3ee)",
             borderRadius: 9999,
             animation: "bar-slide 1.6s ease-in-out infinite",
           }} />

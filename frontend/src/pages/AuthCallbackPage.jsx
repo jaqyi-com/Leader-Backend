@@ -417,7 +417,7 @@ export default function AuthCallbackPage() {
           <div
             className="w-7 h-7 rounded-lg flex items-center justify-center"
             style={{
-              background: "linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%)",
+              background: "linear-gradient(135deg, var(--accent) 0%, #f4576a 100%)",
               boxShadow: "0 0 16px var(--accent-glow)",
             }}
           >

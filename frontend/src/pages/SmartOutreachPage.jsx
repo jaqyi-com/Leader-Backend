@@ -31,7 +31,7 @@ export default function SmartOutreachPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
           <div style={{
             width: 36, height: 36, borderRadius: 12,
-            background: "linear-gradient(135deg, var(--accent), #8b5cf6)",
+            background: "linear-gradient(135deg, var(--accent), #f4576a)",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
             <BarChart3 size={18} color="#fff" />

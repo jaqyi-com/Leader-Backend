@@ -104,7 +104,7 @@ export default function LinkedInFinderPage() {
             value={aiPrompt} onChange={e => setAiPrompt(e.target.value)} style={{ paddingRight: 130 }} />
           <button onClick={analyzeWithAI} disabled={aiLoading || !aiPrompt.trim()}
             className="absolute right-2 bottom-2 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold disabled:opacity-40"
-            style={{ background: "linear-gradient(135deg,var(--accent),#8b5cf6)", color: "white" }}>
+            style={{ background: "linear-gradient(135deg,var(--accent),#f4576a)", color: "white" }}>
             {aiLoading ? <><Loader2 size={11} className="animate-spin" /> Analyzing...</> : <><Wand2 size={11} /> Auto-fill</>}
           </button>
         </div>

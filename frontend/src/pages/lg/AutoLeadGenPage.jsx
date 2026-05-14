@@ -34,7 +34,7 @@ const EXAMPLE_PROMPTS = [
 function getLogStyle(line) {
   if (line.startsWith("✅") || line.startsWith("🎉")) return "#22c55e";
   if (line.startsWith("❌") || line.startsWith("⚠")) return "#f87171";
-  if (line.startsWith("🧠") || line.startsWith("🤖")) return "#a78bfa";
+  if (line.startsWith("🧠") || line.startsWith("🤖")) return "#f47a88";
   if (line.startsWith("🌐") || line.startsWith("🕷")) return "#38bdf8";
   if (line.startsWith("💾") || line.startsWith("📊")) return "#34d399";
   if (line.startsWith("•")) return "var(--text-2)";
