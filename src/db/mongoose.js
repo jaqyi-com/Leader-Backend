@@ -245,6 +245,23 @@ const ChatKnowledgeSource = require("./models/chatKnowledgeSource");
 const ChatConversation = require("./models/chatConversation");
 const ChatMessage = require("./models/chatMessage");
 
+// CRM models
+const Pipeline = require("./models/pipeline");
+const Deal = require("./models/deal");
+const Activity = require("./models/activity");
+const Quotation = require("./models/quotation");
+const Invoice = require("./models/invoice");
+const Payment = require("./models/payment");
+
+// Accounting models
+const { LedgerGroup, Ledger, Voucher } = require("./models/accounting");
+
+// Inventory models
+const { StockGroup, StockItem, StockMovement, Order } = require("./models/inventory");
+
+// Payroll models
+const { Employee, SalaryStructure, Payslip, Attendance } = require("./models/payroll");
+
 // ─── Auto Scraper ────────────────────────────────────────────────────────────
 const autoScraperSessionSchema = new mongoose.Schema({
   sessionId:   { type: String, required: true, unique: true, index: true },
@@ -392,4 +409,25 @@ module.exports = {
   ChatKnowledgeSource,
   ChatConversation,
   ChatMessage,
+  // CRM
+  Pipeline,
+  Deal,
+  Activity,
+  Quotation,
+  Invoice,
+  Payment,
+  // Accounting
+  LedgerGroup,
+  Ledger,
+  Voucher,
+  // Inventory
+  StockGroup,
+  StockItem,
+  StockMovement,
+  Order,
+  // Payroll
+  Employee,
+  SalaryStructure,
+  Payslip,
+  Attendance,
 };

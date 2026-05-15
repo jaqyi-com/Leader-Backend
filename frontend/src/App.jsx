@@ -38,6 +38,17 @@ import EmailFinderPage    from "./pages/lg/EmailFinderPage";
 import CompanyIntelPage   from "./pages/lg/CompanyIntelPage";
 import AIResearchAgentPage from "./pages/lg/AIResearchAgentPage";
 import AutoLeadGenPage    from "./pages/lg/AutoLeadGenPage";
+// CRM
+import CrmPipelinePage    from "./pages/crm/CrmPipelinePage";
+import CrmDashboardPage   from "./pages/crm/CrmDashboardPage";
+import DealDetailPage     from "./pages/crm/DealDetailPage";
+import CrmActivitiesPage  from "./pages/crm/CrmActivitiesPage";
+import CrmQuotationsPage  from "./pages/crm/CrmQuotationsPage";
+import CrmInvoicesPage    from "./pages/crm/CrmInvoicesPage";
+// ERP
+import AccountingPage     from "./pages/accounting/AccountingPage";
+import InventoryPage      from "./pages/inventory/InventoryPage";
+import PayrollPage        from "./pages/payroll/PayrollPage";
 
 
 import { ThemeProvider } from "./context/ThemeContext";
@@ -97,6 +108,17 @@ export default function App() {
             <Route path="lg/companies"      element={<CompanyIntelPage />} />
             <Route path="lg/research"       element={<AIResearchAgentPage />} />
             <Route path="lg/auto-lead-gen"  element={<AutoLeadGenPage />} />
+            {/* CRM */}
+            <Route path="crm/pipeline"      element={<CrmPipelinePage />} />
+            <Route path="crm/dashboard"     element={<CrmDashboardPage />} />
+            <Route path="crm/deals/:id"     element={<DealDetailPage />} />
+            <Route path="crm/activities"    element={<CrmActivitiesPage />} />
+            <Route path="crm/quotations"    element={<CrmQuotationsPage />} />
+            <Route path="crm/invoices"      element={<CrmInvoicesPage />} />
+            {/* ERP */}
+            <Route path="accounting"        element={<AccountingPage />} />
+            <Route path="inventory"         element={<InventoryPage />} />
+            <Route path="payroll"           element={<PayrollPage />} />
 
           </Route>
 

@@ -21,6 +21,7 @@ const orgRouter = require("./routes/org");
 const socialRouter = require("./routes/social");
 const chatbotRouter = require("./routes/chatbot");
 const outreachRouter = require("./routes/outreach");
+const crmRouter = require("./routes/crm");
 const { configurePassport } = require("./config/passport");
 
 connectDB();
@@ -125,6 +126,10 @@ app.use("/api/auth", authRouter);
 app.use("/api/org", orgRouter);
 app.use("/api/social", socialRouter);
 app.use("/api/outreach", outreachRouter);
+app.use("/api/crm", crmRouter);
+app.use("/api/accounting", require("./routes/accounting"));
+app.use("/api/inventory", require("./routes/inventory"));
+app.use("/api/payroll", require("./routes/payroll"));
 app.use("/api/gmail", require("./routes/gmailAuth"));
 
 // ------------------------------------------------------------

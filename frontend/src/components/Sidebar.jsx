@@ -4,6 +4,8 @@ import {
   Globe, MapPin, Database, ChevronLeft, ChevronRight,
   Zap, Settings, Share2, MessageSquare, Sparkles,
   Users2, Mail, Building2, BrainCircuit, Rocket, BookOpen, Target,
+  Briefcase, BarChart3, ListChecks, FileText, CreditCard,
+  Calculator, Package, UserCog,
 } from "lucide-react";
 
 
@@ -32,6 +34,20 @@ const LEAD_GEN_LINKS = [
   { to: "/app/lg/companies", label: "Company Intel", icon: Building2 },
   { to: "/app/lg/research", label: "AI Research", icon: BrainCircuit },
   { to: "/app/lg/database", label: "Lead Database", icon: Database }
+];
+
+const CRM_LINKS = [
+  { to: "/app/crm/pipeline", label: "Pipeline", icon: Briefcase },
+  { to: "/app/crm/dashboard", label: "CRM Dashboard", icon: BarChart3 },
+  { to: "/app/crm/activities", label: "Activities", icon: ListChecks },
+  { to: "/app/crm/quotations", label: "Quotations", icon: FileText },
+  { to: "/app/crm/invoices", label: "Invoices", icon: CreditCard },
+];
+
+const ERP_LINKS = [
+  { to: "/app/accounting", label: "Accounting", icon: Calculator },
+  { to: "/app/inventory", label: "Inventory", icon: Package },
+  { to: "/app/payroll", label: "Payroll & HR", icon: UserCog },
 ];
 
 function NavItem({ to, label, icon: Icon, collapsed, end }) {
@@ -154,6 +170,18 @@ export default function Sidebar({ collapsed, onToggle }) {
         <SectionLabel label="Lead Generator" collapsed={collapsed} />
 
         {LEAD_GEN_LINKS.map(({ to, label, icon }) => (
+          <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
+        ))}
+
+        <SectionLabel label="CRM" collapsed={collapsed} />
+
+        {CRM_LINKS.map(({ to, label, icon }) => (
+          <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
+        ))}
+
+        <SectionLabel label="ERP" collapsed={collapsed} />
+
+        {ERP_LINKS.map(({ to, label, icon }) => (
           <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
         ))}
 
