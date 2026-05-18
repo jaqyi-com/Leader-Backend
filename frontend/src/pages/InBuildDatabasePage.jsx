@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Database, Search, Filter, Download, RefreshCw, Loader2, Mail, Phone, Globe, MapPin, Sparkles, X, ChevronDown, ChevronUp, ExternalLink, Users } from "lucide-react";
-import { ibGetDatabase, ibGetStats, ibAIFilter } from "../../api";
+import { ibGetDatabase, ibGetStats, ibAIFilter } from "../api";
 import toast from "react-hot-toast";
 
 const STATUS_CFG = {
