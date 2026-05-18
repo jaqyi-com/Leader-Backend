@@ -249,9 +249,19 @@ export default function InBuildDatabasePage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="py-12 text-center text-[var(--text-3)]">
-                  <Loader2 size={20} className="animate-spin mx-auto mb-2"/>Loading records…
-                </td></tr>
+                Array.from({ length: 6 }).map((_, idx) => (
+                  <tr key={`skel-${idx}`} className="border-b border-[var(--border)] animate-pulse">
+                    <td className="px-3 py-3"><div className="h-4 bg-[var(--surface-2)] rounded w-32 mb-1"></div><div className="h-2 bg-[var(--surface-2)] rounded w-16"></div></td>
+                    <td className="px-3 py-3"><div className="h-4 bg-[var(--surface-2)] rounded w-24 mb-1"></div><div className="h-2 bg-[var(--surface-2)] rounded w-20"></div></td>
+                    <td className="px-3 py-3"><div className="h-4 bg-[var(--surface-2)] rounded w-40 mb-1"></div><div className="h-2 bg-[var(--surface-2)] rounded w-24"></div></td>
+                    <td className="px-3 py-3"><div className="h-4 bg-[var(--surface-2)] rounded w-28"></div></td>
+                    <td className="px-3 py-3"><div className="h-4 bg-[var(--surface-2)] rounded w-20"></div></td>
+                    <td className="px-3 py-3"><div className="h-4 bg-[var(--surface-2)] rounded w-16"></div></td>
+                    <td className="px-3 py-3"><div className="h-5 bg-[var(--surface-2)] rounded-full w-16"></div></td>
+                    <td className="px-3 py-3"><div className="h-4 bg-[var(--surface-2)] rounded w-20"></div></td>
+                    <td className="px-3 py-3"><div className="h-4 bg-[var(--surface-2)] rounded w-16"></div></td>
+                  </tr>
+                ))
               ) : leads.length === 0 ? (
                 <tr><td colSpan={9} className="py-16 text-center text-[var(--text-3)]">
                   <Database size={32} className="mx-auto mb-3 opacity-30"/>
