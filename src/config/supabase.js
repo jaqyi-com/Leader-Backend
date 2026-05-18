@@ -21,6 +21,6 @@ if (SUPABASE_URL && SUPABASE_KEY) {
   console.warn("[Supabase] ⚠️  SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set. InBuild Database will use mock data.");
 }
 
-const SUPABASE_TABLE = process.env.SUPABASE_TABLE || "leads";
+const SUPABASE_TABLE = process.env.SUPABASE_TABLE || "business_data";
 
 module.exports = { supabase, SUPABASE_TABLE };
