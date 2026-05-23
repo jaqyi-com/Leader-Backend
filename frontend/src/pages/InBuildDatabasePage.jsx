@@ -5,7 +5,7 @@ import {
   Phone, Globe, MapPin, Sparkles, X, ChevronDown, ChevronUp,
   ExternalLink, Star
 } from "lucide-react";
-import { ibGetDatabase, ibGetStats, ibAIFilter, ibGetColumns, ibRefreshCache, ibStartSync, ibGetSyncStatus } from "../api";
+import { ibGetDatabase, ibGetStats, ibAIFilter, ibGetColumns, ibRefreshCache } from "../api";
 import toast from "react-hot-toast";
 
 // Columns that always display in a fixed order if present
@@ -20,7 +20,7 @@ const PRIORITY_COLS = [
   { key: "website",   label: "Website"       },
 ];
 
-const HIDDEN_KEYS = new Set(["_id", "_sheet", "_tab", "url"]);
+const HIDDEN_KEYS = new Set(["_id", "_row_hash", "unnamed_13", "url"]);
 
 const BLANK = { search: "", category: "", city: "", has_phone: "", has_website: "" };
 
@@ -32,10 +32,6 @@ export default function InBuildDatabasePage() {
   const [loading,     setLoading]     = useState(true);
   const [refreshing,  setRefreshing]  = useState(false);
   const [aiLoading,   setAiLoading]   = useState(false);
-  const [syncing,     setSyncing]     = useState(false);
-  const [syncProgress, setSyncProgress] = useState("");
-  const [lastSync,    setLastSync]    = useState(null);
-  const syncPollRef = useState(null);
   const [aiQuery,     setAiQuery]     = useState("");
   const [aiSummary,   setAiSummary]   = useState("");
   const [showF,       setShowF]       = useState(false);
@@ -82,35 +78,6 @@ export default function InBuildDatabasePage() {
     ibGetStats().then(({ data }) => setStats(data)).catch(() => {});
   }, []);
 
-  // ── Poll sync status while sync is running ─────────────────
-  const pollSync = useCallback(async () => {
-    try {
-      const { data } = await ibGetSyncStatus();
-      setSyncProgress(data.progress || "");
-      if (data.lastSync) setLastSync(data.lastSync);
-      if (!data.running) {
-        setSyncing(false);
-        if (data.lastError) {
-          toast.error("Sync failed: " + data.lastError);
-        } else {
-          toast.success(`✅ Sync complete — ${(data.lastCount || 0).toLocaleString()} records imported!`);
-          // Reload data after sync
-          load();
-          ibGetStats().then(({ data: s }) => setStats(s)).catch(() => {});
-          loadColumns();
-        }
-      }
-    } catch { /* ignore */ }
-  }, [load, loadColumns]);
-
-  useEffect(() => {
-    let interval;
-    if (syncing) {
-      interval = setInterval(pollSync, 3000);
-    }
-    return () => clearInterval(interval);
-  }, [syncing, pollSync]);
-
   const handleSort = col => {
     if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortBy(col); setSortDir("asc"); }
@@ -139,18 +106,6 @@ export default function InBuildDatabasePage() {
       toast.success("Stats refreshed!");
     } catch { toast.error("Refresh failed"); }
     finally { setRefreshing(false); }
-  };
-
-  const handleSync = async () => {
-    if (syncing) return;
-    try {
-      await ibStartSync();
-      setSyncing(true);
-      setSyncProgress("Starting sync…");
-      toast("🔄 Syncing from Google Sheets — this may take a few minutes for large datasets.", { duration: 6000 });
-    } catch (err) {
-      toast.error("Failed to start sync: " + (err?.response?.data?.error || err.message));
-    }
   };
 
   const clearAll = () => { setFilters(BLANK); setAiQuery(""); setAiSummary(""); setPage(1); };
@@ -192,44 +147,12 @@ export default function InBuildDatabasePage() {
           <button onClick={exportCSV} disabled={!leads.length} className="btn-ghost text-xs gap-1.5">
             <Download size={13} />Export CSV
           </button>
-          <button onClick={handleRefresh} disabled={refreshing || loading || syncing} className="btn-ghost text-xs gap-1.5">
+          <button onClick={handleRefresh} disabled={refreshing || loading} className="btn-ghost text-xs gap-1.5">
             <RefreshCw size={13} className={refreshing || loading ? "animate-spin" : ""} />
             {refreshing ? "Refreshing…" : "Refresh"}
           </button>
-          <button
-            onClick={handleSync}
-            disabled={syncing}
-            className="btn-primary text-xs gap-1.5"
-            title="Import all data from Google Sheets into the database"
-          >
-            <RefreshCw size={13} className={syncing ? "animate-spin" : ""} />
-            {syncing ? "Syncing…" : "Sync from Sheets"}
-          </button>
         </div>
       </div>
-
-      {/* Sync Progress Banner */}
-      {syncing && syncProgress && (
-        <motion.div
-          initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-          className="card p-3 flex items-center gap-3 border border-yellow-500/30"
-          style={{ background: "rgba(234,179,8,0.07)" }}
-        >
-          <RefreshCw size={14} className="animate-spin text-yellow-400 flex-shrink-0" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-yellow-400">Syncing from Google Sheets…</p>
-            <p className="text-[11px] text-[var(--text-3)] truncate mt-0.5">{syncProgress}</p>
-          </div>
-          <span className="text-[10px] text-[var(--text-3)] whitespace-nowrap">Do not close this tab</span>
-        </motion.div>
-      )}
-
-      {/* Last sync info */}
-      {!syncing && lastSync && (
-        <p className="text-[10px] text-[var(--text-3)] -mt-2">
-          Last synced: {new Date(lastSync).toLocaleString()}
-        </p>
-      )}
 
       {/* Stats */}
       {statRows.length > 0 && (
@@ -352,7 +275,7 @@ export default function InBuildDatabasePage() {
                   <td colSpan={cols.length} className="py-16 text-center text-[var(--text-3)]">
                     <Database size={32} className="mx-auto mb-3 opacity-30" />
                     <p>No records match your filters.</p>
-                    <p className="text-[10px] mt-1 opacity-60">Make sure your Google Sheets are configured and shared with the service account.</p>
+                    <p className="text-[10px] mt-1 opacity-60">Try adjusting your search or clearing the filters.</p>
                   </td>
                 </tr>
               ) : leads.map((l, i) => (
