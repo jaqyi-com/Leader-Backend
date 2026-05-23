@@ -222,8 +222,9 @@ function buildWhere({ search, category, city, has_phone, has_website }, fieldToC
     );
   }
 
-  // Always exclude the header row artifact (row 1 has column names as values)
-  conditions.push(`"business_name" != 'business_name'`);
+  // Exclude ONLY the one header artifact row (row 1 where column names = values)
+  // Use IS DISTINCT FROM so NULL business_names are NOT excluded
+  conditions.push(`"business_name" IS DISTINCT FROM 'business_name'`);
 
   return {
     whereStr: `WHERE ${conditions.join(" AND ")}`,
@@ -290,15 +291,19 @@ router.get("/stats", async (req, res) => {
     const phoneCol   = `"${fieldToCol.phone   || "phone"}"`;
     const websiteCol = `"${fieldToCol.website || "website"}"`;
 
+    const HEADER_FILTER = `"business_name" IS DISTINCT FROM 'business_name'`;
+
     const [totalRes, phoneRes, websiteRes] = await Promise.all([
-      pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}`),
+      pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} WHERE ${HEADER_FILTER}`),
       pgQuery(
         `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}
-         WHERE ${phoneCol} IS NOT NULL AND ${phoneCol} != ''`
+         WHERE ${HEADER_FILTER}
+           AND ${phoneCol} IS NOT NULL AND ${phoneCol} != '' AND ${phoneCol} IS DISTINCT FROM 'phone'`
       ),
       pgQuery(
         `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}
-         WHERE ${websiteCol} IS NOT NULL AND ${websiteCol} != ''`
+         WHERE ${HEADER_FILTER}
+           AND ${websiteCol} IS NOT NULL AND ${websiteCol} != '' AND ${websiteCol} IS DISTINCT FROM 'website'`
       ),
     ]);
 
