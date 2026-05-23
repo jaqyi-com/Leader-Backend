@@ -1,259 +1,283 @@
 "use strict";
 // ============================================================
-// IN BUILD - DATABASE ROUTE  (Google Sheets backed)
+// IN BUILD DATABASE — Route Handler
 // ============================================================
+// Data source : Cloud SQL PostgreSQL (public.usa_business_data)
+// Instance    : sigma-current-497209-i6:us-central1:leader (34.71.167.187)
+// Database    : doott
+//
+// Architecture:
+//   • All READ queries  → Cloud SQL (public.usa_business_data)
+//   • POST /sync        → No-op (data lives in Cloud SQL, no import needed)
+//   • POST /refresh     → Clears Redis stats cache + schema cache
+//   • GET  /health      → Cloud SQL connectivity + row count
+//
+// MongoDB Atlas is NOT touched here — it remains for all other features.
+// ============================================================
+
 const express = require("express");
 const router  = express.Router();
 const OpenAI  = require("openai");
-const { sheetsClient, SHEET_IDS } = require("../config/googleSheets");
-const { cacheGet, cacheSet }      = require("../db/redis");
+
+const { query: pgQuery, SCHEMA, TABLE } = require("../db/cloudSql");
+const { cacheGet, cacheSet, cacheDel }  = require("../db/redis");
 const logger = require("../utils/logger").forAgent("InBuildDatabase");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
 
-const CACHE_KEY = "cache:inbuild-database";
-const CACHE_TTL = 300; // 5 minutes
+// Fully-qualified table reference (safe, no user input)
+const FULL_TABLE      = `"${SCHEMA}"."${TABLE}"`;
+const STATS_CACHE_KEY = "cache:inbuild-stats";
+const STATS_CACHE_TTL = 120; // seconds
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // COLUMN NORMALISATION MAP
-// Maps common header variations → canonical field names
+// Maps common DB column name variations → standard API field name
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// COLUMN NORMALISATION MAP
+// Maps actual usa_business_data column names → standard API field names
+// Discovered from live schema: 85 columns, 742,079 rows
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 const NORMALIZE = {
-  "business name":  "name",
-  "company name":   "name",
-  "business":       "name",
-  "phone number":   "phone",
-  "phone no":       "phone",
-  "mobile":         "phone",
-  "website url":    "website",
-  "web":            "website",
-  "url":            "website",
-  "city":           "city_file",
-  "region":         "city_file",
-  "location":       "city_file",
-  "area":           "city_file",
-  "star rating":    "rating",
-  "google rating":  "rating",
-  "stars":          "rating",
-  "review count":   "reviews",
-  "no. of reviews": "reviews",
-  "num reviews":    "reviews",
-  "reviews count":  "reviews",
-  "business category": "category",
-  "type":           "category",
-  "street address": "address",
-  "full address":   "address",
-  "google maps url":"url",
-  "maps link":      "url",
-  "place url":      "url",
+  // Name
+  "business_name":    "name",
+  "company":          "name",
+  "full_name":        "name",
+  // Phone — `phone` column has the real data (phone_1..9 are extras)
+  "phone":            "phone",
+  "company_phone":    "phone",
+  // Website
+  "company_website":  "website",
+  "website":          "website",
+  // City / Region — primary is `city`, also `location`, `state`
+  "location":         "city_file",
+  "city":             "city_file",
+  "state":            "city_file",
+  // Category
+  "_category":        "category",
+  "industry":         "category",
+  // Address
+  "street_address":   "address",
+  // URL / Social
+  "linked_url":       "url",
+  "facebook_profile": "url",
 };
 
-function normalizeKey(raw) {
-  const lower = raw.trim().toLowerCase();
-  return NORMALIZE[lower] || lower.replace(/\s+/g, "_");
-}
+const CORE_FIELDS = new Set([
+  "name", "category", "city_file", "rating",
+  "reviews", "phone", "address", "website", "url",
+]);
+
+// Extra rich fields from usa_business_data exposed at top level (not buried in extra)
+const RICH_FIELDS = new Set([
+  "email", "job_title", "first_name", "last_name", "contact_person",
+  "company_email", "company_phone", "company_facebook", "linked_url",
+  "revenue_range", "number_of_employees", "team_size", "total_funding",
+  "zip_code", "state", "industry", "city",
+  "phone", "phone_1", "phone_2", "phone_3",
+  "work_email_1", "work_email_2", "direct_email_1", "direct_email_2",
+  "generic_email", "corporate_email",
+]);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// HELPER — call Sheets API with a timeout guard (avoids Vercel timeout)
+// SCHEMA DISCOVERY (lazy, cached in-memory)
+// Introspects public.usa_business_data columns once, builds mappings.
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function withTimeout(promise, ms = 8000) {
-  return Promise.race([
-    promise,
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error(`Sheets API timeout after ${ms}ms`)), ms)
-    ),
-  ]);
-}
+let _schemaCache = null;
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// FETCH ALL ROWS FROM ALL SHEETS  (with Redis cache)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function fetchAllRows() {
-  // Try Redis cache first
-  try {
-    const cached = await cacheGet(CACHE_KEY);
-    if (cached && Array.isArray(cached)) {
-      logger.info("[InBuildDatabase] Returning cached data.");
-      return cached;
+async function getSchema() {
+  if (_schemaCache) return _schemaCache;
+
+  const res = await pgQuery(
+    `SELECT column_name
+     FROM information_schema.columns
+     WHERE table_schema = $1 AND table_name = $2
+     ORDER BY ordinal_position`,
+    [SCHEMA, TABLE]
+  );
+
+  const actualCols = res.rows.map(r => r.column_name);
+
+  // fieldToCol : standard_name → actual_db_column  (e.g. "name" → "business_name")
+  // colToField : actual_db_column → standard_name   (for result normalisation)
+  const fieldToCol = {};
+  const colToField = {};
+
+  for (const col of actualCols) {
+    const lower      = col.toLowerCase();
+    const stdField   = NORMALIZE[lower] || (CORE_FIELDS.has(lower) ? lower : null);
+    if (stdField && !fieldToCol[stdField]) {
+      fieldToCol[stdField] = col;
+      colToField[col]      = stdField;
     }
-  } catch (cacheErr) {
-    logger.warn("[InBuildDatabase] Cache read failed (non-fatal):", cacheErr.message);
   }
 
-  if (!sheetsClient || SHEET_IDS.length === 0) {
-    logger.warn("[InBuildDatabase] No sheets client or no sheet IDs configured.");
-    return [];
+  // For any standard field still unmapped, default to itself
+  for (const f of CORE_FIELDS) {
+    if (!fieldToCol[f]) fieldToCol[f] = f;
   }
 
-  const allRows = [];
-  let globalIdx = 0;
+  logger.info(
+    `[CloudSQL] Schema loaded — ${actualCols.length} cols. Mappings: ${JSON.stringify(fieldToCol)}`
+  );
 
-  for (const sheetId of SHEET_IDS) {
+  _schemaCache = { actualCols, fieldToCol, colToField };
+  return _schemaCache;
+}
+
+/** Normalise a raw DB row into the standard API shape. */
+function normalizeRow({ actualCols, colToField }, row) {
+  const core  = {};
+  const rich  = {};
+  const extra = {};
+
+  for (const col of actualCols) {
+    const val   = row[col] ?? "";
+    const field = colToField[col];
+
+    if (field && CORE_FIELDS.has(field)) {
+      // Map to standard field name
+      core[field] = val !== null ? String(val) : "";
+    } else if (col !== "id" && col !== "_row_hash" && RICH_FIELDS.has(col)) {
+      // Expose rich contact fields at top level
+      rich[col] = val;
+    } else if (col !== "id" && col !== "_row_hash" && col !== "unnamed_13") {
+      extra[col] = val;
+    }
+  }
+
+  // Ensure every core field is present
+  for (const f of CORE_FIELDS) {
+    if (core[f] === undefined) core[f] = "";
+  }
+
+  return { ...core, ...rich, ...extra };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// WHERE CLAUSE BUILDER  (fully parameterised — no SQL injection)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildWhere({ search, category, city, has_phone, has_website }, fieldToCol) {
+  const conditions = [];
+  const values     = [];
+  let   idx        = 1;
+
+  const col = (f) => `"${fieldToCol[f] || f}"`;
+
+  if (search) {
+    // Search across name, category, city, phone, address, email, contact_person
+    const searchTargets = [
+      fieldToCol.name     || "business_name",
+      fieldToCol.category || "_category",
+      fieldToCol.city_file || "city",
+      fieldToCol.phone    || "phone",
+      fieldToCol.address  || "street_address",
+      "email",
+      "contact_person",
+      "job_title",
+    ].filter(Boolean);
+
+    const searchCols = searchTargets.map(c => `"${c}" ILIKE $${idx}`);
+    conditions.push(`(${searchCols.join(" OR ")})`);
+    values.push(`%${search}%`);
+    idx++;
+  }
+
+  if (category) {
+    conditions.push(`${col("category")} ILIKE $${idx}`);
+    values.push(`%${category}%`);
+    idx++;
+  }
+
+  if (city) {
+    // Search across city + state + location
+    conditions.push(
+      `("city" ILIKE $${idx} OR "state" ILIKE $${idx} OR "location" ILIKE $${idx})`
+    );
+    values.push(`%${city}%`);
+    idx++;
+  }
+
+  // has_phone: check primary phone column
+  const phoneActual = fieldToCol.phone || "phone";
+  if (has_phone === "true") {
+    conditions.push(
+      `("${phoneActual}" IS NOT NULL AND "${phoneActual}" != '' AND "${phoneActual}" != '${TABLE}')`
+    );
+  } else if (has_phone === "false") {
+    conditions.push(
+      `("${phoneActual}" IS NULL OR "${phoneActual}" = '')`
+    );
+  }
+
+  // has_website: check website column
+  const webActual = fieldToCol.website || "website";
+  if (has_website === "true") {
+    conditions.push(
+      `("${webActual}" IS NOT NULL AND "${webActual}" != '' AND "${webActual}" NOT ILIKE '%website%')`
+    );
+  } else if (has_website === "false") {
+    conditions.push(
+      `("${webActual}" IS NULL OR "${webActual}" = '')`
+    );
+  }
+
+  // Always exclude the header row artifact (row 1 has column names as values)
+  conditions.push(`"business_name" != 'business_name'`);
+
+  return {
+    whereStr: `WHERE ${conditions.join(" AND ")}`,
+    values,
+    nextIdx:  idx,
+  };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET /health
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/health", async (req, res) => {
+  try {
+    const pingRes = await pgQuery("SELECT NOW() AS now");
+
+    let totalRecords = 0;
     try {
-      logger.info(`[InBuildDatabase] Fetching sheet: ${sheetId}`);
+      const cntRes = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}`);
+      totalRecords = parseInt(cntRes.rows[0].cnt, 10);
+    } catch (_) { /* table might be empty or temp error */ }
 
-      const meta = await withTimeout(
-        sheetsClient.spreadsheets.get({ spreadsheetId: sheetId })
-      );
-      const tabs = meta.data.sheets || [];
-
-      for (const tab of tabs) {
-        const tabTitle = tab.properties.title;
-        try {
-          const resp = await withTimeout(
-            sheetsClient.spreadsheets.values.get({
-              spreadsheetId: sheetId,
-              range: tabTitle,
-            })
-          );
-
-          const rows = resp.data.values || [];
-          if (rows.length < 2) continue;
-
-          const rawHeaders = rows[0];
-          const headers    = rawHeaders.map(normalizeKey);
-
-          for (let r = 1; r < rows.length; r++) {
-            const rowArr = rows[r];
-            const obj    = { _id: `gs_${globalIdx++}`, _sheet: sheetId, _tab: tabTitle };
-            headers.forEach((h, i) => {
-              obj[h] = rowArr[i] !== undefined ? String(rowArr[i]).trim() : "";
-            });
-            ["name","category","city_file","rating","reviews","phone","address","website","url"]
-              .forEach(f => { if (!(f in obj)) obj[f] = ""; });
-            allRows.push(obj);
-          }
-          logger.info(`[InBuildDatabase] Sheet "${sheetId}" / tab "${tabTitle}": ${rows.length - 1} rows.`);
-        } catch (tabErr) {
-          logger.warn(`[InBuildDatabase] Tab "${tabTitle}" in "${sheetId}" failed: ${tabErr.message}`);
-        }
-      }
-    } catch (err) {
-      logger.error(`[InBuildDatabase] Sheet "${sheetId}" failed: ${err.message}`);
-    }
+    res.json({
+      ok:           true,
+      source:       "cloud_sql",
+      instance:     "sigma-current-497209-i6:us-central1:leader",
+      database:     process.env.CLOUD_SQL_DB || "doott",
+      table:        FULL_TABLE,
+      serverTime:   pingRes.rows[0].now,
+      totalRecords,
+    });
+  } catch (err) {
+    logger.error(`[health] ${err.message}`);
+    res.status(503).json({
+      ok:     false,
+      source: "cloud_sql",
+      error:  err.message,
+    });
   }
-
-  logger.info(`[InBuildDatabase] Total rows: ${allRows.length}`);
-  try {
-    await cacheSet(CACHE_KEY, allRows, CACHE_TTL);
-  } catch (cacheErr) {
-    logger.warn("[InBuildDatabase] Cache write failed (non-fatal):", cacheErr.message);
-  }
-  return allRows;
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// GET /health  — diagnostic (no Sheets API call)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-router.get("/health", (req, res) => {
-  res.json({
-    ok: true,
-    sheetsClientReady: !!sheetsClient,
-    sheetCount: SHEET_IDS.length,
-    sheetIds: SHEET_IDS.map(id => `${id.slice(0, 8)}…`), // partial for security
-    cacheKey: CACHE_KEY,
-  });
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// IN-MEMORY FILTERING
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function applyFilters(rows, { search, category, city, has_phone, has_website }) {
-  let data = rows;
-
-  if (search) {
-    const q = search.toLowerCase();
-    data = data.filter(r =>
-      (r.name      || "").toLowerCase().includes(q) ||
-      (r.address   || "").toLowerCase().includes(q) ||
-      (r.phone     || "").toLowerCase().includes(q) ||
-      (r.category  || "").toLowerCase().includes(q) ||
-      (r.city_file || "").toLowerCase().includes(q)
-    );
-  }
-  if (category) {
-    const q = category.toLowerCase();
-    data = data.filter(r => (r.category || "").toLowerCase().includes(q));
-  }
-  if (city) {
-    const q = city.toLowerCase();
-    data = data.filter(r => (r.city_file || "").toLowerCase().includes(q));
-  }
-  if (has_phone === "true")  data = data.filter(r => r.phone && r.phone.trim() !== "");
-  if (has_phone === "false") data = data.filter(r => !r.phone || r.phone.trim() === "");
-  if (has_website === "true")  data = data.filter(r => r.website && r.website.trim() !== "");
-  if (has_website === "false") data = data.filter(r => !r.website || r.website.trim() === "");
-
-  return data;
-}
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// GET /columns  — return detected column names
+// GET /columns
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/columns", async (req, res) => {
   try {
-    const rows = await fetchAllRows();
-    if (!rows.length) return res.json({ columns: [], source: "google_sheets" });
+    const { actualCols, fieldToCol } = await getSchema();
 
-    // Collect all unique column keys across all rows (excluding internal _ fields)
-    const colSet = new Set();
-    rows.forEach(r => Object.keys(r).forEach(k => { if (!k.startsWith("_")) colSet.add(k); }));
-    res.json({ columns: Array.from(colSet), source: "google_sheets" });
+    const coreKeys  = [...CORE_FIELDS].filter(f => fieldToCol[f]);
+    const mappedCols = new Set(Object.values(fieldToCol));
+    const extraKeys  = actualCols.filter(c => !mappedCols.has(c) && c !== "id");
+
+    res.json({ columns: [...coreKeys, ...extraKeys], source: "cloud_sql" });
   } catch (err) {
     res.status(500).json({ error: err.message });
-  }
-});
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// GET /  — paginated + filtered list
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-router.get("/", async (req, res) => {
-  const {
-    page      = 1,
-    limit     = 50,
-    search    = "",
-    category  = "",
-    city      = "",
-    has_phone = "",
-    has_website = "",
-    sort_by   = "name",
-    sort_dir  = "asc",
-  } = req.query;
-
-  const pageNum  = Math.max(1, parseInt(page));
-  const limitNum = Math.min(200, Math.max(1, parseInt(limit)));
-  const offset   = (pageNum - 1) * limitNum;
-
-  try {
-    let rows = await fetchAllRows();
-
-    // Apply filters
-    rows = applyFilters(rows, { search, category, city, has_phone, has_website });
-
-    // Sort
-    const dir = sort_dir === "desc" ? -1 : 1;
-    rows.sort((a, b) => {
-      const av = a[sort_by] ?? "";
-      const bv = b[sort_by] ?? "";
-      // Numeric sort for rating/reviews
-      if (sort_by === "rating" || sort_by === "reviews") {
-        return (parseFloat(av) - parseFloat(bv)) * dir;
-      }
-      return av.localeCompare(bv) * dir;
-    });
-
-    const total = rows.length;
-    const paged = rows.slice(offset, offset + limitNum);
-
-    return res.json({
-      leads:  paged,
-      total,
-      page:   pageNum,
-      pages:  Math.ceil(total / limitNum),
-      source: "google_sheets",
-    });
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -262,18 +286,104 @@ router.get("/", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/stats", async (req, res) => {
   try {
-    const rows = await fetchAllRows();
-    const total        = rows.length;
-    const with_phone   = rows.filter(r => r.phone   && r.phone.trim()   !== "").length;
-    const with_website = rows.filter(r => r.website && r.website.trim() !== "").length;
-    res.json({ total, with_phone, with_website, source: "google_sheets" });
+    const cached = await cacheGet(STATS_CACHE_KEY);
+    if (cached) return res.json({ ...cached, _cache: "hit" });
+
+    const { fieldToCol } = await getSchema();
+    const phoneCol   = `"${fieldToCol.phone   || "phone"}"`;
+    const websiteCol = `"${fieldToCol.website || "website"}"`;
+
+    const [totalRes, phoneRes, websiteRes] = await Promise.all([
+      pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}`),
+      pgQuery(
+        `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}
+         WHERE ${phoneCol} IS NOT NULL AND ${phoneCol} != ''`
+      ),
+      pgQuery(
+        `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}
+         WHERE ${websiteCol} IS NOT NULL AND ${websiteCol} != ''`
+      ),
+    ]);
+
+    const payload = {
+      total:        parseInt(totalRes.rows[0].cnt,   10),
+      with_phone:   parseInt(phoneRes.rows[0].cnt,   10),
+      with_website: parseInt(websiteRes.rows[0].cnt, 10),
+      source:       "cloud_sql",
+    };
+
+    await cacheSet(STATS_CACHE_KEY, payload, STATS_CACHE_TTL);
+    res.json(payload);
   } catch (err) {
+    logger.error(`[stats] ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// POST /ai-filter  — natural language → structured filters
+// GET /  — paginated, filtered, sorted from Cloud SQL
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/", async (req, res) => {
+  const {
+    page        = 1,
+    limit       = 50,
+    search      = "",
+    category    = "",
+    city        = "",
+    has_phone   = "",
+    has_website = "",
+    sort_by     = "name",
+    sort_dir    = "asc",
+  } = req.query;
+
+  const pageNum  = Math.max(1, parseInt(page,  10));
+  const limitNum = Math.min(200, Math.max(1, parseInt(limit, 10)));
+  const offset   = (pageNum - 1) * limitNum;
+
+  try {
+    const schema = await getSchema();
+    const { fieldToCol } = schema;
+
+    const { whereStr, values, nextIdx } = buildWhere(
+      { search, category, city, has_phone, has_website },
+      fieldToCol
+    );
+
+    // Safe sort: only allow mapped column names
+    const sortCol = `"${fieldToCol[sort_by] || fieldToCol.name || "name"}"`;
+    const sortDir = sort_dir === "desc" ? "DESC" : "ASC";
+
+    const dataSQL = `
+      SELECT * FROM ${FULL_TABLE}
+      ${whereStr}
+      ORDER BY ${sortCol} ${sortDir} NULLS LAST
+      LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
+    `;
+    const countSQL = `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${whereStr}`;
+
+    const [dataRes, countRes] = await Promise.all([
+      pgQuery(dataSQL,  [...values, limitNum, offset]),
+      pgQuery(countSQL, values),
+    ]);
+
+    const total  = parseInt(countRes.rows[0].cnt, 10);
+    const leads  = dataRes.rows.map(row => normalizeRow(schema, row));
+
+    res.json({
+      leads,
+      total,
+      page:   pageNum,
+      pages:  Math.ceil(total / limitNum),
+      source: "cloud_sql",
+    });
+  } catch (err) {
+    logger.error(`[GET /] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// POST /ai-filter — Convert natural language → SQL filter params
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.post("/ai-filter", async (req, res) => {
   const { query } = req.body;
@@ -284,19 +394,19 @@ router.post("/ai-filter", async (req, res) => {
 
 Return ONLY valid JSON with any of these optional keys (omit keys that aren't mentioned):
 {
-  "search": "string",          // general text search across name/address/phone
-  "category": "string",        // e.g. "Legal services", "Nail salons"
-  "city": "string",            // e.g. "San Antonio", "Dallas"
-  "has_phone": "true|false",
+  "search":      "string",
+  "category":    "string",
+  "city":        "string",
+  "has_phone":   "true|false",
   "has_website": "true|false",
-  "sort_by": "name|rating|reviews",
-  "sort_dir": "asc|desc",
-  "summary": "string"          // one sentence explaining what you understood
+  "sort_by":     "name|rating|reviews",
+  "sort_dir":    "asc|desc",
+  "summary":     "string"
 }`;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.1,
+      model:           "gpt-4o-mini",
+      temperature:     0.1,
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
@@ -312,14 +422,39 @@ Return ONLY valid JSON with any of these optional keys (omit keys that aren't me
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// POST /refresh  — force-clear Redis cache for this dataset
+// GET /sync/status
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/sync/status", (req, res) => {
+  res.json({
+    running:   false,
+    source:    "cloud_sql",
+    message:   "Data lives directly in Cloud SQL (public.usa_business_data). No sync required.",
+    lastSync:  "N/A",
+    lastCount: null,
+    lastError: null,
+    progress:  "✅ Cloud SQL is the primary store.",
+  });
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// POST /sync — Not applicable (data already in Cloud SQL)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.post("/sync", (req, res) => {
+  res.json({
+    started: false,
+    source:  "cloud_sql",
+    message: "Sync is not required. Data lives directly in Cloud SQL (public.usa_business_data). Use POST /refresh to clear cache.",
+  });
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// POST /refresh — clear Redis stats cache + schema cache
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.post("/refresh", async (req, res) => {
   try {
-    const { cacheDel } = require("../db/redis");
-    await cacheDel(CACHE_KEY);
-    logger.info("[InBuildDatabase] Cache manually cleared.");
-    res.json({ success: true, message: "Cache cleared. Next request will re-fetch from Google Sheets." });
+    _schemaCache = null;                  // force schema re-discovery on next request
+    await cacheDel(STATS_CACHE_KEY);
+    res.json({ success: true, message: "Stats cache and schema cache cleared." });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

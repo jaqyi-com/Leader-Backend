@@ -21,11 +21,11 @@
 | Service | Purpose | Free tier? |
 |---------|---------|------------|
 | [Vercel](https://vercel.com) | Host backend + frontend | ✅ Yes |
-| [MongoDB Atlas](https://cloud.mongodb.com) | Database | ✅ Yes (512MB) |
+| [MongoDB Atlas](https://cloud.mongodb.com) | Primary database | ✅ Yes (512MB) |
 | [Upstash Redis](https://upstash.com) | Cache | ✅ Yes (10K req/day) |
 | [OpenAI](https://platform.openai.com) | GPT-4o + Embeddings | 💳 Pay-per-use |
 | [Apollo.io](https://apollo.io) | Lead enrichment | Freemium |
-| [Google Cloud](https://console.cloud.google.com) | OAuth + Places API | Freemium |
+| [Google Cloud](https://console.cloud.google.com) | OAuth + Places API + **Cloud SQL** | Freemium |
 
 ---
 
@@ -79,6 +79,15 @@ UNIFIED_WORKSPACE_ID    = ...
 UNIFIED_WORKSPACE_SECRET= ...
 UNIFIED_BASE_URL        = https://api.unified.to
 NODE_ENV                = production
+
+# ── Cloud SQL (In-Build Database) ────────────────────────────
+CLOUD_SQL_HOST          = 34.71.167.187
+CLOUD_SQL_PORT          = 5432
+CLOUD_SQL_DB            = doott
+CLOUD_SQL_SCHEMA        = public
+CLOUD_SQL_TABLE         = usa_business_data
+CLOUD_SQL_USER          = akshat
+CLOUD_SQL_PASSWORD      = <your Cloud SQL user password>
 ```
 
 ---
@@ -136,6 +145,38 @@ The app auto-creates these collections on first run:
 - `autonomousleads`, `places`, `websites`, `socialposts`
 - `users`, `organizations`, `members`
 - `chatknowledgechunks`, `chatknowledgesources`, `chatconversations`, `chatmessages`
+
+---
+
+## Step 4b — Cloud SQL Setup (In-Build Database)
+
+The In-Build Database reads directly from **Google Cloud SQL PostgreSQL**.
+No data migration needed — the table `public.usa_business_data` (742k rows) already exists.
+
+### Required: Add Vercel's IPs to Cloud SQL Authorized Networks
+
+Vercel functions run from dynamic IPs. To allow them to connect:
+
+1. Go to [Cloud SQL Console → `leader` instance → Connections](https://console.cloud.google.com/sql/instances/leader/connections?project=sigma-current-497209-i6)
+2. Click **Networking** tab → **Authorized Networks**
+3. The instance currently has `0.0.0.0/0` (open to all) — this works but is insecure
+4. **Recommended for production**: Restrict to Vercel's IP ranges.
+   - Vercel publishes their IP ranges at: https://vercel.com/docs/edge-network/regions
+   - Or keep `0.0.0.0/0` temporarily and add a **strong password** on the DB user
+
+### Verify connection from Vercel
+
+After deployment, check:
+```bash
+curl https://<your-backend>.vercel.app/api/inbuild-database/health
+# Should return: { "ok": true, "source": "cloud_sql", "totalRecords": 742085 }
+```
+
+### SSL Note
+
+Cloud SQL with public IP **requires SSL**. The app uses `rejectUnauthorized: false`
+(no server cert validation) which is safe for backend-to-DB connections. This is
+already configured in `src/db/cloudSql.js`.
 
 ---
 
