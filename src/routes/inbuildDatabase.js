@@ -1,32 +1,176 @@
 "use strict";
 // ============================================================
-// IN BUILD - DATABASE ROUTE
+// IN BUILD - DATABASE ROUTE  (Google Sheets backed)
 // ============================================================
 const express = require("express");
 const router  = express.Router();
 const OpenAI  = require("openai");
-const { supabase, SUPABASE_TABLE } = require("../config/supabase");
+const { sheetsClient, SHEET_IDS } = require("../config/googleSheets");
+const { cacheGet, cacheSet }      = require("../db/redis");
 const logger = require("../utils/logger").forAgent("InBuildDatabase");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
 
+const CACHE_KEY = "cache:inbuild-database";
+const CACHE_TTL = 300; // 5 minutes
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// GET /columns
+// COLUMN NORMALISATION MAP
+// Maps common header variations → canonical field names
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const NORMALIZE = {
+  "business name":  "name",
+  "company name":   "name",
+  "business":       "name",
+  "phone number":   "phone",
+  "phone no":       "phone",
+  "mobile":         "phone",
+  "website url":    "website",
+  "web":            "website",
+  "url":            "website",
+  "city":           "city_file",
+  "region":         "city_file",
+  "location":       "city_file",
+  "area":           "city_file",
+  "star rating":    "rating",
+  "google rating":  "rating",
+  "stars":          "rating",
+  "review count":   "reviews",
+  "no. of reviews": "reviews",
+  "num reviews":    "reviews",
+  "reviews count":  "reviews",
+  "business category": "category",
+  "type":           "category",
+  "street address": "address",
+  "full address":   "address",
+  "google maps url":"url",
+  "maps link":      "url",
+  "place url":      "url",
+};
+
+function normalizeKey(raw) {
+  const lower = raw.trim().toLowerCase();
+  return NORMALIZE[lower] || lower.replace(/\s+/g, "_");
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// FETCH ALL ROWS FROM ALL SHEETS  (with Redis cache)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+async function fetchAllRows() {
+  // Try Redis cache first
+  const cached = await cacheGet(CACHE_KEY);
+  if (cached) {
+    logger.info("[InBuildDatabase] Returning cached data.");
+    return cached;
+  }
+
+  if (!sheetsClient || SHEET_IDS.length === 0) {
+    logger.warn("[InBuildDatabase] No sheets client or no sheet IDs configured.");
+    return [];
+  }
+
+  const allRows = [];
+  let globalIdx = 0;
+
+  for (const sheetId of SHEET_IDS) {
+    try {
+      logger.info(`[InBuildDatabase] Fetching sheet: ${sheetId}`);
+
+      // Get all tabs of the spreadsheet
+      const meta = await sheetsClient.spreadsheets.get({ spreadsheetId: sheetId });
+      const tabs  = meta.data.sheets || [];
+
+      for (const tab of tabs) {
+        const tabTitle = tab.properties.title;
+        try {
+          const resp = await sheetsClient.spreadsheets.values.get({
+            spreadsheetId: sheetId,
+            range: tabTitle,
+          });
+
+          const rows = resp.data.values || [];
+          if (rows.length < 2) continue; // No data rows
+
+          const rawHeaders = rows[0];
+          const headers    = rawHeaders.map(normalizeKey);
+
+          for (let r = 1; r < rows.length; r++) {
+            const rowArr = rows[r];
+            const obj    = { _id: `gs_${globalIdx++}`, _sheet: sheetId, _tab: tabTitle };
+            headers.forEach((h, i) => {
+              obj[h] = rowArr[i] !== undefined ? String(rowArr[i]).trim() : "";
+            });
+            // Ensure required canonical fields exist (even if empty)
+            ["name","category","city_file","rating","reviews","phone","address","website","url"]
+              .forEach(f => { if (!(f in obj)) obj[f] = ""; });
+            allRows.push(obj);
+          }
+          logger.info(`[InBuildDatabase] Sheet "${sheetId}" / tab "${tabTitle}": ${rows.length - 1} rows loaded.`);
+        } catch (tabErr) {
+          logger.warn(`[InBuildDatabase] Could not read tab "${tabTitle}" in sheet "${sheetId}": ${tabErr.message}`);
+        }
+      }
+    } catch (err) {
+      logger.error(`[InBuildDatabase] Failed to read sheet "${sheetId}": ${err.message}`);
+    }
+  }
+
+  logger.info(`[InBuildDatabase] Total merged rows: ${allRows.length}`);
+  await cacheSet(CACHE_KEY, allRows, CACHE_TTL);
+  return allRows;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// IN-MEMORY FILTERING
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function applyFilters(rows, { search, category, city, has_phone, has_website }) {
+  let data = rows;
+
+  if (search) {
+    const q = search.toLowerCase();
+    data = data.filter(r =>
+      (r.name      || "").toLowerCase().includes(q) ||
+      (r.address   || "").toLowerCase().includes(q) ||
+      (r.phone     || "").toLowerCase().includes(q) ||
+      (r.category  || "").toLowerCase().includes(q) ||
+      (r.city_file || "").toLowerCase().includes(q)
+    );
+  }
+  if (category) {
+    const q = category.toLowerCase();
+    data = data.filter(r => (r.category || "").toLowerCase().includes(q));
+  }
+  if (city) {
+    const q = city.toLowerCase();
+    data = data.filter(r => (r.city_file || "").toLowerCase().includes(q));
+  }
+  if (has_phone === "true")  data = data.filter(r => r.phone && r.phone.trim() !== "");
+  if (has_phone === "false") data = data.filter(r => !r.phone || r.phone.trim() === "");
+  if (has_website === "true")  data = data.filter(r => r.website && r.website.trim() !== "");
+  if (has_website === "false") data = data.filter(r => !r.website || r.website.trim() === "");
+
+  return data;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET /columns  — return detected column names
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/columns", async (req, res) => {
-  if (!supabase) return res.json({ columns: [], table: SUPABASE_TABLE, source: "mock" });
   try {
-    const { data, error } = await supabase.from(SUPABASE_TABLE).select("*").limit(1);
-    if (error) throw new Error(error.message);
-    const cols = data?.length ? Object.keys(data[0]) : [];
-    res.json({ columns: cols, table: SUPABASE_TABLE, source: "supabase" });
+    const rows = await fetchAllRows();
+    if (!rows.length) return res.json({ columns: [], source: "google_sheets" });
+
+    // Collect all unique column keys across all rows (excluding internal _ fields)
+    const colSet = new Set();
+    rows.forEach(r => Object.keys(r).forEach(k => { if (!k.startsWith("_")) colSet.add(k); }));
+    res.json({ columns: Array.from(colSet), source: "google_sheets" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// GET /
+// GET /  — paginated + filtered list
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/", async (req, res) => {
   const {
@@ -37,7 +181,7 @@ router.get("/", async (req, res) => {
     city      = "",
     has_phone = "",
     has_website = "",
-    sort_by   = "id",
+    sort_by   = "name",
     sort_dir  = "asc",
   } = req.query;
 
@@ -45,42 +189,56 @@ router.get("/", async (req, res) => {
   const limitNum = Math.min(200, Math.max(1, parseInt(limit)));
   const offset   = (pageNum - 1) * limitNum;
 
-  if (supabase) {
-    try {
-      let query = supabase.from(SUPABASE_TABLE).select("*", { count: "exact" });
+  try {
+    let rows = await fetchAllRows();
 
-      if (search) {
-        query = query.or(`name.ilike.%${search}%,address.ilike.%${search}%,phone.ilike.%${search}%,category.ilike.%${search}%`);
+    // Apply filters
+    rows = applyFilters(rows, { search, category, city, has_phone, has_website });
+
+    // Sort
+    const dir = sort_dir === "desc" ? -1 : 1;
+    rows.sort((a, b) => {
+      const av = a[sort_by] ?? "";
+      const bv = b[sort_by] ?? "";
+      // Numeric sort for rating/reviews
+      if (sort_by === "rating" || sort_by === "reviews") {
+        return (parseFloat(av) - parseFloat(bv)) * dir;
       }
-      if (category) query = query.ilike("category", `%${category}%`);
-      if (city)     query = query.ilike("city_file", `%${city}%`);
-      if (has_phone === "true")  query = query.not("phone", "is", null).neq("phone", "");
-      if (has_phone === "false") query = query.or("phone.is.null,phone.eq.");
-      if (has_website === "true")  query = query.not("website", "is", null).neq("website", "");
-      if (has_website === "false") query = query.or("website.is.null,website.eq.");
+      return av.localeCompare(bv) * dir;
+    });
 
-      const ascending = sort_dir === "asc";
-      query = query.order(sort_by, { ascending }).range(offset, offset + limitNum - 1);
+    const total = rows.length;
+    const paged = rows.slice(offset, offset + limitNum);
 
-      const { data, error, count } = await query;
-      if (error) throw new Error(error.message);
-
-      return res.json({
-        leads: data || [],
-        total: count || 0,
-        page: pageNum,
-        pages: Math.ceil((count || 0) / limitNum),
-        source: "supabase",
-      });
-    } catch (err) {
-      return res.status(500).json({ error: err.message });
-    }
+    return res.json({
+      leads:  paged,
+      total,
+      page:   pageNum,
+      pages:  Math.ceil(total / limitNum),
+      source: "google_sheets",
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
-  return res.json({ leads: [], total: 0, page: 1, pages: 1, source: "mock" });
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// POST /ai-filter
+// GET /stats
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/stats", async (req, res) => {
+  try {
+    const rows = await fetchAllRows();
+    const total        = rows.length;
+    const with_phone   = rows.filter(r => r.phone   && r.phone.trim()   !== "").length;
+    const with_website = rows.filter(r => r.website && r.website.trim() !== "").length;
+    res.json({ total, with_phone, with_website, source: "google_sheets" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// POST /ai-filter  — natural language → structured filters
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.post("/ai-filter", async (req, res) => {
   const { query } = req.body;
@@ -96,7 +254,7 @@ Return ONLY valid JSON with any of these optional keys (omit keys that aren't me
   "city": "string",            // e.g. "San Antonio", "Dallas"
   "has_phone": "true|false",
   "has_website": "true|false",
-  "sort_by": "id|name|rating|reviews",
+  "sort_by": "name|rating|reviews",
   "sort_dir": "asc|desc",
   "summary": "string"          // one sentence explaining what you understood
 }`;
@@ -107,7 +265,7 @@ Return ONLY valid JSON with any of these optional keys (omit keys that aren't me
       response_format: { type: "json_object" },
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: query },
+        { role: "user",   content: query },
       ],
     });
 
@@ -119,15 +277,14 @@ Return ONLY valid JSON with any of these optional keys (omit keys that aren't me
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// GET /stats
+// POST /refresh  — force-clear Redis cache for this dataset
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-router.get("/stats", async (req, res) => {
-  if (!supabase) return res.json({ total: 0, with_phone: 0, with_website: 0, source: "mock" });
+router.post("/refresh", async (req, res) => {
   try {
-    const { count: total } = await supabase.from(SUPABASE_TABLE).select("*", { count: "exact", head: true });
-    const { count: with_phone } = await supabase.from(SUPABASE_TABLE).select("*", { count: "exact", head: true }).not("phone", "is", null).neq("phone", "");
-    const { count: with_website } = await supabase.from(SUPABASE_TABLE).select("*", { count: "exact", head: true }).not("website", "is", null).neq("website", "");
-    res.json({ total, with_phone, with_website, source: "supabase" });
+    const { cacheDel } = require("../db/redis");
+    await cacheDel(CACHE_KEY);
+    logger.info("[InBuildDatabase] Cache manually cleared.");
+    res.json({ success: true, message: "Cache cleared. Next request will re-fetch from Google Sheets." });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

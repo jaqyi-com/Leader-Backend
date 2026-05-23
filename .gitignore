@@ -7,6 +7,9 @@ data/
 logs/
 *.log
 .DS_Store
+
+# Google Sheets service account credentials (keep out of git!)
+src/config/googleSheetsCredentials.json
 {src
 
 # Frontend build output

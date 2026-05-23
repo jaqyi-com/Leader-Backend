@@ -15,7 +15,6 @@
     "reset": "rm -f data/seen_*.json data/outreach_log.json data/sent_emails.json data/lead_scores.json"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.105.4",
     "@upstash/redis": "^1.37.0",
     "axios": "^1.6.0",
     "bcryptjs": "^3.0.3",
