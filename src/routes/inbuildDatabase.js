@@ -54,14 +54,30 @@ function normalizeKey(raw) {
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// HELPER — call Sheets API with a timeout guard (avoids Vercel timeout)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function withTimeout(promise, ms = 8000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error(`Sheets API timeout after ${ms}ms`)), ms)
+    ),
+  ]);
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // FETCH ALL ROWS FROM ALL SHEETS  (with Redis cache)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function fetchAllRows() {
   // Try Redis cache first
-  const cached = await cacheGet(CACHE_KEY);
-  if (cached) {
-    logger.info("[InBuildDatabase] Returning cached data.");
-    return cached;
+  try {
+    const cached = await cacheGet(CACHE_KEY);
+    if (cached && Array.isArray(cached)) {
+      logger.info("[InBuildDatabase] Returning cached data.");
+      return cached;
+    }
+  } catch (cacheErr) {
+    logger.warn("[InBuildDatabase] Cache read failed (non-fatal):", cacheErr.message);
   }
 
   if (!sheetsClient || SHEET_IDS.length === 0) {
@@ -76,20 +92,23 @@ async function fetchAllRows() {
     try {
       logger.info(`[InBuildDatabase] Fetching sheet: ${sheetId}`);
 
-      // Get all tabs of the spreadsheet
-      const meta = await sheetsClient.spreadsheets.get({ spreadsheetId: sheetId });
-      const tabs  = meta.data.sheets || [];
+      const meta = await withTimeout(
+        sheetsClient.spreadsheets.get({ spreadsheetId: sheetId })
+      );
+      const tabs = meta.data.sheets || [];
 
       for (const tab of tabs) {
         const tabTitle = tab.properties.title;
         try {
-          const resp = await sheetsClient.spreadsheets.values.get({
-            spreadsheetId: sheetId,
-            range: tabTitle,
-          });
+          const resp = await withTimeout(
+            sheetsClient.spreadsheets.values.get({
+              spreadsheetId: sheetId,
+              range: tabTitle,
+            })
+          );
 
           const rows = resp.data.values || [];
-          if (rows.length < 2) continue; // No data rows
+          if (rows.length < 2) continue;
 
           const rawHeaders = rows[0];
           const headers    = rawHeaders.map(normalizeKey);
@@ -100,25 +119,41 @@ async function fetchAllRows() {
             headers.forEach((h, i) => {
               obj[h] = rowArr[i] !== undefined ? String(rowArr[i]).trim() : "";
             });
-            // Ensure required canonical fields exist (even if empty)
             ["name","category","city_file","rating","reviews","phone","address","website","url"]
               .forEach(f => { if (!(f in obj)) obj[f] = ""; });
             allRows.push(obj);
           }
-          logger.info(`[InBuildDatabase] Sheet "${sheetId}" / tab "${tabTitle}": ${rows.length - 1} rows loaded.`);
+          logger.info(`[InBuildDatabase] Sheet "${sheetId}" / tab "${tabTitle}": ${rows.length - 1} rows.`);
         } catch (tabErr) {
-          logger.warn(`[InBuildDatabase] Could not read tab "${tabTitle}" in sheet "${sheetId}": ${tabErr.message}`);
+          logger.warn(`[InBuildDatabase] Tab "${tabTitle}" in "${sheetId}" failed: ${tabErr.message}`);
         }
       }
     } catch (err) {
-      logger.error(`[InBuildDatabase] Failed to read sheet "${sheetId}": ${err.message}`);
+      logger.error(`[InBuildDatabase] Sheet "${sheetId}" failed: ${err.message}`);
     }
   }
 
-  logger.info(`[InBuildDatabase] Total merged rows: ${allRows.length}`);
-  await cacheSet(CACHE_KEY, allRows, CACHE_TTL);
+  logger.info(`[InBuildDatabase] Total rows: ${allRows.length}`);
+  try {
+    await cacheSet(CACHE_KEY, allRows, CACHE_TTL);
+  } catch (cacheErr) {
+    logger.warn("[InBuildDatabase] Cache write failed (non-fatal):", cacheErr.message);
+  }
   return allRows;
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET /health  — diagnostic (no Sheets API call)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/health", (req, res) => {
+  res.json({
+    ok: true,
+    sheetsClientReady: !!sheetsClient,
+    sheetCount: SHEET_IDS.length,
+    sheetIds: SHEET_IDS.map(id => `${id.slice(0, 8)}…`), // partial for security
+    cacheKey: CACHE_KEY,
+  });
+});
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // IN-MEMORY FILTERING
