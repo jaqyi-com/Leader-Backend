@@ -237,14 +237,13 @@ function buildWhere({ search, category, city, has_phone, has_website }, fieldToC
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/health", async (req, res) => {
   try {
-    const pingRes = await pgQuery("SELECT NOW() AS now, current_user AS cu, current_schema() AS cs");
+    const pingRes = await pgQuery("SELECT NOW() AS now");
 
-    let totalRecords  = 0;
-    let countError    = null;
+    let totalRecords = 0;
     try {
       const cntRes = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}`);
       totalRecords = parseInt(cntRes.rows[0].cnt, 10);
-    } catch (e) { countError = e.message; }
+    } catch (_) { /* ignore — reported via ok:false if ping also fails */ }
 
     res.json({
       ok:           true,
@@ -252,19 +251,12 @@ router.get("/health", async (req, res) => {
       instance:     "sigma-current-497209-i6:us-central1:leader",
       database:     process.env.CLOUD_SQL_DB || "doott",
       table:        FULL_TABLE,
-      connectedAs:  pingRes.rows[0].cu,
-      schema:       pingRes.rows[0].cs,
       serverTime:   pingRes.rows[0].now,
       totalRecords,
-      countError,   // shows permission issue if any
     });
   } catch (err) {
     logger.error(`[health] ${err.message}`);
-    res.status(503).json({
-      ok:     false,
-      source: "cloud_sql",
-      error:  err.message,
-    });
+    res.status(503).json({ ok: false, source: "cloud_sql", error: err.message });
   }
 });
 
