@@ -180,13 +180,13 @@ export const getAutoLeadGenStatus = (sessionId) =>
   `${BASE}/lead-generator/auto-gen/status/${sessionId}`;  // returns raw URL for SSE EventSource
 
 // ============================================================
-// IN BUILD - DATABASE (MongoDB + Google Sheets sync)
+// IN BUILD - DATABASE (Cloud SQL + pgvector semantic search)
 // ============================================================
-export const ibGetDatabase   = (params = {}) => lgApi.get("/api/inbuild-database", { params });
-export const ibGetStats      = ()             => lgApi.get("/api/inbuild-database/stats");
-export const ibGetColumns    = ()             => lgApi.get("/api/inbuild-database/columns");
-export const ibAIFilter      = (query)        => lgApi.post("/api/inbuild-database/ai-filter", { query });
-export const ibRefreshCache  = ()             => lgApi.post("/api/inbuild-database/refresh");
-export const ibStartSync     = ()             => lgApi.post("/api/inbuild-database/sync");
-export const ibGetSyncStatus = ()             => lgApi.get("/api/inbuild-database/sync/status");
-export const ibGetHealth     = ()             => lgApi.get("/api/inbuild-database/health");
+export const ibGetDatabase    = (params = {}) => lgApi.get("/api/inbuild-database", { params });
+export const ibGetStats       = ()             => lgApi.get("/api/inbuild-database/stats");
+export const ibGetColumns     = ()             => lgApi.get("/api/inbuild-database/columns");
+export const ibAIFilter       = (query)        => lgApi.post("/api/inbuild-database/ai-filter", { query });
+export const ibRefreshCache   = ()             => lgApi.post("/api/inbuild-database/refresh");
+export const ibGetHealth      = ()             => lgApi.get("/api/inbuild-database/health");
+export const ibSemanticSearch = (body)         => lgApi.post("/api/inbuild-database/semantic-search", body);
+export const ibEmbedStatus    = ()             => lgApi.get("/api/inbuild-database/embedding-status");

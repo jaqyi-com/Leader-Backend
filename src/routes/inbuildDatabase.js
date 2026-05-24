@@ -28,6 +28,14 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
 // Fully-qualified table reference (safe, no user input)
 const FULL_TABLE      = `"${SCHEMA}"."${TABLE}"`;
 const STATS_CACHE_KEY = "cache:inbuild-stats";
+
+// Columns that may contain phone / website data
+const PHONE_COLS = ["phone", "company_phone"];
+const WEB_COLS   = ["website", "company_website"];
+
+// Redis key for caching query embeddings (avoids re-embedding same query)
+const EMBED_CACHE_PREFIX = "cache:embed:";
+const EMBED_CACHE_TTL    = 60 * 60 * 24; // 24 hours
 const STATS_CACHE_TTL = 120; // seconds
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -157,26 +165,18 @@ function normalizeRow({ actualCols, colToField }, row) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // WHERE CLAUSE BUILDER  (fully parameterised — no SQL injection)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function buildWhere({ search, category, city, has_phone, has_website }, fieldToCol) {
+function buildWhere({ search, category, city, state, has_phone, has_website }, fieldToCol) {
   const conditions = [];
   const values     = [];
   let   idx        = 1;
 
-  const col = (f) => `"${fieldToCol[f] || f}"`;
-
   if (search) {
-    // Search across name, category, city, phone, address, email, contact_person
+    // Search across name, category, city, BOTH phone columns, address, email
     const searchTargets = [
-      fieldToCol.name     || "business_name",
-      fieldToCol.category || "_category",
-      fieldToCol.city_file || "city",
-      fieldToCol.phone    || "phone",
-      fieldToCol.address  || "street_address",
-      "email",
-      "contact_person",
-      "job_title",
-    ].filter(Boolean);
-
+      "business_name", "_category", "city", "state",
+      "phone", "company_phone",
+      "street_address", "email", "contact_person", "job_title",
+    ];
     const searchCols = searchTargets.map(c => `"${c}" ILIKE $${idx}`);
     conditions.push(`(${searchCols.join(" OR ")})`);
     values.push(`%${search}%`);
@@ -184,46 +184,46 @@ function buildWhere({ search, category, city, has_phone, has_website }, fieldToC
   }
 
   if (category) {
-    conditions.push(`${col("category")} ILIKE $${idx}`);
+    conditions.push(`"_category" ILIKE $${idx}`);
     values.push(`%${category}%`);
     idx++;
   }
 
   if (city) {
-    // Search across city + state + location
-    conditions.push(
-      `("city" ILIKE $${idx} OR "state" ILIKE $${idx} OR "location" ILIKE $${idx})`
-    );
+    conditions.push(`("city" ILIKE $${idx} OR "city" ILIKE $${idx})`);
     values.push(`%${city}%`);
     idx++;
   }
 
-  // has_phone: check primary phone column
-  const phoneActual = fieldToCol.phone || "phone";
+  if (state) {
+    conditions.push(`"state" ILIKE $${idx}`);
+    values.push(`%${state}%`);
+    idx++;
+  }
+
+  // has_phone — check ALL phone columns with OR (has data) / AND (no data)
   if (has_phone === "true") {
-    conditions.push(
-      `("${phoneActual}" IS NOT NULL AND "${phoneActual}" != '' AND "${phoneActual}" != '${TABLE}')`
+    const conds = PHONE_COLS.map(
+      c => `("${c}" IS NOT NULL AND "${c}" != '' AND "${c}" IS DISTINCT FROM 'phone')`
     );
+    conditions.push(`(${conds.join(" OR ")})`);
   } else if (has_phone === "false") {
-    conditions.push(
-      `("${phoneActual}" IS NULL OR "${phoneActual}" = '')`
-    );
+    const conds = PHONE_COLS.map(c => `("${c}" IS NULL OR "${c}" = '')`);
+    conditions.push(`(${conds.join(" AND ")})`);
   }
 
-  // has_website: check website column
-  const webActual = fieldToCol.website || "website";
+  // has_website — check ALL website columns with OR / AND
   if (has_website === "true") {
-    conditions.push(
-      `("${webActual}" IS NOT NULL AND "${webActual}" != '' AND "${webActual}" NOT ILIKE '%website%')`
+    const conds = WEB_COLS.map(
+      c => `("${c}" IS NOT NULL AND "${c}" != '' AND "${c}" NOT ILIKE '%website%')`
     );
+    conditions.push(`(${conds.join(" OR ")})`);
   } else if (has_website === "false") {
-    conditions.push(
-      `("${webActual}" IS NULL OR "${webActual}" = '')`
-    );
+    const conds = WEB_COLS.map(c => `("${c}" IS NULL OR "${c}" = '')`);
+    conditions.push(`(${conds.join(" AND ")})`);
   }
 
-  // Exclude ONLY the one header artifact row (row 1 where column names = values)
-  // Use IS DISTINCT FROM so NULL business_names are NOT excluded
+  // Exclude the one header artifact row; IS DISTINCT FROM keeps NULLs
   conditions.push(`"business_name" IS DISTINCT FROM 'business_name'`);
 
   return {
@@ -323,6 +323,124 @@ router.get("/stats", async (req, res) => {
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET /embedding-status  — how many rows have embeddings
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/embedding-status", async (req, res) => {
+  try {
+    const [totalRes, embRes] = await Promise.all([
+      pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} WHERE "business_name" IS DISTINCT FROM 'business_name'`),
+      pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} WHERE embedding IS NOT NULL`),
+    ]);
+    const total    = parseInt(totalRes.rows[0].cnt);
+    const embedded = parseInt(embRes.rows[0].cnt);
+    res.json({
+      total,
+      embedded,
+      remaining: total - embedded,
+      percent:   total > 0 ? parseFloat(((embedded / total) * 100).toFixed(1)) : 0,
+      ready:     embedded > 10000, // flag: enough embeddings to use semantic search
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// POST /semantic-search  — pgvector cosine similarity search
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.post("/semantic-search", async (req, res) => {
+  const {
+    query       = "",
+    category    = "",
+    city        = "",
+    state       = "",
+    has_phone   = "",
+    has_website = "",
+    page        = 1,
+    limit       = 50,
+  } = req.body;
+
+  if (!query.trim()) return res.status(422).json({ error: "query is required" });
+
+  const pageNum  = Math.max(1, parseInt(page));
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+  const offset   = (pageNum - 1) * limitNum;
+
+  try {
+    // 1. Get query embedding (Redis-cached by query text)
+    const cacheKey = EMBED_CACHE_PREFIX + Buffer.from(query).toString("base64").slice(0, 64);
+    let queryVec = await cacheGet(cacheKey);
+
+    if (!queryVec) {
+      const embRes = await openai.embeddings.create({
+        model:      "text-embedding-3-small",
+        input:      query.slice(0, 2000),
+        dimensions: 512,
+      });
+      queryVec = embRes.data[0].embedding;
+      await cacheSet(cacheKey, queryVec, EMBED_CACHE_TTL);
+    }
+
+    const vecStr = `[${queryVec.join(",")}]`;
+
+    // 2. Build optional hard filters
+    const conditions = [`embedding IS NOT NULL`, `"business_name" IS DISTINCT FROM 'business_name'`];
+    const values     = [vecStr];
+    let   idx        = 2;
+
+    if (category) { conditions.push(`"_category" ILIKE $${idx}`); values.push(`%${category}%`); idx++; }
+    if (city)     { conditions.push(`"city" ILIKE $${idx}`);       values.push(`%${city}%`);     idx++; }
+    if (state)    { conditions.push(`"state" ILIKE $${idx}`);      values.push(`%${state}%`);    idx++; }
+
+    if (has_phone === "true") {
+      const conds = PHONE_COLS.map(c => `("${c}" IS NOT NULL AND "${c}" != '' AND "${c}" IS DISTINCT FROM 'phone')`);
+      conditions.push(`(${conds.join(" OR ")})`);
+    } else if (has_phone === "false") {
+      conditions.push(`(${PHONE_COLS.map(c => `("${c}" IS NULL OR "${c}" = '')`).join(" AND ")})`);
+    }
+
+    if (has_website === "true") {
+      const conds = WEB_COLS.map(c => `("${c}" IS NOT NULL AND "${c}" != '' AND "${c}" NOT ILIKE '%website%')`);
+      conditions.push(`(${conds.join(" OR ")})`);
+    } else if (has_website === "false") {
+      conditions.push(`(${WEB_COLS.map(c => `("${c}" IS NULL OR "${c}" = '')`).join(" AND ")})`);
+    }
+
+    const whereStr = `WHERE ${conditions.join(" AND ")}`;
+
+    // 3. Count total matches (for pagination)
+    const countSql = `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${whereStr}`;
+    const countRes = await pgQuery(countSql, values);
+    const total    = parseInt(countRes.rows[0].cnt);
+
+    // 4. Semantic search — order by cosine distance
+    values.push(limitNum, offset);
+    const searchSql = `
+      SELECT *,
+        ROUND((1 - (embedding <=> $1)::numeric) * 100, 1) AS similarity
+      FROM ${FULL_TABLE}
+      ${whereStr}
+      ORDER BY embedding <=> $1
+      LIMIT $${idx} OFFSET $${idx + 1}
+    `;
+    const searchRes = await pgQuery(searchSql, values);
+
+    const { actualCols, colToField, fieldToCol } = await getSchema();
+    const leads = searchRes.rows.map(row => {
+      const similarity = row.similarity;
+      delete row.embedding; // don't send 512-float arrays to frontend
+      const normalized = normalizeRow({ actualCols, colToField }, row);
+      return { ...normalized, similarity };
+    });
+
+    res.json({ leads, total, page: pageNum, limit: limitNum, source: "semantic", query });
+  } catch (err) {
+    logger.error(`[semantic-search] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GET /  — paginated, filtered, sorted from Cloud SQL
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/", async (req, res) => {
@@ -332,6 +450,7 @@ router.get("/", async (req, res) => {
     search      = "",
     category    = "",
     city        = "",
+    state       = "",
     has_phone   = "",
     has_website = "",
     sort_by     = "name",
@@ -347,7 +466,7 @@ router.get("/", async (req, res) => {
     const { fieldToCol } = schema;
 
     const { whereStr, values, nextIdx } = buildWhere(
-      { search, category, city, has_phone, has_website },
+      { search, category, city, state, has_phone, has_website },
       fieldToCol
     );
 
