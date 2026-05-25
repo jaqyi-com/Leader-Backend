@@ -119,11 +119,44 @@ app.use(passport.initialize());
 validateCredentials();
 const pipeline = new PipelineOrchestrator();
 
+// ============================================================
+// GLOBAL AUTH GUARD
+// ============================================================
+// Every API route requires a valid JWT **except** the paths below.
+// To add a new public endpoint, append its prefix to PUBLIC_PATH_PREFIXES.
+//
+// Public paths:
+//   /api/auth/*                   — login, register, Google/GitHub OAuth callbacks
+//   /api/gmail/callback           — Google Gmail OAuth redirect (no JWT in URL)
+//   /api/social/posts/approve/*   — email approval links (sent without JWT)
+//   /api/social/posts/reject/*    — email rejection links
+// ============================================================
+const PUBLIC_PATH_PREFIXES = [
+  "/api/auth",                  // all auth & OAuth routes
+  "/api/gmail/callback",        // Gmail OAuth callback
+  "/api/social/posts/approve",  // email-based approval links
+  "/api/social/posts/reject",   // email-based rejection links
+];
+
+app.use((req, res, next) => {
+  // Root — always public (health / uptime check)
+  if (req.path === "/") return next();
+
+  // Check whitelist
+  const isPublic = PUBLIC_PATH_PREFIXES.some(
+    (p) => req.path === p || req.path.startsWith(p + "/")
+  );
+  if (isPublic) return next();
+
+  // Everything else — require valid JWT
+  return auth(req, res, next);
+});
+
 // ------------------------------------------------------------
 // AUTH & ORG ROUTES (public — no auth required)
 // ------------------------------------------------------------
 app.use("/api/auth", authRouter);
-app.use("/api/org", orgRouter);
+app.use("/api/org", auth, orgRouter);
 app.use("/api/social", socialRouter);
 app.use("/api/outreach", outreachRouter);
 app.use("/api/crm", crmRouter);
@@ -131,6 +164,7 @@ app.use("/api/accounting", require("./routes/accounting"));
 app.use("/api/inventory", require("./routes/inventory"));
 app.use("/api/payroll", require("./routes/payroll"));
 app.use("/api/gmail", require("./routes/gmailAuth"));
+
 
 // ------------------------------------------------------------
 // CHATBOT / RAG ROUTES (protected — auth enforced in router)
