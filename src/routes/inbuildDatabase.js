@@ -383,47 +383,75 @@ router.post("/semantic-search", async (req, res) => {
 
     const vecStr = `[${queryVec.join(",")}]`;
 
-    // 2. Build optional hard filters
-    const conditions = [`embedding IS NOT NULL`, `"business_name" IS DISTINCT FROM 'business_name'`];
-    const values     = [vecStr];
-    let   idx        = 2;
+    // 2. Build optional hard filters — two param arrays:
+    //    countValues: filter params only ($1,$2,...) — count SQL has NO vector param
+    //    searchValues: vector at $1, then same filters at $2,$3,... — search SQL uses <=> $1
+    const baseConditions = [`embedding IS NOT NULL`, `"business_name" IS DISTINCT FROM 'business_name'`];
 
-    if (category) { conditions.push(`"_category" ILIKE $${idx}`); values.push(`%${category}%`); idx++; }
-    if (city)     { conditions.push(`"city" ILIKE $${idx}`);       values.push(`%${city}%`);     idx++; }
-    if (state)    { conditions.push(`"state" ILIKE $${idx}`);      values.push(`%${state}%`);    idx++; }
+    const countConditions  = [...baseConditions];
+    const countValues      = [];
+    let   cIdx             = 1;
 
+    const searchConditions = [...baseConditions];
+    const searchValues     = [vecStr];   // $1 = vector for cosine distance
+    let   sIdx             = 2;
+
+    if (category) {
+      countConditions.push(`"_category" ILIKE $${cIdx}`);   countValues.push(`%${category}%`);  cIdx++;
+      searchConditions.push(`"_category" ILIKE $${sIdx}`);  searchValues.push(`%${category}%`); sIdx++;
+    }
+    if (city) {
+      countConditions.push(`"city" ILIKE $${cIdx}`);   countValues.push(`%${city}%`);  cIdx++;
+      searchConditions.push(`"city" ILIKE $${sIdx}`);  searchValues.push(`%${city}%`); sIdx++;
+    }
+    if (state) {
+      countConditions.push(`"state" ILIKE $${cIdx}`);   countValues.push(`%${state}%`);  cIdx++;
+      searchConditions.push(`"state" ILIKE $${sIdx}`);  searchValues.push(`%${state}%`); sIdx++;
+    }
+
+    // Phone / website filters — no bound params (IS NOT NULL checks)
     if (has_phone === "true") {
       const conds = PHONE_COLS.map(c => `("${c}" IS NOT NULL AND "${c}" != '' AND "${c}" IS DISTINCT FROM 'phone')`);
-      conditions.push(`(${conds.join(" OR ")})`);
+      const clause = `(${conds.join(" OR ")})`;
+      countConditions.push(clause);
+      searchConditions.push(clause);
     } else if (has_phone === "false") {
-      conditions.push(`(${PHONE_COLS.map(c => `("${c}" IS NULL OR "${c}" = '')`).join(" AND ")})`);
+      const clause = `(${PHONE_COLS.map(c => `("${c}" IS NULL OR "${c}" = '')`).join(" AND ")})`;
+      countConditions.push(clause);
+      searchConditions.push(clause);
     }
 
     if (has_website === "true") {
       const conds = WEB_COLS.map(c => `("${c}" IS NOT NULL AND "${c}" != '' AND "${c}" NOT ILIKE '%website%')`);
-      conditions.push(`(${conds.join(" OR ")})`);
+      const clause = `(${conds.join(" OR ")})`;
+      countConditions.push(clause);
+      searchConditions.push(clause);
     } else if (has_website === "false") {
-      conditions.push(`(${WEB_COLS.map(c => `("${c}" IS NULL OR "${c}" = '')`).join(" AND ")})`);
+      const clause = `(${WEB_COLS.map(c => `("${c}" IS NULL OR "${c}" = '')`).join(" AND ")})`;
+      countConditions.push(clause);
+      searchConditions.push(clause);
     }
 
-    const whereStr = `WHERE ${conditions.join(" AND ")}`;
+    const countWhereStr  = `WHERE ${countConditions.join(" AND ")}`;
+    const searchWhereStr = `WHERE ${searchConditions.join(" AND ")}`;
 
-    // 3. Count total matches (for pagination)
-    const countSql = `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${whereStr}`;
-    const countRes = await pgQuery(countSql, values);
+    // 3. Count total matches — uses countValues (no vector, 0 or more filter params)
+    const countSql = `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${countWhereStr}`;
+    const countRes = await pgQuery(countSql, countValues);
     const total    = parseInt(countRes.rows[0].cnt);
 
-    // 4. Semantic search — order by cosine distance
-    values.push(limitNum, offset);
+    // 4. Semantic search — vector at $1, filters at $2..N, then LIMIT/OFFSET
+    searchValues.push(limitNum, offset);
     const searchSql = `
       SELECT *,
         ROUND((1 - (embedding <=> $1)::numeric) * 100, 1) AS similarity
       FROM ${FULL_TABLE}
-      ${whereStr}
+      ${searchWhereStr}
       ORDER BY embedding <=> $1
-      LIMIT $${idx} OFFSET $${idx + 1}
+      LIMIT $${sIdx} OFFSET $${sIdx + 1}
     `;
-    const searchRes = await pgQuery(searchSql, values);
+    const searchRes = await pgQuery(searchSql, searchValues);
+
 
     const { actualCols, colToField, fieldToCol } = await getSchema();
     const leads = searchRes.rows.map(row => {
