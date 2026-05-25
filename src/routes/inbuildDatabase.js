@@ -93,6 +93,12 @@ const RICH_FIELDS = new Set([
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 let _schemaCache = null;
 
+// Columns to EXCLUDE from SELECT — too large or not needed by frontend.
+// embedding : 512-dim vector (6 KB per row) → sent only in semantic-search
+// _row_hash : dedup utility column
+// unnamed_13: stale artifact column
+const SKIP_IN_SELECT = new Set(["embedding", "_row_hash", "unnamed_13"]);
+
 async function getSchema() {
   if (_schemaCache) return _schemaCache;
 
@@ -106,12 +112,16 @@ async function getSchema() {
 
   const actualCols = res.rows.map(r => r.column_name);
 
+  // Columns returned by regular SELECT (excludes large/binary cols)
+  const selectCols = actualCols.filter(c => !SKIP_IN_SELECT.has(c));
+  const selectSQL  = selectCols.map(c => `"${c}"`).join(", ");
+
   // fieldToCol : standard_name → actual_db_column  (e.g. "name" → "business_name")
   // colToField : actual_db_column → standard_name   (for result normalisation)
   const fieldToCol = {};
   const colToField = {};
 
-  for (const col of actualCols) {
+  for (const col of selectCols) {
     const lower      = col.toLowerCase();
     const stdField   = NORMALIZE[lower] || (CORE_FIELDS.has(lower) ? lower : null);
     if (stdField && !fieldToCol[stdField]) {
@@ -126,30 +136,31 @@ async function getSchema() {
   }
 
   logger.info(
-    `[CloudSQL] Schema loaded — ${actualCols.length} cols. Mappings: ${JSON.stringify(fieldToCol)}`
+    `[CloudSQL] Schema loaded — ${actualCols.length} total cols, ${selectCols.length} selected. Mappings: ${JSON.stringify(fieldToCol)}`
   );
 
-  _schemaCache = { actualCols, fieldToCol, colToField };
+  _schemaCache = { actualCols, selectCols, selectSQL, fieldToCol, colToField };
   return _schemaCache;
 }
 
-/** Normalise a raw DB row into the standard API shape. */
-function normalizeRow({ actualCols, colToField }, row) {
+/** Normalise a raw DB row into the standard API shape.
+ *  Iterates selectCols (never includes embedding/_row_hash/unnamed_13). */
+function normalizeRow({ selectCols, colToField }, row) {
   const core  = {};
   const rich  = {};
   const extra = {};
 
-  for (const col of actualCols) {
+  for (const col of selectCols) {
     const val   = row[col] ?? "";
     const field = colToField[col];
 
     if (field && CORE_FIELDS.has(field)) {
       // Map to standard field name
       core[field] = val !== null ? String(val) : "";
-    } else if (col !== "id" && col !== "_row_hash" && RICH_FIELDS.has(col)) {
+    } else if (col !== "id" && RICH_FIELDS.has(col)) {
       // Expose rich contact fields at top level
       rich[col] = val;
-    } else if (col !== "id" && col !== "_row_hash" && col !== "unnamed_13") {
+    } else if (col !== "id") {
       extra[col] = val;
     }
   }
@@ -502,8 +513,9 @@ router.get("/", async (req, res) => {
     const sortCol = `"${fieldToCol[sort_by] || fieldToCol.name || "name"}"`;
     const sortDir = sort_dir === "desc" ? "DESC" : "ASC";
 
+    const { selectSQL } = schema;
     const dataSQL = `
-      SELECT * FROM ${FULL_TABLE}
+      SELECT ${selectSQL} FROM ${FULL_TABLE}
       ${whereStr}
       ORDER BY ${sortCol} ${sortDir} NULLS LAST
       LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
