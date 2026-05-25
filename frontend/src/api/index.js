@@ -12,6 +12,32 @@ if (!isLocal && !import.meta.env.VITE_API_URL) {
 
 const api = axios.create({ baseURL: BASE, timeout: 300000 });
 
+// ── Auth interceptor ───────────────────────────────────────────────────────
+// Automatically attach JWT to every request and redirect on token expiry.
+function applyAuthInterceptors(instance) {
+  instance.interceptors.request.use((config) => {
+    const token = localStorage.getItem("leader_token");
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    return config;
+  });
+
+  instance.interceptors.response.use(
+    (res) => res,
+    (err) => {
+      if (err.response?.status === 401) {
+        // Token expired or invalid — clear and redirect to login
+        localStorage.removeItem("leader_token");
+        if (!window.location.pathname.startsWith("/login")) {
+          window.location.href = "/login";
+        }
+      }
+      return Promise.reject(err);
+    }
+  );
+}
+
+applyAuthInterceptors(api);
+
 
 // --- Stats ---
 export const getStats       = ()         => api.get("/stats");
@@ -65,6 +91,7 @@ const CRAWLER_BASE =
   (isLocal ? "http://localhost:3001/api/crawler" : `${BASE.replace(/\/api$/, "")}/api/crawler`);
 
 export const crawlerApi = axios.create({ baseURL: CRAWLER_BASE, timeout: 300000 });
+applyAuthInterceptors(crawlerApi);
 
 
 // --- Crawler (website crawl) ---
@@ -138,6 +165,7 @@ const BACKEND_ROOT = BASE.replace(/\/api$/, "");
 export { BACKEND_ROOT };
 
 const lgApi = axios.create({ baseURL: BACKEND_ROOT, timeout: 120000 });
+applyAuthInterceptors(lgApi);
 
 export const lgAnalyzeProspect      = (description)  => lgApi.post("/api/lead-generator/analyze-prospect", { description });
 export const lgLinkedInSearch       = (params)        => lgApi.post("/api/lead-generator/linkedin/search", params);
