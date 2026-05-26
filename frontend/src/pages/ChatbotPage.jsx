@@ -136,23 +136,20 @@ function SourceCitations({ chunks }) {
   );
 }
 
-/** Badge shown on assistant messages that were answered from the In-Build DB */
-function DBResultsBadge({ dbResults }) {
+/** Full panel showing actual In-Build DB records as cards */
+function DBResultsPanel({ dbResults }) {
   if (!dbResults) return null;
-  const { count, total, query } = dbResults;
+  const { count, total, query, leads = [] } = dbResults;
   return (
     <motion.div
-      initial={{ opacity: 0, y: 6, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      style={{ marginTop: 10, marginBottom: 2 }}
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{ marginTop: 12, marginBottom: 4, width: "100%" }}
     >
+      {/* Header bar */}
       <div style={{
-        display: "inline-flex", alignItems: "center", gap: 8,
-        background: "linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.1))",
-        border: "1px solid rgba(34,197,94,0.4)",
-        borderRadius: 12, padding: "6px 14px",
-        fontSize: 12, color: "#22c55e", fontWeight: 600,
-        boxShadow: "0 0 12px rgba(34,197,94,0.15)",
+        display: "flex", alignItems: "center", gap: 8,
+        marginBottom: 10,
       }}>
         {/* Pulsing dot */}
         <motion.div
@@ -160,24 +157,113 @@ function DBResultsBadge({ dbResults }) {
           transition={{ duration: 1.5, repeat: Infinity }}
           style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", flexShrink: 0 }}
         />
-        <Database size={13} />
-        <span>In-Build Database</span>
-        <span style={{ opacity: 0.6, fontWeight: 400, fontSize: 11 }}>
+        <Database size={13} color="#22c55e" />
+        <span style={{ fontSize: 12, fontWeight: 700, color: "#22c55e" }}>In-Build Database</span>
+        <span style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 400 }}>
           {count} result{count !== 1 ? "s" : ""} from {total?.toLocaleString()} records
         </span>
         {query && (
-          <span style={{ opacity: 0.55, fontWeight: 400, fontSize: 11 }}>
-            · "{query.slice(0, 35)}{query.length > 35 ? "…" : ""}"
+          <span style={{ fontSize: 11, color: "var(--text-3)", opacity: 0.6 }}>
+            · "{query.slice(0, 40)}{query.length > 40 ? "…" : ""}"
           </span>
         )}
-        <a
-          href="/app/inbuild-db"
-          title="Open In-Build Database"
-          style={{ color: "#22c55e", display: "flex", alignItems: "center", marginLeft: 2 }}
-        >
-          <ExternalLink size={11} />
+        <a href="/app/inbuild-db" style={{
+          marginLeft: "auto", display: "flex", alignItems: "center", gap: 4,
+          fontSize: 11, color: "#22c55e", textDecoration: "none", fontWeight: 600,
+          opacity: 0.8,
+        }}>
+          View all <ExternalLink size={10} />
         </a>
       </div>
+
+      {/* Cards */}
+      {leads.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {leads.map((lead, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, x: -8 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: i * 0.04 }}
+              style={{
+                background: "var(--overlay-1)",
+                border: "1px solid var(--border)",
+                borderLeft: "3px solid rgba(34,197,94,0.6)",
+                borderRadius: 10,
+                padding: "10px 14px",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  {/* Name + category */}
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                      {lead.name || "—"}
+                    </span>
+                    {lead.category && (
+                      <span style={{
+                        fontSize: 10, fontWeight: 600, color: "var(--accent)",
+                        background: "rgba(226,55,68,0.12)", border: "1px solid rgba(226,55,68,0.2)",
+                        borderRadius: 4, padding: "1px 6px",
+                      }}>{lead.category}</span>
+                    )}
+                    {lead.match && (
+                      <span style={{
+                        fontSize: 10, color: "#22c55e", fontWeight: 600,
+                        background: "rgba(34,197,94,0.1)", borderRadius: 4, padding: "1px 6px",
+                      }}>{lead.match}% match</span>
+                    )}
+                  </div>
+
+                  {/* Details row */}
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", marginTop: 5 }}>
+                    {(lead.city || lead.state) && (
+                      <span style={{ fontSize: 11, color: "var(--text-3)", display: "flex", alignItems: "center", gap: 3 }}>
+                        📍 {[lead.city, lead.state].filter(Boolean).join(", ")}
+                      </span>
+                    )}
+                    {lead.phone && (
+                      <a href={`tel:${lead.phone}`} style={{ fontSize: 11, color: "#60a5fa", display: "flex", alignItems: "center", gap: 3, textDecoration: "none" }}>
+                        📞 {lead.phone}
+                      </a>
+                    )}
+                    {lead.email && (
+                      <a href={`mailto:${lead.email}`} style={{ fontSize: 11, color: "#a78bfa", display: "flex", alignItems: "center", gap: 3, textDecoration: "none" }}>
+                        ✉️ {lead.email}
+                      </a>
+                    )}
+                    {lead.address && (
+                      <span style={{ fontSize: 11, color: "var(--text-3)", display: "flex", alignItems: "center", gap: 3 }}>
+                        🏠 {lead.address}
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Website button */}
+                {lead.website && lead.website !== "—" && (
+                  <a
+                    href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
+                    target="_blank" rel="noopener noreferrer"
+                    style={{
+                      flexShrink: 0, fontSize: 11, color: "#22c55e",
+                      background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)",
+                      borderRadius: 6, padding: "3px 8px",
+                      textDecoration: "none", display: "flex", alignItems: "center", gap: 4,
+                    }}
+                  >
+                    Visit <ExternalLink size={9} />
+                  </a>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ fontSize: 12, color: "var(--text-3)", padding: "8px 0" }}>
+          Results are displayed below.
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -234,7 +320,7 @@ function MessageBubble({ msg, isStreaming }) {
         alignItems: "flex-start",
         gap: 10,
         flexDirection: isUser ? "row-reverse" : "row",
-        maxWidth: "78%",
+        maxWidth: isUser ? "78%" : (msg.dbResults ? "92%" : "78%"),
       }}>
         {/* Avatar */}
         <div style={{
@@ -276,10 +362,10 @@ function MessageBubble({ msg, isStreaming }) {
             )}
           </div>
 
-          {/* DB results badge + Source citations + copy (assistant messages) */}
+          {/* DB results panel + Source citations + copy (assistant messages) */}
           {!isUser && (
             <div>
-              <DBResultsBadge dbResults={msg.dbResults} />
+              <DBResultsPanel dbResults={msg.dbResults} />
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
                 <SourceCitations chunks={msg.sourceChunks} />
                 {msg.content && <CopyButton text={msg.content} />}
@@ -471,7 +557,7 @@ export default function ChatbotPage() {
       },
       onDbResults: (event) => {
         setMessages(prev => prev.map(m =>
-          m._id === "streaming" ? { ...m, dbResults: { count: event.count, total: event.total, query: event.query } } : m
+          m._id === "streaming" ? { ...m, dbResults: { count: event.count, total: event.total, query: event.query, leads: event.leads || [] } } : m
         ));
       },
       onDelta: (token) => {

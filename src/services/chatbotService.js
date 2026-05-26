@@ -431,19 +431,21 @@ Format responses with markdown where it improves readability.`;
     const kbSection = hasContext
       ? `\n\n---\n\n## Knowledge Base Context\n${context}`
       : "";
-    return `You are the AI assistant for "${orgName}". You have access to a live business database with millions of records.
+    return `You are the AI assistant for "${orgName}". You have access to a live business database.
 Current date and time: ${nowString}
 
-${dbResult.contextBlock}${kbSection}
+The user asked: "${dbResult.contextBlock.match(/for: "([^"]+)"/)?.[1] || "business search"}"
+
+The search results have already been displayed to the user as a visual card panel in the UI.
+Do NOT list or repeat the business records — the user can already see them.
 
 INSTRUCTIONS:
-- The table above contains REAL business data retrieved from the In-Build Database. Present it clearly and helpfully.
-- Format the results as a clean, readable list or table for the user.
-- Highlight key details: name, location, phone, website, email.
-- If the user asked for a specific count or filter, mention how many results were found.
-- Always answer in a friendly, professional tone.
-- You may suggest the user visit the In-Build Database page for full filtering and export capabilities.
-- Format responses with markdown where it improves readability.`;
+- Briefly confirm how many results were found and what was searched.
+- Offer to help the user filter, sort, or export the results.
+- If the user asks for more details about a specific business, answer based on the data.
+- Suggest useful next steps (e.g. "Want me to filter by phone number?" or "I can search a specific city.").
+- Keep your response SHORT (2-3 sentences max) since the data is already visible.
+- Always answer in a friendly, professional tone.${kbSection}`;
   }
 
   if (hasContext) {
@@ -556,7 +558,24 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
         dbResult = await searchInBuildDB(expandedPrompt);
         if (dbResult) {
           logger.info(`[Chat] InBuildDB: found ${dbResult.leads.length} leads`);
-          sendEvent({ type: "db_results", count: dbResult.leads.length, total: 957932, query: expandedPrompt });
+          // Send leads data to frontend for UI rendering
+          sendEvent({
+            type:   "db_results",
+            count:  dbResult.leads.length,
+            total:  957932,
+            query:  expandedPrompt,
+            leads:  dbResult.leads.map(r => ({
+              name:     r.business_name  || "",
+              category: r._category      || "",
+              city:     r.city           || "",
+              state:    r.state          || "",
+              phone:    r.phone          || "",
+              website:  r.website        || "",
+              email:    r.email          || "",
+              address:  r.street_address || "",
+              match:    r.similarity     || null,
+            })),
+          });
         }
       }
 
