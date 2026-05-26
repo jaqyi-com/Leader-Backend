@@ -7,6 +7,7 @@ import {
   Copy, Check, Cpu, Shield, ExternalLink
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import toast from "react-hot-toast";
 import {
   fetchConversations, fetchMessages,
@@ -141,29 +142,40 @@ function DBResultsBadge({ dbResults }) {
   const { count, total, query } = dbResults;
   return (
     <motion.div
-      initial={{ opacity: 0, y: 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      style={{ marginTop: 8 }}
+      initial={{ opacity: 0, y: 6, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      style={{ marginTop: 10, marginBottom: 2 }}
     >
       <div style={{
-        display: "inline-flex", alignItems: "center", gap: 6,
-        background: "rgba(34,197,94,0.1)",
-        border: "1px solid rgba(34,197,94,0.3)",
-        borderRadius: 20, padding: "4px 10px",
-        fontSize: 11, color: "#22c55e", fontWeight: 600,
-        cursor: "default",
+        display: "inline-flex", alignItems: "center", gap: 8,
+        background: "linear-gradient(135deg, rgba(34,197,94,0.15), rgba(16,185,129,0.1))",
+        border: "1px solid rgba(34,197,94,0.4)",
+        borderRadius: 12, padding: "6px 14px",
+        fontSize: 12, color: "#22c55e", fontWeight: 600,
+        boxShadow: "0 0 12px rgba(34,197,94,0.15)",
       }}>
-        <Database size={11} />
-        <span>In-Build DB · {count} result{count !== 1 ? "s" : ""} of {total?.toLocaleString()}</span>
+        {/* Pulsing dot */}
+        <motion.div
+          animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
+          transition={{ duration: 1.5, repeat: Infinity }}
+          style={{ width: 7, height: 7, borderRadius: "50%", background: "#22c55e", flexShrink: 0 }}
+        />
+        <Database size={13} />
+        <span>In-Build Database</span>
+        <span style={{ opacity: 0.6, fontWeight: 400, fontSize: 11 }}>
+          {count} result{count !== 1 ? "s" : ""} from {total?.toLocaleString()} records
+        </span>
         {query && (
-          <span style={{ opacity: 0.7, fontWeight: 400 }}>· "{query.slice(0, 40)}{query.length > 40 ? "…" : ""}"</span>
+          <span style={{ opacity: 0.55, fontWeight: 400, fontSize: 11 }}>
+            · "{query.slice(0, 35)}{query.length > 35 ? "…" : ""}"
+          </span>
         )}
         <a
           href="/app/inbuild-db"
           title="Open In-Build Database"
-          style={{ color: "#22c55e", display: "flex", alignItems: "center" }}
+          style={{ color: "#22c55e", display: "flex", alignItems: "center", marginLeft: 2 }}
         >
-          <ExternalLink size={10} />
+          <ExternalLink size={11} />
         </a>
       </div>
     </motion.div>
@@ -259,7 +271,7 @@ function MessageBubble({ msg, isStreaming }) {
               <TypingDots />
             ) : (
               <div style={{ margin: 0 }} className="markdown-content">
-                <ReactMarkdown>{msg.content || ""}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content || ""}</ReactMarkdown>
               </div>
             )}
           </div>
@@ -867,6 +879,11 @@ export default function ChatbotPage() {
         .markdown-content strong { font-weight: 700; }
         .markdown-content code { background: var(--overlay-border); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
         .markdown-content pre { background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px; overflow-x: auto; }
+        .markdown-content table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 12px; }
+        .markdown-content th { background: rgba(226,55,68,0.15); color: var(--accent); font-weight: 700; padding: 7px 10px; border: 1px solid rgba(226,55,68,0.2); text-align: left; white-space: nowrap; }
+        .markdown-content td { padding: 6px 10px; border: 1px solid var(--border); color: var(--text-2); vertical-align: top; }
+        .markdown-content tr:nth-child(even) td { background: rgba(255,255,255,0.03); }
+        .markdown-content tr:hover td { background: rgba(226,55,68,0.05); }
       `}</style>
     </div>
   );
