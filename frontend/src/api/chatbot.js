@@ -62,7 +62,7 @@ export async function deleteConversation(conversationId) {
  *   - onError(message)
  */
 export async function sendMessage(conversationId, message, callbacks = {}, model = "gpt-4o") {
-  const { onExpanded, onSources, onDelta, onDone, onError, onTokens, onModerated, onRateLimit } = callbacks;
+  const { onExpanded, onSources, onDelta, onDone, onError, onTokens, onModerated, onRateLimit, onDbResults } = callbacks;
 
   const response = await fetch(
     `${BASE}/chatbot/conversations/${conversationId}/chat`,
@@ -110,13 +110,14 @@ export async function sendMessage(conversationId, message, callbacks = {}, model
         try {
           const event = JSON.parse(jsonStr);
           switch (event.type) {
-            case "expanded":   onExpanded?.(event.content, event.wasExpanded); break;
-            case "sources":    onSources?.(event.chunks); break;
-            case "delta":      onDelta?.(event.content); break;
-            case "tokens":     onTokens?.(event.count, event.model); break;
-            case "moderated":  onModerated?.(event.categories); break;
-            case "done":       onDone?.(event); break;
-            case "error":      onError?.(event.message); break;
+            case "expanded":    onExpanded?.(event.content, event.wasExpanded); break;
+            case "sources":     onSources?.(event.chunks); break;
+            case "delta":       onDelta?.(event.content); break;
+            case "tokens":      onTokens?.(event.count, event.model); break;
+            case "moderated":   onModerated?.(event.categories); break;
+            case "db_results":  onDbResults?.(event); break;
+            case "done":        onDone?.(event); break;
+            case "error":       onError?.(event.message); break;
           }
         } catch (_) {}
       }

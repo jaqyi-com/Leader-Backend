@@ -28,8 +28,12 @@ const {
 const logger = require("../utils/logger").forAgent("ChatbotService");
 const { ingestText } = require("./knowledgeIngestService");
 const { moderate, getSafeDeclineMessage } = require("./moderationService");
+const { query: pgQuery, SCHEMA, TABLE } = require("../db/cloudSql");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
+
+// Fully-qualified table for In-Build DB queries
+const IB_FULL_TABLE = `"${SCHEMA}"."${TABLE}"`;
 
 // ── Config ─────────────────────────────────────────────────────
 const EMBED_MODEL    = "text-embedding-3-small";
@@ -115,6 +119,120 @@ async function trimHistoryToTokens(history, systemPrompt, maxTokens = MAX_CONTEX
   }
 
   return { trimmedHistory: kept, tokenCount: usedTokens + systemTokens };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// IN-BUILD DATABASE INTEGRATION
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * Classify whether the user message is a business/lead data search.
+ * Fast call: gpt-4o-mini, max_tokens=5, temperature=0.
+ * Returns true if the message is asking for businesses, contacts,
+ * leads, cafes, dentists, phone numbers, emails, or any business
+ * directory / B2B data search.
+ */
+async function isDataSearchQuery(userMessage) {
+  try {
+    const response = await openai.chat.completions.create({
+      model: FAST_MODEL,
+      max_tokens: 5,
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: `You are a query classifier. Respond with only YES or NO.
+Answer YES if the user is asking to search for, find, or list business records such as:
+- Businesses, companies, cafes, restaurants, dentists, gyms, stores, agencies, clinics, shops
+- Leads, contacts, prospects, phone numbers, emails, websites
+- Any B2B or business directory search (e.g. "find X in Y city", "show me businesses with websites", "list dentists in Austin")
+Answer NO for all other messages (greetings, company policy questions, general knowledge, math, etc.).`,
+        },
+        { role: "user", content: userMessage },
+      ],
+    });
+    const ans = response.choices[0]?.message?.content?.trim().toUpperCase();
+    return ans === "YES";
+  } catch (err) {
+    logger.warn(`[InBuildDB] isDataSearchQuery failed: ${err.message}`);
+    return false;
+  }
+}
+
+/**
+ * Search the In-Build Database (Cloud SQL, pgvector) directly.
+ * Embeds the query, runs cosine similarity search, returns top 10 leads.
+ * Returns { leads, total, contextBlock } where contextBlock is a
+ * pre-formatted markdown table string ready to inject into the system prompt.
+ */
+async function searchInBuildDB(query) {
+  try {
+    // 1. Embed the query with the same model / dimensions as the DB embeddings
+    const embRes = await openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: query.slice(0, 2000),
+      dimensions: 512,
+    });
+    const vec = embRes.data[0].embedding;
+    const vecStr = `[${vec.join(",")}]`;
+
+    // 2. Count rows that have embeddings (approximate via a fast limit query)
+    const countRes = await pgQuery(
+      `SELECT COUNT(*) AS cnt FROM ${IB_FULL_TABLE} WHERE embedding IS NOT NULL AND "business_name" IS DISTINCT FROM 'business_name'`,
+      [],
+      10000
+    );
+    const total = parseInt(countRes.rows[0].cnt, 10);
+
+    // 3. Semantic similarity search — top 10
+    const searchRes = await pgQuery(
+      `SELECT
+         "business_name",
+         "_category",
+         "city",
+         "state",
+         "phone",
+         "website",
+         "street_address",
+         "email",
+         ROUND((1 - (embedding <=> $1)::numeric) * 100, 1) AS similarity
+       FROM ${IB_FULL_TABLE}
+       WHERE embedding IS NOT NULL
+         AND "business_name" IS DISTINCT FROM 'business_name'
+       ORDER BY embedding <=> $1
+       LIMIT 10`,
+      [vecStr],
+      15000
+    );
+
+    const leads = searchRes.rows;
+    if (!leads.length) return null;
+
+    // 4. Format as markdown table for LLM context
+    const rows = leads.map((r, i) => {
+      const name    = r.business_name || "—";
+      const cat     = r._category     || "—";
+      const loc     = [r.city, r.state].filter(Boolean).join(", ") || "—";
+      const phone   = r.phone         || "—";
+      const web     = r.website       || "—";
+      const email   = r.email         || "—";
+      const addr    = r.street_address || "—";
+      const score   = r.similarity    != null ? `${r.similarity}%` : "—";
+      return `| ${i+1} | ${name} | ${cat} | ${loc} | ${phone} | ${web} | ${email} | ${addr} | ${score} |`;
+    }).join("\n");
+
+    const contextBlock =
+      `## 🗄️ Live In-Build Database Results\n` +
+      `> Searched ${total.toLocaleString()} business records for: "${query}"\n\n` +
+      `| # | Business Name | Category | Location | Phone | Website | Email | Address | Match % |\n` +
+      `|---|---|---|---|---|---|---|---|---|\n` +
+      rows;
+
+    return { leads, total, contextBlock };
+  } catch (err) {
+    logger.error(`[InBuildDB] searchInBuildDB failed: ${err.message}`);
+    return null;
+  }
 }
 
 // ── Pure JS cosine similarity ───────────────────────────────────
@@ -290,8 +408,10 @@ Respond ONLY with: { "containsKnowledge": boolean, "extractedKnowledge": "...", 
 }
 
 // ── Build the right system prompt ──────────────────────────────
-function buildSystemPrompt(orgName, intent, retrievedChunks) {
-  const hasContext = retrievedChunks.length > 0;
+function buildSystemPrompt(orgName, intent, retrievedChunks, dbResult = null) {
+  const hasDbResult  = dbResult && dbResult.leads && dbResult.leads.length > 0;
+  const hasContext   = retrievedChunks.length > 0;
+
   const context = hasContext
     ? retrievedChunks
         .map((c, i) => `[Source ${i + 1}: ${c.metadata?.sourceName || "Knowledge"}]\n${c.text.slice(0, CHUNK_CHAR_LIMIT)}`)
@@ -312,6 +432,26 @@ You know the current date and time — use it when asked.
 For company-specific questions, let the user know you can look those up from the knowledge base.
 Keep answers concise and friendly.
 Format responses with markdown where it improves readability.`;
+  }
+
+  // ── DB results take highest priority ──────────────────────────
+  if (hasDbResult) {
+    const kbSection = hasContext
+      ? `\n\n---\n\n## Knowledge Base Context\n${context}`
+      : "";
+    return `You are the AI assistant for "${orgName}". You have access to a live business database with millions of records.
+Current date and time: ${nowString}
+
+${dbResult.contextBlock}${kbSection}
+
+INSTRUCTIONS:
+- The table above contains REAL business data retrieved from the In-Build Database. Present it clearly and helpfully.
+- Format the results as a clean, readable list or table for the user.
+- Highlight key details: name, location, phone, website, email.
+- If the user asked for a specific count or filter, mention how many results were found.
+- Always answer in a friendly, professional tone.
+- You may suggest the user visit the In-Build Database page for full filtering and export capabilities.
+- Format responses with markdown where it improves readability.`;
   }
 
   if (hasContext) {
@@ -400,6 +540,7 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
     let expandedPrompt = userMessage;
     let wasExpanded = false;
     let topChunks = [];
+    let dbResult = null;
 
     if (intent === "KB_QUERY") {
       // ── 6a. Expand prompt ────────────────────────────────────
@@ -409,13 +550,31 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
         await ChatMessage.findByIdAndUpdate(userMsg._id, { expandedPrompt });
       }
 
-      // ── 6b. Embed & retrieve ─────────────────────────────────
-      const queryEmbedding = await embedText(expandedPrompt);
-      topChunks = await retrieveTopK(orgId, queryEmbedding);
+      // ── 6b. Check if this is a business data search ──────────
+      // Run in parallel with RAG retrieval for speed
+      const [isDataSearch, queryEmbedding] = await Promise.all([
+        isDataSearchQuery(userMessage),
+        embedText(expandedPrompt),
+      ]);
 
-      logger.info(`[Chat] Retrieved ${topChunks.length} chunks (threshold: ${SIMILARITY_THRESHOLD})`);
-      if (topChunks.length > 0) {
-        logger.info(`[Chat] Top similarity: ${topChunks[0].similarity.toFixed(3)}`);
+      logger.info(`[Chat] isDataSearch: ${isDataSearch}`);
+
+      // ── 6c. In-Build DB search (highest priority) ─────────────
+      if (isDataSearch) {
+        dbResult = await searchInBuildDB(expandedPrompt);
+        if (dbResult) {
+          logger.info(`[Chat] InBuildDB: found ${dbResult.leads.length} leads (of ${dbResult.total} total)`);
+          sendEvent({ type: "db_results", count: dbResult.leads.length, total: dbResult.total, query: expandedPrompt });
+        }
+      }
+
+      // ── 6d. RAG retrieval (fallback if DB returns nothing) ────
+      if (!dbResult) {
+        topChunks = await retrieveTopK(orgId, queryEmbedding);
+        logger.info(`[Chat] Retrieved ${topChunks.length} RAG chunks (threshold: ${SIMILARITY_THRESHOLD})`);
+        if (topChunks.length > 0) {
+          logger.info(`[Chat] Top RAG similarity: ${topChunks[0].similarity.toFixed(3)}`);
+        }
       }
     }
 
@@ -432,7 +591,7 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
     sendEvent({ type: "sources", chunks: sourcesPayload });
 
     // ── 7. Build system prompt ───────────────────────────────────
-    const systemPrompt = buildSystemPrompt(orgName, intent, topChunks);
+    const systemPrompt = buildSystemPrompt(orgName, intent, topChunks, dbResult);
 
     // ── 8. Token counting + history trimming ─────────────────────
     const { trimmedHistory, tokenCount } = await trimHistoryToTokens(

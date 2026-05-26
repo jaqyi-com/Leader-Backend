@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare, Plus, Trash2, Send, Database, ChevronDown,
   ChevronRight, Bot, User, Sparkles, BookOpen, X, Loader2,
-  Copy, Check, Cpu, Shield, Zap
+  Copy, Check, Cpu, Shield, ExternalLink
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import toast from "react-hot-toast";
@@ -135,6 +135,41 @@ function SourceCitations({ chunks }) {
   );
 }
 
+/** Badge shown on assistant messages that were answered from the In-Build DB */
+function DBResultsBadge({ dbResults }) {
+  if (!dbResults) return null;
+  const { count, total, query } = dbResults;
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 4 }}
+      animate={{ opacity: 1, y: 0 }}
+      style={{ marginTop: 8 }}
+    >
+      <div style={{
+        display: "inline-flex", alignItems: "center", gap: 6,
+        background: "rgba(34,197,94,0.1)",
+        border: "1px solid rgba(34,197,94,0.3)",
+        borderRadius: 20, padding: "4px 10px",
+        fontSize: 11, color: "#22c55e", fontWeight: 600,
+        cursor: "default",
+      }}>
+        <Database size={11} />
+        <span>In-Build DB · {count} result{count !== 1 ? "s" : ""} of {total?.toLocaleString()}</span>
+        {query && (
+          <span style={{ opacity: 0.7, fontWeight: 400 }}>· "{query.slice(0, 40)}{query.length > 40 ? "…" : ""}"</span>
+        )}
+        <a
+          href="/app/inbuild-db"
+          title="Open In-Build Database"
+          style={{ color: "#22c55e", display: "flex", alignItems: "center" }}
+        >
+          <ExternalLink size={10} />
+        </a>
+      </div>
+    </motion.div>
+  );
+}
+
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
@@ -229,11 +264,14 @@ function MessageBubble({ msg, isStreaming }) {
             )}
           </div>
 
-          {/* Source citations + copy (assistant messages) */}
+          {/* DB results badge + Source citations + copy (assistant messages) */}
           {!isUser && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <SourceCitations chunks={msg.sourceChunks} />
-              {msg.content && <CopyButton text={msg.content} />}
+            <div>
+              <DBResultsBadge dbResults={msg.dbResults} />
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
+                <SourceCitations chunks={msg.sourceChunks} />
+                {msg.content && <CopyButton text={msg.content} />}
+              </div>
             </div>
           )}
         </div>
@@ -418,6 +456,11 @@ export default function ChatbotPage() {
       },
       onSources: (chunks) => {
         setMessages(prev => prev.map(m => m._id === "streaming" ? { ...m, sourceChunks: chunks } : m));
+      },
+      onDbResults: (event) => {
+        setMessages(prev => prev.map(m =>
+          m._id === "streaming" ? { ...m, dbResults: { count: event.count, total: event.total, query: event.query } } : m
+        ));
       },
       onDelta: (token) => {
         setMessages(prev => prev.map(m => m._id === "streaming" ? { ...m, content: m.content + token } : m));
