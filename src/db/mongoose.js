@@ -14,8 +14,9 @@ async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
   try {
     await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 8000,
-      connectTimeoutMS: 10000,
+      serverSelectionTimeoutMS: 30000,
+      connectTimeoutMS:         30000,
+      socketTimeoutMS:          60000,  // allow long-running chatbot streams
     });
     logger.info("✅ Connected to MongoDB Atlas");
   } catch (error) {

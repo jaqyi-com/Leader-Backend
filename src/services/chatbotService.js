@@ -161,30 +161,15 @@ Answer NO for all other messages (greetings, company policy questions, general k
 
 /**
  * Search the In-Build Database (Cloud SQL, pgvector) directly.
- * Embeds the query, runs cosine similarity search, returns top 10 leads.
- * Returns { leads, total, contextBlock } where contextBlock is a
- * pre-formatted markdown table string ready to inject into the system prompt.
+ * Accepts a pre-computed 512-dim embedding vector (avoids a second OpenAI call).
+ * Runs cosine similarity search, returns top 10 leads formatted as a markdown table.
+ * Returns { leads, contextBlock } or null on failure/no results.
  */
-async function searchInBuildDB(query) {
+async function searchInBuildDB(queryText, queryEmbedding) {
   try {
-    // 1. Embed the query with the same model / dimensions as the DB embeddings
-    const embRes = await openai.embeddings.create({
-      model: "text-embedding-3-small",
-      input: query.slice(0, 2000),
-      dimensions: 512,
-    });
-    const vec = embRes.data[0].embedding;
-    const vecStr = `[${vec.join(",")}]`;
+    const vecStr = `[${queryEmbedding.join(",")}]`;
 
-    // 2. Count rows that have embeddings (approximate via a fast limit query)
-    const countRes = await pgQuery(
-      `SELECT COUNT(*) AS cnt FROM ${IB_FULL_TABLE} WHERE embedding IS NOT NULL AND "business_name" IS DISTINCT FROM 'business_name'`,
-      [],
-      10000
-    );
-    const total = parseInt(countRes.rows[0].cnt, 10);
-
-    // 3. Semantic similarity search — top 10
+    // Semantic similarity search — top 10
     const searchRes = await pgQuery(
       `SELECT
          "business_name",
@@ -208,27 +193,27 @@ async function searchInBuildDB(query) {
     const leads = searchRes.rows;
     if (!leads.length) return null;
 
-    // 4. Format as markdown table for LLM context
+    // Format as markdown table for LLM context
     const rows = leads.map((r, i) => {
-      const name    = r.business_name || "—";
-      const cat     = r._category     || "—";
-      const loc     = [r.city, r.state].filter(Boolean).join(", ") || "—";
-      const phone   = r.phone         || "—";
-      const web     = r.website       || "—";
-      const email   = r.email         || "—";
-      const addr    = r.street_address || "—";
-      const score   = r.similarity    != null ? `${r.similarity}%` : "—";
+      const name  = r.business_name  || "—";
+      const cat   = r._category      || "—";
+      const loc   = [r.city, r.state].filter(Boolean).join(", ") || "—";
+      const phone = r.phone          || "—";
+      const web   = r.website        || "—";
+      const email = r.email          || "—";
+      const addr  = r.street_address || "—";
+      const score = r.similarity != null ? `${r.similarity}%` : "—";
       return `| ${i+1} | ${name} | ${cat} | ${loc} | ${phone} | ${web} | ${email} | ${addr} | ${score} |`;
     }).join("\n");
 
     const contextBlock =
       `## 🗄️ Live In-Build Database Results\n` +
-      `> Searched ${total.toLocaleString()} business records for: "${query}"\n\n` +
+      `> Searched 957,932 business records for: "${queryText}"\n\n` +
       `| # | Business Name | Category | Location | Phone | Website | Email | Address | Match % |\n` +
       `|---|---|---|---|---|---|---|---|---|\n` +
       rows;
 
-    return { leads, total, contextBlock };
+    return { leads, contextBlock };
   } catch (err) {
     logger.error(`[InBuildDB] searchInBuildDB failed: ${err.message}`);
     return null;
@@ -561,10 +546,10 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
 
       // ── 6c. In-Build DB search (highest priority) ─────────────
       if (isDataSearch) {
-        dbResult = await searchInBuildDB(expandedPrompt);
+        dbResult = await searchInBuildDB(expandedPrompt, queryEmbedding);
         if (dbResult) {
-          logger.info(`[Chat] InBuildDB: found ${dbResult.leads.length} leads (of ${dbResult.total} total)`);
-          sendEvent({ type: "db_results", count: dbResult.leads.length, total: dbResult.total, query: expandedPrompt });
+          logger.info(`[Chat] InBuildDB: found ${dbResult.leads.length} leads`);
+          sendEvent({ type: "db_results", count: dbResult.leads.length, total: 957932, query: expandedPrompt });
         }
       }
 
