@@ -161,13 +161,20 @@ Answer NO for all other messages (greetings, company policy questions, general k
 
 /**
  * Search the In-Build Database (Cloud SQL, pgvector) directly.
- * Accepts a pre-computed 512-dim embedding vector (avoids a second OpenAI call).
+ * Computes its own 512-dim embedding (MUST match the dimension stored in the DB).
+ * The chatbot's embedText() uses 1536-dim for RAG — a different model output size.
  * Runs cosine similarity search, returns top 10 leads formatted as a markdown table.
  * Returns { leads, contextBlock } or null on failure/no results.
  */
-async function searchInBuildDB(queryText, queryEmbedding) {
+async function searchInBuildDB(queryText) {
   try {
-    const vecStr = `[${queryEmbedding.join(",")}]`;
+    // IMPORTANT: use dimensions:512 to match the DB column (text-embedding-3-small@512)
+    const embRes = await openai.embeddings.create({
+      model:      "text-embedding-3-small",
+      input:      queryText.slice(0, 2000),
+      dimensions: 512,
+    });
+    const vecStr = `[${embRes.data[0].embedding.join(",")}]`;
 
     // Semantic similarity search — top 10
     const searchRes = await pgQuery(
@@ -546,7 +553,7 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
 
       // ── 6c. In-Build DB search (highest priority) ─────────────
       if (isDataSearch) {
-        dbResult = await searchInBuildDB(expandedPrompt, queryEmbedding);
+        dbResult = await searchInBuildDB(expandedPrompt);
         if (dbResult) {
           logger.info(`[Chat] InBuildDB: found ${dbResult.leads.length} leads`);
           sendEvent({ type: "db_results", count: dbResult.leads.length, total: 957932, query: expandedPrompt });
