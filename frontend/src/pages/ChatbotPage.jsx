@@ -303,6 +303,8 @@ function TokenBar({ count, max = MAX_CONTEXT }) {
 
 function MessageBubble({ msg, isStreaming }) {
   const isUser = msg.role === "user";
+  const hasDbResults = !isUser && msg.dbResults && msg.dbResults.leads && msg.dbResults.leads.length > 0;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 12 }}
@@ -320,7 +322,8 @@ function MessageBubble({ msg, isStreaming }) {
         alignItems: "flex-start",
         gap: 10,
         flexDirection: isUser ? "row-reverse" : "row",
-        maxWidth: isUser ? "78%" : (msg.dbResults ? "92%" : "78%"),
+        maxWidth: isUser ? "78%" : (hasDbResults ? "96%" : "78%"),
+        width: hasDbResults ? "96%" : undefined,
       }}>
         {/* Avatar */}
         <div style={{
@@ -330,46 +333,52 @@ function MessageBubble({ msg, isStreaming }) {
             ? "linear-gradient(135deg,var(--accent),#f4576a)"
             : "var(--overlay-2)",
           border: "1px solid var(--border)",
+          marginTop: hasDbResults ? 2 : 0,
         }}>
           {isUser ? <User size={14} color="white" /> : <Bot size={14} color="var(--accent)" />}
         </div>
 
-        <div style={{ flex: 1 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           {/* Expanded prompt (user messages) */}
           {isUser && msg.expandedPrompt && (
             <ExpandedPromptBadge expandedPrompt={msg.expandedPrompt} original={msg.content} />
           )}
 
-          {/* Bubble */}
-          <div style={{
-            background: isUser
-              ? "linear-gradient(135deg,var(--accent) 0%,#f4576a 100%)"
-              : "var(--overlay-2)",
-            border: isUser ? "none" : "1px solid var(--border)",
-            borderRadius: isUser ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-            padding: "12px 16px",
-            color: isUser ? "white" : "var(--text)",
-            fontSize: 14,
-            lineHeight: 1.65,
-            backdropFilter: "blur(8px)",
-          }}>
-            {isStreaming && !msg.content ? (
-              <TypingDots />
-            ) : (
-              <div style={{ margin: 0 }} className="markdown-content">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content || ""}</ReactMarkdown>
-              </div>
-            )}
-          </div>
+          {/* ── DB Results Panel (shown ABOVE the text bubble when results exist) ── */}
+          {hasDbResults && (
+            <DBResultsPanel dbResults={msg.dbResults} />
+          )}
 
-          {/* DB results panel + Source citations + copy (assistant messages) */}
+          {/* Bubble — show only if there is text content OR still streaming */}
+          {(isStreaming || msg.content) && (
+            <div style={{
+              background: isUser
+                ? "linear-gradient(135deg,var(--accent) 0%,#f4576a 100%)"
+                : "var(--overlay-2)",
+              border: isUser ? "none" : "1px solid var(--border)",
+              borderRadius: isUser ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+              padding: "12px 16px",
+              color: isUser ? "white" : "var(--text)",
+              fontSize: 14,
+              lineHeight: 1.65,
+              backdropFilter: "blur(8px)",
+              marginTop: hasDbResults ? 8 : 0,
+            }}>
+              {isStreaming && !msg.content ? (
+                <TypingDots />
+              ) : (
+                <div style={{ margin: 0 }} className="markdown-content">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content || ""}</ReactMarkdown>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Source citations + copy button (assistant messages) */}
           {!isUser && (
-            <div>
-              <DBResultsPanel dbResults={msg.dbResults} />
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-                <SourceCitations chunks={msg.sourceChunks} />
-                {msg.content && <CopyButton text={msg.content} />}
-              </div>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
+              <SourceCitations chunks={msg.sourceChunks} />
+              {msg.content && <CopyButton text={msg.content} />}
             </div>
           )}
         </div>
