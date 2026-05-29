@@ -136,6 +136,59 @@ function SourceCitations({ chunks }) {
   );
 }
 
+/** Source badge shown when response used the In-Build Database */
+function InBuildDBBadge({ dbResults }) {
+  const [open, setOpen] = useState(false);
+  if (!dbResults || !dbResults.leads || dbResults.leads.length === 0) return null;
+  const { count, total, query } = dbResults;
+  return (
+    <div style={{ marginTop: 10 }}>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{
+          display: "flex", alignItems: "center", gap: 5,
+          background: "none", border: "none", cursor: "pointer",
+          color: "#22c55e", fontSize: 11, padding: 0, fontWeight: 600,
+        }}
+      >
+        <Database size={11} />
+        <span>In-Build Database · {count} result{count !== 1 ? "s" : ""}</span>
+        {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            style={{ overflow: "hidden", marginTop: 6 }}
+          >
+            <div style={{
+              background: "rgba(34,197,94,0.07)",
+              border: "1px solid rgba(34,197,94,0.25)",
+              borderRadius: 8,
+              padding: "7px 11px",
+              fontSize: 11,
+              color: "var(--text-2)",
+              display: "flex", flexDirection: "column", gap: 3,
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontWeight: 700, color: "#22c55e" }}>🗄️ In-Build Database</span>
+                <span style={{ opacity: 0.6 }}>Cloud SQL · pgvector semantic search</span>
+              </div>
+              <div style={{ opacity: 0.75 }}>
+                Searched <b style={{ color: "var(--text)" }}>{total?.toLocaleString()}</b> business records
+                {query && <> for <b style={{ color: "var(--text)" }}>"{query.slice(0, 60)}{query.length > 60 ? "…" : ""}"</b></>}
+                {" · "}<b style={{ color: "#22c55e" }}>{count} match{count !== 1 ? "es" : ""} found</b>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 /** Full panel showing actual In-Build DB records as cards */
 function DBResultsPanel({ dbResults }) {
   if (!dbResults) return null;
@@ -374,10 +427,13 @@ function MessageBubble({ msg, isStreaming }) {
             </div>
           )}
 
-          {/* Source citations + copy button (assistant messages) */}
+          {/* Source citations + In-Build DB badge + copy button (assistant messages) */}
           {!isUser && (
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 4 }}>
-              <SourceCitations chunks={msg.sourceChunks} />
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginTop: 4, gap: 8 }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+                <SourceCitations chunks={msg.sourceChunks} />
+                <InBuildDBBadge dbResults={msg.dbResults} />
+              </div>
               {msg.content && <CopyButton text={msg.content} />}
             </div>
           )}
