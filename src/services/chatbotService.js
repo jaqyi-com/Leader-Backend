@@ -527,65 +527,63 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
     // ── 4. Get conversation history ──────────────────────────────
     const history = await getConversationHistory(conversation._id);
 
-    // ── 5. Classify intent ───────────────────────────────────────
-    const intent = await classifyIntent(userMessage, orgName, history.slice(0, -1));
-    logger.info(`[Chat] Intent: ${intent} | Model: ${chatModel} | Msg: "${userMessage.slice(0, 50)}"`);
+    // ── 5. Classify intent + check data search in parallel ─────
+    const [intent, isDataSearch] = await Promise.all([
+      classifyIntent(userMessage, orgName, history.slice(0, -1)),
+      isDataSearchQuery(userMessage),
+    ]);
+    logger.info(`[Chat] Intent: ${intent} | isDataSearch: ${isDataSearch} | Model: ${chatModel} | Msg: "${userMessage.slice(0, 50)}"`);
 
     let expandedPrompt = userMessage;
     let wasExpanded = false;
     let topChunks = [];
     let dbResult = null;
 
-    if (intent === "KB_QUERY") {
-      // ── 6a. Expand prompt ────────────────────────────────────
+    // ── 6. In-Build DB search (runs for ANY data search, regardless of intent) ──
+    if (isDataSearch) {
       expandedPrompt = await expandPrompt(userMessage, orgName);
       wasExpanded = expandedPrompt !== userMessage.trim();
       if (wasExpanded) {
         await ChatMessage.findByIdAndUpdate(userMsg._id, { expandedPrompt });
       }
 
-      // ── 6b. Check if this is a business data search ──────────
-      // Run in parallel with RAG retrieval for speed
-      const [isDataSearch, queryEmbedding] = await Promise.all([
-        isDataSearchQuery(userMessage),
-        embedText(expandedPrompt),
-      ]);
+      dbResult = await searchInBuildDB(expandedPrompt);
+      if (dbResult) {
+        logger.info(`[Chat] InBuildDB: found ${dbResult.leads.length} leads`);
+        // Send leads data to frontend for UI rendering
+        sendEvent({
+          type:   "db_results",
+          count:  dbResult.leads.length,
+          total:  957932,
+          query:  expandedPrompt,
+          leads:  dbResult.leads.map(r => ({
+            name:     r.business_name  || "",
+            category: r._category      || "",
+            city:     r.city           || "",
+            state:    r.state          || "",
+            phone:    r.phone          || "",
+            website:  r.website        || "",
+            email:    r.email          || "",
+            address:  r.street_address || "",
+            match:    r.similarity     || null,
+          })),
+        });
+      }
+    }
 
-      logger.info(`[Chat] isDataSearch: ${isDataSearch}`);
-
-      // ── 6c. In-Build DB search (highest priority) ─────────────
-      if (isDataSearch) {
-        dbResult = await searchInBuildDB(expandedPrompt);
-        if (dbResult) {
-          logger.info(`[Chat] InBuildDB: found ${dbResult.leads.length} leads`);
-          // Send leads data to frontend for UI rendering
-          sendEvent({
-            type:   "db_results",
-            count:  dbResult.leads.length,
-            total:  957932,
-            query:  expandedPrompt,
-            leads:  dbResult.leads.map(r => ({
-              name:     r.business_name  || "",
-              category: r._category      || "",
-              city:     r.city           || "",
-              state:    r.state          || "",
-              phone:    r.phone          || "",
-              website:  r.website        || "",
-              email:    r.email          || "",
-              address:  r.street_address || "",
-              match:    r.similarity     || null,
-            })),
-          });
-        }
+    // ── 7. KB_QUERY RAG retrieval (only if DB search didn't run or returned nothing) ──
+    if (!dbResult && intent === "KB_QUERY") {
+      expandedPrompt = await expandPrompt(userMessage, orgName);
+      wasExpanded = expandedPrompt !== userMessage.trim();
+      if (wasExpanded) {
+        await ChatMessage.findByIdAndUpdate(userMsg._id, { expandedPrompt });
       }
 
-      // ── 6d. RAG retrieval (fallback if DB returns nothing) ────
-      if (!dbResult) {
-        topChunks = await retrieveTopK(orgId, queryEmbedding);
-        logger.info(`[Chat] Retrieved ${topChunks.length} RAG chunks (threshold: ${SIMILARITY_THRESHOLD})`);
-        if (topChunks.length > 0) {
-          logger.info(`[Chat] Top RAG similarity: ${topChunks[0].similarity.toFixed(3)}`);
-        }
+      const queryEmbedding = await embedText(expandedPrompt);
+      topChunks = await retrieveTopK(orgId, queryEmbedding);
+      logger.info(`[Chat] Retrieved ${topChunks.length} RAG chunks (threshold: ${SIMILARITY_THRESHOLD})`);
+      if (topChunks.length > 0) {
+        logger.info(`[Chat] Top RAG similarity: ${topChunks[0].similarity.toFixed(3)}`);
       }
     }
 
