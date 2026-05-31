@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Network, Database, Target, Bot, RotateCcw, Sun, Moon } from "lucide-react";
+import { Network, Database, Target, Bot, RotateCcw, Sun, Moon, Map, Brain, BarChart3, Send } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 
 const agents = [
@@ -217,6 +217,10 @@ function BeforeAfter() {
               "Ideal Customer Profile intelligence grading",
               "Continuous Google Sheets synchronization 24/7",
               "Autonomous outreach to top-tier verified leads",
+              "Smart Market Map — visualize 742k+ US businesses by state",
+              "AI Ideal Customer Profiler — plain-English → perfect leads",
+              "Market Intelligence Dashboard — instant industry reports",
+              "One-click Campaign Builder — search → select → launch",
             ].map((t) => (
               <li key={t} className="flex gap-3">
                 <span className="mt-2 h-px w-4 shrink-0 bg-foreground" />
@@ -325,9 +329,40 @@ const deepDives = [
     subtitle: "Relentless execution",
     p1: "Leader is designed to run asynchronously in the background. Built on Node.js crons and FastAPI scaling, the entire pipeline processes thousands of records autonomously without human intervention.",
     p2: "Every generated metric, drafted email, and scraped domain is continuously synchronized back to structured Google Sheets, providing absolute transparency into the engine's real-time internal state.",
-    p2: "Every generated metric, drafted email, and scraped domain is continuously synchronized back to structured Google Sheets, providing absolute transparency into the engine's real-time internal state.",
     icon: RotateCcw
-  }
+  },
+  {
+    n: "06",
+    title: "Smart Market Map",
+    subtitle: "Geographic intelligence",
+    p1: "Powered by 742,000+ indexed US businesses, the Smart Market Map renders a real-time state-by-state density heatmap for any industry you specify. Filter by category, instantly see where your market is concentrated.",
+    p2: "Built without any external mapping libraries — pure React and CSS grid — the tile map loads instantly and requires zero API keys. Hover any state to see exact business counts and top cities at a glance.",
+    icon: Map
+  },
+  {
+    n: "07",
+    title: "AI Ideal Customer Profiler",
+    subtitle: "Plain English → perfect leads",
+    p1: "Describe your ideal customer in plain English — industry, location, company size, contact requirements — and GPT-4o extracts a structured filter profile and optimized semantic search query automatically.",
+    p2: "The profiler then runs a pgvector cosine similarity search across the entire database, ranks matches by relevance, and generates a one-sentence AI explanation for each top match, so you know exactly why a lead qualifies.",
+    icon: Brain
+  },
+  {
+    n: "08",
+    title: "Market Intelligence Dashboard",
+    subtitle: "Instant industry analyst reports",
+    p1: "Enter any business category and state — get back a full market intelligence report in seconds. Total business count, phone/email/website/LinkedIn coverage rates, top states and cities, revenue ranges, and team size distributions.",
+    p2: "Animated coverage rings and horizontal bar charts make the data instantly scannable. A plain-language AI snapshot summarizes the market in two sentences, giving you the insight without the noise.",
+    icon: BarChart3
+  },
+  {
+    n: "09",
+    title: "One-Click Campaign Builder",
+    subtitle: "Search → select → launch",
+    p1: "Browse or semantically search the in-built database, check the checkbox next to any businesses you want to target, and hit Launch Campaign. Leader packages them into a structured outreach campaign in your CRM — no CSV exports, no copy-paste.",
+    p2: "The campaign is created as a draft in Smart Outreach with the leads pre-populated, initial contact and follow-up sequences pre-configured, and only contactable leads (those with an email or phone) included.",
+    icon: Send
+  },
 ];
 
 function SystemDeepDives() {
