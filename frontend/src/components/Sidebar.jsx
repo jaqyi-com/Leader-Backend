@@ -5,7 +5,7 @@ import {
   Zap, Settings, Share2, MessageSquare, Sparkles,
   Users2, Mail, Building2, BrainCircuit, Rocket, BookOpen, Target,
   Briefcase, BarChart3, ListChecks, FileText, CreditCard,
-  Calculator, Package, UserCog, Server,
+  Calculator, Package, UserCog, Server, ShieldCheck,
 } from "lucide-react";
 
 
@@ -204,8 +204,9 @@ export default function Sidebar({ collapsed, onToggle }) {
         className="px-2 py-3 flex flex-col gap-1"
         style={{ borderTop: "1px solid var(--border)" }}
       >
-        <NavItem to="/app/docs" label="How It Works" icon={BookOpen} collapsed={collapsed} end={false} />
-        <NavItem to="/app/settings" label="Settings" icon={Settings} collapsed={collapsed} end={false} />
+        <NavItem to="/app/docs"  label="How It Works"     icon={BookOpen}     collapsed={collapsed} end={false} />
+        <NavItem to="/app/admin" label="Admin Analytics"   icon={ShieldCheck}  collapsed={collapsed} end={false} />
+        <NavItem to="/app/settings" label="Settings"       icon={Settings}     collapsed={collapsed} end={false} />
       </div>
 
       {/* Collapse toggle */}

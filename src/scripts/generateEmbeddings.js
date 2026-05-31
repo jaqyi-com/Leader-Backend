@@ -1,191 +1,232 @@
 /**
- * generateEmbeddings.js
- * ─────────────────────
- * One-time script: generates 512-dim OpenAI embeddings for every row in
- * public.usa_business_data and writes them back to the `embedding` column.
+ * generateEmbeddings.js  (v3 — pool + auto-reconnect)
+ * ─────────────────────────────────────────────────────
+ * Fixes v2 bug: single Client dropped by Cloud SQL after ~60 min idle,
+ * causing all subsequent UPDATEs to fail with "connection error".
  *
- * Usage:   node src/scripts/generateEmbeddings.js
- * Resume:  just run again — it skips rows that already have an embedding
- * Cost:    ~$0.52 for 742k records (text-embedding-3-small @ $0.02/1M tokens)
- * Time:    ~45–60 minutes
+ * v3 strategy:
+ *   • Pool (max:2) for all DB operations — auto-reconnects on TCP drop
+ *   • Initial big SELECT uses a dedicated pool client with long timeout
+ *   • Each UNNEST UPDATE acquires a fresh client from the pool
+ *   • keepAlive pings prevent Cloud SQL from dropping idle connections
+ *   • Resume-safe: re-fetches only rows WHERE embedding IS NULL
+ *
+ * Usage:  node src/scripts/generateEmbeddings.js
+ * Resume: safe to re-run at any time — skips already-embedded rows
  */
 
 require("dotenv").config();
-const { Client }   = require("pg");
-const { OpenAI }   = require("openai");
-const fs           = require("fs");
-const path         = require("path");
+const { Pool }  = require("pg");
+const { OpenAI } = require("openai");
 
-// ── Config ──────────────────────────────────────────────────────────────────
-const BATCH_SIZE        = 500;   // records per DB read
-const EMBED_BATCH_SIZE  = 100;   // texts per OpenAI call (max 2048, keep small for safety)
-const PROGRESS_FILE     = path.join(__dirname, "embed_progress.json");
-const EMBED_MODEL       = "text-embedding-3-small";
-const EMBED_DIMS        = 512;
-const EMBED_DELAY_MS    = 200;   // pause between OpenAI batches (rate-limit safety)
+// ── Config ────────────────────────────────────────────────────────────────────
+const OPENAI_BATCH   = 1000;  // texts per OpenAI call  (max 2048)
+const DB_WRITE_BATCH = 100;   // rows per UNNEST UPDATE (100 × 512-dim ≈ 400 KB — safe)
+const EMBED_MODEL    = "text-embedding-3-small";
+const EMBED_DIMS     = 512;
 
-// ── DB connection (uses akshat — has UPDATE on table) ─────────────────────
-const DB_CONFIG = {
-  host:                   process.env.CLOUD_SQL_HOST     || "34.71.167.187",
-  port:                   5432,
-  database:               process.env.CLOUD_SQL_DB       || "doott",
-  user:                   "akshat",          // table owner — has UPDATE
-  password:               "2420074#Akshat",
-  ssl:                    { rejectUnauthorized: false },
-  connectionTimeoutMillis: 30000,
-  statement_timeout:       60000,
+const POOL_CFG = {
+  host:                       "34.71.167.187",
+  port:                       5432,
+  database:                   "doott",
+  user:                       "jaqyi",
+  password:                   "2420074",
+  ssl:                        { rejectUnauthorized: false },
+  // Pool settings
+  max:                        2,      // 2 connections: 1 for fetch, 1 for writes
+  min:                        0,
+  idleTimeoutMillis:          60000,  // keep idle connections up to 60 s
+  connectionTimeoutMillis:    30000,
+  // TCP keep-alive prevents Cloud SQL from dropping the connection
+  keepAlive:                  true,
+  keepAliveInitialDelayMillis: 10000, // first ping after 10 s idle
 };
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function buildEmbedText(row) {
-  const parts = [
-    row.business_name,
-    row._category,
-    [row.city, row.state].filter(Boolean).join(", "),
-    row.phone || row.company_phone,
-    row.street_address,
-  ].filter(v => v && String(v).trim() && v !== "business_name");
-  return parts.join(" | ").slice(0, 1000); // keep under token limit
-}
-
-function loadProgress() {
-  try { return JSON.parse(fs.readFileSync(PROGRESS_FILE, "utf8")); }
-  catch { return { offset: 0, done: 0, skipped: 0, errors: 0 }; }
-}
-
-function saveProgress(p) {
-  fs.writeFileSync(PROGRESS_FILE, JSON.stringify(p, null, 2));
+// ── Build embed text for one row ──────────────────────────────────────────────
+function embedText(r) {
+  return [
+    r.business_name,
+    r._category,
+    [r.city, r.state].filter(Boolean).join(", "),
+    r.phone || r.company_phone,
+    r.street_address,
+  ]
+    .map(v => (v && String(v).trim()) || null)
+    .filter(Boolean)
+    .join(" | ")
+    .slice(0, 1000) || "Unknown Business";
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
-// ── Main ─────────────────────────────────────────────────────────────────────
-async function main() {
-  const db = new Client(DB_CONFIG);
-  await db.connect();
-  console.log("✅ Connected to Cloud SQL as akshat");
+// ── Resilient pool UPDATE — retries up to 3× on connection errors ─────────────
+async function poolUpdate(pool, ctids, embStrs) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const client = await pool.connect();
+    try {
+      await client.query(
+        `UPDATE public.usa_business_data AS t
+         SET    embedding = v.emb::vector(${EMBED_DIMS})
+         FROM   unnest($1::text[], $2::text[]) AS v(ctid_str, emb)
+         WHERE  t.ctid = v.ctid_str::tid`,
+        [ctids, embStrs]
+      );
+      return true; // success
+    } catch (e) {
+      if (attempt < 3) {
+        process.stderr.write(`\n  ⚠️  UPDATE attempt ${attempt} failed: ${e.message} — retrying in 5s…\n`);
+        await sleep(5000);
+      } else {
+        process.stderr.write(`\n  ❌ UPDATE failed after 3 attempts: ${e.message}\n`);
+        return false;
+      }
+    } finally {
+      client.release();
+    }
+  }
+  return false;
+}
 
-  // Count total & already embedded
-  const totalRes = await db.query(
-    `SELECT COUNT(*) AS cnt FROM public.usa_business_data WHERE business_name IS DISTINCT FROM 'business_name'`
+// ── Main ──────────────────────────────────────────────────────────────────────
+async function main() {
+  const pool = new Pool(POOL_CFG);
+  pool.on("error", (err) =>
+    process.stderr.write(`\n⚠️  Pool error (auto-reconnect): ${err.message}\n`)
   );
-  const embeddedRes = await db.query(
+
+  // ─ 1. Count rows ─────────────────────────────────────────────────────────
+  const totalRes = await pool.query(
+    `SELECT COUNT(*) AS cnt FROM public.usa_business_data
+     WHERE business_name IS DISTINCT FROM 'business_name'`
+  );
+  const embRes = await pool.query(
     `SELECT COUNT(*) AS cnt FROM public.usa_business_data WHERE embedding IS NOT NULL`
   );
-  const total    = parseInt(totalRes.rows[0].cnt);
-  const already  = parseInt(embeddedRes.rows[0].cnt);
-  console.log(`📊 Total rows: ${total.toLocaleString()}`);
-  console.log(`📊 Already embedded: ${already.toLocaleString()} (${((already/total)*100).toFixed(1)}%)`);
-  console.log(`📊 Remaining: ${(total - already).toLocaleString()}`);
-  console.log(`💰 Estimated cost for remaining: ~$${((total - already) * 35 / 1_000_000 * 0.02).toFixed(3)}`);
-  console.log("─────────────────────────────────────────────");
+  const grandTotal  = parseInt(totalRes.rows[0].cnt);
+  const alreadyDone = parseInt(embRes.rows[0].cnt);
+  const remaining   = grandTotal - alreadyDone;
 
-  if (already >= total) {
-    console.log("🎉 All records already embedded! Nothing to do.");
-    await db.end();
+  console.log("✅ Connected (pool) as jaqyi");
+  console.log(`📊 Grand total : ${grandTotal.toLocaleString()}`);
+  console.log(`📊 Already done: ${alreadyDone.toLocaleString()}`);
+  console.log(`📊 Remaining   : ${remaining.toLocaleString()}`);
+  console.log(`💰 Est. cost   : ~$${(remaining * 35 / 1_000_000 * 0.02).toFixed(3)}`);
+  console.log("─────────────────────────────────────────────────────────");
+
+  if (remaining === 0) {
+    console.log("🎉 Nothing to do — all rows already embedded!");
+    await pool.end();
     return;
   }
 
-  const prog = loadProgress();
-  let { done, skipped, errors } = prog;
-  let offset = 0; // always scan from beginning, skip rows that have embedding
-  let processed = 0;
+  // ─ 2. Fetch all rows that still need embedding ─────────────────────────
+  // Use a dedicated client with a long statement_timeout for the big SELECT.
+  console.log("⏳ Pre-fetching rows that need embedding (10–30 s)…");
+  const fetchStart = Date.now();
+
+  const fetchClient = await pool.connect();
+  await fetchClient.query("SET statement_timeout = 300000"); // 5 min
+  const fetchRes = await fetchClient.query(
+    `SELECT
+       ctid::text    AS ctid_str,
+       business_name,
+       _category,
+       city,
+       state,
+       phone,
+       company_phone,
+       street_address
+     FROM public.usa_business_data
+     WHERE embedding IS NULL
+       AND business_name IS DISTINCT FROM 'business_name'
+     ORDER BY ctid`
+  );
+  fetchClient.release();
+
+  const rows = fetchRes.rows;
+  console.log(`✅ Fetched ${rows.length.toLocaleString()} rows in ${((Date.now()-fetchStart)/1000).toFixed(1)}s`);
+  console.log("─────────────────────────────────────────────────────────");
+
+  // ─ 3. Process in batches ─────────────────────────────────────────────────
+  let done   = 0;
+  let errors = 0;
   const startTime = Date.now();
 
-  while (true) {
-    // Fetch batch of rows WITHOUT embeddings
-    const batch = await db.query(
-      `SELECT business_name, _category, city, state, phone, company_phone, street_address,
-              ctid
-       FROM public.usa_business_data
-       WHERE embedding IS NULL
-         AND business_name IS DISTINCT FROM 'business_name'
-       ORDER BY ctid
-       LIMIT $1`,
-      [BATCH_SIZE]
-    );
+  for (let i = 0; i < rows.length; i += DB_WRITE_BATCH) {
+    const batch = rows.slice(i, i + DB_WRITE_BATCH);
 
-    if (batch.rows.length === 0) {
-      console.log("\n✅ All rows processed!");
-      break;
-    }
+    // Call OpenAI in sub-batches of OPENAI_BATCH
+    const allEmbeddings = [];
+    for (let j = 0; j < batch.length; j += OPENAI_BATCH) {
+      const sub   = batch.slice(j, j + OPENAI_BATCH);
+      const texts = sub.map(embedText);
 
-    // Build embed texts
-    const texts = batch.rows.map(buildEmbedText);
-    const ctids = batch.rows.map(r => r.ctid);
-
-    // Split texts into sub-batches for OpenAI
-    for (let i = 0; i < texts.length; i += EMBED_BATCH_SIZE) {
-      const subTexts = texts.slice(i, i + EMBED_BATCH_SIZE);
-      const subCtids = ctids.slice(i, i + EMBED_BATCH_SIZE);
-
-      let embeddings;
-      try {
-        const res = await openai.embeddings.create({
-          model:      EMBED_MODEL,
-          input:      subTexts,
-          dimensions: EMBED_DIMS,
-        });
-        embeddings = res.data.map(d => d.embedding);
-      } catch (e) {
-        console.error(`  ⚠️  OpenAI error: ${e.message} — retrying in 5s`);
-        await sleep(5000);
+      let res = null;
+      for (let retry = 3; retry > 0; retry--) {
         try {
-          const res = await openai.embeddings.create({ model: EMBED_MODEL, input: subTexts, dimensions: EMBED_DIMS });
-          embeddings = res.data.map(d => d.embedding);
-        } catch (e2) {
-          console.error(`  ❌ Retry failed: ${e2.message} — skipping batch`);
-          errors += subTexts.length;
-          continue;
-        }
-      }
-
-      // Write embeddings back to DB using ctid for fast lookup
-      for (let j = 0; j < embeddings.length; j++) {
-        try {
-          await db.query(
-            `UPDATE public.usa_business_data SET embedding = $1 WHERE ctid = $2`,
-            [`[${embeddings[j].join(",")}]`, subCtids[j]]
-          );
-          done++;
+          res = await openai.embeddings.create({
+            model:      EMBED_MODEL,
+            input:      texts,
+            dimensions: EMBED_DIMS,
+          });
+          break;
         } catch (e) {
-          errors++;
+          if (retry === 1) {
+            process.stderr.write(`\n  ⚠️  OpenAI failed (skipping sub-batch): ${e.message}\n`);
+          } else {
+            await sleep(3000);
+          }
         }
       }
 
-      await sleep(EMBED_DELAY_MS);
+      if (res) allEmbeddings.push(...res.data.map(d => d.embedding));
+      else     allEmbeddings.push(...Array(sub.length).fill(null));
     }
 
-    processed += batch.rows.length;
-    const elapsed  = (Date.now() - startTime) / 1000;
-    const rate     = processed / elapsed;
-    const remaining = (total - already - processed);
-    const eta      = remaining > 0 ? Math.round(remaining / rate) : 0;
+    // Build ctid / embStr arrays (skip nulls from OpenAI failures)
+    const ctids   = [];
+    const embStrs = [];
+    batch.forEach((row, idx) => {
+      const emb = allEmbeddings[idx];
+      if (emb) {
+        ctids.push(row.ctid_str);
+        embStrs.push(`[${emb.join(",")}]`);
+      } else {
+        errors++;
+      }
+    });
+
+    // Write to DB using pool (auto-reconnects on connection drop)
+    if (ctids.length > 0) {
+      const ok = await poolUpdate(pool, ctids, embStrs);
+      if (ok) done += ctids.length;
+      else    errors += ctids.length;
+    }
 
     // Progress line
-    const pct = (((already + processed) / total) * 100).toFixed(1);
+    const elapsed = (Date.now() - startTime) / 1000;
+    const rate    = done / elapsed;
+    const etaSec  = rate > 0 ? Math.round((rows.length - done) / rate) : 9999;
+    const pct     = ((alreadyDone + done) / grandTotal * 100).toFixed(1);
     process.stdout.write(
-      `\r⚡ ${(already + processed).toLocaleString()} / ${total.toLocaleString()} (${pct}%) ` +
-      `| ${rate.toFixed(0)} rec/s | ETA: ${Math.floor(eta/60)}m${eta%60}s | errors: ${errors}   `
+      `\r⚡ ${(alreadyDone + done).toLocaleString()} / ${grandTotal.toLocaleString()} (${pct}%)` +
+      ` | ${Math.round(rate)}/s | ETA: ${Math.floor(etaSec/60)}m${etaSec%60}s | err: ${errors}   `
     );
-
-    saveProgress({ offset: processed, done, skipped, errors, pct });
   }
 
-  const totalTime = Math.round((Date.now() - startTime) / 1000);
-  console.log(`\n\n🏁 Done in ${Math.floor(totalTime/60)}m ${totalTime%60}s`);
-  console.log(`   Embedded: ${done.toLocaleString()}`);
-  console.log(`   Errors:   ${errors}`);
-  console.log("\n📌 Next step: Create HNSW index in Cloud SQL Studio:");
-  console.log("   CREATE INDEX CONCURRENTLY usa_biz_embedding_hnsw_idx");
-  console.log("   ON public.usa_business_data");
-  console.log("   USING hnsw (embedding vector_cosine_ops)");
-  console.log("   WITH (m = 16, ef_construction = 64);");
+  const totalSec = Math.round((Date.now() - startTime) / 1000);
+  console.log(`\n\n🏁 Finished in ${Math.floor(totalSec/60)}m ${totalSec%60}s`);
+  console.log(`   Embedded : ${done.toLocaleString()}`);
+  console.log(`   Errors   : ${errors}`);
+  if (errors > 0) {
+    console.log(`\n⚠️  ${errors} rows had errors — re-run to retry them (they still have embedding IS NULL).`);
+  } else {
+    console.log("\n🎉 All rows embedded successfully!");
+  }
 
-  fs.unlinkSync(PROGRESS_FILE);
-  await db.end();
+  await pool.end();
 }
 
 main().catch(e => { console.error("Fatal:", e.message); process.exit(1); });

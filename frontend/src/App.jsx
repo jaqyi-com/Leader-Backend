@@ -50,7 +50,7 @@ import CrmInvoicesPage    from "./pages/crm/CrmInvoicesPage";
 import AccountingPage     from "./pages/accounting/AccountingPage";
 import InventoryPage      from "./pages/inventory/InventoryPage";
 import PayrollPage        from "./pages/payroll/PayrollPage";
-
+import AdminAnalyticsPage from "./pages/AdminAnalyticsPage";
 
 import { ThemeProvider } from "./context/ThemeContext";
 
@@ -121,6 +121,8 @@ export default function App() {
             <Route path="accounting"        element={<AccountingPage />} />
             <Route path="inventory"         element={<InventoryPage />} />
             <Route path="payroll"           element={<PayrollPage />} />
+            {/* Admin */}
+            <Route path="admin"             element={<AdminAnalyticsPage />} />
 
           </Route>
 
