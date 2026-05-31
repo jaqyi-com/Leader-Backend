@@ -54,6 +54,10 @@ const NORMALIZE = {
   // Phone — consolidated into phone_number
   "phone_number":      "phone",
   "company_phone":     "phone",   // legacy alias kept for backward compat
+  // Email — consolidated into email_address
+  "email_address":     "email",
+  "email":             "email",   // legacy alias
+  "company_email":     "email",   // legacy alias
   // Website
   "company_website":  "website",
   "website":          "website",
@@ -78,13 +82,11 @@ const CORE_FIELDS = new Set([
 
 // Extra rich fields from usa_business_data exposed at top level (not buried in extra)
 const RICH_FIELDS = new Set([
-  "email", "job_title", "first_name", "last_name", "contact_person",
-  "company_email", "company_phone", "company_facebook", "linked_url",
+  "email_address", "job_title", "first_name", "last_name", "contact_person",
+  "company_facebook", "linked_url",
   "revenue_range", "number_of_employees", "team_size", "total_funding",
   "zip_code", "state", "industry", "city",
   "phone_number",
-  "work_email_1", "work_email_2", "direct_email_1", "direct_email_2",
-  "generic_email", "corporate_email",
 ]);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -185,8 +187,8 @@ function buildWhere({ search, category, city, state, has_phone, has_website }, f
     // Search across name, category, city, phone_number, address, email
     const searchTargets = [
       "business_name", "_category", "city", "state",
-      "phone_number",
-      "street_address", "email", "contact_person", "job_title",
+      "phone_number", "email_address",
+      "street_address", "contact_person", "job_title",
     ];
     const searchCols = searchTargets.map(c => `"${c}" ILIKE $${idx}`);
     conditions.push(`(${searchCols.join(" OR ")})`);
@@ -680,7 +682,7 @@ router.get("/market-intel", async (req, res) => {
       pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w}`, values),
       safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND "phone_number" IS NOT NULL AND "phone_number" != ''`),
       safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("company_website" IS NOT NULL AND "company_website" != '' AND "company_website" NOT ILIKE '%website%')`),
-      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("email" IS NOT NULL AND "email" != '')`),
+      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("email_address" IS NOT NULL AND "email_address" != '')`),
       safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("linked_url" IS NOT NULL AND "linked_url" != '')`),
       safeRun(`SELECT "state", COUNT(*) AS count FROM ${FULL_TABLE} ${w} AND "state" IS NOT NULL AND "state" != '' GROUP BY "state" ORDER BY count DESC LIMIT 15`),
       safeRun(`SELECT "city",  COUNT(*) AS count FROM ${FULL_TABLE} ${w} AND "city"  IS NOT NULL AND "city"  != '' GROUP BY "city"  ORDER BY count DESC LIMIT 10`),
@@ -826,7 +828,7 @@ router.post("/launch-campaign", async (req, res) => {
         contactId:          new mongoose.Types.ObjectId(),
         contactSource:      "inbuilt_db",
         name:               (lead.name || lead.business_name || "Unknown").slice(0, 200),
-        email:              lead.email || lead.company_email || lead.work_email_1 || lead.direct_email_1 || "",
+        email:              lead.email_address || "",
         phone:              lead.phone_number || lead.company_phone || "",
         companyName:        (lead.name || "").slice(0, 200),
         score:              Math.round(Number(lead.similarity) || 50),
