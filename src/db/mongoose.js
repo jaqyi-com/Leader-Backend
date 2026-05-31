@@ -203,14 +203,19 @@ const placeSearchHistorySchema = new mongoose.Schema({
 
 // ─── Page View (website traffic tracking) ─────────────────────────────────────
 const pageViewSchema = new mongoose.Schema({
-  path:      { type: String, default: "/" },
-  referrer:  { type: String, default: "Direct" },
-  device:    { type: String, default: "Desktop" },   // Desktop | Mobile | Tablet
-  browser:   { type: String, default: "Unknown" },   // Chrome | Firefox | Safari | Edge | Other
-  country:   { type: String, default: "Unknown" },   // ISO-2 country code e.g. "IN"
-  city:      { type: String, default: "" },
-  ip:        { type: String, default: "" },
-  sessionId: { type: String, default: "" },          // random ID per browser for unique-visitor count
+  path:        { type: String, default: "/" },
+  referrer:    { type: String, default: "Direct" },
+  device:      { type: String, default: "Desktop" },
+  browser:     { type: String, default: "Unknown" },
+  country:     { type: String, default: "Unknown" },
+  city:        { type: String, default: "" },
+  ip:          { type: String, default: "" },
+  sessionId:   { type: String, default: "" },
+  duration:    { type: Number, default: 0 },    // seconds spent on PREVIOUS page
+  utmSource:   { type: String, default: "" },
+  utmMedium:   { type: String, default: "" },
+  utmCampaign: { type: String, default: "" },
+  isEntry:     { type: Boolean, default: false }, // first page of a session
 }, { timestamps: true });
 // Index for fast time-range queries and unique-visitor counts
 pageViewSchema.index({ createdAt: -1 });

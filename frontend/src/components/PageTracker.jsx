@@ -1,13 +1,16 @@
 /**
- * PageTracker — invisible component that fires a tracking hit on every route change.
- * Generates a persistent sessionId in localStorage for unique-visitor counting.
- * Fails silently — never interferes with the app.
+ * PageTracker — fires a tracking hit on every route change.
+ * Sends: path, referrer, sessionId, duration (time on prev page),
+ *        UTM params, isEntry (first page of session).
+ * Silent failure — never interferes with the app.
  */
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+const API_BASE   = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 const SESSION_KEY = "leader_sid";
+const ENTRY_KEY   = "leader_session_active";
+const TIME_KEY    = "leader_entry_time";
 
 function getSessionId() {
   let id = localStorage.getItem(SESSION_KEY);
@@ -21,29 +24,51 @@ function getSessionId() {
 function parseReferrer() {
   try {
     if (!document.referrer) return "Direct";
-    const host = new URL(document.referrer).hostname.replace(/^www\./, "");
-    return host || "Direct";
-  } catch {
-    return "Direct";
-  }
+    return new URL(document.referrer).hostname.replace(/^www\./, "") || "Direct";
+  } catch { return "Direct"; }
+}
+
+function getUtm() {
+  try {
+    const p = new URLSearchParams(window.location.search);
+    return {
+      utmSource:   p.get("utm_source")   || "",
+      utmMedium:   p.get("utm_medium")   || "",
+      utmCampaign: p.get("utm_campaign") || "",
+    };
+  } catch { return { utmSource: "", utmMedium: "", utmCampaign: "" }; }
 }
 
 export default function PageTracker() {
   const location = useLocation();
+  const entryTimeRef = useRef(Date.now());
 
   useEffect(() => {
-    // fire-and-forget, never await, never block UI
-    const sessionId = getSessionId();
+    const now = Date.now();
+
+    // Duration: seconds spent on the previous page
+    const duration = Math.round((now - entryTimeRef.current) / 1000);
+    entryTimeRef.current = now;
+
+    // isEntry: first page of this browser session (sessionStorage clears on tab close)
+    const isEntry = !sessionStorage.getItem(ENTRY_KEY);
+    sessionStorage.setItem(ENTRY_KEY, "1");
+
+    const utm = getUtm();
+
     fetch(`${API_BASE}/track`, {
-      method: "POST",
+      method:  "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         path:      location.pathname,
         referrer:  parseReferrer(),
-        sessionId,
+        sessionId: getSessionId(),
+        duration:  isEntry ? 0 : duration,  // no duration for first page
+        isEntry,
+        ...utm,
       }),
     }).catch(() => {});
   }, [location.pathname]);
 
-  return null; // renders nothing
+  return null;
 }
