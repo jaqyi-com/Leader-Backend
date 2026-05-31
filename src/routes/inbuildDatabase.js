@@ -30,7 +30,7 @@ const FULL_TABLE      = `"${SCHEMA}"."${TABLE}"`;
 const STATS_CACHE_KEY = "cache:inbuild-stats";
 
 // Columns that may contain phone / website data
-const PHONE_COLS = ["phone", "company_phone"];
+const PHONE_COLS = ["phone_number"];
 const WEB_COLS   = ["website", "company_website"];
 
 // Redis key for caching query embeddings (avoids re-embedding same query)
@@ -51,9 +51,9 @@ const NORMALIZE = {
   "business_name":    "name",
   "company":          "name",
   "full_name":        "name",
-  // Phone — `phone` column has the real data (phone_1..9 are extras)
-  "phone":            "phone",
-  "company_phone":    "phone",
+  // Phone — consolidated into phone_number
+  "phone_number":      "phone",
+  "company_phone":     "phone",   // legacy alias kept for backward compat
   // Website
   "company_website":  "website",
   "website":          "website",
@@ -73,7 +73,7 @@ const NORMALIZE = {
 
 const CORE_FIELDS = new Set([
   "name", "category", "city_file", "rating",
-  "reviews", "phone", "address", "website", "url",
+  "reviews", "phone_number", "address", "website", "url",
 ]);
 
 // Extra rich fields from usa_business_data exposed at top level (not buried in extra)
@@ -82,7 +82,7 @@ const RICH_FIELDS = new Set([
   "company_email", "company_phone", "company_facebook", "linked_url",
   "revenue_range", "number_of_employees", "team_size", "total_funding",
   "zip_code", "state", "industry", "city",
-  "phone", "phone_1", "phone_2", "phone_3",
+  "phone_number",
   "work_email_1", "work_email_2", "direct_email_1", "direct_email_2",
   "generic_email", "corporate_email",
 ]);
@@ -182,10 +182,10 @@ function buildWhere({ search, category, city, state, has_phone, has_website }, f
   let   idx        = 1;
 
   if (search) {
-    // Search across name, category, city, BOTH phone columns, address, email
+    // Search across name, category, city, phone_number, address, email
     const searchTargets = [
       "business_name", "_category", "city", "state",
-      "phone", "company_phone",
+      "phone_number",
       "street_address", "email", "contact_person", "job_title",
     ];
     const searchCols = searchTargets.map(c => `"${c}" ILIKE $${idx}`);
@@ -214,13 +214,9 @@ function buildWhere({ search, category, city, state, has_phone, has_website }, f
 
   // has_phone — check ALL phone columns with OR (has data) / AND (no data)
   if (has_phone === "true") {
-    const conds = PHONE_COLS.map(
-      c => `("${c}" IS NOT NULL AND "${c}" != '' AND "${c}" IS DISTINCT FROM 'phone')`
-    );
-    conditions.push(`(${conds.join(" OR ")})`);
+    conditions.push(`("phone_number" IS NOT NULL AND "phone_number" != '')`);
   } else if (has_phone === "false") {
-    const conds = PHONE_COLS.map(c => `("${c}" IS NULL OR "${c}" = '')`);
-    conditions.push(`(${conds.join(" AND ")})`);
+    conditions.push(`("phone_number" IS NULL OR "phone_number" = '')`);
   }
 
   // has_website — check ALL website columns with OR / AND
@@ -299,7 +295,7 @@ router.get("/stats", async (req, res) => {
     if (cached) return res.json({ ...cached, _cache: "hit" });
 
     const { fieldToCol } = await getSchema();
-    const phoneCol   = `"${fieldToCol.phone   || "phone"}"`;
+    const phoneCol   = `"phone_number"`;
     const websiteCol = `"${fieldToCol.website || "website"}"`;
 
     const HEADER_FILTER = `"business_name" IS DISTINCT FROM 'business_name'`;
@@ -309,7 +305,7 @@ router.get("/stats", async (req, res) => {
       pgQuery(
         `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}
          WHERE ${HEADER_FILTER}
-           AND ${phoneCol} IS NOT NULL AND ${phoneCol} != '' AND ${phoneCol} IS DISTINCT FROM 'phone'`
+           AND ${phoneCol} IS NOT NULL AND ${phoneCol} != ''`
       ),
       pgQuery(
         `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}
@@ -420,14 +416,12 @@ router.post("/semantic-search", async (req, res) => {
       searchConditions.push(`"state" ILIKE $${sIdx}`);  searchValues.push(`%${state}%`); sIdx++;
     }
 
-    // Phone / website filters — no bound params (IS NOT NULL checks)
+    // Phone / website filters
     if (has_phone === "true") {
-      const conds = PHONE_COLS.map(c => `("${c}" IS NOT NULL AND "${c}" != '' AND "${c}" IS DISTINCT FROM 'phone')`);
-      const clause = `(${conds.join(" OR ")})`;
-      countConditions.push(clause);
-      searchConditions.push(clause);
+      countConditions.push(`("phone_number" IS NOT NULL AND "phone_number" != '')`);
+      searchConditions.push(`("phone_number" IS NOT NULL AND "phone_number" != '')`);
     } else if (has_phone === "false") {
-      const clause = `(${PHONE_COLS.map(c => `("${c}" IS NULL OR "${c}" = '')`).join(" AND ")})`;
+      const clause = `("phone_number" IS NULL OR "phone_number" = '')`;
       countConditions.push(clause);
       searchConditions.push(clause);
     }
@@ -684,7 +678,7 @@ router.get("/market-intel", async (req, res) => {
       stateRes, cityRes, revenueRes, employeeRes,
     ] = await Promise.all([
       pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w}`, values),
-      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND "phone" IS NOT NULL AND "phone" != '' AND "phone" IS DISTINCT FROM 'phone'`),
+      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND "phone_number" IS NOT NULL AND "phone_number" != ''`),
       safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("company_website" IS NOT NULL AND "company_website" != '' AND "company_website" NOT ILIKE '%website%')`),
       safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("email" IS NOT NULL AND "email" != '')`),
       safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("linked_url" IS NOT NULL AND "linked_url" != '')`),
@@ -767,7 +761,7 @@ router.post("/ideal-customer", async (req, res) => {
     if (profile.category)    { conditions.push(`"_category" ILIKE $${sIdx}`);  sValues.push(`%${profile.category}%`);  sIdx++; }
     if (profile.city)        { conditions.push(`"city" ILIKE $${sIdx}`);        sValues.push(`%${profile.city}%`);      sIdx++; }
     if (profile.state)       { conditions.push(`"state" ILIKE $${sIdx}`);       sValues.push(`%${profile.state}%`);     sIdx++; }
-    if (profile.has_phone    === "true") conditions.push(`("phone" IS NOT NULL AND "phone" != '' AND "phone" IS DISTINCT FROM 'phone')`);
+    if (profile.has_phone    === "true") conditions.push(`("phone_number" IS NOT NULL AND "phone_number" != '')`);
     if (profile.has_website  === "true") conditions.push(`("company_website" IS NOT NULL AND "company_website" != '' AND "company_website" NOT ILIKE '%website%')`);
 
     sValues.push(limitNum, offset);
@@ -833,7 +827,7 @@ router.post("/launch-campaign", async (req, res) => {
         contactSource:      "inbuilt_db",
         name:               (lead.name || lead.business_name || "Unknown").slice(0, 200),
         email:              lead.email || lead.company_email || lead.work_email_1 || lead.direct_email_1 || "",
-        phone:              lead.phone || lead.company_phone || "",
+        phone:              lead.phone_number || lead.company_phone || "",
         companyName:        (lead.name || "").slice(0, 200),
         score:              Math.round(Number(lead.similarity) || 50),
         icebreaker:         "",
