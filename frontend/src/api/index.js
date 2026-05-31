@@ -218,3 +218,9 @@ export const ibRefreshCache   = ()             => lgApi.post("/api/inbuild-datab
 export const ibGetHealth      = ()             => lgApi.get("/api/inbuild-database/health");
 export const ibSemanticSearch = (body)         => lgApi.post("/api/inbuild-database/semantic-search", body);
 export const ibEmbedStatus    = ()             => lgApi.get("/api/inbuild-database/embedding-status");
+// ── New intelligence features ──────────────────────────────────────────────
+export const ibGetMap         = (params = {})  => lgApi.get("/api/inbuild-database/map", { params });
+export const ibGetMarketIntel = (params = {})  => lgApi.get("/api/inbuild-database/market-intel", { params });
+export const ibIdealCustomer  = (body)         => lgApi.post("/api/inbuild-database/ideal-customer", body);
+export const ibLaunchCampaign = (body)         => lgApi.post("/api/inbuild-database/launch-campaign", body);
+

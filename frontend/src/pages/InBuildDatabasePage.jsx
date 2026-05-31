@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
   Database, Search, Filter, Download, RefreshCw, Loader2,
   Phone, Globe, MapPin, Sparkles, X, ChevronDown, ChevronUp,
-  ExternalLink, Star, Zap, Target, AlertCircle
+  ExternalLink, Star, Zap, Target, AlertCircle, Send, CheckCircle2
 } from "lucide-react";
 import {
   ibGetDatabase, ibGetStats, ibAIFilter, ibGetColumns,
-  ibRefreshCache, ibSemanticSearch, ibEmbedStatus
+  ibRefreshCache, ibSemanticSearch, ibEmbedStatus, ibLaunchCampaign
 } from "../api";
 import toast from "react-hot-toast";
 
@@ -59,6 +60,7 @@ function SimilarityBadge({ score }) {
 }
 
 export default function InBuildDatabasePage() {
+  const navigate = useNavigate();
   const [leads,         setLeads]         = useState([]);
   const [total,         setTotal]         = useState(0);
   const [stats,         setStats]         = useState(null);
@@ -68,14 +70,19 @@ export default function InBuildDatabasePage() {
   const [aiLoading,     setAiLoading]     = useState(false);
   const [aiQuery,       setAiQuery]       = useState("");
   const [aiSummary,     setAiSummary]     = useState("");
-  const [semanticMode,  setSemanticMode]  = useState(false);  // true = pgvector, false = text
-  const [embedStatus,   setEmbedStatus]   = useState(null);   // { total, embedded, percent, ready }
+  const [semanticMode,  setSemanticMode]  = useState(false);
+  const [embedStatus,   setEmbedStatus]   = useState(null);
   const [showF,         setShowF]         = useState(false);
   const [page,          setPage]          = useState(1);
   const [limit,         setLimit]         = useState(50);
   const [sortBy,        setSortBy]        = useState("name");
   const [sortDir,       setSortDir]       = useState("asc");
   const [filters,       setFilters]       = useState(BLANK);
+  // ── Campaign builder state ───────────────────────────────────
+  const [selected,      setSelected]      = useState(new Set());  // indices of selected rows
+  const [showCampModal, setShowCampModal] = useState(false);
+  const [campName,      setCampName]      = useState("");
+  const [launching,     setLaunching]     = useState(false);
   const embedPollRef = useRef(null);
 
   const setF = (k, v) => { setFilters(p => ({ ...p, [k]: v })); setPage(1); };
@@ -196,6 +203,26 @@ export default function InBuildDatabasePage() {
   const clearAll = () => {
     setFilters(BLANK); setAiQuery(""); setAiSummary("");
     setSemanticMode(false); setPage(1);
+    setSelected(new Set());
+  };
+
+  // ── Campaign builder ──────────────────────────────────────────
+  const toggleSelect = (idx) => setSelected(prev => {
+    const next = new Set(prev); next.has(idx) ? next.delete(idx) : next.add(idx); return next;
+  });
+
+  const launchCampaign = async () => {
+    if (!campName.trim()) { toast.error("Campaign name is required"); return; }
+    const chosenLeads = [...selected].map(i => leads[i]);
+    setLaunching(true);
+    try {
+      const { data } = await ibLaunchCampaign({ leads: chosenLeads, campaignName: campName, channels: ["email"] });
+      toast.success(`✅ Campaign created with ${data.contactCount} contacts!`);
+      setShowCampModal(false); setSelected(new Set()); setCampName("");
+      navigate("/app/outreach");
+    } catch (e) {
+      toast.error(e.response?.data?.error || e.message);
+    } finally { setLaunching(false); }
   };
 
   const exportCSV = () => {
@@ -240,6 +267,13 @@ export default function InBuildDatabasePage() {
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
+          {selected.size > 0 && (
+            <motion.button initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+              onClick={() => setShowCampModal(true)}
+              className="btn-primary text-xs gap-1.5">
+              <Send size={12} />Launch Campaign ({selected.size})
+            </motion.button>
+          )}
           <button onClick={exportCSV} disabled={!leads.length} className="btn-ghost text-xs gap-1.5">
             <Download size={13} />Export CSV
           </button>
@@ -406,6 +440,14 @@ export default function InBuildDatabasePage() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
+                <th className="px-3 py-3 w-8">
+                  <input type="checkbox"
+                    checked={leads.length > 0 && selected.size === leads.length}
+                    onChange={() => selected.size === leads.length
+                      ? setSelected(new Set())
+                      : setSelected(new Set(leads.map((_, i) => i)))}
+                  />
+                </th>
                 {semanticMode && (
                   <th className="text-left px-3 py-3 text-[var(--text-3)] font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap">
                     Match
@@ -423,6 +465,7 @@ export default function InBuildDatabasePage() {
               {loading ? (
                 Array.from({ length: 6 }).map((_, idx) => (
                   <tr key={`skel-${idx}`} className="border-b border-[var(--border)] animate-pulse">
+                    <td className="px-3 py-3 w-8"><div className="h-4 w-4 bg-[var(--surface-2)] rounded" /></td>
                     {(semanticMode ? ["sim", ...cols.map(c=>c.key)] : cols.map(c=>c.key)).map((_, ci) => (
                       <td key={ci} className="px-3 py-3">
                         <div className="h-4 bg-[var(--surface-2)] rounded" style={{ width: `${60 + (ci * 17) % 60}px` }} />
@@ -432,7 +475,7 @@ export default function InBuildDatabasePage() {
                 ))
               ) : leads.length === 0 ? (
                 <tr>
-                  <td colSpan={cols.length + (semanticMode ? 1 : 0)} className="py-16 text-center text-[var(--text-3)]">
+                  <td colSpan={cols.length + (semanticMode ? 2 : 1)} className="py-16 text-center text-[var(--text-3)]">
                     <Database size={32} className="mx-auto mb-3 opacity-30" />
                     <p>No records match your {semanticMode ? "semantic query" : "filters"}.</p>
                     <p className="text-[10px] mt-1 opacity-60">
@@ -441,7 +484,15 @@ export default function InBuildDatabasePage() {
                   </td>
                 </tr>
               ) : leads.map((l, i) => (
-                <tr key={l._id || i} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors">
+                <tr key={l._id || i}
+                  className={`border-b border-[var(--border)] transition-colors ${
+                    selected.has(i) ? "bg-indigo-500/5" : "hover:bg-[var(--surface-2)]"
+                  }`}>
+                  <td className="px-3 py-2.5">
+                    <input type="checkbox" checked={selected.has(i)}
+                      onChange={() => toggleSelect(i)}
+                      onClick={e => e.stopPropagation()} />
+                  </td>
                   {semanticMode && (
                     <td className="px-3 py-2.5">
                       <SimilarityBadge score={l.similarity} />
@@ -527,6 +578,39 @@ export default function InBuildDatabasePage() {
           </div>
         )}
       </div>
+
+      {/* ── Campaign Launch Modal ─────────────────────────────── */}
+      <AnimatePresence>
+        {showCampModal && (
+          <motion.div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <div className="absolute inset-0 bg-black/60" onClick={() => setShowCampModal(false)} />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="relative z-10 card p-6 w-full max-w-md"
+              style={{ background: "var(--surface)" }}>
+              <h3 className="text-base font-bold text-[var(--text)] mb-1">🚀 Launch Outreach Campaign</h3>
+              <p className="text-xs text-[var(--text-3)] mb-4">
+                {selected.size} leads selected · will be added to a new draft campaign
+              </p>
+              <label className="text-xs font-semibold text-[var(--text-2)] block mb-1">Campaign Name</label>
+              <input className="input w-full text-sm mb-4" placeholder="e.g. DB Outreach May 2026"
+                value={campName} onChange={e => setCampName(e.target.value)} autoFocus
+                onKeyDown={e => e.key === "Enter" && launchCampaign()} />
+              <p className="text-[10px] text-[var(--text-3)] mb-4">
+                ⚠️ Only leads with an email or phone number will be included in the campaign.
+              </p>
+              <div className="flex gap-2">
+                <button onClick={() => setShowCampModal(false)} className="btn-ghost flex-1">Cancel</button>
+                <button onClick={launchCampaign} disabled={launching} className="btn-primary flex-1 gap-1.5">
+                  {launching ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                  {launching ? "Creating…" : "Create Campaign"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

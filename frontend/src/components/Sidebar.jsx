@@ -6,7 +6,7 @@ import {
   Zap, Settings, Share2, MessageSquare, Sparkles,
   Users2, Mail, Building2, BrainCircuit, Rocket, BookOpen, Target,
   Briefcase, BarChart3, ListChecks, FileText, CreditCard,
-  Calculator, Package, UserCog, Server, ShieldCheck,
+  Calculator, Package, UserCog, Server, ShieldCheck, TrendingUp,
 } from "lucide-react";
 
 
@@ -35,7 +35,8 @@ const LEAD_GEN_LINKS = [
   { to: "/app/lg/companies", label: "Company Intel", icon: Building2 },
   { to: "/app/lg/research", label: "AI Research", icon: BrainCircuit },
   { to: "/app/lg/database", label: "Lead Database", icon: Database },
-  { to: "/app/inbuild-db", label: "In Build - Database", icon: Server }
+  { to: "/app/inbuild-db",    label: "In Build - Database",  icon: Server       },
+  { to: "/app/db-intelligence",label: "DB Intelligence",       icon: TrendingUp   },
 ];
 
 const CRM_LINKS = [

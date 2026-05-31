@@ -621,4 +621,252 @@ router.post("/refresh", async (req, res) => {
   }
 });
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET /map  — business density by state (+ top cities)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/map", async (req, res) => {
+  const { category = "", limit = 15 } = req.query;
+  try {
+    const conditions = [`"business_name" IS DISTINCT FROM 'business_name'`, `"state" IS NOT NULL`, `"state" != ''`];
+    const values = [];
+    let idx = 1;
+    if (category) {
+      conditions.push(`"_category" ILIKE $${idx}`);
+      values.push(`%${category}%`);
+      idx++;
+    }
+    const whereStr = `WHERE ${conditions.join(" AND ")}`;
+
+    const [stateRes, cityRes] = await Promise.all([
+      pgQuery(
+        `SELECT "state", COUNT(*) AS count FROM ${FULL_TABLE} ${whereStr} GROUP BY "state" ORDER BY count DESC LIMIT 60`,
+        values
+      ),
+      pgQuery(
+        `SELECT "city", "state", COUNT(*) AS count FROM ${FULL_TABLE}
+         ${whereStr} AND "city" IS NOT NULL AND "city" != ''
+         GROUP BY "city", "state" ORDER BY count DESC LIMIT ${Math.min(parseInt(limit) || 15, 50)}`,
+        values
+      ),
+    ]);
+
+    res.json({
+      category,
+      byState:  stateRes.rows.map(r => ({ state: r.state,   count: parseInt(r.count) })),
+      topCities: cityRes.rows.map(r => ({ city: r.city, state: r.state, count: parseInt(r.count) })),
+    });
+  } catch (err) {
+    logger.error(`[GET /map] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET /market-intel  — full market intelligence for a category
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/market-intel", async (req, res) => {
+  const { category = "", state = "" } = req.query;
+  if (!category.trim()) return res.status(422).json({ error: "category is required" });
+
+  try {
+    const conditions = [`"business_name" IS DISTINCT FROM 'business_name'`];
+    const values = [];
+    let idx = 1;
+    if (category) { conditions.push(`"_category" ILIKE $${idx}`); values.push(`%${category}%`); idx++; }
+    if (state)    { conditions.push(`"state" ILIKE $${idx}`);     values.push(`%${state}%`);    idx++; }
+    const w = `WHERE ${conditions.join(" AND ")}`;
+
+    const safeRun = (sql, vals = values) =>
+      pgQuery(sql, vals).catch(() => ({ rows: [] }));
+
+    const [
+      totalRes, phoneRes, websiteRes, emailRes, linkedRes,
+      stateRes, cityRes, revenueRes, employeeRes,
+    ] = await Promise.all([
+      pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w}`, values),
+      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND "phone" IS NOT NULL AND "phone" != '' AND "phone" IS DISTINCT FROM 'phone'`),
+      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("company_website" IS NOT NULL AND "company_website" != '' AND "company_website" NOT ILIKE '%website%')`),
+      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("email" IS NOT NULL AND "email" != '')`),
+      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("linked_url" IS NOT NULL AND "linked_url" != '')`),
+      safeRun(`SELECT "state", COUNT(*) AS count FROM ${FULL_TABLE} ${w} AND "state" IS NOT NULL AND "state" != '' GROUP BY "state" ORDER BY count DESC LIMIT 15`),
+      safeRun(`SELECT "city",  COUNT(*) AS count FROM ${FULL_TABLE} ${w} AND "city"  IS NOT NULL AND "city"  != '' GROUP BY "city"  ORDER BY count DESC LIMIT 10`),
+      safeRun(`SELECT "revenue_range", COUNT(*) AS count FROM ${FULL_TABLE} ${w} AND "revenue_range" IS NOT NULL AND "revenue_range" != '' GROUP BY "revenue_range" ORDER BY count DESC LIMIT 8`),
+      safeRun(`SELECT "number_of_employees", COUNT(*) AS count FROM ${FULL_TABLE} ${w} AND "number_of_employees" IS NOT NULL AND "number_of_employees" != '' GROUP BY "number_of_employees" ORDER BY count DESC LIMIT 8`),
+    ]);
+
+    const total = parseInt(totalRes.rows[0].cnt || 0);
+    const pct   = (n) => (total > 0 ? Math.round((parseInt(n) / total) * 100) : 0);
+
+    res.json({
+      category, state, total,
+      coverage: {
+        phone:   { count: parseInt(phoneRes.rows[0]?.cnt   || 0), pct: pct(phoneRes.rows[0]?.cnt   || 0) },
+        website: { count: parseInt(websiteRes.rows[0]?.cnt || 0), pct: pct(websiteRes.rows[0]?.cnt || 0) },
+        email:   { count: parseInt(emailRes.rows[0]?.cnt   || 0), pct: pct(emailRes.rows[0]?.cnt   || 0) },
+        linkedin:{ count: parseInt(linkedRes.rows[0]?.cnt  || 0), pct: pct(linkedRes.rows[0]?.cnt  || 0) },
+      },
+      byState:   stateRes.rows.map(r => ({ state: r.state,                        count: parseInt(r.count) })),
+      topCities: cityRes.rows.map(r  => ({ city:  r.city,                         count: parseInt(r.count) })),
+      revenue:   revenueRes.rows.map(r   => ({ range: r.revenue_range,            count: parseInt(r.count) })),
+      employees: employeeRes.rows.map(r  => ({ size:  r.number_of_employees,      count: parseInt(r.count) })),
+    });
+  } catch (err) {
+    logger.error(`[GET /market-intel] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// POST /ideal-customer  — AI description → semantic search + explanations
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.post("/ideal-customer", async (req, res) => {
+  const { description = "", page = 1, limit = 20 } = req.body;
+  if (!description.trim()) return res.status(422).json({ error: "description is required" });
+
+  try {
+    // Step 1: AI extracts structured profile
+    const profileCompletion = await openai.chat.completions.create({
+      model: "gpt-4o-mini", temperature: 0.1,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: `Extract filter params AND an optimized semantic search query from a business description. Return JSON only:
+{
+  "semanticQuery": "string — optimized query for pgvector similarity",
+  "category":    "string or empty",
+  "city":        "string or empty",
+  "state":       "string or empty — use 2-letter abbreviation",
+  "has_phone":   "true|false|empty",
+  "has_website": "true|false|empty",
+  "profileSummary": "string — 1-2 sentence description of this ideal customer"
+}`,
+        },
+        { role: "user", content: description },
+      ],
+    });
+    const profile = JSON.parse(profileCompletion.choices[0].message.content);
+
+    // Step 2: Embed the semantic query
+    const embRes = await openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: (profile.semanticQuery || description).slice(0, 2000),
+      dimensions: 512,
+    });
+    const vecStr = `[${embRes.data[0].embedding.join(",")}]`;
+
+    // Step 3: Build pgvector search with filters
+    const pageNum  = Math.max(1, parseInt(page));
+    const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
+    const offset   = (pageNum - 1) * limitNum;
+
+    const conditions = [`embedding IS NOT NULL`, `"business_name" IS DISTINCT FROM 'business_name'`];
+    const sValues = [vecStr]; // $1 = vector
+    let sIdx = 2;
+
+    if (profile.category)    { conditions.push(`"_category" ILIKE $${sIdx}`);  sValues.push(`%${profile.category}%`);  sIdx++; }
+    if (profile.city)        { conditions.push(`"city" ILIKE $${sIdx}`);        sValues.push(`%${profile.city}%`);      sIdx++; }
+    if (profile.state)       { conditions.push(`"state" ILIKE $${sIdx}`);       sValues.push(`%${profile.state}%`);     sIdx++; }
+    if (profile.has_phone    === "true") conditions.push(`("phone" IS NOT NULL AND "phone" != '' AND "phone" IS DISTINCT FROM 'phone')`);
+    if (profile.has_website  === "true") conditions.push(`("company_website" IS NOT NULL AND "company_website" != '' AND "company_website" NOT ILIKE '%website%')`);
+
+    sValues.push(limitNum, offset);
+    const searchSql = `
+      SELECT *, ROUND((1 - (embedding <=> $1)::numeric) * 100, 1) AS similarity
+      FROM ${FULL_TABLE}
+      WHERE ${conditions.join(" AND ")}
+      ORDER BY embedding <=> $1
+      LIMIT $${sIdx} OFFSET $${sIdx + 1}
+    `;
+
+    const schema    = await getSchema();
+    const searchRes = await pgQuery(searchSql, sValues);
+    const leads     = searchRes.rows.map(row => {
+      const sim = row.similarity;
+      delete row.embedding;
+      return { ...normalizeRow(schema, row), similarity: sim };
+    });
+
+    // Step 4: AI writes "why this matches" for top 3
+    let explanations = {};
+    const top3 = leads.slice(0, 3);
+    if (top3.length > 0) {
+      const explainCompletion = await openai.chat.completions.create({
+        model: "gpt-4o-mini", temperature: 0.3,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: `Write a short 1-sentence "why this matches" for each business. Return: { "0": "...", "1": "...", "2": "..." }`,
+          },
+          {
+            role: "user",
+            content: `Ideal customer: "${description}"\nMatches: ${JSON.stringify(top3.map(l => ({ name: l.name, category: l.category, city: l.city_file, revenue: l.revenue_range, employees: l.number_of_employees, score: l.similarity })))}`,
+          },
+        ],
+      });
+      explanations = JSON.parse(explainCompletion.choices[0].message.content);
+    }
+
+    res.json({ leads, profile, explanations, description, page: pageNum, limit: limitNum });
+  } catch (err) {
+    logger.error(`[POST /ideal-customer] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// POST /launch-campaign  — create OutreachCampaign from selected DB rows
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.post("/launch-campaign", async (req, res) => {
+  try {
+    const { leads = [], campaignName = "DB Campaign", channels = ["email"] } = req.body;
+    if (!leads.length) return res.status(422).json({ error: "No leads provided" });
+    if (!req.user?.orgId) return res.status(401).json({ error: "Authentication required" });
+
+    const { OutreachCampaign } = require("../db/mongoose");
+    const mongoose = require("mongoose");
+
+    const contacts = leads
+      .map(lead => ({
+        contactId:          new mongoose.Types.ObjectId(),
+        contactSource:      "inbuilt_db",
+        name:               (lead.name || lead.business_name || "Unknown").slice(0, 200),
+        email:              lead.email || lead.company_email || lead.work_email_1 || lead.direct_email_1 || "",
+        phone:              lead.phone || lead.company_phone || "",
+        companyName:        (lead.name || "").slice(0, 200),
+        score:              Math.round(Number(lead.similarity) || 50),
+        icebreaker:         "",
+        personalizedSubject:"",
+        personalizedEmail:  "",
+        whatsappMessage:    "",
+        status:             "pending",
+        deliveries:         [],
+      }))
+      .filter(c => c.email || c.phone); // only contactable leads
+
+    if (!contacts.length) {
+      return res.status(422).json({ error: "None of the selected leads have email or phone data" });
+    }
+
+    const campaign = await OutreachCampaign.create({
+      name:     campaignName,
+      channels,
+      sequence: [
+        { day: 0, channel: channels[0] || "email", label: "Initial Contact" },
+        { day: 3, channel: "email",                 label: "Follow-up" },
+      ],
+      contacts,
+      status: "draft",
+      orgId:  req.user.orgId,
+    });
+
+    res.json({ success: true, campaign, contactCount: contacts.length });
+  } catch (err) {
+    logger.error(`[POST /launch-campaign] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
+
