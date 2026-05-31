@@ -383,4 +383,121 @@ router.get("/", async (req, res) => {
   }
 });
 
+
+// ─── GET /api/analytics/traffic ──────────────────────────────────────────────
+// Website traffic stats — admin-only (covered by router.use guard above)
+router.get("/traffic", async (req, res) => {
+  try {
+    const { PageView } = db;
+    const now      = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const weekStart  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const dayStart   = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    // ── KPI counts ────────────────────────────────────────────────────────────
+    const [totalViews, todayViews, weekViews] = await Promise.all([
+      safeCount(PageView),
+      safeCount(PageView, { createdAt: { $gte: todayStart } }),
+      safeCount(PageView, { createdAt: { $gte: weekStart } }),
+    ]);
+
+    // Unique visitors = distinct sessionIds in last 7 days
+    const uniqueResult = await safeAggregate(PageView, [
+      { $match: { createdAt: { $gte: weekStart }, sessionId: { $ne: "" } } },
+      { $group: { _id: "$sessionId" } },
+      { $count: "total" },
+    ]);
+    const uniqueVisitors = uniqueResult[0]?.total ?? 0;
+
+    // ── Hourly views — last 24 hours (24 buckets, one per hour) ───────────────
+    const hourlyRaw = await safeAggregate(PageView, [
+      { $match: { createdAt: { $gte: dayStart } } },
+      { $group: {
+        _id: { $hour: "$createdAt" },
+        count: { $sum: 1 },
+      }},
+      { $sort: { _id: 1 } },
+    ]);
+    // Fill all 24 hour slots
+    const hourlyMap = {};
+    hourlyRaw.forEach(h => { hourlyMap[h._id] = h.count; });
+    const currentHour = now.getHours();
+    const hourlyViews = Array.from({ length: 24 }, (_, i) => {
+      // Rotate so earliest hour comes first
+      const hour = (currentHour + 1 + i) % 24;
+      return { hour, count: hourlyMap[hour] ?? 0 };
+    });
+
+    // ── Top pages (last 7 days) ────────────────────────────────────────────────
+    const topPages = await safeAggregate(PageView, [
+      { $match: { createdAt: { $gte: weekStart } } },
+      { $group: { _id: "$path", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 10 },
+    ]);
+
+    // ── Devices ───────────────────────────────────────────────────────────────
+    const devicesRaw = await safeAggregate(PageView, [
+      { $match: { createdAt: { $gte: weekStart } } },
+      { $group: { _id: "$device", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+    const deviceTotal = devicesRaw.reduce((s, d) => s + d.count, 0) || 1;
+    const devices = devicesRaw.map(d => ({
+      device: d._id || "Unknown",
+      count:  d.count,
+      pct:    Math.round((d.count / deviceTotal) * 100),
+    }));
+
+    // ── Browsers ──────────────────────────────────────────────────────────────
+    const browsersRaw = await safeAggregate(PageView, [
+      { $match: { createdAt: { $gte: weekStart } } },
+      { $group: { _id: "$browser", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+    ]);
+    const browserTotal = browsersRaw.reduce((s, d) => s + d.count, 0) || 1;
+    const browsers = browsersRaw.map(b => ({
+      browser: b._id || "Unknown",
+      count:   b.count,
+      pct:     Math.round((b.count / browserTotal) * 100),
+    }));
+
+    // ── Top countries ─────────────────────────────────────────────────────────
+    const countries = await safeAggregate(PageView, [
+      { $match: { createdAt: { $gte: weekStart }, country: { $ne: "Unknown" } } },
+      { $group: { _id: "$country", count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 8 },
+    ]);
+
+    // ── Recent visits (last 20) ───────────────────────────────────────────────
+    const recentVisits = await PageView.find()
+      .sort({ createdAt: -1 })
+      .limit(20)
+      .lean();
+
+    res.json({
+      generatedAt: now.toISOString(),
+      kpis: { totalViews, todayViews, weekViews, uniqueVisitors },
+      hourlyViews,
+      topPages: topPages.map(p => ({ path: p._id || "/", count: p.count })),
+      devices,
+      browsers,
+      countries: countries.map(c => ({ country: c._id, count: c.count })),
+      recentVisits: recentVisits.map(v => ({
+        path:      v.path,
+        device:    v.device,
+        browser:   v.browser,
+        country:   v.country,
+        city:      v.city,
+        referrer:  v.referrer,
+        when:      v.createdAt,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
+

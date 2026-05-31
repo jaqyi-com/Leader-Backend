@@ -51,6 +51,7 @@ import AccountingPage     from "./pages/accounting/AccountingPage";
 import InventoryPage      from "./pages/inventory/InventoryPage";
 import PayrollPage        from "./pages/payroll/PayrollPage";
 import AdminAnalyticsPage from "./pages/AdminAnalyticsPage";
+import PageTracker        from "./components/PageTracker";
 
 import { ThemeProvider } from "./context/ThemeContext";
 
@@ -58,6 +59,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+          <PageTracker />
         <Routes>
           {/* ── Public routes ─────────────────────────────────── */}
           <Route path="/"                element={<LandingPage />} />

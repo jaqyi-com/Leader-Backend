@@ -1,197 +1,476 @@
+/**
+ * Admin Analytics — /app/admin
+ *
+ * Two tabs:
+ *  • Traffic  — website page-view analytics (matching screenshot design)
+ *  • Platform — app-wide metrics (leads, CRM, outreach, etc.)
+ *
+ * Only accessible to ADMIN_EMAIL. Everyone else sees a lock screen.
+ */
+
 import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import {
-  Users2, Building2, Mail, MapPin, Globe, TrendingUp,
-  MessageSquare, Share2, Briefcase, CreditCard,
-  Package, UserCog, Calculator, RefreshCw, AlertCircle,
-  Activity, Target, Zap, CheckCircle2, ShieldCheck,
-  ArrowUpRight, Lock,
+  Eye, TrendingUp, Activity, Users,
+  Monitor, Smartphone, Tablet,
+  Globe, RefreshCw, AlertCircle, Lock, ShieldCheck,
+  Chrome, Layers,
+  // platform tab
+  Building2, Mail, Target, Briefcase, Share2,
+  UserCog, Calculator, Package, Zap, MapPin,
 } from "lucide-react";
 
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+const API_BASE   = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 const ADMIN_EMAIL = "akshatv00001@gmail.com";
 
-// ── tiny helpers ─────────────────────────────────────────────────────────────
-const fmt = (n) =>
-  n == null ? "—" : n >= 1_000_000
-    ? `${(n / 1_000_000).toFixed(1)}M`
-    : n >= 1_000
-    ? `${(n / 1_000).toFixed(1)}k`
-    : String(n);
-
-const currency = (n) =>
-  n == null ? "—" :
-  `₹${n >= 1_000_000 ? `${(n / 1_000_000).toFixed(2)}M` : n.toLocaleString("en-IN")}`;
-
-// ── Sparkline ─────────────────────────────────────────────────────────────────
-function Sparkline({ data = [], color = "#E23744", height = 36 }) {
-  if (!data.length) return <div style={{ height }} />;
-  const counts = data.map((d) => d.count);
-  const max = Math.max(...counts, 1);
-  const min = Math.min(...counts, 0);
-  const range = max - min || 1;
-  const w = 120, h = height;
-  const pts = counts.map((c, i) => {
-    const x = (i / Math.max(counts.length - 1, 1)) * w;
-    const y = h - ((c - min) / range) * (h - 4) - 2;
-    return `${x},${y}`;
-  });
-  const polyline = pts.join(" ");
-  const area = `${pts[0].split(",")[0]},${h} ${polyline} ${pts[pts.length - 1].split(",")[0]},${h}`;
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ overflow: "visible" }}>
-      <defs>
-        <linearGradient id={`g${color.replace("#","")}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.3" />
-          <stop offset="100%" stopColor={color} stopOpacity="0" />
-        </linearGradient>
-      </defs>
-      <polygon points={area} fill={`url(#g${color.replace("#","")})`} />
-      <polyline points={polyline} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-      {counts.length > 0 && (
-        <circle cx={pts[pts.length-1].split(",")[0]} cy={pts[pts.length-1].split(",")[1]} r="3" fill={color} />
-      )}
-    </svg>
-  );
+// ── helpers ───────────────────────────────────────────────────────────────────
+function fmt(n) {
+  if (n == null) return "0";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000)     return `${(n / 1_000).toFixed(1)}k`;
+  return String(n);
 }
 
-// ── Mini Bar ──────────────────────────────────────────────────────────────────
-function MiniBar({ items = [], colorVar = "--accent" }) {
-  const max = Math.max(...items.map((i) => i.count), 1);
+function timeAgo(dateStr) {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  if (diff < 60_000)    return `${Math.round(diff / 1000)}s ago`;
+  if (diff < 3_600_000) return `${Math.round(diff / 60_000)}m ago`;
+  if (diff < 86_400_000)return `${Math.round(diff / 3_600_000)}h ago`;
+  return `${Math.round(diff / 86_400_000)}d ago`;
+}
+
+const DEVICE_ICON = {
+  Desktop: Monitor,
+  Mobile:  Smartphone,
+  Tablet:  Tablet,
+};
+
+const COUNTRY_FLAG = (cc = "") => {
+  // Convert ISO-2 to flag emoji
+  if (!cc || cc.length !== 2) return "🌐";
+  return cc.toUpperCase().replace(/./g, c =>
+    String.fromCodePoint(c.charCodeAt(0) + 127397)
+  );
+};
+
+// ── Bar Chart (Last 24 Hours) ─────────────────────────────────────────────────
+function HourBarChart({ data = [] }) {
+  const max = Math.max(...data.map(d => d.count), 1);
+  const labelIdxs = [0, 4, 8, 12, 16, 20]; // every 4 hours
+
   return (
-    <div className="flex flex-col gap-1.5 w-full">
-      {items.slice(0, 6).map((item) => (
-        <div key={item.label} className="flex items-center gap-2 text-xs">
-          <span className="w-20 truncate capitalize" style={{ color: "var(--text-3)" }}>{item.label}</span>
-          <div className="flex-1 h-1.5 rounded-full" style={{ background: "var(--surface-3)" }}>
+    <div className="flex flex-col gap-2">
+      {/* Bars */}
+      <div className="flex items-end gap-px" style={{ height: 160 }}>
+        {data.map((d, i) => {
+          const pct = (d.count / max) * 100;
+          return (
             <motion.div
-              initial={{ width: 0 }}
-              animate={{ width: `${(item.count / max) * 100}%` }}
-              transition={{ duration: 0.6, ease: "easeOut" }}
-              className="h-full rounded-full"
-              style={{ background: `var(${colorVar})` }}
+              key={i}
+              initial={{ height: 0 }}
+              animate={{ height: `${Math.max(pct, d.count > 0 ? 2 : 0)}%` }}
+              transition={{ duration: 0.5, delay: i * 0.01, ease: "easeOut" }}
+              title={`${String(d.hour).padStart(2, "0")}:00 — ${d.count} view${d.count !== 1 ? "s" : ""}`}
+              className="flex-1 rounded-sm cursor-pointer transition-opacity hover:opacity-80"
+              style={{
+                background: d.count > 0
+                  ? "linear-gradient(to top, #6366f1, #818cf8)"
+                  : "rgba(255,255,255,0.04)",
+                minHeight: d.count > 0 ? 2 : 1,
+              }}
             />
-          </div>
-          <span className="w-8 text-right font-semibold" style={{ color: "var(--text-2)" }}>{fmt(item.count)}</span>
-        </div>
-      ))}
-      {items.length === 0 && <p className="text-xs" style={{ color: "var(--text-3)" }}>No data yet.</p>}
-    </div>
-  );
-}
-
-// ── Donut ─────────────────────────────────────────────────────────────────────
-function Donut({ segments = [], size = 90 }) {
-  const total = segments.reduce((s, seg) => s + seg.value, 0) || 1;
-  const r = size / 2 - 10;
-  const circ = 2 * Math.PI * r;
-  let offset = 0;
-  const arcs = segments.map((seg) => {
-    const dash = (seg.value / total) * circ;
-    const arc = { ...seg, dash, offset };
-    offset += dash;
-    return arc;
-  });
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="var(--surface-3)" strokeWidth="8" />
-      {arcs.map((arc, i) => (
-        <circle key={i} cx={size/2} cy={size/2} r={r} fill="none"
-          stroke={arc.color} strokeWidth="8"
-          strokeDasharray={`${arc.dash} ${circ - arc.dash}`}
-          strokeDashoffset={circ / 4 - arc.offset} strokeLinecap="round"
-          style={{ transition: "stroke-dasharray 0.6s ease" }}
-        />
-      ))}
-      <text x={size/2} y={size/2+1} textAnchor="middle" dominantBaseline="middle"
-        style={{ fontSize: 13, fontWeight: 700, fill: "var(--text)", fontFamily: "Inter,sans-serif" }}>
-        {fmt(total)}
-      </text>
-    </svg>
-  );
-}
-
-// ── Stat Card ─────────────────────────────────────────────────────────────────
-function StatCard({ icon: Icon, label, value, color = "var(--accent)" }) {
-  return (
-    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.35 }} className="card p-4 flex flex-col gap-3">
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: `${color}18` }}>
-          <Icon size={15} style={{ color }} />
-        </div>
-        <span className="text-xs font-medium" style={{ color: "var(--text-3)" }}>{label}</span>
+          );
+        })}
       </div>
-      <span className="text-2xl font-bold" style={{ color: "var(--text)" }}>{value}</span>
-    </motion.div>
-  );
-}
 
-// ── Section Header ────────────────────────────────────────────────────────────
-function SectionHeader({ icon: Icon, label, color = "var(--accent)" }) {
-  return (
-    <div className="flex items-center gap-2 mb-4">
-      <Icon size={14} style={{ color }} />
-      <span className="text-xs font-semibold uppercase tracking-widest" style={{ color }}>{label}</span>
-      <div className="flex-1 h-px" style={{ background: "var(--border)" }} />
-    </div>
-  );
-}
-
-// ── Org Card ──────────────────────────────────────────────────────────────────
-function OrgCard({ org, idx }) {
-  const colors = ["var(--accent)", "var(--teal)", "var(--emerald)", "var(--violet)", "var(--ember)"];
-  const c = colors[idx % colors.length];
-  return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: idx * 0.05 }} className="card p-4 flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-            style={{ background: c }}>
-            {(org.name || "?")[0].toUpperCase()}
-          </div>
-          <div>
-            <p className="text-sm font-semibold leading-tight" style={{ color: "var(--text)" }}>{org.name}</p>
-            <p className="text-xs" style={{ color: "var(--text-3)" }}>{org.slug}</p>
-          </div>
-        </div>
-        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: `${c}18`, color: c }}>
-          {fmt(org.memberCount)} member{org.memberCount !== 1 ? "s" : ""}
-        </span>
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { label: "Leads", val: org.leads },
-          { label: "Outreach", val: org.outreach },
-          { label: "Deals", val: org.deals },
-        ].map((r) => (
-          <div key={r.label} className="flex flex-col gap-0.5">
-            <span className="text-xs" style={{ color: "var(--text-3)" }}>{r.label}</span>
-            <span className="text-base font-bold" style={{ color: c }}>{fmt(r.val)}</span>
+      {/* X-axis labels — show every 4th */}
+      <div className="flex" style={{ height: 20 }}>
+        {data.map((d, i) => (
+          <div key={i} className="flex-1 flex justify-center">
+            {labelIdxs.includes(i) ? (
+              <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>
+                {String(d.hour).padStart(2, "0")}
+              </span>
+            ) : null}
           </div>
         ))}
       </div>
-      <p className="text-[10px]" style={{ color: "var(--text-3)" }}>
-        Created {new Date(org.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-      </p>
+    </div>
+  );
+}
+
+// ── Progress Bar Row ──────────────────────────────────────────────────────────
+function BarRow({ label, count, pct, icon: Icon, max }) {
+  const barPct = max ? (count / max) * 100 : pct;
+  return (
+    <div className="flex items-center gap-3 py-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+      {Icon && <Icon size={13} style={{ color: "rgba(255,255,255,0.4)", flexShrink: 0 }} />}
+      <span className="text-sm flex-shrink-0" style={{ color: "rgba(255,255,255,0.7)", minWidth: 80 }}>
+        {label}
+      </span>
+      <div className="flex-1 h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${barPct}%` }}
+          transition={{ duration: 0.7, ease: "easeOut" }}
+          className="h-full rounded-full"
+          style={{ background: "linear-gradient(90deg,#6366f1,#818cf8)" }}
+        />
+      </div>
+      <span className="text-sm font-medium flex-shrink-0" style={{ color: "rgba(255,255,255,0.5)", minWidth: 36, textAlign: "right" }}>
+        {pct != null ? `${pct}%` : count}
+      </span>
+    </div>
+  );
+}
+
+// ── KPI Card ─────────────────────────────────────────────────────────────────
+function KpiCard({ icon: Icon, label, value, sub, iconBg }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-xl p-5 flex items-center gap-4"
+      style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}
+    >
+      <div className="w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0"
+        style={{ background: iconBg }}>
+        <Icon size={18} style={{ color: "#fff" }} />
+      </div>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.4)" }}>
+          {label}
+        </span>
+        <span className="text-3xl font-bold" style={{ color: "#fff", lineHeight: 1.1 }}>
+          {value}
+        </span>
+        {sub && <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>{sub}</span>}
+      </div>
     </motion.div>
+  );
+}
+
+// ── Section Card ─────────────────────────────────────────────────────────────
+function SectionCard({ title, children, className = "" }) {
+  return (
+    <div
+      className={`rounded-xl p-5 ${className}`}
+      style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+    >
+      <h3 className="text-sm font-semibold mb-4" style={{ color: "rgba(255,255,255,0.7)" }}>
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+// ── Traffic Tab ───────────────────────────────────────────────────────────────
+function TrafficTab({ token }) {
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
+  const [lastUpdate, setLastUpdate] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/analytics/traffic`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        throw new Error(e.error || `${res.status}`);
+      }
+      setData(await res.json());
+      setLastUpdate(new Date());
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const k = data?.kpis ?? {};
+  const topPages    = data?.topPages ?? [];
+  const devices     = data?.devices  ?? [];
+  const browsers    = data?.browsers ?? [];
+  const countries   = data?.countries ?? [];
+  const recentVisits= data?.recentVisits ?? [];
+  const hourly      = data?.hourlyViews ?? [];
+
+  const maxPage = Math.max(...topPages.map(p => p.count), 1);
+
+  return (
+    <div className="flex flex-col gap-0" style={{ background: "#0a0a0f", minHeight: "100%" }}>
+      {/* ── Sub-header ── */}
+      <div className="flex items-center justify-between px-6 py-4"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <div>
+          <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+            {lastUpdate ? `Updated ${timeAgo(lastUpdate.toISOString())}` : "Loading…"}
+          </p>
+        </div>
+        <button onClick={load} disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+          style={{ background: "#6366f1", color: "#fff", opacity: loading ? 0.6 : 1 }}>
+          <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
+          Refresh
+        </button>
+      </div>
+
+      {/* ── Error ── */}
+      {error && (
+        <div className="mx-6 mt-4 px-4 py-3 rounded-xl flex items-center gap-2 text-xs"
+          style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+          <AlertCircle size={13} /> {error}
+        </div>
+      )}
+
+      <div className="p-6 flex flex-col gap-5">
+
+        {/* ── KPI Row ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <KpiCard icon={Eye}        label="Total Page Views" value={fmt(k.totalViews)}     sub="All time"            iconBg="rgba(99,102,241,0.25)" />
+          <KpiCard icon={TrendingUp} label="Today"            value={fmt(k.todayViews)}     sub="Last 24 hours"       iconBg="rgba(34,197,94,0.2)"  />
+          <KpiCard icon={Activity}   label="This Week"        value={fmt(k.weekViews)}       sub="Last 7 days"         iconBg="rgba(245,158,11,0.2)" />
+          <KpiCard icon={Users}      label="Unique Visitors"  value={fmt(k.uniqueVisitors)} sub="By session, 7 days"  iconBg="rgba(14,165,233,0.2)" />
+        </div>
+
+        {/* ── Chart Row ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {/* Bar Chart */}
+          <SectionCard title="Page Views — Last 24 Hours" className="lg:col-span-3">
+            {hourly.length > 0
+              ? <HourBarChart data={hourly} />
+              : <div className="h-40 flex items-center justify-center text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>No data yet — visit some pages first.</div>
+            }
+          </SectionCard>
+
+          {/* Top Pages */}
+          <SectionCard title="Top Pages" className="lg:col-span-2">
+            {topPages.length === 0 ? (
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>No page visits recorded yet.</p>
+            ) : topPages.map((p, i) => (
+              <div key={p.path} className="flex items-center gap-3 py-2" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                <span className="text-xs font-bold" style={{ color: "rgba(255,255,255,0.25)", minWidth: 16 }}>#{i + 1}</span>
+                <span className="text-sm flex-1 truncate font-mono" style={{ color: "rgba(255,255,255,0.7)", fontSize: 12 }}>{p.path}</span>
+                <div className="w-20 h-1 rounded-full overflow-hidden flex-shrink-0" style={{ background: "rgba(255,255,255,0.07)" }}>
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(p.count / maxPage) * 100}%` }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    className="h-full rounded-full"
+                    style={{ background: "linear-gradient(90deg,#6366f1,#818cf8)" }}
+                  />
+                </div>
+                <span className="text-xs font-semibold flex-shrink-0" style={{ color: "rgba(255,255,255,0.5)", minWidth: 20, textAlign: "right" }}>{p.count}</span>
+              </div>
+            ))}
+          </SectionCard>
+        </div>
+
+        {/* ── Devices + Countries ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {/* Devices */}
+          <SectionCard title="Devices" className="lg:col-span-3">
+            {devices.length === 0 ? (
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>No data yet.</p>
+            ) : devices.map((d) => (
+              <BarRow key={d.device} label={d.device} count={d.count} pct={d.pct}
+                icon={DEVICE_ICON[d.device] || Monitor} />
+            ))}
+            {/* Browsers */}
+            {browsers.length > 0 && (
+              <>
+                <p className="text-xs font-semibold mt-5 mb-2" style={{ color: "rgba(255,255,255,0.4)" }}>Browsers</p>
+                {browsers.map((b) => (
+                  <BarRow key={b.browser} label={b.browser} count={b.count} pct={b.pct}
+                    icon={Chrome} />
+                ))}
+              </>
+            )}
+          </SectionCard>
+
+          {/* Top Countries */}
+          <SectionCard title="Top Countries" className="lg:col-span-2">
+            {countries.length === 0 ? (
+              <p className="text-xs" style={{ color: "rgba(255,255,255,0.3)" }}>Geo data resolves async — check back shortly.</p>
+            ) : countries.map((c) => (
+              <div key={c.country} className="flex items-center gap-3 py-2.5" style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                <span className="text-base flex-shrink-0" style={{ lineHeight: 1 }}>{COUNTRY_FLAG(c.country)}</span>
+                <span className="text-sm flex-1" style={{ color: "rgba(255,255,255,0.65)" }}>{c.country}</span>
+                <span className="text-sm font-semibold" style={{ color: "rgba(255,255,255,0.45)" }}>{c.count} views</span>
+              </div>
+            ))}
+          </SectionCard>
+        </div>
+
+        {/* ── Recent Visits ── */}
+        <SectionCard title="Recent Visits">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
+                  {["PAGE", "DEVICE", "COUNTRY", "CITY", "REFERRER", "WHEN"].map(h => (
+                    <th key={h} className="text-left py-2 pr-6 font-semibold tracking-wider"
+                      style={{ color: "rgba(255,255,255,0.3)", fontSize: 10 }}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {recentVisits.length === 0 ? (
+                  <tr><td colSpan={6} className="py-6 text-center" style={{ color: "rgba(255,255,255,0.25)" }}>No visits recorded yet.</td></tr>
+                ) : recentVisits.map((v, i) => (
+                  <tr key={i} style={{ borderBottom: "1px solid rgba(255,255,255,0.03)" }}>
+                    <td className="py-2.5 pr-6 font-mono" style={{ color: "rgba(255,255,255,0.7)", fontSize: 11 }}>{v.path}</td>
+                    <td className="py-2.5 pr-6" style={{ color: "rgba(255,255,255,0.55)" }}>{v.device}</td>
+                    <td className="py-2.5 pr-6" style={{ color: "rgba(255,255,255,0.55)" }}>{v.country}</td>
+                    <td className="py-2.5 pr-6" style={{ color: "rgba(255,255,255,0.4)" }}>{v.city || "—"}</td>
+                    <td className="py-2.5 pr-6" style={{ color: v.referrer === "Direct" ? "rgba(255,255,255,0.25)" : "rgba(255,255,255,0.55)" }}>
+                      {v.referrer}
+                    </td>
+                    <td className="py-2.5 whitespace-nowrap" style={{ color: "rgba(255,255,255,0.35)" }}>
+                      🕐 {timeAgo(v.when)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </SectionCard>
+      </div>
+    </div>
+  );
+}
+
+// ── Platform Tab (App Metrics) ────────────────────────────────────────────────
+function PlatformTab({ token }) {
+  const [data, setData]       = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
+  const [days, setDays]       = useState(30);
+
+  const load = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/analytics?days=${days}`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(`${res.status}`);
+      setData(await res.json());
+    } catch (e) { setError(e.message); }
+    finally { setLoading(false); }
+  }, [days, token]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const o   = data?.overview        ?? {};
+  const lg  = data?.leadGeneration  ?? {};
+  const ls  = data?.leadScoring     ?? {};
+  const out = data?.outreach        ?? {};
+  const crm = data?.crm             ?? {};
+  const soc = data?.social          ?? {};
+
+  const rows = [
+    { icon: Building2, label: "Companies",      val: fmt(o.totalCompanies),        color: "#22d3ee" },
+    { icon: Mail,      label: "Contacts",       val: fmt(o.totalContacts),         color: "#a78bfa" },
+    { icon: Target,    label: "Gen. Leads",     val: fmt(o.totalGeneratedLeads),   color: "#f59e0b" },
+    { icon: MapPin,    label: "Places",         val: fmt(o.totalPlaces),           color: "#10b981" },
+    { icon: Mail,      label: "Outreach Sent",  val: fmt(out.sent),                color: "#22d3ee" },
+    { icon: Activity,  label: "Reply Rate",     val: out.replyRate ?? "—",         color: "#E23744" },
+    { icon: Briefcase, label: "Total Deals",    val: fmt(crm.deals?.total),        color: "#10b981" },
+    { icon: Briefcase, label: "Won Deals",      val: fmt(crm.deals?.won),          color: "#10b981" },
+    { icon: Share2,    label: "Social Posts",   val: fmt(soc.total),               color: "#a78bfa" },
+    { icon: Share2,    label: "Published",      val: fmt(soc.published),           color: "#10b981" },
+    { icon: UserCog,   label: "Employees",      val: fmt(data?.hr?.employees),     color: "#22d3ee" },
+    { icon: Calculator,label: "Vouchers",       val: fmt(data?.accounting?.vouchers), color: "#f59e0b" },
+    { icon: Package,   label: "Stock Items",    val: fmt(data?.inventory?.stockItems), color: "#10b981" },
+    { icon: Package,   label: "Orders",         val: fmt(data?.inventory?.orders),    color: "#f59e0b" },
+  ];
+
+  return (
+    <div className="p-6 flex flex-col gap-5" style={{ background: "#0a0a0f", minHeight: "100%" }}>
+      {/* Window picker + refresh */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)" }}>
+          {[7, 14, 30, 90].map(d => (
+            <button key={d} onClick={() => setDays(d)}
+              className="px-3 py-1 rounded-lg text-xs font-medium transition-all"
+              style={{ background: days === d ? "#6366f1" : "transparent", color: days === d ? "#fff" : "rgba(255,255,255,0.4)" }}>
+              {d}d
+            </button>
+          ))}
+        </div>
+        <button onClick={load} disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+          style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.6)" }}>
+          <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Refresh
+        </button>
+      </div>
+
+      {error && (
+        <div className="px-4 py-3 rounded-xl flex items-center gap-2 text-xs"
+          style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+          <AlertCircle size={13} /> {error}
+        </div>
+      )}
+
+      {/* KPI Grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+        {rows.map((r) => (
+          <motion.div key={r.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            className="rounded-xl p-4 flex flex-col gap-2"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="flex items-center gap-1.5">
+              <r.icon size={12} style={{ color: r.color }} />
+              <span className="text-[10px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.35)" }}>{r.label}</span>
+            </div>
+            <span className="text-xl font-bold" style={{ color: "#fff" }}>{r.val}</span>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* Lead scoring */}
+      <div className="rounded-xl p-5" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        <p className="text-xs font-semibold mb-4 uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.4)" }}>Lead Scoring</p>
+        <div className="flex gap-6">
+          {[
+            { label: "High",   val: ls.high,   color: "#f43f5e" },
+            { label: "Medium", val: ls.medium, color: "#f59e0b" },
+            { label: "Low",    val: ls.low,    color: "#10b981" },
+          ].map(s => (
+            <div key={s.label} className="flex flex-col gap-1">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 rounded-full" style={{ background: s.color }} />
+                <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{s.label}</span>
+              </div>
+              <span className="text-2xl font-bold" style={{ color: s.color }}>{fmt(s.val)}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
 // ── 403 Wall ──────────────────────────────────────────────────────────────────
 function AccessDenied() {
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-4 p-8">
+    <div className="flex flex-col items-center justify-center h-full gap-4 p-8" style={{ background: "#0a0a0f" }}>
       <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-        style={{ background: "rgba(226,55,68,0.12)", border: "1px solid rgba(226,55,68,0.25)" }}>
-        <Lock size={28} style={{ color: "var(--rose)" }} />
+        style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)" }}>
+        <Lock size={28} style={{ color: "#f87171" }} />
       </div>
-      <h2 className="text-xl font-bold text-center" style={{ color: "var(--text)" }}>Access Restricted</h2>
-      <p className="text-sm text-center max-w-xs" style={{ color: "var(--text-3)" }}>
-        This section is only accessible to the application owner. If you believe this is a mistake, contact your administrator.
+      <h2 className="text-xl font-bold" style={{ color: "#fff" }}>Access Restricted</h2>
+      <p className="text-sm text-center max-w-xs" style={{ color: "rgba(255,255,255,0.4)" }}>
+        This section is only accessible to the application owner.
       </p>
     </div>
   );
@@ -201,385 +480,63 @@ function AccessDenied() {
 export default function AdminAnalyticsPage() {
   const { user, token } = useAuth();
   const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL;
+  const [tab, setTab] = useState("traffic");
 
-  const [data, setData] = useState(null);
-  const [orgs, setOrgs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [days, setDays] = useState(30);
-  const [lastRefresh, setLastRefresh] = useState(null);
-
-  const load = useCallback(async () => {
-    if (!isAdmin) return;
-    setLoading(true);
-    setError(null);
-    try {
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const [analyticsRes, orgsRes] = await Promise.all([
-        fetch(`${API_BASE}/analytics?days=${days}`, { headers }),
-        fetch(`${API_BASE}/org/all`, { headers }),
-      ]);
-      if (!analyticsRes.ok) {
-        const e = await analyticsRes.json().catch(() => ({}));
-        throw new Error(e.error || `Server ${analyticsRes.status}`);
-      }
-      const analyticsJson = await analyticsRes.json();
-      setData(analyticsJson);
-
-      // org list is best-effort
-      if (orgsRes.ok) {
-        const orgJson = await orgsRes.json().catch(() => []);
-        setOrgs(Array.isArray(orgJson) ? orgJson : orgJson.orgs ?? []);
-      }
-
-      setLastRefresh(new Date());
-    } catch (e) {
-      setError(e.message);
-    } finally {
-      setLoading(false);
-    }
-  }, [days, isAdmin, token]);
-
-  useEffect(() => { load(); }, [load]);
-
-  // ── guard ──────────────────────────────────────────────────────────────────
   if (!isAdmin) return <AccessDenied />;
 
-  // ── derived ────────────────────────────────────────────────────────────────
-  const o   = data?.overview        ?? {};
-  const lg  = data?.leadGeneration  ?? {};
-  const ls  = data?.leadScoring     ?? {};
-  const out = data?.outreach        ?? {};
-  const cr  = data?.crawler         ?? {};
-  const soc = data?.social          ?? {};
-  const crm = data?.crm             ?? {};
-  const hr  = data?.hr              ?? {};
-  const acc = data?.accounting      ?? {};
-  const inv = data?.inventory       ?? {};
-  const tr  = data?.trends          ?? {};
-
-  const outreachStatus  = (out.statusBreakdown              ?? []).map((s) => ({ label: s.status,   count: s.count }));
-  const leadStatus      = (lg.generatedLeadStatusBreakdown  ?? []).map((s) => ({ label: s.status,   count: s.count }));
-  const dealStages      = (crm.deals?.stageBreakdown        ?? []).map((s) => ({ label: s.stage,    count: s.count }));
-  const socialPlatforms = (soc.platformBreakdown            ?? []).map((p) => ({ label: p.platform, count: p.count }));
-  const responseIntents = (out.responseIntents              ?? []).map((r) => ({ label: r.intent,   count: r.count }));
-
-  const scoringSegments = [
-    { color: "#e11d48", value: ls.high   ?? 0 },
-    { color: "#f59e0b", value: ls.medium ?? 0 },
-    { color: "#10b981", value: ls.low    ?? 0 },
-  ];
-  const dealSegments = [
-    { color: "#10b981", value: crm.deals?.won  ?? 0 },
-    { color: "#E23744", value: crm.deals?.lost ?? 0 },
-    { color: "#22d3ee", value: crm.deals?.open ?? 0 },
-  ];
-
   return (
-    <div className="flex flex-col h-full overflow-y-auto" style={{ background: "var(--bg)" }}>
+    <div className="flex flex-col h-full" style={{ background: "#0a0a0f" }}>
 
-      {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div className="sticky top-0 z-20 px-6 py-4 flex items-center justify-between"
-        style={{ background: "var(--topbar-bg)", backdropFilter: "blur(14px)", borderBottom: "1px solid var(--border)" }}>
+      {/* ── Top header ── */}
+      <div className="px-6 py-4 flex items-center justify-between flex-shrink-0"
+        style={{ borderBottom: "1px solid rgba(255,255,255,0.07)" }}>
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg,var(--accent),#f4576a)", boxShadow: "0 0 16px var(--accent-glow)" }}>
-            <ShieldCheck size={15} className="text-white" />
-          </div>
+          <Activity size={18} style={{ color: "#6366f1" }} />
           <div>
-            <h1 className="text-base font-bold flex items-center gap-2" style={{ color: "var(--text)" }}>
-              Admin Analytics
-              <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold"
-                style={{ background: "rgba(226,55,68,0.15)", color: "var(--accent)" }}>OWNER ONLY</span>
-            </h1>
-            <p className="text-xs" style={{ color: "var(--text-3)" }}>
-              {lastRefresh ? `Last refreshed ${lastRefresh.toLocaleTimeString()}` : "Loading…"} · {user?.email}
+            <h1 className="text-base font-bold" style={{ color: "#fff" }}>Analytics Dashboard</h1>
+            <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+              Leader AI — Website traffic &amp; application activity
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 rounded-xl p-1"
-            style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
-            {[7, 14, 30, 90].map((d) => (
-              <button key={d} onClick={() => setDays(d)} className="px-3 py-1 rounded-lg text-xs font-medium transition-all"
-                style={{ background: days === d ? "var(--accent)" : "transparent", color: days === d ? "#fff" : "var(--text-3)" }}>
-                {d}d
-              </button>
-            ))}
+        <div className="flex items-center gap-2">
+          {/* Tab switcher */}
+          {[
+            { id: "traffic",  label: "Traffic" },
+            { id: "platform", label: "Platform" },
+          ].map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              className="px-4 py-1.5 rounded-lg text-xs font-medium transition-all"
+              style={{
+                background: tab === t.id ? "#6366f1" : "rgba(255,255,255,0.05)",
+                color: tab === t.id ? "#fff" : "rgba(255,255,255,0.4)",
+                border: "1px solid " + (tab === t.id ? "#6366f1" : "rgba(255,255,255,0.08)"),
+              }}>
+              {t.label}
+            </button>
+          ))}
+
+          <div className="w-px h-5 mx-1" style={{ background: "rgba(255,255,255,0.1)" }} />
+
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs"
+            style={{ background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)", color: "#818cf8" }}>
+            <ShieldCheck size={11} /> Owner
           </div>
-          <button onClick={load} disabled={loading} className="btn-secondary text-xs gap-1.5 flex items-center">
-            <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
-            Refresh
-          </button>
         </div>
       </div>
 
-      {/* ── Error ── */}
-      <AnimatePresence>
-        {error && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mx-6 mt-4 px-4 py-3 rounded-xl flex items-center gap-2 text-sm"
-            style={{ background: "rgba(226,55,68,0.1)", border: "1px solid rgba(226,55,68,0.25)", color: "var(--rose)" }}>
-            <AlertCircle size={15} /> {error}
+      {/* ── Tab Content ── */}
+      <div className="flex-1 overflow-y-auto">
+        <AnimatePresence mode="wait">
+          <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }} className="h-full">
+            {tab === "traffic"
+              ? <TrafficTab  token={token} />
+              : <PlatformTab token={token} />
+            }
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      <div className="p-6 flex flex-col gap-8">
-
-        {/* ── KPI Strip ── */}
-        <section>
-          <SectionHeader icon={Zap} label="Platform Overview" color="var(--accent)" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <StatCard icon={Users2}    label="Total Leads"    value={fmt(o.totalLeads)}          color="var(--accent)"  />
-            <StatCard icon={Building2} label="Companies"      value={fmt(o.totalCompanies)}       color="var(--teal)"    />
-            <StatCard icon={Mail}      label="Contacts"       value={fmt(o.totalContacts)}        color="var(--violet)"  />
-            <StatCard icon={Target}    label="Gen. Leads"     value={fmt(o.totalGeneratedLeads)}  color="var(--ember)"   />
-            <StatCard icon={MapPin}    label="Places"         value={fmt(o.totalPlaces)}          color="var(--emerald)" />
-            <StatCard icon={Activity}  label="Reply Rate"     value={o.replyRate ?? "—"}          color="var(--rose)"    />
-          </div>
-        </section>
-
-        {/* ── Organisations ── */}
-        {orgs.length > 0 && (
-          <section>
-            <SectionHeader icon={Building2} label={`Organisations (${orgs.length})`} color="var(--teal)" />
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-              {orgs.map((org, i) => <OrgCard key={org._id} org={org} idx={i} />)}
-            </div>
-          </section>
-        )}
-
-        {/* ── Lead Generation + Scoring ── */}
-        <section>
-          <SectionHeader icon={Target} label="Lead Generation & Scoring" color="var(--violet)" />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="card p-5 flex flex-col gap-4">
-              <p className="text-xs font-semibold" style={{ color: "var(--text-2)" }}>Lead Sources</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Companies",  val: lg.companies,      color: "var(--teal)"    },
-                  { label: "Contacts",   val: lg.contacts,       color: "var(--violet)"  },
-                  { label: "Gen. Leads", val: lg.generatedLeads, color: "var(--ember)"   },
-                  { label: "Places",     val: lg.places,         color: "var(--emerald)" },
-                ].map((item) => (
-                  <div key={item.label} className="flex flex-col gap-0.5">
-                    <span className="text-xs" style={{ color: "var(--text-3)" }}>{item.label}</span>
-                    <span className="text-lg font-bold" style={{ color: item.color }}>{fmt(item.val)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div className="card p-5 flex flex-col gap-3">
-              <p className="text-xs font-semibold" style={{ color: "var(--text-2)" }}>Lead Status</p>
-              <MiniBar items={leadStatus} colorVar="--violet" />
-            </div>
-            <div className="card p-5 flex flex-col gap-3">
-              <p className="text-xs font-semibold" style={{ color: "var(--text-2)" }}>Priority Scoring</p>
-              <div className="flex items-center gap-4">
-                <Donut segments={scoringSegments} size={90} />
-                <div className="flex flex-col gap-2 text-xs">
-                  {[
-                    { label: "High",   val: ls.high,   color: "#e11d48" },
-                    { label: "Medium", val: ls.medium, color: "#f59e0b" },
-                    { label: "Low",    val: ls.low,    color: "#10b981" },
-                  ].map((s) => (
-                    <div key={s.label} className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ background: s.color }} />
-                      <span style={{ color: "var(--text-3)" }}>{s.label}</span>
-                      <span className="ml-auto font-semibold" style={{ color: "var(--text)" }}>{fmt(s.val)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Outreach ── */}
-        <section>
-          <SectionHeader icon={Mail} label="Outreach" color="var(--teal)" />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="card p-5 flex flex-col gap-4">
-              <p className="text-xs font-semibold" style={{ color: "var(--text-2)" }}>Outreach KPIs</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Total Sent",   val: fmt(out.sent),            color: "var(--teal)"    },
-                  { label: "Replies",      val: fmt(out.replied),         color: "var(--emerald)" },
-                  { label: "Responses",    val: fmt(out.totalResponses),  color: "var(--violet)"  },
-                  { label: "Reply Rate",   val: out.replyRate ?? "—",     color: "var(--accent)"  },
-                ].map((item) => (
-                  <div key={item.label} className="flex flex-col gap-0.5">
-                    <span className="text-xs" style={{ color: "var(--text-3)" }}>{item.label}</span>
-                    <span className="text-lg font-bold" style={{ color: item.color }}>{item.val}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="rounded-xl p-3 flex items-center justify-between" style={{ background: "var(--surface-2)" }}>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs" style={{ color: "var(--text-3)" }}>Campaigns</span>
-                  <span className="text-base font-bold" style={{ color: "var(--text)" }}>{fmt(out.campaigns?.total)}</span>
-                </div>
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold"
-                  style={{ background: "rgba(16,185,129,0.12)", color: "var(--emerald)" }}>
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-dot" />
-                  {fmt(out.campaigns?.active)} active
-                </div>
-              </div>
-            </div>
-            <div className="card p-5 flex flex-col gap-3">
-              <p className="text-xs font-semibold" style={{ color: "var(--text-2)" }}>Outreach Status</p>
-              <MiniBar items={outreachStatus} colorVar="--teal" />
-            </div>
-            <div className="card p-5 flex flex-col gap-3">
-              <p className="text-xs font-semibold" style={{ color: "var(--text-2)" }}>Response Intents</p>
-              <MiniBar items={responseIntents} colorVar="--emerald" />
-            </div>
-          </div>
-        </section>
-
-        {/* ── CRM ── */}
-        <section>
-          <SectionHeader icon={Briefcase} label="CRM & Revenue" color="var(--emerald)" />
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="card p-5 flex flex-col gap-3">
-              <p className="text-xs font-semibold" style={{ color: "var(--text-2)" }}>Deal Outcomes</p>
-              <div className="flex items-center gap-4">
-                <Donut segments={dealSegments} size={90} />
-                <div className="flex flex-col gap-2 text-xs">
-                  {[
-                    { label: "Won",  val: crm.deals?.won,  color: "#10b981" },
-                    { label: "Lost", val: crm.deals?.lost, color: "#E23744" },
-                    { label: "Open", val: crm.deals?.open, color: "#22d3ee" },
-                  ].map((s) => (
-                    <div key={s.label} className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ background: s.color }} />
-                      <span style={{ color: "var(--text-3)" }}>{s.label}</span>
-                      <span className="ml-auto font-semibold" style={{ color: "var(--text)" }}>{fmt(s.val)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <div className="card p-5 flex flex-col gap-3">
-              <p className="text-xs font-semibold" style={{ color: "var(--text-2)" }}>Pipeline Stages</p>
-              <MiniBar items={dealStages} colorVar="--emerald" />
-            </div>
-            <div className="card p-5 flex flex-col gap-3">
-              <p className="text-xs font-semibold" style={{ color: "var(--text-2)" }}>Financials</p>
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: "Revenue",    val: currency(crm.revenue), color: "var(--emerald)" },
-                  { label: "Invoices",   val: fmt(crm.invoices),     color: "var(--teal)"    },
-                  { label: "Payments",   val: fmt(crm.payments),     color: "var(--violet)"  },
-                  { label: "Activities", val: fmt(crm.activities),   color: "var(--ember)"   },
-                ].map((item) => (
-                  <div key={item.label} className="flex flex-col gap-0.5">
-                    <span className="text-xs" style={{ color: "var(--text-3)" }}>{item.label}</span>
-                    <span className="text-lg font-bold" style={{ color: item.color }}>{item.val}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* ── Infrastructure ── */}
-        <section>
-          <SectionHeader icon={Globe} label="Infrastructure & Ops" color="var(--ember)" />
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-            {[
-              {
-                label: "Crawler", icon: Globe, color: "var(--ember)",
-                rows: [
-                  { label: "Websites",     val: cr.totalWebsites },
-                  { label: "Crawl Runs",   val: cr.crawlRuns?.total },
-                  { label: "Completed",    val: cr.crawlRuns?.completed },
-                  { label: "Auto Sessions",val: cr.autoScraperSessions },
-                ],
-              },
-              {
-                label: "Social", icon: Share2, color: "var(--violet)",
-                rows: [
-                  { label: "Total Posts",  val: soc.total },
-                  { label: "Published",    val: soc.published },
-                  { label: "Pending",      val: soc.pendingApproval },
-                  ...socialPlatforms.slice(0, 2).map((p) => ({ label: p.label, val: p.count })),
-                ],
-              },
-              {
-                label: "HR / Payroll", icon: UserCog, color: "var(--teal)",
-                rows: [
-                  { label: "Employees", val: hr.employees },
-                  { label: "Payslips",  val: hr.payslips },
-                ],
-              },
-              {
-                label: "Accounting", icon: Calculator, color: "var(--accent)",
-                rows: [
-                  { label: "Vouchers", val: acc.vouchers },
-                ],
-              },
-              {
-                label: "Inventory", icon: Package, color: "var(--emerald)",
-                rows: [
-                  { label: "Stock Items", val: inv.stockItems },
-                  { label: "Orders",      val: inv.orders },
-                ],
-              },
-            ].map(({ label, icon: Icon, color, rows }) => (
-              <div key={label} className="card p-4 flex flex-col gap-3">
-                <div className="flex items-center gap-2">
-                  <Icon size={13} style={{ color }} />
-                  <span className="text-xs font-semibold" style={{ color: "var(--text-2)" }}>{label}</span>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  {rows.map((r) => (
-                    <div key={r.label} className="flex justify-between text-xs">
-                      <span className="capitalize" style={{ color: "var(--text-3)" }}>{r.label}</span>
-                      <span className="font-semibold" style={{ color: "var(--text)" }}>{fmt(r.val)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* ── Trends ── */}
-        <section>
-          <SectionHeader icon={TrendingUp} label={`Growth — Last ${days} Days`} color="var(--teal)" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            {[
-              { label: "Contacts",    data: tr.contacts,       color: "#a78bfa" },
-              { label: "Gen. Leads",  data: tr.generatedLeads, color: "#f59e0b" },
-              { label: "Outreach",    data: tr.outreach,       color: "#22d3ee" },
-              { label: "Crawl Runs",  data: tr.crawlRuns,      color: "#E23744" },
-              { label: "Deals",       data: tr.deals,          color: "#10b981" },
-            ].map((t) => {
-              const total = (t.data ?? []).reduce((s, d) => s + d.count, 0);
-              return (
-                <div key={t.label} className="card p-4 flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium" style={{ color: "var(--text-3)" }}>{t.label}</span>
-                    <span className="text-xs font-bold" style={{ color: t.color }}>{fmt(total)}</span>
-                  </div>
-                  <Sparkline data={t.data ?? []} color={t.color} height={36} />
-                  <div className="flex items-center justify-between text-[10px]" style={{ color: "var(--text-3)" }}>
-                    <span>{t.data?.[0]?.date?.slice(5) ?? "—"}</span>
-                    <span>{t.data?.[t.data.length - 1]?.date?.slice(5) ?? "—"}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </section>
-
-        <div className="py-4 text-center text-xs" style={{ color: "var(--text-3)", borderTop: "1px solid var(--border)" }}>
-          Owner-only admin view · {orgs.length} org{orgs.length !== 1 ? "s" : ""} · Window: {days}d · {data ? "All sections loaded" : "Awaiting data"}
-        </div>
+        </AnimatePresence>
       </div>
     </div>
   );

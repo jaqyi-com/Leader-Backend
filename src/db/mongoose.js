@@ -201,6 +201,21 @@ const placeSearchHistorySchema = new mongoose.Schema({
   orgId: { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
 }, { timestamps: true });
 
+// ─── Page View (website traffic tracking) ─────────────────────────────────────
+const pageViewSchema = new mongoose.Schema({
+  path:      { type: String, default: "/" },
+  referrer:  { type: String, default: "Direct" },
+  device:    { type: String, default: "Desktop" },   // Desktop | Mobile | Tablet
+  browser:   { type: String, default: "Unknown" },   // Chrome | Firefox | Safari | Edge | Other
+  country:   { type: String, default: "Unknown" },   // ISO-2 country code e.g. "IN"
+  city:      { type: String, default: "" },
+  ip:        { type: String, default: "" },
+  sessionId: { type: String, default: "" },          // random ID per browser for unique-visitor count
+}, { timestamps: true });
+// Index for fast time-range queries and unique-visitor counts
+pageViewSchema.index({ createdAt: -1 });
+pageViewSchema.index({ sessionId: 1, createdAt: -1 });
+
 const Company = mongoose.models.Company || mongoose.model("Company", companySchema);
 const Contact = mongoose.models.Contact || mongoose.model("Contact", contactSchema);
 const OutreachLog = mongoose.models.OutreachLog || mongoose.model("OutreachLog", outreachLogSchema);
@@ -211,6 +226,7 @@ const Place = mongoose.models.Place || mongoose.model("Place", placeSchema);
 const PlaceSearchHistory = mongoose.models.PlaceSearchHistory || mongoose.model("PlaceSearchHistory", placeSearchHistorySchema);
 const Website = mongoose.models.Website || mongoose.model("Website", websiteSchema);
 const CrawlRun = mongoose.models.CrawlRun || mongoose.model("CrawlRun", crawlRunSchema);
+const PageView = mongoose.models.PageView || mongoose.model("PageView", pageViewSchema);
 
 // --- SOCIAL POST SCHEMA ---
 const socialPostSchema = new mongoose.Schema({
@@ -401,6 +417,7 @@ module.exports = {
   AutoScraperLead,
   GeneratedLead,
   OutreachCampaign,
+  PageView,
   // Auth / Org layer
   User,
   Organization,

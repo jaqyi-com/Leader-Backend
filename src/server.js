@@ -137,6 +137,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/gmail/callback",        // Gmail OAuth callback
   "/api/social/posts/approve",  // email-based approval links
   "/api/social/posts/reject",   // email-based rejection links
+  "/api/track",                 // page-view tracker (no auth needed)
 ];
 
 app.use((req, res, next) => {
@@ -162,6 +163,7 @@ app.use("/api/social", socialRouter);
 app.use("/api/outreach", outreachRouter);
 app.use("/api/crm", crmRouter);
 app.use("/api/analytics", analyticsRouter);
+app.use("/api/track",     require("./routes/tracker"));
 app.use("/api/accounting", require("./routes/accounting"));
 app.use("/api/inventory", require("./routes/inventory"));
 app.use("/api/payroll", require("./routes/payroll"));
