@@ -1,4 +1,5 @@
 import { NavLink } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Globe, MapPin, Database, ChevronLeft, ChevronRight,
@@ -109,6 +110,8 @@ function SectionLabel({ label, collapsed }) {
 }
 
 export default function Sidebar({ collapsed, onToggle }) {
+  const { user } = useAuth();
+  const isAdmin = user?.email?.toLowerCase() === "akshatv00001@gmail.com";
   return (
     <motion.aside
       initial={false}
@@ -204,9 +207,11 @@ export default function Sidebar({ collapsed, onToggle }) {
         className="px-2 py-3 flex flex-col gap-1"
         style={{ borderTop: "1px solid var(--border)" }}
       >
-        <NavItem to="/app/docs"  label="How It Works"     icon={BookOpen}     collapsed={collapsed} end={false} />
-        <NavItem to="/app/admin" label="Admin Analytics"   icon={ShieldCheck}  collapsed={collapsed} end={false} />
-        <NavItem to="/app/settings" label="Settings"       icon={Settings}     collapsed={collapsed} end={false} />
+        <NavItem to="/app/docs"  label="How It Works"   icon={BookOpen}    collapsed={collapsed} end={false} />
+        {isAdmin && (
+          <NavItem to="/app/admin" label="Admin Analytics" icon={ShieldCheck} collapsed={collapsed} end={false} />
+        )}
+        <NavItem to="/app/settings" label="Settings"     icon={Settings}    collapsed={collapsed} end={false} />
       </div>
 
       {/* Collapse toggle */}

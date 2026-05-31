@@ -47,6 +47,39 @@ router.get("/mine", async (req, res) => {
   }
 });
 
+// ── ADMIN: List ALL organisations (platform owner only) ───────────────────────
+// GET /api/org/all
+router.get("/all", async (req, res) => {
+  try {
+    const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+    const callerEmail = (req.user?.email || "").toLowerCase().trim();
+    if (!ADMIN_EMAIL || callerEmail !== ADMIN_EMAIL) {
+      return res.status(403).json({ error: "Access denied. Owner only." });
+    }
+
+    const { Organization, Member, GeneratedLead, OutreachLog, Deal } = require("../db/mongoose");
+
+    const allOrgs = await Organization.find().sort({ createdAt: -1 }).lean();
+
+    const orgsWithStats = await Promise.all(
+      allOrgs.map(async (org) => {
+        const [memberCount, leads, outreach, deals] = await Promise.all([
+          Member.countDocuments({ orgId: org._id, status: "active" }),
+          GeneratedLead.countDocuments({ orgId: org._id }),
+          OutreachLog.countDocuments({ orgId: org._id }),
+          Deal.countDocuments({ orgId: org._id }),
+        ]);
+        return { ...org, memberCount, leads, outreach, deals };
+      })
+    );
+
+    res.json(orgsWithStats);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // ── Switch active org ─────────────────────────────────────────────────────────
 // POST /api/org/switch
 router.post("/switch", async (req, res) => {

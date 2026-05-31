@@ -1,22 +1,34 @@
 /**
- * Analytics Dashboard Route
+ * Admin Analytics Route  — OWNER ONLY
  * GET /api/analytics
  *
- * Returns a unified snapshot of key metrics across the entire platform:
- *   • Lead generation (Companies, Contacts, GeneratedLeads, Places)
- *   • Outreach activity (OutreachLog, OutreachCampaigns, Responses)
- *   • Lead scoring distribution
- *   • Crawler / website intelligence (CrawlRuns, Websites, AutoScraperSessions)
- *   • Social media posts
- *   • CRM (Deals, Activities, Invoices, Payments)
- *   • Payroll & HR (Employees, Payslips, Attendance)
- *   • Accounting (Vouchers)
- *   • Inventory (Stock items, Orders)
- *   • Growth over time (last 30 days, daily buckets)
+ * Hard-locked to ADMIN_EMAIL (set in .env).
+ * Any other authenticated user receives 403 Forbidden.
+ * Data is returned globally (not scoped to a single org) so the
+ * owner can see metrics across ALL organisations on the platform.
  */
 
 const router = require("express").Router();
 const db     = require("../db/mongoose");
+
+// ─── Owner guard ─────────────────────────────────────────────────────────────
+// Must come before every handler on this router.
+const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+
+router.use((req, res, next) => {
+  const callerEmail = (req.user?.email || "").toLowerCase().trim();
+  if (!callerEmail) {
+    return res.status(401).json({ error: "Authentication required." });
+  }
+  if (!ADMIN_EMAIL) {
+    // ADMIN_EMAIL not set in .env — deny all for safety
+    return res.status(503).json({ error: "Analytics admin email not configured on server." });
+  }
+  if (callerEmail !== ADMIN_EMAIL) {
+    return res.status(403).json({ error: "Access denied. This section is restricted to the application owner." });
+  }
+  next();
+});
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
