@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Database, Search, Filter, Download, RefreshCw, Loader2,
   Phone, Globe, MapPin, Sparkles, X, ChevronDown, ChevronUp,
-  ExternalLink, Star, Zap, Target, AlertCircle, Send, CheckCircle2
+  ExternalLink, Star, Zap, Target, AlertCircle, Send, CheckCircle2, Mail
 } from "lucide-react";
 import {
   ibGetDatabase, ibGetStats, ibAIFilter, ibGetColumns,
@@ -13,14 +13,14 @@ import {
 import toast from "react-hot-toast";
 
 const PRIORITY_COLS = [
-  { key: "name",      label: "Business Name" },
-  { key: "category",  label: "Category"      },
-  { key: "city_file", label: "City/Region"   },
-  { key: "rating",    label: "Rating"        },
-  { key: "reviews",   label: "Reviews"       },
-  { key: "phone",     label: "Phone"         },
-  { key: "address",   label: "Address"       },
-  { key: "website",   label: "Website"       },
+  { key: "name",          label: "Business Name" },
+  { key: "category",      label: "Category"      },
+  { key: "city_file",     label: "City/Region"   },
+  { key: "rating",        label: "Rating"        },
+  { key: "phone_number",  label: "Phone"         },
+  { key: "email_address", label: "Email"         },
+  { key: "website",       label: "Website"       },
+  { key: "address",       label: "Address"       },
 ];
 
 const HIDDEN_KEYS = new Set(["_id", "_row_hash", "unnamed_13", "url", "embedding"]);
@@ -528,10 +528,33 @@ export default function InBuildDatabasePage() {
                           : "—"}
                       </td>
                     );
-                    if (c.key === "phone") return (
+                    if (c.key === "phone_number" || c.key === "phone") return (
                       <td key={c.key} className="px-3 py-2.5">
                         {val
-                          ? <p className="flex items-center gap-1 text-[var(--text-2)]"><Phone size={9} />{val}</p>
+                          ? <p className="flex items-center gap-1 text-[var(--text-2)] text-[11px]">
+                              <Phone size={9} className="text-green-400 flex-shrink-0" />
+                              <span className="truncate max-w-[160px]" title={val}>{val}</span>
+                            </p>
+                          : <span className="text-[var(--text-3)]">—</span>}
+                      </td>
+                    );
+                    if (c.key === "email_address" || c.key === "email") return (
+                      <td key={c.key} className="px-3 py-2.5">
+                        {val
+                          ? <div className="flex flex-col gap-0.5">
+                              {val.split(", ").slice(0, 2).map((em, i) => (
+                                <a key={i} href={`mailto:${em.trim()}`}
+                                  className="flex items-center gap-1 text-[11px] text-blue-400 hover:underline max-w-[200px] truncate"
+                                  title={em.trim()}>
+                                  <Mail size={9} className="flex-shrink-0" />{em.trim()}
+                                </a>
+                              ))}
+                              {val.split(", ").length > 2 && (
+                                <span className="text-[9px] text-[var(--text-3)]">
+                                  +{val.split(", ").length - 2} more
+                                </span>
+                              )}
+                            </div>
                           : <span className="text-[var(--text-3)]">—</span>}
                       </td>
                     );
