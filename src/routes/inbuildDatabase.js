@@ -77,7 +77,7 @@ const NORMALIZE = {
 
 const CORE_FIELDS = new Set([
   "name", "category", "city_file", "rating",
-  "reviews", "phone_number", "address", "website", "url",
+  "reviews", "phone_number", "email_address", "address", "website", "url",
 ]);
 
 // Extra rich fields from usa_business_data exposed at top level (not buried in extra)
