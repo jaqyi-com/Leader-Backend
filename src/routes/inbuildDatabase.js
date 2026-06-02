@@ -591,7 +591,6 @@ router.post("/semantic-search", async (req, res) => {
     const searchRes = await pgQuery(searchSql, searchValues);
 
 
-    const { selectCols, colToField, fieldToCol } = await getSchema();
     const leads = searchRes.rows.map(row => {
       const similarity = row.similarity;
       delete row.embedding; // don't send 512-float arrays to frontend
