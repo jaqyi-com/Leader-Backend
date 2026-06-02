@@ -52,12 +52,13 @@ const NORMALIZE = {
   "company":          "name",
   "full_name":        "name",
   // Phone — consolidated into phone_number
-  "phone_number":      "phone",
-  "company_phone":     "phone",   // legacy alias kept for backward compat
+  "phone":             "phone_number",
+  "phone_number":      "phone_number",
+  "company_phone":     "phone_number",
   // Email — consolidated into email_address
-  "email_address":     "email",
-  "email":             "email",   // legacy alias
-  "company_email":     "email",   // legacy alias
+  "email_address":     "email_address",
+  "email":             "email_address",
+  "company_email":     "email_address",
   // Website
   "company_website":  "website",
   "website":          "website",
@@ -65,19 +66,27 @@ const NORMALIZE = {
   "location":         "city_file",
   "city":             "city_file",
   "state":            "city_file",
+  "_city_file":       "city_file",
   // Category
   "_category":        "category",
   "industry":         "category",
   // Address
   "street_address":   "address",
+  "address":          "address",
   // URL / Social
   "linked_url":       "url",
   "facebook_profile": "url",
+  "url":              "url",
+  // Query
+  "query":            "query",
+  // Rating / Reviews
+  "rating":           "rating",
+  "reviews":          "reviews",
 };
 
 const CORE_FIELDS = new Set([
   "name", "category", "city_file", "rating",
-  "reviews", "phone_number", "email_address", "address", "website", "url",
+  "reviews", "phone_number", "email_address", "address", "website", "url", "query"
 ]);
 
 // Extra rich fields from usa_business_data exposed at top level (not buried in extra)
@@ -178,65 +187,133 @@ function normalizeRow({ selectCols, colToField }, row) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // WHERE CLAUSE BUILDER  (fully parameterised — no SQL injection)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function buildWhere({ search, category, city, state, has_phone, has_website }, fieldToCol) {
+function buildWhere({
+  search,
+  category,
+  city_file,
+  phone,
+  query_filter,
+  min_rating,
+  max_rating,
+  min_reviews,
+  max_reviews,
+  address,
+  website,
+  url,
+  has_phone,
+  has_website
+}, fieldToCol) {
   const conditions = [];
   const values     = [];
   let   idx        = 1;
 
+  const colName = fieldToCol.name || "business_name";
+  const colCategory = fieldToCol.category || "_category";
+  const colCityFile = fieldToCol.city_file || "_city_file";
+  const colPhone = fieldToCol.phone_number || "phone";
+  const colAddress = fieldToCol.address || "address";
+  const colWebsite = fieldToCol.website || "website";
+  const colUrl = fieldToCol.url || "url";
+  const colRating = fieldToCol.rating || "rating";
+  const colReviews = fieldToCol.reviews || "reviews";
+  const colQuery = fieldToCol.query || "query";
+
   if (search) {
-    // Search across name, category, city, phone_number, address, email
+    // Search across name, category, city_file, phone, address, query
     const searchTargets = [
-      "business_name", "_category", "city", "state",
-      "phone_number", "email_address",
-      "street_address", "contact_person", "job_title",
-    ];
+      colName, colCategory, colCityFile, colPhone, colAddress, colQuery
+    ].filter(Boolean);
     const searchCols = searchTargets.map(c => `"${c}" ILIKE $${idx}`);
     conditions.push(`(${searchCols.join(" OR ")})`);
     values.push(`%${search}%`);
     idx++;
   }
 
-  if (category) {
-    conditions.push(`"_category" ILIKE $${idx}`);
+  if (category && colCategory) {
+    conditions.push(`"${colCategory}" ILIKE $${idx}`);
     values.push(`%${category}%`);
     idx++;
   }
 
-  if (city) {
-    conditions.push(`("city" ILIKE $${idx} OR "city" ILIKE $${idx})`);
-    values.push(`%${city}%`);
+  if (city_file && colCityFile) {
+    conditions.push(`"${colCityFile}" ILIKE $${idx}`);
+    values.push(`%${city_file}%`);
     idx++;
   }
 
-  if (state) {
-    conditions.push(`"state" ILIKE $${idx}`);
-    values.push(`%${state}%`);
+  if (phone && colPhone) {
+    conditions.push(`"${colPhone}" ILIKE $${idx}`);
+    values.push(`%${phone}%`);
     idx++;
   }
 
-  // has_phone — check ALL phone columns with OR (has data) / AND (no data)
-  if (has_phone === "true") {
-    conditions.push(`("phone_number" IS NOT NULL AND "phone_number" != '')`);
-  } else if (has_phone === "false") {
-    conditions.push(`("phone_number" IS NULL OR "phone_number" = '')`);
+  if (query_filter && colQuery) {
+    conditions.push(`"${colQuery}" ILIKE $${idx}`);
+    values.push(`%${query_filter}%`);
+    idx++;
   }
 
-  // has_website — check ALL website columns with OR / AND
-  if (has_website === "true") {
-    const conds = WEB_COLS.map(
-      c => `("${c}" IS NOT NULL AND "${c}" != '' AND "${c}" NOT ILIKE '%website%')`
-    );
-    conditions.push(`(${conds.join(" OR ")})`);
-  } else if (has_website === "false") {
-    const conds = WEB_COLS.map(c => `("${c}" IS NULL OR "${c}" = '')`);
-    conditions.push(`(${conds.join(" AND ")})`);
+  if (min_rating && colRating) {
+    conditions.push(`"${colRating}" >= $${idx}`);
+    values.push(parseFloat(min_rating));
+    idx++;
   }
 
-  // Exclude the one header artifact row; IS DISTINCT FROM keeps NULLs
-  conditions.push(`"business_name" IS DISTINCT FROM 'business_name'`);
+  if (max_rating && colRating) {
+    conditions.push(`"${colRating}" <= $${idx}`);
+    values.push(parseFloat(max_rating));
+    idx++;
+  }
+
+  if (min_reviews && colReviews) {
+    conditions.push(`"${colReviews}" >= $${idx}`);
+    values.push(parseInt(min_reviews, 10));
+    idx++;
+  }
+
+  if (max_reviews && colReviews) {
+    conditions.push(`"${colReviews}" <= $${idx}`);
+    values.push(parseInt(max_reviews, 10));
+    idx++;
+  }
+
+  if (address && colAddress) {
+    conditions.push(`"${colAddress}" ILIKE $${idx}`);
+    values.push(`%${address}%`);
+    idx++;
+  }
+
+  if (website && colWebsite) {
+    conditions.push(`"${colWebsite}" ILIKE $${idx}`);
+    values.push(`%${website}%`);
+    idx++;
+  }
+
+  if (url && colUrl) {
+    conditions.push(`"${colUrl}" ILIKE $${idx}`);
+    values.push(`%${url}%`);
+    idx++;
+  }
+
+  // has_phone — check phone column
+  if (has_phone === "true" && colPhone) {
+    conditions.push(`("${colPhone}" IS NOT NULL AND "${colPhone}" != '')`);
+  } else if (has_phone === "false" && colPhone) {
+    conditions.push(`("${colPhone}" IS NULL OR "${colPhone}" = '')`);
+  }
+
+  // has_website — check website column
+  if (has_website === "true" && colWebsite) {
+    conditions.push(`("${colWebsite}" IS NOT NULL AND "${colWebsite}" != '' AND "${colWebsite}" NOT ILIKE '%website%')`);
+  } else if (has_website === "false" && colWebsite) {
+    conditions.push(`("${colWebsite}" IS NULL OR "${colWebsite}" = '')`);
+  }
+
+  // Exclude the one header artifact row
+  conditions.push(`"${colName}" IS DISTINCT FROM 'business_name'`);
 
   return {
-    whereStr: `WHERE ${conditions.join(" AND ")}`,
+    whereStr: conditions.length ? `WHERE ${conditions.join(" AND ")}` : "",
     values,
     nextIdx:  idx,
   };
@@ -297,10 +374,11 @@ router.get("/stats", async (req, res) => {
     if (cached) return res.json({ ...cached, _cache: "hit" });
 
     const { fieldToCol } = await getSchema();
-    const phoneCol   = `"phone_number"`;
+    const phoneCol   = `"${fieldToCol.phone_number || "phone_number"}"`;
     const websiteCol = `"${fieldToCol.website || "website"}"`;
+    const colName    = `"${fieldToCol.name || "business_name"}"`;
 
-    const HEADER_FILTER = `"business_name" IS DISTINCT FROM 'business_name'`;
+    const HEADER_FILTER = `${colName} IS DISTINCT FROM 'business_name'`;
 
     const [totalRes, phoneRes, websiteRes] = await Promise.all([
       pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} WHERE ${HEADER_FILTER}`),
@@ -363,6 +441,16 @@ router.post("/semantic-search", async (req, res) => {
     category    = "",
     city        = "",
     state       = "",
+    city_file   = "",
+    phone       = "",
+    query_filter= "",
+    min_rating  = "",
+    max_rating  = "",
+    min_reviews = "",
+    max_reviews = "",
+    address     = "",
+    website     = "",
+    url         = "",
     has_phone   = "",
     has_website = "",
     page        = 1,
@@ -392,10 +480,32 @@ router.post("/semantic-search", async (req, res) => {
 
     const vecStr = `[${queryVec.join(",")}]`;
 
-    // 2. Build optional hard filters — two param arrays:
-    //    countValues: filter params only ($1,$2,...) — count SQL has NO vector param
-    //    searchValues: vector at $1, then same filters at $2,$3,... — search SQL uses <=> $1
-    const baseConditions = [`embedding IS NOT NULL`, `"business_name" IS DISTINCT FROM 'business_name'`];
+    // 2. Build optional hard filters
+    let finalCityFile = city_file;
+    if (!finalCityFile && (city || state)) {
+      if (city && state) {
+        finalCityFile = `${city}_${state}`;
+      } else {
+        finalCityFile = city || state;
+      }
+    }
+
+    const { selectCols, colToField, fieldToCol } = await getSchema();
+    const colName = fieldToCol.name || "business_name";
+    const colCategory = fieldToCol.category || "_category";
+    const colCityFile = fieldToCol.city_file || "_city_file";
+    const colPhone = fieldToCol.phone_number || "phone";
+    const colAddress = fieldToCol.address || "address";
+    const colWebsite = fieldToCol.website || "website";
+    const colUrl = fieldToCol.url || "url";
+    const colRating = fieldToCol.rating || "rating";
+    const colReviews = fieldToCol.reviews || "reviews";
+    const colQuery = fieldToCol.query || "query";
+
+    const baseConditions = [
+      `embedding IS NOT NULL`,
+      `"${colName}" IS DISTINCT FROM 'business_name'`
+    ];
 
     const countConditions  = [...baseConditions];
     const countValues      = [];
@@ -405,42 +515,63 @@ router.post("/semantic-search", async (req, res) => {
     const searchValues     = [vecStr];   // $1 = vector for cosine distance
     let   sIdx             = 2;
 
-    if (category) {
-      countConditions.push(`"_category" ILIKE $${cIdx}`);   countValues.push(`%${category}%`);  cIdx++;
-      searchConditions.push(`"_category" ILIKE $${sIdx}`);  searchValues.push(`%${category}%`); sIdx++;
-    }
-    if (city) {
-      countConditions.push(`"city" ILIKE $${cIdx}`);   countValues.push(`%${city}%`);  cIdx++;
-      searchConditions.push(`"city" ILIKE $${sIdx}`);  searchValues.push(`%${city}%`); sIdx++;
-    }
-    if (state) {
-      countConditions.push(`"state" ILIKE $${cIdx}`);   countValues.push(`%${state}%`);  cIdx++;
-      searchConditions.push(`"state" ILIKE $${sIdx}`);  searchValues.push(`%${state}%`); sIdx++;
+    const addFilter = (col, val, isNumeric = false, isInteger = false, operator = "ILIKE") => {
+      if (val !== undefined && val !== null && val !== "") {
+        let parsedVal = val;
+        if (isNumeric) parsedVal = parseFloat(val);
+        if (isInteger) parsedVal = parseInt(val, 10);
+        
+        let countParam = parsedVal;
+        let searchParam = parsedVal;
+        if (operator === "ILIKE") {
+          countParam = `%${parsedVal}%`;
+          searchParam = `%${parsedVal}%`;
+        }
+
+        countConditions.push(`"${col}" ${operator} $${cIdx}`);
+        countValues.push(countParam);
+        cIdx++;
+
+        searchConditions.push(`"${col}" ${operator} $${sIdx}`);
+        searchValues.push(searchParam);
+        sIdx++;
+      }
+    };
+
+    if (category && colCategory) addFilter(colCategory, category);
+    if (finalCityFile && colCityFile) addFilter(colCityFile, finalCityFile);
+    if (phone && colPhone) addFilter(colPhone, phone);
+    if (query_filter && colQuery) addFilter(colQuery, query_filter);
+    if (min_rating && colRating) addFilter(colRating, min_rating, true, false, ">=");
+    if (max_rating && colRating) addFilter(colRating, max_rating, true, false, "<=");
+    if (min_reviews && colReviews) addFilter(colReviews, min_reviews, false, true, ">=");
+    if (max_reviews && colReviews) addFilter(colReviews, max_reviews, false, true, "<=");
+    if (address && colAddress) addFilter(colAddress, address);
+    if (website && colWebsite) addFilter(colWebsite, website);
+    if (url && colUrl) addFilter(colUrl, url);
+
+    if (has_phone === "true" && colPhone) {
+      const cond = `("${colPhone}" IS NOT NULL AND "${colPhone}" != '')`;
+      countConditions.push(cond);
+      searchConditions.push(cond);
+    } else if (has_phone === "false" && colPhone) {
+      const cond = `("${colPhone}" IS NULL OR "${colPhone}" = '')`;
+      countConditions.push(cond);
+      searchConditions.push(cond);
     }
 
-    // Phone / website filters
-    if (has_phone === "true") {
-      countConditions.push(`("phone_number" IS NOT NULL AND "phone_number" != '')`);
-      searchConditions.push(`("phone_number" IS NOT NULL AND "phone_number" != '')`);
-    } else if (has_phone === "false") {
-      const clause = `("phone_number" IS NULL OR "phone_number" = '')`;
-      countConditions.push(clause);
-      searchConditions.push(clause);
+    if (has_website === "true" && colWebsite) {
+      const cond = `("${colWebsite}" IS NOT NULL AND "${colWebsite}" != '' AND "${colWebsite}" NOT ILIKE '%website%')`;
+      countConditions.push(cond);
+      searchConditions.push(cond);
+    } else if (has_website === "false" && colWebsite) {
+      const cond = `("${colWebsite}" IS NULL OR "${colWebsite}" = '')`;
+      countConditions.push(cond);
+      searchConditions.push(cond);
     }
 
-    if (has_website === "true") {
-      const conds = WEB_COLS.map(c => `("${c}" IS NOT NULL AND "${c}" != '' AND "${c}" NOT ILIKE '%website%')`);
-      const clause = `(${conds.join(" OR ")})`;
-      countConditions.push(clause);
-      searchConditions.push(clause);
-    } else if (has_website === "false") {
-      const clause = `(${WEB_COLS.map(c => `("${c}" IS NULL OR "${c}" = '')`).join(" AND ")})`;
-      countConditions.push(clause);
-      searchConditions.push(clause);
-    }
-
-    const countWhereStr  = `WHERE ${countConditions.join(" AND ")}`;
-    const searchWhereStr = `WHERE ${searchConditions.join(" AND ")}`;
+    const countWhereStr  = countConditions.length ? `WHERE ${countConditions.join(" AND ")}` : "";
+    const searchWhereStr = searchConditions.length ? `WHERE ${searchConditions.join(" AND ")}` : "";
 
     // 3. Count total matches — uses countValues (no vector, 0 or more filter params)
     const countSql = `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${countWhereStr}`;
@@ -486,6 +617,16 @@ router.get("/", async (req, res) => {
     category    = "",
     city        = "",
     state       = "",
+    city_file   = "",
+    phone       = "",
+    query_filter= "",
+    min_rating  = "",
+    max_rating  = "",
+    min_reviews = "",
+    max_reviews = "",
+    address     = "",
+    website     = "",
+    url         = "",
     has_phone   = "",
     has_website = "",
     sort_by     = "name",
@@ -500,8 +641,32 @@ router.get("/", async (req, res) => {
     const schema = await getSchema();
     const { fieldToCol } = schema;
 
+    let finalCityFile = city_file;
+    if (!finalCityFile && (city || state)) {
+      if (city && state) {
+        finalCityFile = `${city}_${state}`;
+      } else {
+        finalCityFile = city || state;
+      }
+    }
+
     const { whereStr, values, nextIdx } = buildWhere(
-      { search, category, city, state, has_phone, has_website },
+      {
+        search,
+        category,
+        city_file: finalCityFile,
+        phone,
+        query_filter,
+        min_rating,
+        max_rating,
+        min_reviews,
+        max_reviews,
+        address,
+        website,
+        url,
+        has_phone,
+        has_website
+      },
       fieldToCol
     );
 
@@ -623,27 +788,82 @@ router.post("/refresh", async (req, res) => {
 router.get("/map", async (req, res) => {
   const { category = "", limit = 15 } = req.query;
   try {
-    const conditions = [`"business_name" IS DISTINCT FROM 'business_name'`, `"state" IS NOT NULL`, `"state" != ''`];
+    const schema = await getSchema();
+    const { actualCols } = schema;
+    const hasState = actualCols.includes("state");
+    const hasCity = actualCols.includes("city");
+    
+    // Dynamic SQL expressions for state and city
+    const stateExpr = hasState ? `"state"` : `
+      CASE 
+        WHEN "_city_file" ILIKE '%_North_Carolina' THEN 'North Carolina'
+        WHEN "_city_file" ILIKE '%_South_Carolina' THEN 'South Carolina'
+        WHEN "_city_file" ILIKE '%_North_Dakota' THEN 'North Dakota'
+        WHEN "_city_file" ILIKE '%_South_Dakota' THEN 'South Dakota'
+        WHEN "_city_file" ILIKE '%_New_York' THEN 'New York'
+        WHEN "_city_file" ILIKE '%_New_Jersey' THEN 'New Jersey'
+        WHEN "_city_file" ILIKE '%_New_Mexico' THEN 'New Mexico'
+        WHEN "_city_file" ILIKE '%_New_Hampshire' THEN 'New Hampshire'
+        WHEN "_city_file" ILIKE '%_Rhode_Island' THEN 'Rhode Island'
+        WHEN "_city_file" ILIKE '%_West_Virginia' THEN 'West Virginia'
+        ELSE INITCAP(REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '^.*_', ''))
+      END
+    `;
+
+    const cityExpr = hasCity ? `"city"` : `
+      REPLACE(CASE 
+        WHEN "_city_file" ILIKE '%_North_Carolina' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_North_Carolina$', '')
+        WHEN "_city_file" ILIKE '%_South_Carolina' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_South_Carolina$', '')
+        WHEN "_city_file" ILIKE '%_North_Dakota' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_North_Dakota$', '')
+        WHEN "_city_file" ILIKE '%_South_Dakota' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_South_Dakota$', '')
+        WHEN "_city_file" ILIKE '%_New_York' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_New_York$', '')
+        WHEN "_city_file" ILIKE '%_New_Jersey' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_New_Jersey$', '')
+        WHEN "_city_file" ILIKE '%_New_Mexico' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_New_Mexico$', '')
+        WHEN "_city_file" ILIKE '%_New_Hampshire' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_New_Hampshire$', '')
+        WHEN "_city_file" ILIKE '%_Rhode_Island' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_Rhode_Island$', '')
+        WHEN "_city_file" ILIKE '%_West_Virginia' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_West_Virginia$', '')
+        ELSE REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_[^_]+$', '')
+      END, '_', ' ')
+    `;
+
+    const colName = schema.fieldToCol.name || "business_name";
+    const colCategory = schema.fieldToCol.category || "_category";
+    const colCityFile = schema.fieldToCol.city_file || "_city_file";
+    const HEADER_FILTER = `"${colName}" IS DISTINCT FROM 'business_name'`;
+
+    const conditions = [
+      HEADER_FILTER,
+      `("${colCityFile}" IS NOT NULL AND "${colCityFile}" != '')`
+    ];
     const values = [];
     let idx = 1;
-    if (category) {
-      conditions.push(`"_category" ILIKE $${idx}`);
+    if (category && colCategory) {
+      conditions.push(`"${colCategory}" ILIKE $${idx}`);
       values.push(`%${category}%`);
       idx++;
     }
     const whereStr = `WHERE ${conditions.join(" AND ")}`;
 
+    const stateSql = `
+      SELECT (${stateExpr}) AS "state", COUNT(*) AS count 
+      FROM ${FULL_TABLE} 
+      ${whereStr} 
+      GROUP BY 1 
+      ORDER BY count DESC 
+      LIMIT 60
+    `;
+    const citySql = `
+      SELECT (${cityExpr}) AS "city", (${stateExpr}) AS "state", COUNT(*) AS count 
+      FROM ${FULL_TABLE}
+      ${whereStr}
+      GROUP BY 1, 2 
+      ORDER BY count DESC 
+      LIMIT ${Math.min(parseInt(limit) || 15, 50)}
+    `;
+
     const [stateRes, cityRes] = await Promise.all([
-      pgQuery(
-        `SELECT "state", COUNT(*) AS count FROM ${FULL_TABLE} ${whereStr} GROUP BY "state" ORDER BY count DESC LIMIT 60`,
-        values
-      ),
-      pgQuery(
-        `SELECT "city", "state", COUNT(*) AS count FROM ${FULL_TABLE}
-         ${whereStr} AND "city" IS NOT NULL AND "city" != ''
-         GROUP BY "city", "state" ORDER BY count DESC LIMIT ${Math.min(parseInt(limit) || 15, 50)}`,
-        values
-      ),
+      pgQuery(stateSql, values),
+      pgQuery(citySql, values),
     ]);
 
     res.json({
@@ -665,29 +885,97 @@ router.get("/market-intel", async (req, res) => {
   if (!category.trim()) return res.status(422).json({ error: "category is required" });
 
   try {
-    const conditions = [`"business_name" IS DISTINCT FROM 'business_name'`];
+    const schema = await getSchema();
+    const { actualCols } = schema;
+    const colName = schema.fieldToCol.name || "business_name";
+    const colCategory = schema.fieldToCol.category || "_category";
+    const colCityFile = schema.fieldToCol.city_file || "_city_file";
+    const colPhone = schema.fieldToCol.phone_number || "phone";
+    const colWebsite = schema.fieldToCol.website || "website";
+    const colEmail = schema.fieldToCol.email_address || "email_address";
+    const colUrl = schema.fieldToCol.url || "url";
+
+    const hasState = actualCols.includes("state");
+    const hasCity = actualCols.includes("city");
+    
+    // Dynamic SQL expressions for state and city
+    const stateExpr = hasState ? `"state"` : `
+      CASE 
+        WHEN "_city_file" ILIKE '%_North_Carolina' THEN 'North Carolina'
+        WHEN "_city_file" ILIKE '%_South_Carolina' THEN 'South Carolina'
+        WHEN "_city_file" ILIKE '%_North_Dakota' THEN 'North Dakota'
+        WHEN "_city_file" ILIKE '%_South_Dakota' THEN 'South Dakota'
+        WHEN "_city_file" ILIKE '%_New_York' THEN 'New York'
+        WHEN "_city_file" ILIKE '%_New_Jersey' THEN 'New Jersey'
+        WHEN "_city_file" ILIKE '%_New_Mexico' THEN 'New Mexico'
+        WHEN "_city_file" ILIKE '%_New_Hampshire' THEN 'New Hampshire'
+        WHEN "_city_file" ILIKE '%_Rhode_Island' THEN 'Rhode Island'
+        WHEN "_city_file" ILIKE '%_West_Virginia' THEN 'West Virginia'
+        ELSE INITCAP(REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '^.*_', ''))
+      END
+    `;
+
+    const cityExpr = hasCity ? `"city"` : `
+      REPLACE(CASE 
+        WHEN "_city_file" ILIKE '%_North_Carolina' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_North_Carolina$', '')
+        WHEN "_city_file" ILIKE '%_South_Carolina' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_South_Carolina$', '')
+        WHEN "_city_file" ILIKE '%_North_Dakota' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_North_Dakota$', '')
+        WHEN "_city_file" ILIKE '%_South_Dakota' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_South_Dakota$', '')
+        WHEN "_city_file" ILIKE '%_New_York' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_New_York$', '')
+        WHEN "_city_file" ILIKE '%_New_Jersey' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_New_Jersey$', '')
+        WHEN "_city_file" ILIKE '%_New_Mexico' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_New_Mexico$', '')
+        WHEN "_city_file" ILIKE '%_New_Hampshire' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_New_Hampshire$', '')
+        WHEN "_city_file" ILIKE '%_Rhode_Island' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_Rhode_Island$', '')
+        WHEN "_city_file" ILIKE '%_West_Virginia' THEN REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_West_Virginia$', '')
+        ELSE REGEXP_REPLACE(REGEXP_REPLACE("_city_file", '^.*_in_', ''), '_[^_]+$', '')
+      END, '_', ' ')
+    `;
+
+    const HEADER_FILTER = `"${colName}" IS DISTINCT FROM 'business_name'`;
+    const conditions = [HEADER_FILTER];
     const values = [];
     let idx = 1;
-    if (category) { conditions.push(`"_category" ILIKE $${idx}`); values.push(`%${category}%`); idx++; }
-    if (state)    { conditions.push(`"state" ILIKE $${idx}`);     values.push(`%${state}%`);    idx++; }
+    if (category && colCategory) { conditions.push(`"${colCategory}" ILIKE $${idx}`); values.push(`%${category}%`); idx++; }
+    if (state && colCityFile) { conditions.push(`"${colCityFile}" ILIKE $${idx}`); values.push(`%${state}%`); idx++; }
     const w = `WHERE ${conditions.join(" AND ")}`;
 
     const safeRun = (sql, vals = values) =>
       pgQuery(sql, vals).catch(() => ({ rows: [] }));
+
+    const hasRevenue = actualCols.includes("revenue_range");
+    const hasEmployees = actualCols.includes("number_of_employees");
 
     const [
       totalRes, phoneRes, websiteRes, emailRes, linkedRes,
       stateRes, cityRes, revenueRes, employeeRes,
     ] = await Promise.all([
       pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w}`, values),
-      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND "phone_number" IS NOT NULL AND "phone_number" != ''`),
-      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("company_website" IS NOT NULL AND "company_website" != '' AND "company_website" NOT ILIKE '%website%')`),
-      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("email_address" IS NOT NULL AND "email_address" != '')`),
-      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("linked_url" IS NOT NULL AND "linked_url" != '')`),
-      safeRun(`SELECT "state", COUNT(*) AS count FROM ${FULL_TABLE} ${w} AND "state" IS NOT NULL AND "state" != '' GROUP BY "state" ORDER BY count DESC LIMIT 15`),
-      safeRun(`SELECT "city",  COUNT(*) AS count FROM ${FULL_TABLE} ${w} AND "city"  IS NOT NULL AND "city"  != '' GROUP BY "city"  ORDER BY count DESC LIMIT 10`),
-      safeRun(`SELECT "revenue_range", COUNT(*) AS count FROM ${FULL_TABLE} ${w} AND "revenue_range" IS NOT NULL AND "revenue_range" != '' GROUP BY "revenue_range" ORDER BY count DESC LIMIT 8`),
-      safeRun(`SELECT "number_of_employees", COUNT(*) AS count FROM ${FULL_TABLE} ${w} AND "number_of_employees" IS NOT NULL AND "number_of_employees" != '' GROUP BY "number_of_employees" ORDER BY count DESC LIMIT 8`),
+      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND "${colPhone}" IS NOT NULL AND "${colPhone}" != ''`),
+      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND ("${colWebsite}" IS NOT NULL AND "${colWebsite}" != '' AND "${colWebsite}" NOT ILIKE '%website%')`),
+      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND "${colEmail}" IS NOT NULL AND "${colEmail}" != ''`),
+      safeRun(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${w} AND "${colUrl}" IS NOT NULL AND "${colUrl}" != ''`),
+      safeRun(`
+        SELECT (${stateExpr}) AS "state", COUNT(*) AS count 
+        FROM ${FULL_TABLE} 
+        ${w} 
+        GROUP BY 1 
+        ORDER BY count DESC 
+        LIMIT 15
+      `),
+      safeRun(`
+        SELECT (${cityExpr}) AS "city", COUNT(*) AS count 
+        FROM ${FULL_TABLE} 
+        ${w} 
+        GROUP BY 1 
+        ORDER BY count DESC 
+        LIMIT 10
+      `),
+      hasRevenue 
+        ? safeRun(`SELECT "revenue_range", COUNT(*) AS count FROM ${FULL_TABLE} ${w} AND "revenue_range" IS NOT NULL AND "revenue_range" != '' GROUP BY "revenue_range" ORDER BY count DESC LIMIT 8`)
+        : Promise.resolve({ rows: [] }),
+      hasEmployees
+        ? safeRun(`SELECT "number_of_employees", COUNT(*) AS count FROM ${FULL_TABLE} ${w} AND "number_of_employees" IS NOT NULL AND "number_of_employees" != '' GROUP BY "number_of_employees" ORDER BY count DESC LIMIT 8`)
+        : Promise.resolve({ rows: [] }),
     ]);
 
     const total = parseInt(totalRes.rows[0].cnt || 0);
@@ -703,8 +991,8 @@ router.get("/market-intel", async (req, res) => {
       },
       byState:   stateRes.rows.map(r => ({ state: r.state,                        count: parseInt(r.count) })),
       topCities: cityRes.rows.map(r  => ({ city:  r.city,                         count: parseInt(r.count) })),
-      revenue:   revenueRes.rows.map(r   => ({ range: r.revenue_range,            count: parseInt(r.count) })),
-      employees: employeeRes.rows.map(r  => ({ size:  r.number_of_employees,      count: parseInt(r.count) })),
+      revenue:   revenueRes.rows.map(r   => ({ range: r.range || r.revenue_range, count: parseInt(r.count) })),
+      employees: employeeRes.rows.map(r  => ({ size:  r.size || r.number_of_employees, count: parseInt(r.count) })),
     });
   } catch (err) {
     logger.error(`[GET /market-intel] ${err.message}`);
@@ -756,15 +1044,39 @@ router.post("/ideal-customer", async (req, res) => {
     const limitNum = Math.min(50, Math.max(1, parseInt(limit)));
     const offset   = (pageNum - 1) * limitNum;
 
-    const conditions = [`embedding IS NOT NULL`, `"business_name" IS DISTINCT FROM 'business_name'`];
+    const schema    = await getSchema();
+    const colName = schema.fieldToCol.name || "business_name";
+    const colCategory = schema.fieldToCol.category || "_category";
+    const colCityFile = schema.fieldToCol.city_file || "_city_file";
+    const colPhone = schema.fieldToCol.phone_number || "phone";
+    const colWebsite = schema.fieldToCol.website || "website";
+
+    const conditions = [`embedding IS NOT NULL`, `"${colName}" IS DISTINCT FROM 'business_name'`];
     const sValues = [vecStr]; // $1 = vector
     let sIdx = 2;
 
-    if (profile.category)    { conditions.push(`"_category" ILIKE $${sIdx}`);  sValues.push(`%${profile.category}%`);  sIdx++; }
-    if (profile.city)        { conditions.push(`"city" ILIKE $${sIdx}`);        sValues.push(`%${profile.city}%`);      sIdx++; }
-    if (profile.state)       { conditions.push(`"state" ILIKE $${sIdx}`);       sValues.push(`%${profile.state}%`);     sIdx++; }
-    if (profile.has_phone    === "true") conditions.push(`("phone_number" IS NOT NULL AND "phone_number" != '')`);
-    if (profile.has_website  === "true") conditions.push(`("company_website" IS NOT NULL AND "company_website" != '' AND "company_website" NOT ILIKE '%website%')`);
+    if (profile.category && colCategory) {
+      conditions.push(`"${colCategory}" ILIKE $${sIdx}`);
+      sValues.push(`%${profile.category}%`);
+      sIdx++;
+    }
+    let finalCityFile = "";
+    if (profile.city && profile.state) {
+      finalCityFile = `${profile.city}_${profile.state}`;
+    } else {
+      finalCityFile = profile.city || profile.state || "";
+    }
+    if (finalCityFile && colCityFile) {
+      conditions.push(`"${colCityFile}" ILIKE $${sIdx}`);
+      sValues.push(`%${finalCityFile}%`);
+      sIdx++;
+    }
+    if (profile.has_phone === "true" && colPhone) {
+      conditions.push(`("${colPhone}" IS NOT NULL AND "${colPhone}" != '')`);
+    }
+    if (profile.has_website === "true" && colWebsite) {
+      conditions.push(`("${colWebsite}" IS NOT NULL AND "${colWebsite}" != '' AND "${colWebsite}" NOT ILIKE '%website%')`);
+    }
 
     sValues.push(limitNum, offset);
     const searchSql = `
@@ -775,7 +1087,6 @@ router.post("/ideal-customer", async (req, res) => {
       LIMIT $${sIdx} OFFSET $${sIdx + 1}
     `;
 
-    const schema    = await getSchema();
     const searchRes = await pgQuery(searchSql, sValues);
     const leads     = searchRes.rows.map(row => {
       const sim = row.similarity;

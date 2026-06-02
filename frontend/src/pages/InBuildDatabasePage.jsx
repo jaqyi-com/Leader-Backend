@@ -24,7 +24,24 @@ const PRIORITY_COLS = [
 ];
 
 const HIDDEN_KEYS = new Set(["_id", "_row_hash", "unnamed_13", "url", "embedding"]);
-const BLANK = { search: "", category: "", city: "", state: "", has_phone: "", has_website: "" };
+const BLANK = {
+  search: "",
+  category: "",
+  city_file: "",
+  city: "",
+  state: "",
+  phone: "",
+  query_filter: "",
+  min_rating: "",
+  max_rating: "",
+  min_reviews: "",
+  max_reviews: "",
+  address: "",
+  website: "",
+  url: "",
+  has_phone: "",
+  has_website: ""
+};
 
 const US_STATES = [
   "", "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
@@ -124,8 +141,18 @@ export default function InBuildDatabasePage() {
       const { data } = await ibSemanticSearch({
         query: q, page: pg, limit,
         category: filters.category,
+        city_file: filters.city_file,
         city:     filters.city,
         state:    filters.state,
+        phone:    filters.phone,
+        query_filter: filters.query_filter,
+        min_rating: filters.min_rating,
+        max_rating: filters.max_rating,
+        min_reviews: filters.min_reviews,
+        max_reviews: filters.max_reviews,
+        address:  filters.address,
+        website:  filters.website,
+        url:      filters.url,
         has_phone:   filters.has_phone,
         has_website: filters.has_website,
       });
@@ -387,6 +414,10 @@ export default function InBuildDatabasePage() {
             {k === "has_phone" ? (v === "true" ? "Has Phone" : "No Phone")
              : k === "has_website" ? (v === "true" ? "Has Website" : "No Website")
              : k === "state" ? `State: ${v}`
+             : k === "city_file" ? `City/Region: ${v}`
+             : k === "query_filter" ? `Query: ${v}`
+             : k === "min_rating" ? `Min Rating: ${v}`
+             : k === "min_reviews" ? `Min Reviews: ${v}`
              : `${k.replace(/_/g, " ")}: ${v}`}
             <button onClick={() => setF(k, "")} className="hover:text-[var(--rose)] ml-0.5"><X size={9} /></button>
           </span>
@@ -400,14 +431,21 @@ export default function InBuildDatabasePage() {
       <AnimatePresence>
         {showF && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
-              <div className="relative">
+            <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="relative col-span-2">
                 <Search size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
-                <input className="input pl-8 text-xs w-full" placeholder="Search…" value={filters.search} onChange={e => setF("search", e.target.value)} />
+                <input className="input pl-8 text-xs w-full" placeholder="Search across all columns…" value={filters.search} onChange={e => setF("search", e.target.value)} />
               </div>
               <input className="input text-xs" placeholder="Category…" value={filters.category} onChange={e => setF("category", e.target.value)} />
-              <input className="input text-xs" placeholder="City…" value={filters.city} onChange={e => setF("city", e.target.value)} />
-              {/* State dropdown */}
+              <input className="input text-xs" placeholder="City/Region (e.g. Austin)…" value={filters.city_file} onChange={e => setF("city_file", e.target.value)} />
+              <input className="input text-xs" placeholder="Phone number search…" value={filters.phone} onChange={e => setF("phone", e.target.value)} />
+              <input className="input text-xs" placeholder="Scraped Query…" value={filters.query_filter} onChange={e => setF("query_filter", e.target.value)} />
+              <input className="input text-xs" type="number" step="0.1" min="0" max="5" placeholder="Min Rating (e.g. 4.0)…" value={filters.min_rating} onChange={e => setF("min_rating", e.target.value)} />
+              <input className="input text-xs" type="number" min="0" placeholder="Min Reviews (e.g. 10)…" value={filters.min_reviews} onChange={e => setF("min_reviews", e.target.value)} />
+              <input className="input text-xs" placeholder="Address…" value={filters.address} onChange={e => setF("address", e.target.value)} />
+              <input className="input text-xs" placeholder="Website…" value={filters.website} onChange={e => setF("website", e.target.value)} />
+              <input className="input text-xs" placeholder="Google Maps URL…" value={filters.url} onChange={e => setF("url", e.target.value)} />
+              
               <select className="input text-xs" value={filters.state} onChange={e => setF("state", e.target.value)}>
                 <option value="">State: Any</option>
                 {US_STATES.filter(Boolean).map(s => (
