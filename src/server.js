@@ -775,12 +775,14 @@ const crawlerRouter        = require("./api/crawler");
 const autoScraperRouter    = require("./api/autoScraper");
 const autoLeadGenRouter    = require("./api/autoLeadGen");
 const leadGeneratorRouter  = require("./routes/leadGenerator");
-const inbuildDatabaseRouter = require("./routes/inbuildDatabase");
+const inbuildDatabaseRouter    = require("./routes/inbuildDatabase");
+const publicContactsRouter     = require("./routes/publicContactsDatabase");
 app.use("/api/crawler",              crawlerRouter);
 app.use("/api/crawler/auto-scraper", autoScraperRouter);
 app.use("/api/lead-generator/auto-gen", autoLeadGenRouter);
 app.use("/api/lead-generator",       leadGeneratorRouter);
 app.use("/api/inbuild-database",     inbuildDatabaseRouter);
+app.use("/api/public-contacts",      publicContactsRouter);
 
 
 

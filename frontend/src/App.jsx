@@ -40,6 +40,7 @@ import AIResearchAgentPage from "./pages/lg/AIResearchAgentPage";
 import AutoLeadGenPage    from "./pages/lg/AutoLeadGenPage";
 import InBuildDatabasePage      from "./pages/InBuildDatabasePage";
 import DatabaseIntelligencePage from "./pages/DatabaseIntelligencePage";
+import PublicDataPage           from "./pages/PublicDataPage";
 // CRM
 import CrmPipelinePage    from "./pages/crm/CrmPipelinePage";
 import CrmDashboardPage   from "./pages/crm/CrmDashboardPage";
@@ -108,6 +109,7 @@ export default function App() {
             {/* Lead Generator */}
             <Route path="lg/database"       element={<LeadDatabasePage />} />
             <Route path="inbuild-db"         element={<InBuildDatabasePage />} />
+            <Route path="public-data"         element={<PublicDataPage />} />
             <Route path="db-intelligence"     element={<DatabaseIntelligencePage />} />
             <Route path="lg/linkedin"       element={<LinkedInFinderPage />} />
             <Route path="lg/email"          element={<EmailFinderPage />} />

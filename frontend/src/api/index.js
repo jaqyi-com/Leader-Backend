@@ -224,3 +224,10 @@ export const ibGetMarketIntel = (params = {})  => lgApi.get("/api/inbuild-databa
 export const ibIdealCustomer  = (body)         => lgApi.post("/api/inbuild-database/ideal-customer", body);
 export const ibLaunchCampaign = (body)         => lgApi.post("/api/inbuild-database/launch-campaign", body);
 
+// ============================================================
+// PUBLIC CONTACTS DATABASE (usa_public_contacts_82m)
+// ============================================================
+export const pcGetDatabase = (params = {}) => lgApi.get("/api/public-contacts", { params });
+export const pcGetStats    = ()             => lgApi.get("/api/public-contacts/stats");
+export const pcGetColumns  = ()             => lgApi.get("/api/public-contacts/columns");
+export const pcRefresh     = ()             => lgApi.post("/api/public-contacts/refresh");
