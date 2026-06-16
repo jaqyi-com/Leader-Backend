@@ -1,28 +1,29 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Database, Search, Filter, Download, RefreshCw, Loader2,
+  Database, Search, Filter, Download, RefreshCw,
   Phone, Mail, MapPin, ChevronDown, ChevronUp, X,
-  Globe, User, Users, ChevronLeft, ChevronRight,
+  Globe, User, Users, Building2,
 } from "lucide-react";
 import { pcGetDatabase, pcGetStats, pcGetColumns, pcRefresh } from "../api";
 import toast from "react-hot-toast";
 
-// ── Priority columns ──────────────────────────────────────
+// ── Columns matching actual DB schema ──────────────────────
 const PRIORITY_COLS = [
-  { key: "name",       label: "Full Name"  },
-  { key: "first_name", label: "First"      },
-  { key: "last_name",  label: "Last"       },
-  { key: "email",      label: "Email"      },
-  { key: "phone",      label: "Phone"      },
-  { key: "city",       label: "City"       },
-  { key: "state",      label: "State"      },
-  { key: "zip",        label: "ZIP"        },
-  { key: "address",    label: "Address"    },
-  { key: "age",        label: "Age"        },
+  { key: "first_name",   label: "First Name"  },
+  { key: "middle_name",  label: "Middle"      },
+  { key: "last_name",    label: "Last Name"   },
+  { key: "email",        label: "Email"       },
+  { key: "phone",        label: "Phone"       },
+  { key: "city",         label: "City"        },
+  { key: "state",        label: "State"       },
+  { key: "zip",          label: "ZIP"         },
+  { key: "address",      label: "Address"     },
+  { key: "company",      label: "Company"     },
+  { key: "title",        label: "Title"       },
+  { key: "industry",     label: "Industry"    },
+  { key: "website",      label: "Website"     },
 ];
-
-const HIDDEN_KEYS = new Set(["_id", "_row_hash", "unnamed_13", "embedding"]);
 
 const BLANK = {
   search:    "",
@@ -32,6 +33,7 @@ const BLANK = {
   city:      "",
   state:     "",
   zip:       "",
+  company:   "",
   has_email: "",
   has_phone: "",
 };
@@ -60,34 +62,16 @@ export default function PublicDataPage() {
   const [records,    setRecords]    = useState([]);
   const [total,      setTotal]      = useState(0);
   const [stats,      setStats]      = useState(null);
-  const [cols,       setCols]       = useState(PRIORITY_COLS);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showF,      setShowF]      = useState(false);
   const [page,       setPage]       = useState(1);
   const [limit,      setLimit]      = useState(50);
-  const [sortBy,     setSortBy]     = useState("name");
+  const [sortBy,     setSortBy]     = useState("last_name");
   const [sortDir,    setSortDir]    = useState("asc");
   const [filters,    setFilters]    = useState(BLANK);
 
   const setF = (k, v) => { setFilters(p => ({ ...p, [k]: v })); setPage(1); };
-
-  // ── Column discovery ───────────────────────────────────
-  const loadColumns = useCallback(async () => {
-    try {
-      const { data } = await pcGetColumns();
-      if (data?.columns?.length) {
-        const priorityKeys = new Set(PRIORITY_COLS.map(c => c.key));
-        const extraKeys    = data.columns.filter(k => !priorityKeys.has(k) && !HIDDEN_KEYS.has(k));
-        const extra        = extraKeys.map(k => ({
-          key: k,
-          label: k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
-        }));
-        const present = PRIORITY_COLS.filter(c => data.columns.includes(c.key));
-        setCols([...present, ...extra]);
-      }
-    } catch { /* keep defaults */ }
-  }, []);
 
   // ── Load records ───────────────────────────────────────
   const load = useCallback(async () => {
@@ -100,14 +84,13 @@ export default function PublicDataPage() {
       });
       setRecords(data.records || []);
       setTotal(data.total || 0);
-    } catch {
+    } catch (e) {
       toast.error("Failed to load public contacts");
     } finally {
       setLoading(false);
     }
   }, [page, limit, sortBy, sortDir, filters]);
 
-  useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
     pcGetStats().then(({ data }) => setStats(data)).catch(() => {});
@@ -125,7 +108,6 @@ export default function PublicDataPage() {
       await pcRefresh();
       await Promise.all([
         load(),
-        loadColumns(),
         pcGetStats().then(({ data }) => setStats(data)),
       ]);
       toast.success("Cache refreshed!");
@@ -136,8 +118,8 @@ export default function PublicDataPage() {
   const clearAll = () => { setFilters(BLANK); setPage(1); };
 
   const exportCSV = () => {
-    const hdrs = cols.map(c => c.label);
-    const rows = records.map(r => cols.map(c => r[c.key] || ""));
+    const hdrs = PRIORITY_COLS.map(c => c.label);
+    const rows = records.map(r => PRIORITY_COLS.map(c => r[c.key] || ""));
     const csv  = [hdrs, ...rows]
       .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
       .join("\n");
@@ -147,8 +129,8 @@ export default function PublicDataPage() {
     a.click();
   };
 
-  const pages   = Math.ceil(total / limit);
-  const chips   = Object.entries(filters).filter(([, v]) => v);
+  const pages  = Math.ceil(total / limit);
+  const chips  = Object.entries(filters).filter(([, v]) => v);
   const statRows = stats ? [
     { label: "Total Records", val: stats.total,      icon: Database, color: "#E23744" },
     { label: "With Email",    val: stats.with_email,  icon: Mail,     color: "#10b981" },
@@ -166,7 +148,8 @@ export default function PublicDataPage() {
             Public Data — 82M USA Contacts
           </h2>
           <p className="text-sm text-[var(--text-3)] mt-0.5">
-            {total.toLocaleString()} records · Live Cloud SQL · <span className="font-mono text-[11px] opacity-60">usa_public_contacts_82m</span>
+            {total.toLocaleString()} records · Live Cloud SQL ·{" "}
+            <span className="font-mono text-[11px] opacity-60">usa_public_contacts_82m</span>
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -223,12 +206,13 @@ export default function PublicDataPage() {
             <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               <div className="relative col-span-2">
                 <Search size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
-                <input className="input pl-8 text-xs w-full" placeholder="Search across all columns…" value={filters.search} onChange={e => setF("search", e.target.value)} />
+                <input className="input pl-8 text-xs w-full" placeholder="Search name, email, phone, city…" value={filters.search} onChange={e => setF("search", e.target.value)} />
               </div>
               <input className="input text-xs" placeholder="Name…" value={filters.name} onChange={e => setF("name", e.target.value)} />
               <input className="input text-xs" placeholder="Email…" value={filters.email} onChange={e => setF("email", e.target.value)} />
               <input className="input text-xs" placeholder="Phone…" value={filters.phone} onChange={e => setF("phone", e.target.value)} />
               <input className="input text-xs" placeholder="City…" value={filters.city} onChange={e => setF("city", e.target.value)} />
+              <input className="input text-xs" placeholder="Company…" value={filters.company} onChange={e => setF("company", e.target.value)} />
               <input className="input text-xs" placeholder="ZIP code…" value={filters.zip} onChange={e => setF("zip", e.target.value)} />
               <select className="input text-xs" value={filters.state} onChange={e => setF("state", e.target.value)}>
                 <option value="">State: Any</option>
@@ -262,7 +246,7 @@ export default function PublicDataPage() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
-                {cols.map(c => (
+                {PRIORITY_COLS.map(c => (
                   <th key={c.key} onClick={() => handleSort(c.key)}
                     className="text-left px-3 py-3 text-[var(--text-3)] font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap cursor-pointer hover:text-[var(--text-2)] select-none">
                     {c.label}{sortBy === c.key ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
@@ -274,7 +258,7 @@ export default function PublicDataPage() {
               {loading ? (
                 Array.from({ length: 8 }).map((_, idx) => (
                   <tr key={`skel-${idx}`} className="border-b border-[var(--border)] animate-pulse">
-                    {cols.map((_, ci) => (
+                    {PRIORITY_COLS.map((_, ci) => (
                       <td key={ci} className="px-3 py-3">
                         <div className="h-4 bg-[var(--surface-2)] rounded" style={{ width: `${55 + (ci * 19) % 60}px` }} />
                       </td>
@@ -283,7 +267,7 @@ export default function PublicDataPage() {
                 ))
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={cols.length} className="py-16 text-center text-[var(--text-3)]">
+                  <td colSpan={PRIORITY_COLS.length} className="py-16 text-center text-[var(--text-3)]">
                     <Users size={32} className="mx-auto mb-3 opacity-30" />
                     <p>No records match your filters.</p>
                     <p className="text-[10px] mt-1 opacity-60">Try adjusting or clearing the filters.</p>
@@ -291,13 +275,11 @@ export default function PublicDataPage() {
                 </tr>
               ) : records.map((r, i) => (
                 <tr key={i} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors">
-                  {cols.map(c => {
+                  {PRIORITY_COLS.map(c => {
                     const val = r[c.key];
-                    if (c.key === "name" || c.key === "first_name" || c.key === "last_name") return (
+                    if (c.key === "first_name" || c.key === "last_name" || c.key === "middle_name") return (
                       <td key={c.key} className="px-3 py-2.5">
-                        <p className="font-semibold text-[var(--text)] flex items-center gap-1">
-                          <User size={10} className="text-[var(--accent)] flex-shrink-0" />{val || "—"}
-                        </p>
+                        <p className="font-semibold text-[var(--text)]">{val || "—"}</p>
                       </td>
                     );
                     if (c.key === "email") return (
@@ -314,23 +296,44 @@ export default function PublicDataPage() {
                         {val
                           ? <p className="flex items-center gap-1 text-[var(--text-2)] text-[11px]">
                               <Phone size={9} className="text-green-400 flex-shrink-0" />
-                              <span className="truncate max-w-[150px]" title={val}>{val}</span>
+                              <span className="truncate max-w-[140px]" title={val}>{val}</span>
                             </p>
                           : <span className="text-[var(--text-3)]">—</span>}
                       </td>
                     );
-                    if (c.key === "city" || c.key === "state" || c.key === "zip") return (
-                      <td key={c.key} className="px-3 py-2.5 text-[var(--text-2)]">
-                        {val || "—"}
+                    if (c.key === "address") return (
+                      <td key={c.key} className="px-3 py-2.5 text-[var(--text-3)] min-w-[140px]">
+                        {val && <span className="flex items-start gap-1"><MapPin size={10} className="mt-0.5 flex-shrink-0" />{val}</span>}
+                        {!val && "—"}
                       </td>
                     );
-                    if (c.key === "address") return (
-                      <td key={c.key} className="px-3 py-2.5 text-[var(--text-3)] min-w-[150px]">
-                        {val && <span className="flex items-start gap-1"><MapPin size={10} className="mt-0.5 flex-shrink-0" />{val}</span>}
+                    if (c.key === "website") return (
+                      <td key={c.key} className="px-3 py-2.5">
+                        {val
+                          ? <a href={val.startsWith("http") ? val : `https://${val}`} target="_blank" rel="noreferrer"
+                               className="text-[var(--text-3)] hover:text-blue-400 flex items-center gap-1">
+                              <Globe size={10} />Visit
+                            </a>
+                          : "—"}
+                      </td>
+                    );
+                    if (c.key === "company") return (
+                      <td key={c.key} className="px-3 py-2.5">
+                        {val
+                          ? <span className="flex items-center gap-1 text-[var(--text-2)]">
+                              <Building2 size={9} className="text-purple-400 flex-shrink-0" />
+                              <span className="truncate max-w-[140px]" title={val}>{val}</span>
+                            </span>
+                          : "—"}
+                      </td>
+                    );
+                    if (c.key === "industry" || c.key === "sub_industry") return (
+                      <td key={c.key} className="px-3 py-2.5">
+                        {val ? <span className="badge badge-purple text-[9px]">{val}</span> : "—"}
                       </td>
                     );
                     return (
-                      <td key={c.key} className="px-3 py-2.5 text-[var(--text-2)] max-w-[160px] truncate">
+                      <td key={c.key} className="px-3 py-2.5 text-[var(--text-2)] max-w-[140px] truncate">
                         {val || "—"}
                       </td>
                     );

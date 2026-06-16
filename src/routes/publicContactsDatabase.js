@@ -6,9 +6,12 @@
 // Instance    : sigma-current-497209-i6:us-central1:leader (34.71.167.187)
 // Database    : doott
 //
-// Architecture mirrors /api/inbuild-database — same Cloud SQL
-// connection, same pattern (Redis stats cache, schema discovery,
-// WHERE builder).  Table is read-only; no sync / embed routes.
+// Actual columns discovered from live schema:
+//   _source_file, first_name, middle_name, last_name, xxxx,
+//   email, ccc, xxx, first_name_1, middle_name_1, last_name_1,
+//   title, company_name, mailing_address, primary_city,
+//   primary_state, zip_code, country, phone, web_address,
+//   email_1, revenue, employee, industry, sub_industry, _row_hash
 // ============================================================
 
 const express = require("express");
@@ -19,55 +22,45 @@ const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const logger = require("../utils/logger").forAgent("PublicContactsDB");
 
 // ── Table config ───────────────────────────────────────────
-const PC_SCHEMA = "public";
-const PC_TABLE  = "usa_public_contacts_82m";
+const PC_SCHEMA  = "public";
+const PC_TABLE   = "usa_public_contacts_82m";
 const FULL_TABLE = `"${PC_SCHEMA}"."${PC_TABLE}"`;
 
-// ── Cache keys ─────────────────────────────────────────────
-const STATS_KEY  = "cache:public-contacts-stats";
-const SCHEMA_KEY = "cache:public-contacts-schema"; // in-memory only
-const STATS_TTL  = 300; // 5 minutes
+// ── Cache ──────────────────────────────────────────────────
+const STATS_KEY = "cache:public-contacts-stats";
+const STATS_TTL = 300; // 5 min
 
-// Columns to exclude from SELECT
-const SKIP_IN_SELECT = new Set(["embedding", "_row_hash", "unnamed_13"]);
+// Columns to exclude from SELECT output
+const SKIP_IN_SELECT = new Set(["_row_hash", "xxxx", "ccc", "xxx"]);
 
-// ── Standard field map ─────────────────────────────────────
-// Maps actual column names → standard API field names shown to the frontend.
-const NORMALIZE = {
-  // Name
-  full_name:        "name",
-  first_name:       "first_name",
-  last_name:        "last_name",
-  name:             "name",
-  // Phone
-  phone:            "phone",
-  phone_number:     "phone",
-  mobile:           "phone",
-  // Email
-  email:            "email",
-  email_address:    "email",
-  // Location
-  city:             "city",
-  state:            "state",
-  zip:              "zip",
-  zip_code:         "zip",
-  // Address
-  address:          "address",
-  street_address:   "address",
-  // Age / DOB
-  age:              "age",
-  dob:              "dob",
-  date_of_birth:    "dob",
+// ── Actual column mapping → standard API field names ───────
+// Maps actual DB column → frontend field key
+const COL_TO_FIELD = {
+  first_name:      "first_name",
+  middle_name:     "middle_name",
+  last_name:       "last_name",
+  email:           "email",
+  email_1:         "email_1",
+  phone:           "phone",
+  mailing_address: "address",
+  primary_city:    "city",
+  primary_state:   "state",
+  zip_code:        "zip",
+  country:         "country",
+  company_name:    "company",
+  title:           "title",
+  web_address:     "website",
+  revenue:         "revenue",
+  employee:        "employee",
+  industry:        "industry",
+  sub_industry:    "sub_industry",
+  _source_file:    "source_file",
+  first_name_1:    "first_name_1",
+  middle_name_1:   "middle_name_1",
+  last_name_1:     "last_name_1",
 };
 
-const CORE_FIELDS = new Set([
-  "name", "first_name", "last_name", "phone", "email",
-  "city", "state", "zip", "address", "age", "dob",
-]);
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// SCHEMA DISCOVERY — lazy, in-memory cached
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ── Schema (static — we know the columns) ──────────────────
 let _schemaCache = null;
 
 async function getSchema() {
@@ -85,132 +78,110 @@ async function getSchema() {
   const selectCols = actualCols.filter(c => !SKIP_IN_SELECT.has(c));
   const selectSQL  = selectCols.map(c => `"${c}"`).join(", ");
 
-  const fieldToCol = {}; // standard_name → actual_db_col
-  const colToField = {}; // actual_db_col → standard_name
+  const colToField = {}; // db_col → api_field
+  const fieldToCol = {}; // api_field → db_col
 
   for (const col of selectCols) {
-    const lower    = col.toLowerCase();
-    const stdField = NORMALIZE[lower] || (CORE_FIELDS.has(lower) ? lower : null);
-    if (stdField && !fieldToCol[stdField]) {
-      fieldToCol[stdField] = col;
-      colToField[col]      = stdField;
-    }
+    const field = COL_TO_FIELD[col] || col;
+    colToField[col]   = field;
+    if (!fieldToCol[field]) fieldToCol[field] = col;
   }
 
-  for (const f of CORE_FIELDS) {
-    if (!fieldToCol[f]) fieldToCol[f] = f;
-  }
-
-  logger.info(
-    `[CloudSQL] PC Schema loaded — ${actualCols.length} total cols, ${selectCols.length} selected.`
-  );
-
+  logger.info(`[CloudSQL] PC Schema — ${actualCols.length} cols, ${selectCols.length} selected`);
   _schemaCache = { actualCols, selectCols, selectSQL, fieldToCol, colToField };
   return _schemaCache;
 }
 
 /** Normalise a raw DB row → standard API shape */
 function normalizeRow({ selectCols, colToField }, row) {
-  const core  = {};
-  const extra = {};
-
+  const out = {};
   for (const col of selectCols) {
-    const val   = row[col] ?? "";
-    const field = colToField[col];
-
-    if (field && CORE_FIELDS.has(field)) {
-      core[field] = val !== null ? String(val) : "";
-    } else if (col !== "id") {
-      extra[col] = val;
-    }
+    const field = colToField[col] || col;
+    const val   = row[col];
+    out[field] = val !== null && val !== undefined ? String(val) : "";
   }
-
-  for (const f of CORE_FIELDS) {
-    if (core[f] === undefined) core[f] = "";
-  }
-
-  return { ...core, ...extra };
+  return out;
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // WHERE CLAUSE BUILDER (fully parameterised)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function buildWhere({
-  search = "",
-  name   = "",
-  email  = "",
-  phone  = "",
-  city   = "",
-  state  = "",
-  zip    = "",
+  search    = "",
+  name      = "",
+  email     = "",
+  phone     = "",
+  city      = "",
+  state     = "",
+  zip       = "",
+  company   = "",
   has_email = "",
   has_phone = "",
-}, fieldToCol) {
+}) {
   const conditions = [];
   const values     = [];
   let   idx        = 1;
 
-  const colName  = fieldToCol.name  || "full_name";
-  const colEmail = fieldToCol.email || "email";
-  const colPhone = fieldToCol.phone || "phone";
-  const colCity  = fieldToCol.city  || "city";
-  const colState = fieldToCol.state || "state";
-  const colZip   = fieldToCol.zip   || "zip";
-
   if (search) {
-    const targets = [colName, colEmail, colPhone, colCity, colState].filter(Boolean);
-    const cols    = targets.map(c => `"${c}" ILIKE $${idx}`);
-    conditions.push(`(${cols.join(" OR ")})`);
+    conditions.push(
+      `("first_name" ILIKE $${idx} OR "last_name" ILIKE $${idx} OR "email" ILIKE $${idx} OR "phone" ILIKE $${idx} OR "primary_city" ILIKE $${idx} OR "company_name" ILIKE $${idx})`
+    );
     values.push(`%${search}%`);
     idx++;
   }
 
-  if (name && colName) {
-    conditions.push(`"${colName}" ILIKE $${idx}`);
+  if (name) {
+    conditions.push(`("first_name" ILIKE $${idx} OR "last_name" ILIKE $${idx} OR "middle_name" ILIKE $${idx})`);
     values.push(`%${name}%`);
     idx++;
   }
 
-  if (email && colEmail) {
-    conditions.push(`"${colEmail}" ILIKE $${idx}`);
+  if (email) {
+    conditions.push(`("email" ILIKE $${idx} OR "email_1" ILIKE $${idx})`);
     values.push(`%${email}%`);
     idx++;
   }
 
-  if (phone && colPhone) {
-    conditions.push(`"${colPhone}" ILIKE $${idx}`);
+  if (phone) {
+    conditions.push(`"phone" ILIKE $${idx}`);
     values.push(`%${phone}%`);
     idx++;
   }
 
-  if (city && colCity) {
-    conditions.push(`"${colCity}" ILIKE $${idx}`);
+  if (city) {
+    conditions.push(`"primary_city" ILIKE $${idx}`);
     values.push(`%${city}%`);
     idx++;
   }
 
-  if (state && colState) {
-    conditions.push(`"${colState}" ILIKE $${idx}`);
+  if (state) {
+    conditions.push(`"primary_state" ILIKE $${idx}`);
     values.push(`%${state}%`);
     idx++;
   }
 
-  if (zip && colZip) {
-    conditions.push(`"${colZip}" ILIKE $${idx}`);
+  if (zip) {
+    conditions.push(`"zip_code" ILIKE $${idx}`);
     values.push(`%${zip}%`);
     idx++;
   }
 
-  if (has_email === "true" && colEmail) {
-    conditions.push(`("${colEmail}" IS NOT NULL AND "${colEmail}" != '')`);
-  } else if (has_email === "false" && colEmail) {
-    conditions.push(`("${colEmail}" IS NULL OR "${colEmail}" = '')`);
+  if (company) {
+    conditions.push(`"company_name" ILIKE $${idx}`);
+    values.push(`%${company}%`);
+    idx++;
   }
 
-  if (has_phone === "true" && colPhone) {
-    conditions.push(`("${colPhone}" IS NOT NULL AND "${colPhone}" != '')`);
-  } else if (has_phone === "false" && colPhone) {
-    conditions.push(`("${colPhone}" IS NULL OR "${colPhone}" = '')`);
+  if (has_email === "true") {
+    conditions.push(`("email" IS NOT NULL AND "email" != '')`);
+  } else if (has_email === "false") {
+    conditions.push(`("email" IS NULL OR "email" = '')`);
+  }
+
+  if (has_phone === "true") {
+    conditions.push(`("phone" IS NOT NULL AND "phone" != '')`);
+  } else if (has_phone === "false") {
+    conditions.push(`("phone" IS NULL OR "phone" = '')`);
   }
 
   return {
@@ -231,13 +202,8 @@ router.get("/health", async (req, res) => {
       const cnt = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}`);
       totalRecords = parseInt(cnt.rows[0].cnt, 10);
     } catch (_) {}
-    res.json({
-      ok: true,
-      source: "cloud_sql",
-      table: FULL_TABLE,
-      serverTime: pingRes.rows[0].now,
-      totalRecords,
-    });
+    res.json({ ok: true, source: "cloud_sql", table: FULL_TABLE,
+      serverTime: pingRes.rows[0].now, totalRecords });
   } catch (err) {
     logger.error(`[health] ${err.message}`);
     res.status(503).json({ ok: false, error: err.message });
@@ -249,11 +215,8 @@ router.get("/health", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/columns", async (req, res) => {
   try {
-    const { actualCols, fieldToCol } = await getSchema();
-    const coreKeys   = [...CORE_FIELDS].filter(f => fieldToCol[f]);
-    const mappedCols = new Set(Object.values(fieldToCol));
-    const extraKeys  = actualCols.filter(c => !mappedCols.has(c) && c !== "id");
-    res.json({ columns: [...coreKeys, ...extraKeys], source: "cloud_sql", table: PC_TABLE });
+    const { selectCols } = await getSchema();
+    res.json({ columns: selectCols, source: "cloud_sql", table: PC_TABLE });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -267,20 +230,10 @@ router.get("/stats", async (req, res) => {
     const cached = await cacheGet(STATS_KEY);
     if (cached) return res.json({ ...cached, _cache: "hit" });
 
-    const { fieldToCol } = await getSchema();
-    const emailCol = `"${fieldToCol.email || "email"}"`;
-    const phoneCol = `"${fieldToCol.phone || "phone"}"`;
-
     const [totalRes, emailRes, phoneRes] = await Promise.all([
       pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}`),
-      pgQuery(
-        `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}
-         WHERE ${emailCol} IS NOT NULL AND ${emailCol} != ''`
-      ),
-      pgQuery(
-        `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}
-         WHERE ${phoneCol} IS NOT NULL AND ${phoneCol} != ''`
-      ),
+      pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} WHERE "email" IS NOT NULL AND "email" != ''`),
+      pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} WHERE "phone" IS NOT NULL AND "phone" != ''`),
     ]);
 
     const payload = {
@@ -300,7 +253,7 @@ router.get("/stats", async (req, res) => {
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// POST /refresh — clear Redis stats + in-memory schema cache
+// POST /refresh
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.post("/refresh", async (req, res) => {
   try {
@@ -326,9 +279,10 @@ router.get("/", async (req, res) => {
     city      = "",
     state     = "",
     zip       = "",
+    company   = "",
     has_email = "",
     has_phone = "",
-    sort_by   = "name",
+    sort_by   = "last_name",
     sort_dir  = "asc",
   } = req.query;
 
@@ -336,22 +290,34 @@ router.get("/", async (req, res) => {
   const limitNum = Math.min(200, Math.max(1, parseInt(limit, 10)));
   const offset   = (pageNum - 1) * limitNum;
 
+  // Map frontend sort_by names to actual DB column names
+  const SORT_MAP = {
+    name:       "last_name",
+    first_name: "first_name",
+    last_name:  "last_name",
+    email:      "email",
+    phone:      "phone",
+    city:       "primary_city",
+    state:      "primary_state",
+    zip:        "zip_code",
+    company:    "company_name",
+    industry:   "industry",
+  };
+  const actualSortCol = SORT_MAP[sort_by] || "last_name";
+  const sortDir = sort_dir === "desc" ? "DESC" : "ASC";
+
   try {
     const schema = await getSchema();
-    const { fieldToCol, selectSQL } = schema;
+    const { selectSQL } = schema;
 
-    const { whereStr, values, nextIdx } = buildWhere(
-      { search, name, email, phone, city, state, zip, has_email, has_phone },
-      fieldToCol
-    );
-
-    const sortCol = `"${fieldToCol[sort_by] || fieldToCol.name || "full_name"}"`;
-    const sortDir = sort_dir === "desc" ? "DESC" : "ASC";
+    const { whereStr, values, nextIdx } = buildWhere({
+      search, name, email, phone, city, state, zip, company, has_email, has_phone,
+    });
 
     const dataSQL = `
       SELECT ${selectSQL} FROM ${FULL_TABLE}
       ${whereStr}
-      ORDER BY ${sortCol} ${sortDir} NULLS LAST
+      ORDER BY "${actualSortCol}" ${sortDir} NULLS LAST
       LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
     `;
     const countSQL = `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${whereStr}`;
