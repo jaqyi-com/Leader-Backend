@@ -29,14 +29,14 @@ const AI_LINKS = [
 ];
 
 const LEAD_GEN_LINKS = [
-  { to: "/app/lg/auto-lead-gen", label: "Auto Lead Gen", icon: Target },
-  { to: "/app/lg/linkedin", label: "LinkedIn Finder", icon: Users2 },
-  { to: "/app/lg/email", label: "Email Finder", icon: Mail },
-  { to: "/app/lg/companies", label: "Company Intel", icon: Building2 },
-  { to: "/app/lg/research", label: "AI Research", icon: BrainCircuit },
-  { to: "/app/lg/database", label: "Lead Database", icon: Database },
-  { to: "/app/inbuild-db",    label: "In Build - Database",  icon: Server       },
-  { to: "/app/db-intelligence",label: "DB Intelligence",       icon: TrendingUp   },
+  // { to: "/app/lg/auto-lead-gen", label: "Auto Lead Gen", icon: Target },
+  // { to: "/app/lg/linkedin", label: "LinkedIn Finder", icon: Users2 },
+  // { to: "/app/lg/email", label: "Email Finder", icon: Mail },
+  // { to: "/app/lg/companies", label: "Company Intel", icon: Building2 },
+  // { to: "/app/lg/research", label: "AI Research", icon: BrainCircuit },
+  // { to: "/app/lg/database", label: "Lead Database", icon: Database },
+  { to: "/app/inbuild-db", label: "In Build - Database", icon: Server },
+  { to: "/app/db-intelligence", label: "DB Intelligence", icon: TrendingUp },
 ];
 
 const CRM_LINKS = [
@@ -178,29 +178,29 @@ export default function Sidebar({ collapsed, onToggle }) {
           <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
         ))}
 
-        <SectionLabel label="CRM" collapsed={collapsed} />
+        {/* <SectionLabel label="CRM" collapsed={collapsed} />
 
         {CRM_LINKS.map(({ to, label, icon }) => (
           <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
-        ))}
+        ))} */}
 
-        <SectionLabel label="ERP" collapsed={collapsed} />
+        {/* <SectionLabel label="ERP" collapsed={collapsed} />
 
         {ERP_LINKS.map(({ to, label, icon }) => (
           <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
-        ))}
+        ))} */}
 
-        <SectionLabel label="Outreach" collapsed={collapsed} />
+        {/* <SectionLabel label="Outreach" collapsed={collapsed} />
 
         {OUTREACH_LINKS.map(({ to, label, icon }) => (
           <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
-        ))}
+        ))} */}
 
-        <SectionLabel label="Crawler" collapsed={collapsed} />
+        {/* <SectionLabel label="Crawler" collapsed={collapsed} />
 
         {CRAWLER_LINKS.map(({ to, label, icon }) => (
           <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
-        ))}
+        ))} */}
       </nav>
 
       {/* Docs + Settings at bottom */}
@@ -208,11 +208,11 @@ export default function Sidebar({ collapsed, onToggle }) {
         className="px-2 py-3 flex flex-col gap-1"
         style={{ borderTop: "1px solid var(--border)" }}
       >
-        <NavItem to="/app/docs"  label="How It Works"   icon={BookOpen}    collapsed={collapsed} end={false} />
+        <NavItem to="/app/docs" label="How It Works" icon={BookOpen} collapsed={collapsed} end={false} />
         {isAdmin && (
           <NavItem to="/app/admin" label="Admin Analytics" icon={ShieldCheck} collapsed={collapsed} end={false} />
         )}
-        <NavItem to="/app/settings" label="Settings"     icon={Settings}    collapsed={collapsed} end={false} />
+        <NavItem to="/app/settings" label="Settings" icon={Settings} collapsed={collapsed} end={false} />
       </div>
 
       {/* Collapse toggle */}
