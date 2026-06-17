@@ -231,3 +231,11 @@ export const pcGetDatabase = (params = {}) => lgApi.get("/api/public-contacts", 
 export const pcGetStats    = ()             => lgApi.get("/api/public-contacts/stats");
 export const pcGetColumns  = ()             => lgApi.get("/api/public-contacts/columns");
 export const pcRefresh     = ()             => lgApi.post("/api/public-contacts/refresh");
+
+// ============================================================
+// NICHES 75M DATABASE (niches_75m_data)
+// ============================================================
+export const n2GetDatabase = (params = {}) => lgApi.get("/api/niches75m", { params });
+export const n2GetStats    = ()             => lgApi.get("/api/niches75m/stats");
+export const n2GetColumns  = ()             => lgApi.get("/api/niches75m/columns");
+export const n2Refresh     = ()             => lgApi.post("/api/niches75m/refresh");

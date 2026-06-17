@@ -41,6 +41,7 @@ import AutoLeadGenPage    from "./pages/lg/AutoLeadGenPage";
 import InBuildDatabasePage      from "./pages/InBuildDatabasePage";
 import DatabaseIntelligencePage from "./pages/DatabaseIntelligencePage";
 import PublicDataPage           from "./pages/PublicDataPage";
+import PublicData2Page          from "./pages/PublicData2Page";
 // CRM
 import CrmPipelinePage    from "./pages/crm/CrmPipelinePage";
 import CrmDashboardPage   from "./pages/crm/CrmDashboardPage";
@@ -110,6 +111,7 @@ export default function App() {
             <Route path="lg/database"       element={<LeadDatabasePage />} />
             <Route path="inbuild-db"         element={<InBuildDatabasePage />} />
             <Route path="public-data"         element={<PublicDataPage />} />
+            <Route path="public-data2"        element={<PublicData2Page />} />
             <Route path="db-intelligence"     element={<DatabaseIntelligencePage />} />
             <Route path="lg/linkedin"       element={<LinkedInFinderPage />} />
             <Route path="lg/email"          element={<EmailFinderPage />} />

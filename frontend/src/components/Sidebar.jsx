@@ -35,8 +35,9 @@ const LEAD_GEN_LINKS = [
   // { to: "/app/lg/companies", label: "Company Intel", icon: Building2 },
   // { to: "/app/lg/research", label: "AI Research", icon: BrainCircuit },
   // { to: "/app/lg/database", label: "Lead Database", icon: Database },
-  { to: "/app/inbuild-db", label: "In Build - Database", icon: Server },
-  { to: "/app/public-data", label: "Public Data", icon: Users },
+  { to: "/app/inbuild-db",   label: "In Build - Database", icon: Server },
+  { to: "/app/public-data",  label: "Public Data",         icon: Users },
+  { to: "/app/public-data2", label: "Public Data 2",        icon: Briefcase },
   { to: "/app/db-intelligence", label: "DB Intelligence", icon: TrendingUp },
 ];
 
