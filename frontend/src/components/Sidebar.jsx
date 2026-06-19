@@ -6,7 +6,7 @@ import {
   Zap, Settings, Share2, MessageSquare, Sparkles,
   Users2, Mail, Building2, BrainCircuit, Rocket, BookOpen, Target,
   Briefcase, BarChart3, ListChecks, FileText, CreditCard,
-  Calculator, Package, UserCog, Server, ShieldCheck, TrendingUp, Users,
+  Calculator, Package, UserCog, Server, ShieldCheck, TrendingUp, Users, Flag,
 } from "lucide-react";
 
 
@@ -36,6 +36,7 @@ const LEAD_GEN_LINKS = [
   // { to: "/app/lg/research", label: "AI Research", icon: BrainCircuit },
   // { to: "/app/lg/database", label: "Lead Database", icon: Database },
   { to: "/app/inbuild-db",   label: "In Build - Database", icon: Server },
+  { to: "/app/india-data",   label: "India Data",           icon: Flag },
   { to: "/app/public-data",  label: "Public Data",         icon: Users },
   { to: "/app/public-data2", label: "Public Data 2",        icon: Briefcase },
   { to: "/app/db-intelligence", label: "DB Intelligence", icon: TrendingUp },

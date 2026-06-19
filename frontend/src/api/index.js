@@ -239,3 +239,11 @@ export const n2GetDatabase = (params = {}) => lgApi.get("/api/niches75m", { para
 export const n2GetStats    = ()             => lgApi.get("/api/niches75m/stats");
 export const n2GetColumns  = ()             => lgApi.get("/api/niches75m/columns");
 export const n2Refresh     = ()             => lgApi.post("/api/niches75m/refresh");
+
+// ============================================================
+// INDIA DATA DATABASE (india_data)
+// ============================================================
+export const indiaGetDatabase = (params = {}) => lgApi.get("/api/india-data", { params });
+export const indiaGetStats    = ()             => lgApi.get("/api/india-data/stats");
+export const indiaGetColumns  = ()             => lgApi.get("/api/india-data/columns");
+export const indiaRefresh     = ()             => lgApi.post("/api/india-data/refresh");
