@@ -173,9 +173,10 @@ router.post("/refresh", async (req, res) => {
   }
 });
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// GET /  — paginated, filtered, sorted
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ── Count cache (avoids re-counting 18.5M rows every request) ──
+const COUNT_CACHE_KEY = "cache:india-data-count";
+const COUNT_CACHE_TTL = 120; // 2 min
+
 router.get("/", async (req, res) => {
   const {
     page      = 1,
@@ -195,24 +196,40 @@ router.get("/", async (req, res) => {
 
     const { whereStr, values, nextIdx } = buildWhere({ search }, schema);
 
-    // Safe sort: only allow actual column names
-    const actualSortCol = selectCols.includes(sort_by) ? sort_by : selectCols[0] || "id";
-    const sortDirection = sort_dir === "desc" ? "DESC" : "ASC";
+    // For 18M+ rows: skip ORDER BY unless user explicitly sorts → use natural row order (fast seq scan)
+    let orderClause = "";
+    if (sort_by && selectCols.includes(sort_by)) {
+      const sortDirection = sort_dir === "desc" ? "DESC" : "ASC";
+      orderClause = `ORDER BY "${sort_by}" ${sortDirection} NULLS LAST`;
+    }
 
     const dataSQL = `
       SELECT ${selectSQL} FROM ${FULL_TABLE}
       ${whereStr}
-      ORDER BY "${actualSortCol}" ${sortDirection} NULLS LAST
+      ${orderClause}
       LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
     `;
-    const countSQL = `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${whereStr}`;
 
-    const [dataRes, countRes] = await Promise.all([
-      pgQuery(dataSQL,  [...values, limitNum, offset]),
-      pgQuery(countSQL, values),
-    ]);
+    // Use cached count when no search filter (avoids counting 18M rows every page)
+    let total;
+    if (!search) {
+      const cachedCount = await cacheGet(COUNT_CACHE_KEY);
+      if (cachedCount !== null && cachedCount !== undefined) {
+        total = cachedCount;
+      } else {
+        const countSQL = `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}`;
+        const countRes = await pgQuery(countSQL, [], 60000);
+        total = parseInt(countRes.rows[0].cnt, 10);
+        await cacheSet(COUNT_CACHE_KEY, total, COUNT_CACHE_TTL);
+      }
+    } else {
+      const countSQL = `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${whereStr}`;
+      const countRes = await pgQuery(countSQL, values, 60000);
+      total = parseInt(countRes.rows[0].cnt, 10);
+    }
 
-    const total   = parseInt(countRes.rows[0].cnt, 10);
+    // Data query with extended timeout for large table
+    const dataRes = await pgQuery(dataSQL, [...values, limitNum, offset], 60000);
     const records = dataRes.rows.map(row => normalizeRow(schema, row));
 
     res.json({
