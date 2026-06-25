@@ -141,15 +141,15 @@ function ProfileSection({ collapsed }) {
     ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
     : "?";
 
-  /* Compute dropdown position based on trigger element */
-  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
+  /* Compute dropdown position — right-anchored so it never overflows on right-side sidebar */
+  const [dropPos, setDropPos] = useState({ top: 0, right: 0, minWidth: 220 });
   useEffect(() => {
     if (open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       setDropPos({
-        top: rect.top,       // dropdown appears above the trigger (we'll shift with transform)
-        left: rect.left,
-        width: rect.width,
+        top: rect.top - 8,                          // 8px gap above trigger
+        right: window.innerWidth - rect.right,       // align right edge to trigger right edge
+        minWidth: Math.max(rect.width, 220),
       });
     }
   }, [open]);
@@ -234,20 +234,20 @@ function ProfileSection({ collapsed }) {
         {open && (
           <motion.div
             ref={dropdownRef}
-            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+            initial={{ opacity: 0, y: 8, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 6, scale: 0.97 }}
-            transition={{ duration: 0.15 }}
+            exit={{ opacity: 0, y: 8, scale: 0.97 }}
+            transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
             style={{
               position: "fixed",
-              top: dropPos.top - 8,
-              left: dropPos.left,
-              width: Math.max(dropPos.width, 220),
-              transform: "translateY(-100%)",
+              top: dropPos.top,
+              right: dropPos.right,
+              minWidth: dropPos.minWidth,
+              transform: "translateY(-100%)",   /* float above trigger */
               borderRadius: 14,
               background: "var(--surface-2)",
               border: "1px solid var(--border)",
-              boxShadow: "0 -16px 48px rgba(0,0,0,0.45)",
+              boxShadow: "0 8px 40px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.04)",
               overflow: "hidden",
               zIndex: 9999,
             }}
