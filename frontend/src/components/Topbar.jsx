@@ -16,7 +16,7 @@ const PAGE_META = {
   "/app/websites":        { title: "Website Intel",   sub: "Technology & contact data from crawled sites" },
   "/app/settings":        { title: "Settings",        sub: "Manage org, members and credentials" },
   "/app/docs":            { title: "How It Works",    sub: "Complete platform documentation" },
-  "/app/chatbot":         { title: "Personal Chat Bot", sub: "Your AI assistant powered by your knowledge base" },
+  "/app/chatbot":         { title: "Ask Doott", sub: "Your AI assistant powered by your knowledge base" },
   "/app/people":          { title: "People",          sub: "Browse and filter people records" },
   "/app/companies":       { title: "Companies",       sub: "Browse and filter company records" },
   "/app/admin":           { title: "Admin Analytics", sub: "Website traffic & application metrics" },

@@ -338,12 +338,12 @@ export default function Sidebar({ collapsed, onToggle }) {
       >
         <ProfileSection collapsed={collapsed} />
 
-        {/* Personal Chat Bot button */}
+        {/* Ask Doott button */}
         <motion.button
           onClick={() => navigate("/app/chatbot")}
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.97 }}
-          title={collapsed ? "Personal Chat Bot" : undefined}
+          title={collapsed ? "Ask Doott" : undefined}
           className="relative flex items-center gap-2 rounded-xl overflow-hidden"
           style={{
             width: "100%",
@@ -367,7 +367,7 @@ export default function Sidebar({ collapsed, onToggle }) {
                 transition={{ duration: 0.15 }}
                 className="overflow-hidden whitespace-nowrap"
               >
-                Personal Chat Bot
+                Ask Doott
               </motion.span>
             )}
           </AnimatePresence>
