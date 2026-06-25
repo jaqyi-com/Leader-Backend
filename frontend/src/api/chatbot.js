@@ -47,6 +47,16 @@ export async function deleteConversation(conversationId) {
   return res.json();
 }
 
+export async function renameConversation(conversationId, title) {
+  const res = await fetch(`${BASE}/chatbot/conversations/${conversationId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getAuthHeader() },
+    body: JSON.stringify({ title }),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || "Failed to rename conversation");
+  return res.json();
+}
+
 // ── SSE Streaming Chat ─────────────────────────────────────────
 
 /**

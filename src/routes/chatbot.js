@@ -149,6 +149,26 @@ router.delete("/conversations/:id", auth, async (req, res) => {
   }
 });
 
+// PATCH /api/chatbot/conversations/:id — rename a conversation title
+router.patch("/conversations/:id", auth, async (req, res) => {
+  try {
+    const { title } = req.body;
+    if (!title || !title.trim()) return res.status(400).json({ error: "title is required" });
+    const orgId = await getOrgFromUser(req);
+    const conversation = await ChatConversation.findOneAndUpdate(
+      { _id: req.params.id, orgId, userId: req.user.userId },
+      { title: title.trim() },
+      { new: true }
+    );
+    if (!conversation) return res.status(404).json({ error: "Conversation not found" });
+    res.json({ conversation });
+  } catch (err) {
+    logger.error(`PATCH /conversations/:id: ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 // ============================================================
 // CHAT (SSE Streaming) ROUTE
 // ============================================================

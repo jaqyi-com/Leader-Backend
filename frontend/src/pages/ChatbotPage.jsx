@@ -4,14 +4,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare, Plus, Trash2, Send, Database, ChevronDown,
   ChevronRight, Bot, User, Sparkles, BookOpen, X, Loader2,
-  Copy, Check, Cpu, Shield, ExternalLink
+  Copy, Check, Cpu, Shield, ExternalLink, MoreHorizontal, Pencil
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import toast from "react-hot-toast";
 import {
   fetchConversations, fetchMessages,
-  deleteConversation, sendMessage
+  deleteConversation, renameConversation, sendMessage
 } from "../api/chatbot";
 import { classifyIntent } from "../lib/intentClassifier";
 import MentionDropdown from "../components/chatbot/MentionDropdown";
@@ -443,51 +443,177 @@ function MessageBubble({ msg, isStreaming }) {
   );
 }
 
-function ConversationItem({ conv, isActive, onClick, onDelete }) {
-  const [showDel, setShowDel] = useState(false);
-  const date = new Date(conv.lastMessageAt || conv.createdAt);
+function ConversationItem({ conv, isActive, onClick, onDelete, onRename }) {
+  const [menuOpen, setMenuOpen]     = useState(false);
+  const [renaming, setRenaming]     = useState(false);
+  const [renameVal, setRenameVal]   = useState(conv.title || "New Conversation");
+  const menuRef   = useRef(null);
+  const inputRef2 = useRef(null);
+
+  const date    = new Date(conv.lastMessageAt || conv.createdAt);
   const timeStr = date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+  /* Close menu when clicking outside */
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    const t = setTimeout(() => document.addEventListener("mousedown", handler), 0);
+    return () => { clearTimeout(t); document.removeEventListener("mousedown", handler); };
+  }, [menuOpen]);
+
+  /* Focus input when entering rename mode */
+  useEffect(() => {
+    if (renaming) { inputRef2.current?.focus(); inputRef2.current?.select(); }
+  }, [renaming]);
+
+  const startRename = () => {
+    setRenameVal(conv.title || "New Conversation");
+    setMenuOpen(false);
+    setRenaming(true);
+  };
+
+  const commitRename = () => {
+    const trimmed = renameVal.trim();
+    if (trimmed && trimmed !== conv.title) onRename(conv._id, trimmed);
+    setRenaming(false);
+  };
+
+  const cancelRename = () => {
+    setRenameVal(conv.title || "New Conversation");
+    setRenaming(false);
+  };
+
   return (
     <motion.div
       whileHover={{ x: 2 }}
-      onMouseEnter={() => setShowDel(true)}
-      onMouseLeave={() => setShowDel(false)}
-      onClick={onClick}
+      onClick={() => { if (!renaming) onClick(); }}
       style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "10px 12px", borderRadius: 10, cursor: "pointer",
+        padding: "10px 12px", borderRadius: 10, cursor: renaming ? "default" : "pointer",
         background: isActive ? "rgba(226,55,68,0.15)" : "transparent",
         border: isActive ? "1px solid rgba(226,55,68,0.3)" : "1px solid transparent",
-        marginBottom: 2, transition: "all 0.15s",
+        marginBottom: 2, transition: "all 0.15s", position: "relative",
       }}
     >
+      {/* Title / rename input */}
       <div style={{ minWidth: 0, flex: 1 }}>
-        <div style={{
-          fontSize: 13, fontWeight: 500, color: "var(--text)",
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>
-          {conv.title || "New Conversation"}
-        </div>
-        <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 2 }}>
-          {timeStr} · {conv.messageCount || 0} msgs
-        </div>
-      </div>
-      <AnimatePresence>
-        {showDel && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            onClick={(e) => { e.stopPropagation(); onDelete(conv._id); }}
-            style={{
-              background: "rgba(239,68,68,0.15)", border: "none", cursor: "pointer",
-              color: "#ef4444", borderRadius: 6, padding: "4px 6px", marginLeft: 6, flexShrink: 0,
+        {renaming ? (
+          <input
+            ref={inputRef2}
+            value={renameVal}
+            onChange={(e) => setRenameVal(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter")  { e.preventDefault(); commitRename(); }
+              if (e.key === "Escape") { e.preventDefault(); cancelRename(); }
             }}
-          >
-            <Trash2 size={12} />
-          </motion.button>
+            onBlur={commitRename}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: "100%", background: "var(--surface-3)",
+              border: "1px solid var(--accent)", borderRadius: 6,
+              padding: "3px 7px", fontSize: 13, color: "var(--text)",
+              outline: "none",
+            }}
+          />
+        ) : (
+          <>
+            <div style={{
+              fontSize: 13, fontWeight: 500, color: "var(--text)",
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            }}>
+              {conv.title || "New Conversation"}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 2 }}>
+              {timeStr} · {conv.messageCount || 0} msgs
+            </div>
+          </>
         )}
-      </AnimatePresence>
+      </div>
+
+      {/* Three-dot button (shown on hover / when menu is open) */}
+      {!renaming && (
+        <div style={{ position: "relative", flexShrink: 0 }} ref={menuRef}>
+          <motion.button
+            initial={{ opacity: 0 }}
+            whileHover={{ opacity: 1 }}
+            animate={{ opacity: menuOpen ? 1 : undefined }}
+            onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v); }}
+            style={{
+              background: menuOpen ? "var(--surface-3)" : "transparent",
+              border: "none", cursor: "pointer",
+              color: "var(--text-3)", borderRadius: 6,
+              padding: "3px 5px", marginLeft: 4,
+              display: "flex", alignItems: "center",
+              transition: "background 0.15s, color 0.15s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.background = "var(--surface-3)"; }}
+            onMouseLeave={(e) => { if (!menuOpen) { e.currentTarget.style.color = "var(--text-3)"; e.currentTarget.style.background = "transparent"; } }}
+          >
+            <MoreHorizontal size={14} />
+          </motion.button>
+
+          {/* Dropdown */}
+          <AnimatePresence>
+            {menuOpen && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                transition={{ duration: 0.12 }}
+                style={{
+                  position: "absolute", right: 0, top: "calc(100% + 4px)",
+                  minWidth: 160, zIndex: 9999,
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 10,
+                  boxShadow: "0 8px 32px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.04)",
+                  overflow: "hidden",
+                  padding: "4px",
+                }}
+              >
+                {/* Rename */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); startRename(); }}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", gap: 8,
+                    padding: "8px 10px", borderRadius: 7, border: "none",
+                    background: "transparent", color: "var(--text-2)",
+                    fontSize: 13, cursor: "pointer", textAlign: "left",
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "var(--surface-3)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                >
+                  <Pencil size={13} style={{ flexShrink: 0 }} />
+                  Rename
+                </button>
+
+                {/* Divider */}
+                <div style={{ height: 1, background: "var(--border)", margin: "3px 6px" }} />
+
+                {/* Delete */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onDelete(conv._id); }}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", gap: 8,
+                    padding: "8px 10px", borderRadius: 7, border: "none",
+                    background: "transparent", color: "var(--rose)",
+                    fontSize: 13, cursor: "pointer", textAlign: "left",
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "rgba(244,63,94,0.08)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                >
+                  <Trash2 size={13} style={{ flexShrink: 0 }} />
+                  Delete
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -557,6 +683,17 @@ export default function ChatbotPage() {
         setActiveConvId(null);
         setMessages([]);
       }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleRenameConversation = async (convId, newTitle) => {
+    try {
+      await renameConversation(convId, newTitle);
+      setConversations((prev) =>
+        prev.map((c) => c._id === convId ? { ...c, title: newTitle } : c)
+      );
     } catch (err) {
       console.error(err);
     }
@@ -755,6 +892,7 @@ export default function ChatbotPage() {
                 isActive={activeConvId === conv._id}
                 onClick={() => loadConversation(conv._id)}
                 onDelete={handleDeleteConversation}
+                onRename={handleRenameConversation}
               />
             ))
           )}
