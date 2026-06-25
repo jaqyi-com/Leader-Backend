@@ -20,8 +20,8 @@ const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const logger = require("../utils/logger").forAgent("FinalPeopleDB");
 
 // ── Table config ───────────────────────────────────────────
-const FP_SCHEMA  = "public";
-const FP_TABLE   = "final_people";
+const FP_SCHEMA  = "final";
+const FP_TABLE   = "people";
 const FULL_TABLE = `"${FP_SCHEMA}"."${FP_TABLE}"`;
 
 // ── Cache ──────────────────────────────────────────────────

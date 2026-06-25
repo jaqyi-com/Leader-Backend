@@ -20,8 +20,8 @@ const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const logger = require("../utils/logger").forAgent("FinalCompaniesDB");
 
 // ── Table config ───────────────────────────────────────────
-const FC_SCHEMA  = "public";
-const FC_TABLE   = "final_companies";
+const FC_SCHEMA  = "final";
+const FC_TABLE   = "companies";
 const FULL_TABLE = `"${FC_SCHEMA}"."${FC_TABLE}"`;
 
 // ── Cache ──────────────────────────────────────────────────
