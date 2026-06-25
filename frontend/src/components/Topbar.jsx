@@ -60,12 +60,6 @@ export default function Topbar() {
           >
             Doott
           </span>
-          <span
-            className="text-[10px] font-semibold uppercase tracking-widest"
-            style={{ color: "var(--accent-2)" }}
-          >
-            AI
-          </span>
         </div>
       </div>
 

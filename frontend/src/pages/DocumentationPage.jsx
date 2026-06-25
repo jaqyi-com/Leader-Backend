@@ -13,7 +13,7 @@ const sections = [
     icon: Zap,
     title: "Platform Overview",
     color: "from-violet-500 to-purple-600",
-    content: `DoottAI is an end-to-end B2B lead generation and outreach platform powered by AI. It helps sales teams, founders, and growth hackers discover, enrich, qualify, and reach out to ideal business prospects — all in one unified workspace.
+    content: `Doott is an end-to-end B2B lead generation and outreach platform powered by AI. It helps sales teams, founders, and growth hackers discover, enrich, qualify, and reach out to ideal business prospects — all in one unified workspace.
 
 The platform is organized around five core pillars:
 1. **Web Crawler** — discovers and extracts intelligence from company websites
@@ -371,7 +371,7 @@ export default function DocumentationPage() {
             How It Works
           </h2>
           <p className="text-sm mt-1.5" style={{ color: "var(--text-3)" }}>
-            Complete documentation for the DoottAI platform — learn how every module works.
+            Complete documentation for the Doott platform — learn how every module works.
           </p>
         </div>
         <div className="flex gap-2">

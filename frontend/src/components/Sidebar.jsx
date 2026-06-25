@@ -45,7 +45,8 @@ function NavItem({ to, label, icon: Icon, collapsed, end }) {
           {isActive && !collapsed && (
             <motion.div
               layoutId="active-indicator"
-              className="ml-auto w-1.5 h-1.5 rounded-full bg-accent"
+              className="ml-auto w-1.5 h-1.5 rounded-full"
+              style={{ backgroundColor: "var(--teal)" }}
             />
           )}
         </motion.div>
@@ -380,8 +381,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       </div>
 
       {/* ── Nav ───────────────────────────────────────────────── */}
-      <nav className="flex-1 px-2 py-4 flex flex-col gap-0.5 overflow-y-auto no-scrollbar">
-        <SectionLabel label="" collapsed={collapsed} />
+      <nav className="flex-1 px-2 pt-2 pb-4 flex flex-col gap-0.5 overflow-y-auto no-scrollbar">
         {LEAD_GEN_LINKS.map(({ to, label, icon }) => (
           <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
         ))}

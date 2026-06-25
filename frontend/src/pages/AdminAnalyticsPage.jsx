@@ -743,7 +743,7 @@ export default function AdminAnalyticsPage() {
           <div>
             <h1 className="text-[15px] font-bold" style={{ color: "#fff" }}>Analytics Dashboard</h1>
             <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.32)" }}>
-              Doott AI — Website traffic &amp; application metrics
+              Doott — Website traffic &amp; application metrics
             </p>
           </div>
         </div>

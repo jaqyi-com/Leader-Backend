@@ -293,7 +293,6 @@ const deepDives = [
     subtitle: "The raw ingest",
     p1: "Using Playwright nodes and distributed proxies, the engine searches deeply within targeted domains. It extracts hidden DOM nodes, intercepts network requests, and scrapes localized mapping data.",
     p2: "Unlike standard scrapers that hit bot protections, the Extraction phase simulates human browsing to bypass modern WAFs and unearth technical constraints, installed tech stacks, and team sizes.",
-    p2: "Unlike standard scrapers that hit bot protections, the Extraction phase simulates human browsing to bypass modern WAFs and unearth technical constraints, installed tech stacks, and team sizes.",
     icon: Network
   },
   {
@@ -301,7 +300,6 @@ const deepDives = [
     title: "NLP Enrichment & Normalization",
     subtitle: "Contextualizing the noise",
     p1: "Raw HTML and unstructured text are meaningless without context. The Enrichment module cross-references scraped names against role matrices to determine precise decision-making hierarchies within the target.",
-    p2: "All findings are funneled through a classification pipeline which normalizes the output into pure JSON structures, scrubbing invalid contact information and formatting names flawlessly for standard outreach.",
     p2: "All findings are funneled through a classification pipeline which normalizes the output into pure JSON structures, scrubbing invalid contact information and formatting names flawlessly for standard outreach.",
     icon: Database
   },
@@ -311,7 +309,6 @@ const deepDives = [
     subtitle: "Mathematical qualification",
     p1: "Stop guessing which leads are worth your time. The engine automatically evaluates every normalized entity against a dynamic Ideal Customer Profile (ICP) blueprint that you define.",
     p2: "It assigns a composite score between 0 to 100 based on firmographic fit, technical compatibility, and budget signals. Low-scoring leads are actively suppressed from the outreach queue.",
-    p2: "It assigns a composite score between 0 to 100 based on firmographic fit, technical compatibility, and budget signals. Low-scoring leads are actively suppressed from the outreach queue.",
     icon: Target
   },
   {
@@ -319,7 +316,6 @@ const deepDives = [
     title: "Autonomous SDR & Generation",
     subtitle: "The human element",
     p1: "For every highly qualified target, a localized sub-agent spins up to construct a comprehensive intelligence dossier containing recent company news, pain points, and personalized conversation starters.",
-    p2: "It seamlessly drafts an individualized first-touch email using this dossier. By eliminating generic templates, the SDR engine secures engagement rates drastically higher than standard automation.",
     p2: "It seamlessly drafts an individualized first-touch email using this dossier. By eliminating generic templates, the SDR engine secures engagement rates drastically higher than standard automation.",
     icon: Bot
   },
