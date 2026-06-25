@@ -67,7 +67,7 @@ function Nav() {
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
         <div className="flex items-center gap-2">
           <Mark />
-          <span className="font-serif text-xl tracking-tight">Leader</span>
+          <span className="font-serif text-xl tracking-tight">Doott</span>
         </div>
         <nav className="hidden items-center gap-8 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground md:flex">
           <a href="#how" className="transition hover:text-foreground">How it works</a>
@@ -137,7 +137,7 @@ function Hero() {
             transition={{ duration: 0.7, delay: 0.15 }}
             className="mt-8 max-w-xl text-lg leading-relaxed text-muted-foreground"
           >
-            Leader explores infinite web surfaces, normalizes complex data, runs the outreach,
+            Doott explores infinite web surfaces, normalizes complex data, runs the outreach,
             and handles your entire top-of-funnel operations automatically. You wake up.
             The pipeline is full. You didn't touch anything.
           </motion.p>
@@ -192,7 +192,7 @@ function BeforeAfter() {
     <section id="how" className="border-b border-border">
       <div className="mx-auto grid max-w-6xl grid-cols-1 md:grid-cols-2">
         <div className="border-b border-border p-10 md:border-b-0 md:border-r md:p-14">
-          <p className="eyebrow mb-6">Before Leader</p>
+          <p className="eyebrow mb-6">Before Doott</p>
           <h3 className="display mb-6 text-3xl md:text-4xl">A list of names. <br /> A wall of work.</h3>
           <ul className="space-y-4 text-muted-foreground">
             {[
@@ -209,7 +209,7 @@ function BeforeAfter() {
           </ul>
         </div>
         <div className="bg-secondary p-10 md:p-14">
-          <p className="eyebrow mb-6">With Leader</p>
+          <p className="eyebrow mb-6">With Doott</p>
           <h3 className="display mb-6 text-3xl md:text-4xl">Total market. <br /> Perfect clarity.</h3>
           <ul className="space-y-4 text-foreground">
             {[
@@ -327,7 +327,7 @@ const deepDives = [
     n: "05",
     title: "24/7 Pipeline Operations",
     subtitle: "Relentless execution",
-    p1: "Leader is designed to run asynchronously in the background. Built on Node.js crons and FastAPI scaling, the entire pipeline processes thousands of records autonomously without human intervention.",
+    p1: "Doott is designed to run asynchronously in the background. Built on Node.js crons and FastAPI scaling, the entire pipeline processes thousands of records autonomously without human intervention.",
     p2: "Every generated metric, drafted email, and scraped domain is continuously synchronized back to structured Google Sheets, providing absolute transparency into the engine's real-time internal state.",
     icon: RotateCcw
   },
@@ -359,7 +359,7 @@ const deepDives = [
     n: "09",
     title: "One-Click Campaign Builder",
     subtitle: "Search → select → launch",
-    p1: "Browse or semantically search the in-built database, check the checkbox next to any businesses you want to target, and hit Launch Campaign. Leader packages them into a structured outreach campaign in your CRM — no CSV exports, no copy-paste.",
+    p1: "Browse or semantically search the in-built database, check the checkbox next to any businesses you want to target, and hit Launch Campaign. Doott packages them into a structured outreach campaign in your CRM — no CSV exports, no copy-paste.",
     p2: "The campaign is created as a draft in Smart Outreach with the leads pre-populated, initial contact and follow-up sequences pre-configured, and only contactable leads (those with an email or phone) included.",
     icon: Send
   },
@@ -437,15 +437,15 @@ function UseCases() {
   const cases = [
     {
       title: "Agency Recruiters",
-      desc: "Stop hunting for hidden contact info. Let Leader automatically map out the engineering org chart of every startup that just raised a Series A.",
+      desc: "Stop hunting for hidden contact info. Let Doott automatically map out the engineering org chart of every startup that just raised a Series A.",
     },
     {
       title: "Software Sales",
-      desc: "Instantly know when a company installs a competitor's SDK. Leader crawls public repositories and DOMs to find exact capability signals.",
+      desc: "Instantly know when a company installs a competitor's SDK. Doott crawls public repositories and DOMs to find exact capability signals.",
     },
     {
       title: "M&A Intelligence",
-      desc: "Build massive market landscapes overnight. Leader scrapes and categorizes thousands of small businesses, finding exact employee headcounts and mapping localized data.",
+      desc: "Build massive market landscapes overnight. Doott scrapes and categorizes thousands of small businesses, finding exact employee headcounts and mapping localized data.",
     }
   ];
 
@@ -483,7 +483,7 @@ function FAQ() {
           {[
             {
               q: "How does the extraction bypass standard Web Application Firewalls (WAF)?",
-              a: "Leader doesn't use standard GET requests for heavy collection. We orchestrate clusters of headless Chromium instances routed through localized residential proxies, fully mirroring organic user interactions spanning mouse jitters to dynamic scroll events."
+              a: "Doott doesn't use standard GET requests for heavy collection. We orchestrate clusters of headless Chromium instances routed through localized residential proxies, fully mirroring organic user interactions spanning mouse jitters to dynamic scroll events."
             },
             {
               q: "Is the data synchronized locally or to a cloud provider?",
@@ -539,7 +539,7 @@ function Footer() {
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-10 md:flex-row">
         <div className="flex items-center gap-2">
           <Mark />
-          <span className="font-serif text-lg">Leader</span>
+          <span className="font-serif text-lg">Doott</span>
         </div>
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
           © {new Date().getFullYear()} · The Autonomous Pipeline

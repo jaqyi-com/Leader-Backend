@@ -210,7 +210,7 @@ export default function RegisterPage() {
             Create your account
           </h1>
           <p style={{ color: "var(--text-3)", fontSize: 14, marginTop: 6 }}>
-            Start your free Leader workspace
+            Start your free doott workspace
           </p>
         </div>
 

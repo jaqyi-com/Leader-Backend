@@ -115,7 +115,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       className="relative h-screen flex flex-col flex-shrink-0 z-30"
       style={{
         background: "var(--surface)",
-        borderRight: "1px solid var(--border)",
+        borderLeft: "1px solid var(--border)",
       }}
     >
       {/* Subtle glow top */}
@@ -150,7 +150,7 @@ export default function Sidebar({ collapsed, onToggle }) {
               className="overflow-hidden"
             >
               <span className="font-bold text-base tracking-tight" style={{ color: "var(--text)" }}>
-                Leader
+                Doott
               </span>
               <span
                 className="ml-1.5 text-[10px] font-semibold uppercase tracking-widest"
@@ -212,7 +212,7 @@ export default function Sidebar({ collapsed, onToggle }) {
       {/* Collapse toggle */}
       <button
         onClick={onToggle}
-        className="absolute -right-3.5 top-[72px] w-7 h-7 rounded-full flex items-center justify-center z-50 transition-all duration-200 hover:scale-110 hover:brightness-110"
+        className="absolute -left-3.5 top-[72px] w-7 h-7 rounded-full flex items-center justify-center z-50 transition-all duration-200 hover:scale-110 hover:brightness-110"
         style={{
           background: "linear-gradient(135deg, var(--accent) 0%, #f4576a 100%)",
           border: "2px solid var(--overlay-border)",
@@ -220,7 +220,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           boxShadow: "0 0 12px var(--accent-glow), 0 2px 8px rgba(0,0,0,0.6)",
         }}
       >
-        {collapsed ? <ChevronRight size={14} strokeWidth={3} /> : <ChevronLeft size={14} strokeWidth={3} />}
+        {collapsed ? <ChevronLeft size={14} strokeWidth={3} /> : <ChevronRight size={14} strokeWidth={3} />}
       </button>
     </motion.aside>
   );

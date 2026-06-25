@@ -266,11 +266,11 @@ function ErrorCard({ errorParam, onRetry }) {
             <p className="text-[11px]" style={{ color: "var(--text-3)" }}>
               If this keeps happening, contact{" "}
               <a
-                href="mailto:support@leader.ai"
+                href="mailto:support@doott.ai"
                 className="underline hover:opacity-70 transition-opacity"
                 style={{ color: "var(--accent)" }}
               >
-                support@leader.ai
+                support@doott.ai
               </a>
             </p>
           </motion.div>
@@ -427,7 +427,7 @@ export default function AuthCallbackPage() {
             className="font-bold text-base tracking-tight"
             style={{ color: "var(--text)" }}
           >
-            Leader
+            Doott
           </span>
           <span
             className="text-[10px] font-semibold uppercase tracking-widest"

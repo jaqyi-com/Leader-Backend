@@ -13,8 +13,6 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg)" }}>
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(p => !p)} />
-
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Topbar />
 
@@ -67,6 +65,8 @@ export default function Layout() {
           )}
         </main>
       </div>
+
+      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(p => !p)} />
     </div>
   );
 }

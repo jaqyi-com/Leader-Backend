@@ -67,7 +67,7 @@ export default function ProtectedRoute({ children }) {
             fontSize: 22, fontWeight: 800, letterSpacing: "-0.5px",
             color: "var(--text)", marginBottom: 4,
           }}>
-            Leader<span style={{ color: "var(--accent)" }}>AI</span>
+            Doott<span style={{ color: "var(--accent)" }}>AI</span>
           </div>
           <div style={{ fontSize: 13, color: "var(--text-3)", fontWeight: 500 }}>
             Initializing workspace…

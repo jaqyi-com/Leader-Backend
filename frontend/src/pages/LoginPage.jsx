@@ -170,7 +170,7 @@ export default function LoginPage() {
             Welcome back
           </h1>
           <p style={{ color: "var(--text-3)", fontSize: 14, marginTop: 6 }}>
-            Sign in to your Leader workspace
+            Sign in to your doott workspace
           </p>
         </div>
 
