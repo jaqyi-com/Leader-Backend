@@ -70,7 +70,7 @@ export default function ProtectedRoute({ children }) {
             Doott
           </div>
           <div style={{ fontSize: 13, color: "var(--text-3)", fontWeight: 500 }}>
-            Initializing workspace…
+            Initializing workspace<span className="dot-1">.</span><span className="dot-2">.</span><span className="dot-3">.</span>
           </div>
         </div>
 
@@ -101,6 +101,14 @@ export default function ProtectedRoute({ children }) {
             50%  { width: 70%;  margin-left: 15%; }
             100% { width: 0%;   margin-left: 100%; }
           }
+          @keyframes dot-flash {
+            0%   { opacity: 0.2; }
+            20%  { opacity: 1; }
+            100% { opacity: 0.2; }
+          }
+          .dot-1 { animation: dot-flash 1.4s infinite; }
+          .dot-2 { animation: dot-flash 1.4s infinite 0.2s; }
+          .dot-3 { animation: dot-flash 1.4s infinite 0.4s; }
         `}</style>
       </div>
     );
