@@ -79,7 +79,7 @@ router.get("/conversations", auth, async (req, res) => {
       orgId,
       userId: req.user.userId,
     })
-      .sort({ lastMessageAt: -1 })
+      .sort({ isPinned: -1, lastMessageAt: -1 })
       .limit(50)
       .lean();
 
@@ -149,15 +149,28 @@ router.delete("/conversations/:id", auth, async (req, res) => {
   }
 });
 
-// PATCH /api/chatbot/conversations/:id — rename a conversation title
+// PATCH /api/chatbot/conversations/:id — rename or pin/unpin a conversation
 router.patch("/conversations/:id", auth, async (req, res) => {
   try {
-    const { title } = req.body;
-    if (!title || !title.trim()) return res.status(400).json({ error: "title is required" });
+    const { title, isPinned } = req.body;
     const orgId = await getOrgFromUser(req);
+
+    const updateData = {};
+    if (title !== undefined) {
+      if (!title || !title.trim()) return res.status(400).json({ error: "title is required" });
+      updateData.title = title.trim();
+    }
+    if (isPinned !== undefined) {
+      updateData.isPinned = !!isPinned;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
     const conversation = await ChatConversation.findOneAndUpdate(
       { _id: req.params.id, orgId, userId: req.user.userId },
-      { title: title.trim() },
+      updateData,
       { new: true }
     );
     if (!conversation) return res.status(404).json({ error: "Conversation not found" });

@@ -4,14 +4,14 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare, Plus, Trash2, Send, Database, ChevronDown,
   ChevronRight, Bot, User, Sparkles, BookOpen, X, Loader2,
-  Copy, Check, Cpu, Shield, ExternalLink, MoreHorizontal, Pencil
+  Copy, Check, Cpu, Shield, ExternalLink, MoreHorizontal, Pencil, Pin
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import toast from "react-hot-toast";
 import {
   fetchConversations, fetchMessages,
-  deleteConversation, renameConversation, sendMessage
+  deleteConversation, renameConversation, sendMessage, pinConversation
 } from "../api/chatbot";
 import { classifyIntent } from "../lib/intentClassifier";
 import MentionDropdown from "../components/chatbot/MentionDropdown";
@@ -443,7 +443,7 @@ function MessageBubble({ msg, isStreaming }) {
   );
 }
 
-function ConversationItem({ conv, isActive, onClick, onDelete, onRename }) {
+function ConversationItem({ conv, isActive, onClick, onDelete, onRename, onPin }) {
   const [menuOpen, setMenuOpen]     = useState(false);
   const [renaming, setRenaming]     = useState(false);
   const [renameVal, setRenameVal]   = useState(conv.title || "New Conversation");
@@ -495,6 +495,7 @@ function ConversationItem({ conv, isActive, onClick, onDelete, onRename }) {
         background: isActive ? "rgba(226,55,68,0.15)" : "transparent",
         border: isActive ? "1px solid rgba(226,55,68,0.3)" : "1px solid transparent",
         marginBottom: 2, transition: "all 0.15s", position: "relative",
+        zIndex: menuOpen ? 50 : 1, // Fix stacking: lift the active conversation item's z-index
       }}
     >
       {/* Title / rename input */}
@@ -525,8 +526,19 @@ function ConversationItem({ conv, isActive, onClick, onDelete, onRename }) {
             }}>
               {conv.title || "New Conversation"}
             </div>
-            <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 2 }}>
-              {timeStr} · {conv.messageCount || 0} msgs
+            <div style={{ fontSize: 11, color: "var(--text-3)", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+              {conv.isPinned && (
+                <Pin
+                  size={11}
+                  style={{
+                    transform: "rotate(45deg)",
+                    fill: "var(--accent)",
+                    color: "var(--accent)",
+                    flexShrink: 0
+                  }}
+                />
+              )}
+              <span>{timeStr} · {conv.messageCount || 0} msgs</span>
             </div>
           </>
         )}
@@ -565,7 +577,7 @@ function ConversationItem({ conv, isActive, onClick, onDelete, onRename }) {
                 style={{
                   position: "absolute", right: 0, top: "calc(100% + 4px)",
                   minWidth: 160, zIndex: 9999,
-                  background: "var(--surface-2)",
+                  background: "var(--surface)", // Solid background (no opacity bleed)
                   border: "1px solid var(--border)",
                   borderRadius: 10,
                   boxShadow: "0 8px 32px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.04)",
@@ -573,6 +585,26 @@ function ConversationItem({ conv, isActive, onClick, onDelete, onRename }) {
                   padding: "4px",
                 }}
               >
+                {/* Pin / Unpin */}
+                <button
+                  onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onPin(conv._id, !conv.isPinned); }}
+                  style={{
+                    width: "100%", display: "flex", alignItems: "center", gap: 8,
+                    padding: "8px 10px", borderRadius: 7, border: "none",
+                    background: "transparent", color: "var(--text-2)",
+                    fontSize: 13, cursor: "pointer", textAlign: "left",
+                    transition: "background 0.12s",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "var(--surface-3)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                >
+                  <Pin size={13} style={{ flexShrink: 0, transform: conv.isPinned ? "none" : "rotate(45deg)", fill: conv.isPinned ? "var(--text-2)" : "none" }} />
+                  {conv.isPinned ? "Unpin" : "Pin"}
+                </button>
+
+                {/* Divider */}
+                <div style={{ height: 1, background: "var(--border)", margin: "3px 6px" }} />
+
                 {/* Rename */}
                 <button
                   onClick={(e) => { e.stopPropagation(); startRename(); }}
@@ -696,6 +728,27 @@ export default function ChatbotPage() {
       );
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handlePinConversation = async (convId, isPinned) => {
+    try {
+      await pinConversation(convId, isPinned);
+      setConversations((prev) => {
+        const updated = prev.map((c) => c._id === convId ? { ...c, isPinned } : c);
+        return updated.sort((a, b) => {
+          const pinA = a.isPinned ? 1 : 0;
+          const pinB = b.isPinned ? 1 : 0;
+          if (pinA !== pinB) return pinB - pinA;
+          const timeA = new Date(a.lastMessageAt || a.createdAt).getTime();
+          const timeB = new Date(b.lastMessageAt || b.createdAt).getTime();
+          return timeB - timeA;
+        });
+      });
+      toast.success(isPinned ? "Conversation pinned" : "Conversation unpinned");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to pin conversation");
     }
   };
 
@@ -893,6 +946,7 @@ export default function ChatbotPage() {
                 onClick={() => loadConversation(conv._id)}
                 onDelete={handleDeleteConversation}
                 onRename={handleRenameConversation}
+                onPin={handlePinConversation}
               />
             ))
           )}

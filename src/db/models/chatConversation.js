@@ -35,6 +35,11 @@ const chatConversationSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    // Pin conversation to the top
+    isPinned: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
@@ -42,7 +47,7 @@ const chatConversationSchema = new mongoose.Schema(
   }
 );
 
-chatConversationSchema.index({ orgId: 1, userId: 1, lastMessageAt: -1 });
+chatConversationSchema.index({ orgId: 1, userId: 1, isPinned: -1, lastMessageAt: -1 });
 
 const ChatConversation =
   mongoose.models.ChatConversation ||

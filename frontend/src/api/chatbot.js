@@ -57,6 +57,16 @@ export async function renameConversation(conversationId, title) {
   return res.json();
 }
 
+export async function pinConversation(conversationId, isPinned) {
+  const res = await fetch(`${BASE}/chatbot/conversations/${conversationId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...getAuthHeader() },
+    body: JSON.stringify({ isPinned }),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || "Failed to pin conversation");
+  return res.json();
+}
+
 // ── SSE Streaming Chat ─────────────────────────────────────────
 
 /**
