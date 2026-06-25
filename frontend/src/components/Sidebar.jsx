@@ -4,11 +4,10 @@ import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Globe, MapPin, Database, ChevronLeft, ChevronRight,
-  Settings, Share2, MessageSquare, Sparkles,
+  ChevronLeft, ChevronRight,
+  Settings, MessageSquare,
   Users2, Building2, BookOpen,
-  Briefcase, BarChart3, ListChecks, FileText, CreditCard,
-  Calculator, Package, UserCog, ShieldCheck,
+  ShieldCheck,
   ChevronDown, LogOut, Sun, Moon,
 } from "lucide-react";
 
@@ -17,6 +16,7 @@ const LEAD_GEN_LINKS = [
   { to: "/app/companies", label: "Companies", icon: Building2 },
 ];
 
+/* ── Nav item ─────────────────────────────────────────────── */
 function NavItem({ to, label, icon: Icon, collapsed, end }) {
   return (
     <NavLink to={to} end={end}>
@@ -54,6 +54,7 @@ function NavItem({ to, label, icon: Icon, collapsed, end }) {
   );
 }
 
+/* ── Section label ────────────────────────────────────────── */
 function SectionLabel({ label, collapsed }) {
   return (
     <AnimatePresence initial={false}>
@@ -74,165 +75,7 @@ function SectionLabel({ label, collapsed }) {
   );
 }
 
-/* ── Profile card + dropdown ────────────────────────────────── */
-function ProfileSection({ collapsed }) {
-  const { user, org, logout } = useAuth();
-  const { dark, toggle } = useTheme();
-  const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    function handler(e) {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
-    }
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  function handleLogout() {
-    logout();
-    navigate("/login");
-  }
-
-  const initials = user?.name
-    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
-    : "?";
-
-  return (
-    <div ref={ref} style={{ position: "relative" }}>
-      {/* Trigger button */}
-      <motion.button
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
-        onClick={() => setOpen((v) => !v)}
-        title={collapsed ? (user?.name || "Profile") : undefined}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          gap: collapsed ? 0 : 8,
-          padding: collapsed ? "6px" : "6px 10px 6px 6px",
-          borderRadius: 12,
-          border: "1px solid var(--border)",
-          background: open ? "var(--surface-3)" : "var(--surface-2)",
-          cursor: "pointer",
-          transition: "border-color 0.2s, background 0.15s",
-          justifyContent: collapsed ? "center" : "flex-start",
-        }}
-        onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
-        onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-      >
-        {/* Avatar */}
-        {user?.avatar ? (
-          <img
-            src={user.avatar}
-            alt={user.name}
-            style={{ width: 28, height: 28, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
-          />
-        ) : (
-          <div
-            style={{
-              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
-              background: "linear-gradient(135deg, var(--accent), #f4576a)",
-              color: "#fff", fontSize: 11, fontWeight: 700,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 0 8px var(--accent-glow)",
-            }}
-          >
-            {initials}
-          </div>
-        )}
-
-        <AnimatePresence initial={false}>
-          {!collapsed && (
-            <motion.div
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: "auto" }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.15 }}
-              style={{ flex: 1, minWidth: 0, textAlign: "left", lineHeight: 1.25, overflow: "hidden" }}
-            >
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                {user?.name || "User"}
-              </div>
-              {org && (
-                <div style={{ fontSize: 11, color: "var(--text-3)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {org.name}
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {!collapsed && (
-          <ChevronDown
-            size={13}
-            style={{
-              color: "var(--text-3)",
-              transform: open ? "rotate(180deg)" : "rotate(0deg)",
-              transition: "transform 0.2s",
-              flexShrink: 0,
-            }}
-          />
-        )}
-      </motion.button>
-
-      {/* Dropdown — opens upward since it's at the bottom of the sidebar */}
-      <AnimatePresence>
-        {open && (
-          <motion.div
-            initial={{ opacity: 0, y: 8, scale: 0.97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 8, scale: 0.97 }}
-            transition={{ duration: 0.15 }}
-            style={{
-              position: "absolute",
-              left: 0,
-              right: 0,
-              bottom: "calc(100% + 8px)",
-              borderRadius: 14,
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-              boxShadow: "0 -16px 48px rgba(0,0,0,0.4)",
-              overflow: "hidden",
-              zIndex: 200,
-              minWidth: 200,
-            }}
-          >
-            {/* User info */}
-            <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>
-              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{user?.name}</div>
-              <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 2 }}>{user?.email}</div>
-            </div>
-
-            {/* Org badge */}
-            {org && (
-              <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>
-                <Building2 size={13} style={{ color: "var(--text-3)", flexShrink: 0 }} />
-                <div>
-                  <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>Organization</div>
-                  <div style={{ fontSize: 13, color: "var(--text-2)", fontWeight: 500 }}>{org.name}</div>
-                </div>
-                <span style={{ marginLeft: "auto", fontSize: 10, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", padding: "2px 7px", borderRadius: 20, background: "rgba(226,55,68,0.15)", color: "var(--accent-2)" }}>
-                  {org.plan || "free"}
-                </span>
-              </div>
-            )}
-
-            {/* Actions */}
-            <div style={{ padding: 6 }}>
-              <MenuButton icon={dark ? <Sun size={14} /> : <Moon size={14} />} label={dark ? "Light Mode" : "Dark Mode"} onClick={() => { setOpen(false); toggle(); }} />
-              <MenuButton icon={<Settings size={14} />} label="Settings" onClick={() => { setOpen(false); navigate("/app/settings"); }} />
-              <MenuButton icon={<LogOut size={14} />} label="Sign out" danger onClick={handleLogout} />
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
-
+/* ── Dropdown menu item ───────────────────────────────────── */
 function MenuButton({ icon, label, onClick, danger }) {
   return (
     <button
@@ -257,6 +100,209 @@ function MenuButton({ icon, label, onClick, danger }) {
       {icon}
       {label}
     </button>
+  );
+}
+
+/* ── Profile section (card + dropdown) ───────────────────── */
+function ProfileSection({ collapsed }) {
+  const { user, org, logout } = useAuth();
+  const { dark, toggle } = useTheme();
+  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  /* Close when clicking outside */
+  useEffect(() => {
+    if (!open) return;
+    function handler(e) {
+      if (
+        triggerRef.current && !triggerRef.current.contains(e.target) &&
+        dropdownRef.current && !dropdownRef.current.contains(e.target)
+      ) {
+        setOpen(false);
+      }
+    }
+    // Use a short timeout so the click that opened it doesn't immediately close it
+    const t = setTimeout(() => document.addEventListener("mousedown", handler), 0);
+    return () => {
+      clearTimeout(t);
+      document.removeEventListener("mousedown", handler);
+    };
+  }, [open]);
+
+  function handleLogout() {
+    setOpen(false);
+    logout();
+    navigate("/login");
+  }
+
+  const initials = user?.name
+    ? user.name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2)
+    : "?";
+
+  /* Compute dropdown position based on trigger element */
+  const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
+  useEffect(() => {
+    if (open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setDropPos({
+        top: rect.top,       // dropdown appears above the trigger (we'll shift with transform)
+        left: rect.left,
+        width: rect.width,
+      });
+    }
+  }, [open]);
+
+  return (
+    <>
+      {/* Trigger */}
+      <button
+        ref={triggerRef}
+        onClick={() => setOpen((v) => !v)}
+        title={collapsed ? (user?.name || "Profile") : undefined}
+        style={{
+          width: "100%",
+          display: "flex",
+          alignItems: "center",
+          gap: collapsed ? 0 : 8,
+          padding: collapsed ? "6px 8px" : "6px 10px 6px 6px",
+          borderRadius: 12,
+          border: "1px solid var(--border)",
+          background: open ? "var(--surface-3)" : "var(--surface-2)",
+          cursor: "pointer",
+          transition: "border-color 0.2s, background 0.15s",
+          justifyContent: collapsed ? "center" : "flex-start",
+          textAlign: "left",
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--border-hover)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
+      >
+        {/* Avatar */}
+        {user?.avatar ? (
+          <img
+            src={user.avatar}
+            alt={user.name}
+            style={{ width: 28, height: 28, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
+          />
+        ) : (
+          <div
+            style={{
+              width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+              background: "linear-gradient(135deg, var(--accent), #f4576a)",
+              color: "#fff", fontSize: 11, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 0 8px var(--accent-glow)",
+            }}
+          >
+            {initials}
+          </div>
+        )}
+
+        {!collapsed && (
+          <>
+            <div style={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
+              <div style={{
+                fontSize: 13, fontWeight: 600, color: "var(--text)",
+                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+              }}>
+                {user?.name || "User"}
+              </div>
+              {org && (
+                <div style={{
+                  fontSize: 11, color: "var(--text-3)",
+                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+                }}>
+                  {org.name}
+                </div>
+              )}
+            </div>
+            <ChevronDown
+              size={13}
+              style={{
+                color: "var(--text-3)", flexShrink: 0,
+                transform: open ? "rotate(180deg)" : "rotate(0deg)",
+                transition: "transform 0.2s",
+              }}
+            />
+          </>
+        )}
+      </button>
+
+      {/* Dropdown — rendered as fixed overlay so it's never clipped */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            ref={dropdownRef}
+            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.97 }}
+            transition={{ duration: 0.15 }}
+            style={{
+              position: "fixed",
+              top: dropPos.top - 8,
+              left: dropPos.left,
+              width: Math.max(dropPos.width, 220),
+              transform: "translateY(-100%)",
+              borderRadius: 14,
+              background: "var(--surface-2)",
+              border: "1px solid var(--border)",
+              boxShadow: "0 -16px 48px rgba(0,0,0,0.45)",
+              overflow: "hidden",
+              zIndex: 9999,
+            }}
+          >
+            {/* User info */}
+            <div style={{ padding: "12px 14px", borderBottom: "1px solid var(--border)" }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{user?.name}</div>
+              <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 2 }}>{user?.email}</div>
+            </div>
+
+            {/* Org badge */}
+            {org && (
+              <div style={{
+                padding: "10px 14px", borderBottom: "1px solid var(--border)",
+                display: "flex", alignItems: "center", gap: 8,
+              }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                    Organization
+                  </div>
+                  <div style={{ fontSize: 13, color: "var(--text-2)", fontWeight: 500 }}>{org.name}</div>
+                </div>
+                <span style={{
+                  fontSize: 10, fontWeight: 600, textTransform: "uppercase",
+                  letterSpacing: "0.06em", padding: "2px 7px", borderRadius: 20,
+                  background: "rgba(226,55,68,0.15)", color: "var(--accent-2)",
+                }}>
+                  {org.plan || "free"}
+                </span>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div style={{ padding: 6 }}>
+              <MenuButton
+                icon={dark ? <Sun size={14} /> : <Moon size={14} />}
+                label={dark ? "Light Mode" : "Dark Mode"}
+                onClick={() => { setOpen(false); toggle(); }}
+              />
+              <MenuButton
+                icon={<Settings size={14} />}
+                label="Settings"
+                onClick={() => { setOpen(false); navigate("/app/settings"); }}
+              />
+              <MenuButton
+                icon={<LogOut size={14} />}
+                label="Sign out"
+                danger
+                onClick={handleLogout}
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
 
@@ -285,12 +331,11 @@ export default function Sidebar({ collapsed, onToggle }) {
         }}
       />
 
-      {/* ── Header: profile card + chatbot button ─────────────── */}
+      {/* ── Header: profile + chatbot ─────────────────────────── */}
       <div
         className="flex flex-col gap-2 px-2 pt-3 pb-2 flex-shrink-0"
         style={{ borderBottom: "1px solid var(--border)" }}
       >
-        {/* Profile dropdown */}
         <ProfileSection collapsed={collapsed} />
 
         {/* Personal Chat Bot button */}
@@ -342,7 +387,7 @@ export default function Sidebar({ collapsed, onToggle }) {
         ))}
       </nav>
 
-      {/* ── Footer: docs / admin / settings ───────────────────── */}
+      {/* ── Footer ────────────────────────────────────────────── */}
       <div
         className="px-2 py-3 flex flex-col gap-1"
         style={{ borderTop: "1px solid var(--border)" }}
@@ -354,10 +399,10 @@ export default function Sidebar({ collapsed, onToggle }) {
         <NavItem to="/app/settings" label="Settings"        icon={Settings}    collapsed={collapsed} end={false} />
       </div>
 
-      {/* ── Collapse toggle ────────────────────────────────────── */}
+      {/* ── Collapse toggle — positioned at vertical center ────── */}
       <button
         onClick={onToggle}
-        className="absolute -left-3.5 top-[72px] w-7 h-7 rounded-full flex items-center justify-center z-50 transition-all duration-200 hover:scale-110 hover:brightness-110"
+        className="absolute -left-3.5 top-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center z-50 transition-all duration-200 hover:scale-110 hover:brightness-110"
         style={{
           background: "linear-gradient(135deg, var(--accent) 0%, #f4576a 100%)",
           border: "2px solid var(--overlay-border)",
