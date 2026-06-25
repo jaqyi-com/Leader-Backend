@@ -43,6 +43,8 @@ import DatabaseIntelligencePage from "./pages/DatabaseIntelligencePage";
 import PublicDataPage           from "./pages/PublicDataPage";
 import PublicData2Page          from "./pages/PublicData2Page";
 import IndiaDataPage            from "./pages/IndiaDataPage";
+import PeoplePage               from "./pages/PeoplePage";
+import CompaniesPage            from "./pages/CompaniesPage";
 // CRM
 import CrmPipelinePage    from "./pages/crm/CrmPipelinePage";
 import CrmDashboardPage   from "./pages/crm/CrmDashboardPage";
@@ -115,6 +117,8 @@ export default function App() {
             <Route path="public-data2"        element={<PublicData2Page />} />
             <Route path="india-data"          element={<IndiaDataPage />} />
             <Route path="db-intelligence"     element={<DatabaseIntelligencePage />} />
+            <Route path="people"              element={<PeoplePage />} />
+            <Route path="companies"           element={<CompaniesPage />} />
             <Route path="lg/linkedin"       element={<LinkedInFinderPage />} />
             <Route path="lg/email"          element={<EmailFinderPage />} />
             <Route path="lg/companies"      element={<CompanyIntelPage />} />

@@ -40,6 +40,8 @@ const LEAD_GEN_LINKS = [
   { to: "/app/public-data",  label: "Public Data",         icon: Users },
   { to: "/app/public-data2", label: "Public Data 2",        icon: Briefcase },
   { to: "/app/db-intelligence", label: "DB Intelligence", icon: TrendingUp },
+  { to: "/app/people",       label: "People",               icon: Users2 },
+  { to: "/app/companies",    label: "Companies",            icon: Building2 },
 ];
 
 const CRM_LINKS = [

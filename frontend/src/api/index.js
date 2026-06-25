@@ -247,3 +247,19 @@ export const indiaGetDatabase = (params = {}) => lgApi.get("/api/india-data", { 
 export const indiaGetStats    = ()             => lgApi.get("/api/india-data/stats");
 export const indiaGetColumns  = ()             => lgApi.get("/api/india-data/columns");
 export const indiaRefresh     = ()             => lgApi.post("/api/india-data/refresh");
+
+// ============================================================
+// FINAL PEOPLE DATABASE (final_people)
+// ============================================================
+export const fpGetDatabase = (params = {}) => lgApi.get("/api/final-people", { params });
+export const fpGetStats    = ()             => lgApi.get("/api/final-people/stats");
+export const fpGetColumns  = ()             => lgApi.get("/api/final-people/columns");
+export const fpRefresh     = ()             => lgApi.post("/api/final-people/refresh");
+
+// ============================================================
+// FINAL COMPANIES DATABASE (final_companies)
+// ============================================================
+export const fcGetDatabase = (params = {}) => lgApi.get("/api/final-companies", { params });
+export const fcGetStats    = ()             => lgApi.get("/api/final-companies/stats");
+export const fcGetColumns  = ()             => lgApi.get("/api/final-companies/columns");
+export const fcRefresh     = ()             => lgApi.post("/api/final-companies/refresh");
