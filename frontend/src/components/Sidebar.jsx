@@ -29,17 +29,6 @@ const AI_LINKS = [
 ];
 
 const LEAD_GEN_LINKS = [
-  // { to: "/app/lg/auto-lead-gen", label: "Auto Lead Gen", icon: Target },
-  // { to: "/app/lg/linkedin", label: "LinkedIn Finder", icon: Users2 },
-  // { to: "/app/lg/email", label: "Email Finder", icon: Mail },
-  // { to: "/app/lg/companies", label: "Company Intel", icon: Building2 },
-  // { to: "/app/lg/research", label: "AI Research", icon: BrainCircuit },
-  // { to: "/app/lg/database", label: "Lead Database", icon: Database },
-  { to: "/app/inbuild-db",   label: "In Build - Database", icon: Server },
-  { to: "/app/india-data",   label: "India Data",           icon: Flag },
-  { to: "/app/public-data",  label: "Public Data",         icon: Users },
-  { to: "/app/public-data2", label: "Public Data 2",        icon: Briefcase },
-  { to: "/app/db-intelligence", label: "DB Intelligence", icon: TrendingUp },
   { to: "/app/people",       label: "People",               icon: Users2 },
   { to: "/app/companies",    label: "Companies",            icon: Building2 },
 ];
