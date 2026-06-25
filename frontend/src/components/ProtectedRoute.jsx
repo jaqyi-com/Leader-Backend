@@ -69,9 +69,6 @@ export default function ProtectedRoute({ children }) {
           }}>
             Doott
           </div>
-          <div style={{ fontSize: 13, color: "var(--text-3)", fontWeight: 500 }}>
-            Initializing workspace…
-          </div>
         </div>
 
         {/* Progress bar */}
