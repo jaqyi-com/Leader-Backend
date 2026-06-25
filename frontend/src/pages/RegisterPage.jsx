@@ -285,44 +285,24 @@ export default function RegisterPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {/* Name + Org Name row */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--text-2)", marginBottom: 6 }}>
-                  Full Name
-                </label>
-                <div style={{ position: "relative" }}>
-                  <User size={14} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", pointerEvents: "none" }} />
-                  <input
-                    id="register-name"
-                    name="name"
-                    type="text"
-                    className="input"
-                    placeholder="Jane Smith"
-                    value={form.name}
-                    onChange={handleChange}
-                    required
-                    style={{ paddingLeft: 38 }}
-                  />
-                </div>
-              </div>
-              <div>
-                <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--text-2)", marginBottom: 6 }}>
-                  Org Name
-                </label>
-                <div style={{ position: "relative" }}>
-                  <Building2 size={14} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", pointerEvents: "none" }} />
-                  <input
-                    id="register-orgname"
-                    name="orgName"
-                    type="text"
-                    className="input"
-                    placeholder="Acme Corp"
-                    value={form.orgName}
-                    onChange={handleChange}
-                    style={{ paddingLeft: 38 }}
-                  />
-                </div>
+            {/* Full Name */}
+            <div>
+              <label style={{ display: "block", fontSize: 13, fontWeight: 500, color: "var(--text-2)", marginBottom: 6 }}>
+                Full Name
+              </label>
+              <div style={{ position: "relative" }}>
+                <User size={14} style={{ position: "absolute", left: 13, top: "50%", transform: "translateY(-50%)", color: "var(--text-3)", pointerEvents: "none" }} />
+                <input
+                  id="register-name"
+                  name="name"
+                  type="text"
+                  className="input"
+                  placeholder="Jane Smith"
+                  value={form.name}
+                  onChange={handleChange}
+                  required
+                  style={{ paddingLeft: 38 }}
+                />
               </div>
             </div>
 

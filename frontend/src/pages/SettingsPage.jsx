@@ -37,14 +37,12 @@ const ROLE_META = {
 
 // ── TABS ───────────────────────────────────────────────────────────────────
 const TABS = [
-  { id: "org",    label: "Organization", icon: <Building2  size={15} /> },
   { id: "email",  label: "Email & Outreach", icon: <Mail size={15} /> },
-  { id: "members",label: "Members",      icon: <Users      size={15} /> },
   { id: "danger", label: "Danger Zone",  icon: <ShieldAlert size={15} /> },
 ];
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState("org");
+  const [tab, setTab] = useState("email");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

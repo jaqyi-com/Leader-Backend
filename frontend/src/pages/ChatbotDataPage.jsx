@@ -346,7 +346,7 @@ export default function ChatbotDataPage() {
           <div>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "var(--text)" }}>Knowledge Base</h1>
             <p style={{ margin: 0, fontSize: 13, color: "var(--text-3)", marginTop: 2 }}>
-              Organization memory — {stats.sourceCount} sources · {stats.chunkCount} indexed chunks
+              Workspace memory — {stats.sourceCount} sources · {stats.chunkCount} indexed chunks
             </p>
           </div>
         </div>
@@ -397,7 +397,7 @@ export default function ChatbotDataPage() {
                 <textarea
                   value={textContent}
                   onChange={(e) => setTextContent(e.target.value)}
-                  placeholder="Paste your organization's knowledge here — facts, FAQs, processes, team info, products..."
+                  placeholder="Paste your workspace's knowledge here — facts, FAQs, processes, team info, products..."
                   rows={7}
                   style={{
                     width: "100%", padding: "10px 12px", background: "var(--overlay-1)",
@@ -500,7 +500,7 @@ export default function ChatbotDataPage() {
             }}>
               <Database size={32} style={{ marginBottom: 12, opacity: 0.4 }} />
               <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 6, color: "var(--text)" }}>No knowledge yet</div>
-              <div style={{ fontSize: 13 }}>Add text or upload files to train the chatbot on your organization's data.</div>
+              <div style={{ fontSize: 13 }}>Add text or upload files to train the chatbot on your company's data.</div>
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

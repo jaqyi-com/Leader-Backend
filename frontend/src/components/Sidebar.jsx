@@ -202,21 +202,13 @@ function ProfileSection({ collapsed }) {
 
         {!collapsed && (
           <>
-            <div style={{ flex: 1, minWidth: 0, lineHeight: 1.25 }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{
                 fontSize: 13, fontWeight: 600, color: "var(--text)",
                 whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
               }}>
                 {user?.name || "User"}
               </div>
-              {org && (
-                <div style={{
-                  fontSize: 11, color: "var(--text-3)",
-                  whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-                }}>
-                  {org.name}
-                </div>
-              )}
             </div>
             <ChevronDown
               size={13}
@@ -258,28 +250,6 @@ function ProfileSection({ collapsed }) {
               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{user?.name}</div>
               <div style={{ fontSize: 12, color: "var(--text-3)", marginTop: 2 }}>{user?.email}</div>
             </div>
-
-            {/* Org badge */}
-            {org && (
-              <div style={{
-                padding: "10px 14px", borderBottom: "1px solid var(--border)",
-                display: "flex", alignItems: "center", gap: 8,
-              }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 11, color: "var(--text-3)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.08em" }}>
-                    Organization
-                  </div>
-                  <div style={{ fontSize: 13, color: "var(--text-2)", fontWeight: 500 }}>{org.name}</div>
-                </div>
-                <span style={{
-                  fontSize: 10, fontWeight: 600, textTransform: "uppercase",
-                  letterSpacing: "0.06em", padding: "2px 7px", borderRadius: 20,
-                  background: "rgba(226,55,68,0.15)", color: "var(--accent-2)",
-                }}>
-                  {org.plan || "free"}
-                </span>
-              </div>
-            )}
 
             {/* Actions */}
             <div style={{ padding: 6 }}>

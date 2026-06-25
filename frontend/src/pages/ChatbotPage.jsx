@@ -21,7 +21,7 @@ import FeatureInvocationPanel from "../components/chatbot/FeatureInvocationPanel
 const MAX_CONTEXT = 100000;
 
 const SUGGESTIONS = [
-  "What does our organization do?",
+  "What does our company do?",
   "What are our key products or services?",
   "Who are our target customers?",
   "What is our company's mission?",
@@ -990,7 +990,7 @@ export default function ChatbotPage() {
               <Bot size={15} color="white" />
             </div>
             <div>
-              <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>Organization AI Assistant</div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>Doott AI Assistant</div>
               <div style={{ fontSize: 11, color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
                 RAG · Streaming · Moderated
@@ -1044,10 +1044,10 @@ export default function ChatbotPage() {
               </motion.div>
               <div style={{ textAlign: "center" }}>
                 <h2 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: "var(--text)" }}>
-                  Organization AI Assistant
+                  Doott AI Assistant
                 </h2>
                 <p style={{ margin: "8px 0 0", fontSize: 14, color: "var(--text-3)" }}>
-                  Ask anything about your organization's knowledge base
+                  Ask anything about your knowledge base
                 </p>
               </div>
 
