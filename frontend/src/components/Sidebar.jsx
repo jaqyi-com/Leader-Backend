@@ -9,7 +9,7 @@ import {
   Users2, Building2, BookOpen,
   ShieldCheck,
   ChevronDown, LogOut, Sun, Moon,
-  Mail, Phone, MapPin,
+  Mail, Phone, MapPin, Globe,
 } from "lucide-react";
 
 const LEAD_GEN_LINKS = [
@@ -355,7 +355,8 @@ export default function Sidebar({ collapsed, onToggle }) {
 
       <nav className="flex-1 px-2 pt-2 pb-4 flex flex-col gap-0.5 overflow-y-auto no-scrollbar">
         {/* LocationIQ — Featured */}
-        <NavItem to="/app/locationiq" label="Location IQ" icon={MapPin} collapsed={collapsed} end={false} />
+        <NavItem to="/app/locationiq"         label="Location IQ"       icon={MapPin} collapsed={collapsed} end={false} />
+        <NavItem to="/app/location-analysis"  label="Location Analysis" icon={Globe}  collapsed={collapsed} end={false} />
 
         {LEAD_GEN_LINKS.map(({ to, label, icon, sub }) => (
           sub ? (
