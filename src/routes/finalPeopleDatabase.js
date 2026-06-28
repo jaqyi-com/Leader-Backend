@@ -70,6 +70,15 @@ function normalizeRow({ selectCols, colToField }, row) {
     const val   = row[col];
     out[field] = val !== null && val !== undefined ? String(val) : "";
   }
+
+  // Auto-derive first_name / last_name from full_name when DB has nulls
+  const full = out.full_name || "";
+  if (full && !out.first_name) {
+    const parts = full.trim().split(/\s+/);
+    out.first_name = parts[0] || "";
+    out.last_name  = parts.length > 1 ? parts.slice(1).join(" ") : "";
+  }
+
   return out;
 }
 

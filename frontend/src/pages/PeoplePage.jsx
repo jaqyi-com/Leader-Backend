@@ -105,6 +105,11 @@ export default function PeoplePage() {
     { label: "Total People", val: stats.total, icon: Users,    color: "#E23744" },
   ] : [];
 
+  // Hide columns where EVERY visible row is empty — avoids showing all-dash columns
+  const visibleCols = cols.filter(c =>
+    records.length === 0 || records.some(r => r[c.key] && r[c.key] !== "")
+  );
+
   // ── Smart cell renderer ───────────────────────────────────
   const renderCell = (col, val) => {
     if (!val) return <span className="text-[var(--text-3)]">—</span>;
@@ -248,7 +253,7 @@ export default function PeoplePage() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
-                {cols.map(c => (
+                {visibleCols.map(c => (
                   <th key={c.key} onClick={() => handleSort(c.key)}
                     className="text-left px-3 py-3 text-[var(--text-3)] font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap cursor-pointer hover:text-[var(--text-2)] select-none">
                     {c.label}{sortBy === c.key ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
@@ -260,7 +265,7 @@ export default function PeoplePage() {
               {loading ? (
                 Array.from({ length: 8 }).map((_, idx) => (
                   <tr key={`skel-${idx}`} className="border-b border-[var(--border)] animate-pulse">
-                    {(cols.length > 0 ? cols : Array.from({ length: 6 })).map((_, ci) => (
+                    {(visibleCols.length > 0 ? visibleCols : Array.from({ length: 6 })).map((_, ci) => (
                       <td key={ci} className="px-3 py-3">
                         <div className="h-4 bg-[var(--surface-2)] rounded" style={{ width: `${55 + (ci * 19) % 60}px` }} />
                       </td>
@@ -269,7 +274,7 @@ export default function PeoplePage() {
                 ))
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={cols.length || 1} className="py-16 text-center text-[var(--text-3)]">
+                  <td colSpan={visibleCols.length || 1} className="py-16 text-center text-[var(--text-3)]">
                     <Database size={32} className="mx-auto mb-3 opacity-30" />
                     <p>No records found.</p>
                     <p className="text-[10px] mt-1 opacity-60">Try adjusting your search or clearing filters.</p>
@@ -277,7 +282,7 @@ export default function PeoplePage() {
                 </tr>
               ) : records.map((r, i) => (
                 <tr key={i} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors">
-                  {cols.map(c => (
+                  {visibleCols.map(c => (
                     <td key={c.key} className="px-3 py-2.5">
                       {renderCell(c, r[c.key])}
                     </td>
