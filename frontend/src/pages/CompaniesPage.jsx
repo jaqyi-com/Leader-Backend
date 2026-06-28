@@ -172,10 +172,10 @@ export default function CompaniesPage() {
             <Building2 size={22} className="text-cyan-400" />
             Companies
           </h2>
-          <p className="text-sm text-[var(--text-3)] mt-0.5">
+          {/* <p className="text-sm text-[var(--text-3)] mt-0.5">
             {total.toLocaleString()} records {" "}
             <span className="font-mono text-[11px] opacity-60">final_companies</span>
-          </p>
+          </p> */}
         </div>
         <div className="flex gap-2 flex-wrap">
           <button onClick={exportCSV} disabled={!records.length} className="btn-ghost text-xs gap-1.5">

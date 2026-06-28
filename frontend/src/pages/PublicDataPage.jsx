@@ -147,10 +147,10 @@ export default function PublicDataPage() {
             <Users size={22} className="text-[var(--accent)]" />
             Public Data — 82M USA Contacts
           </h2>
-          <p className="text-sm text-[var(--text-3)] mt-0.5">
+          {/* <p className="text-sm text-[var(--text-3)] mt-0.5">
             {total.toLocaleString()} records {" "}
             <span className="font-mono text-[11px] opacity-60">usa_public_contacts_82m</span>
-          </p>
+          </p> */}
         </div>
         <div className="flex gap-2 flex-wrap">
           <button onClick={exportCSV} disabled={!records.length} className="btn-ghost text-xs gap-1.5">

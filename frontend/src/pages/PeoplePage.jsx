@@ -171,10 +171,10 @@ export default function PeoplePage() {
             <Users size={22} className="text-[var(--accent)]" />
             People
           </h2>
-          <p className="text-sm text-[var(--text-3)] mt-0.5">
+          {/* <p className="text-sm text-[var(--text-3)] mt-0.5">
             {total.toLocaleString()} records {" "}
             <span className="font-mono text-[11px] opacity-60">final_people</span>
-          </p>
+          </p> */}
         </div>
         <div className="flex gap-2 flex-wrap">
           <button onClick={exportCSV} disabled={!records.length} className="btn-ghost text-xs gap-1.5">
