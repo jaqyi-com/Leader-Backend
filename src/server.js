@@ -167,6 +167,7 @@ app.use("/api/track",     require("./routes/tracker"));
 app.use("/api/accounting", require("./routes/accounting"));
 app.use("/api/inventory", require("./routes/inventory"));
 app.use("/api/payroll", require("./routes/payroll"));
+app.use("/api/locationiq", require("./routes/locationiq"));
 app.use("/api/gmail", require("./routes/gmailAuth"));
 
 
