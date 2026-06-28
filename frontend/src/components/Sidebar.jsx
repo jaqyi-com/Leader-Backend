@@ -353,45 +353,11 @@ export default function Sidebar({ collapsed, onToggle }) {
         </motion.button>
       </div>
 
-      {/* ── Nav ───────────────────────────────────────────────── */}
       <nav className="flex-1 px-2 pt-2 pb-4 flex flex-col gap-0.5 overflow-y-auto no-scrollbar">
         {LEAD_GEN_LINKS.map(({ to, label, icon, sub }) => (
           sub ? (
-            <div key={to} className={collapsed ? "" : "pl-4"}>
-              <NavLink to={to} end={false}>
-                {({ isActive }) => (
-                  <motion.div
-                    whileHover={{ x: collapsed ? 0 : 2 }}
-                    whileTap={{ scale: 0.97 }}
-                    title={collapsed ? label : undefined}
-                    className={isActive ? "nav-item-active" : "nav-item"}
-                    style={{ opacity: 0.85, fontSize: "12px" }}
-                  >
-                    {icon({ size: 13, className: "flex-shrink-0" })}
-                    <AnimatePresence initial={false}>
-                      {!collapsed && (
-                        <motion.span
-                          key="label"
-                          initial={{ opacity: 0, width: 0 }}
-                          animate={{ opacity: 1, width: "auto" }}
-                          exit={{ opacity: 0, width: 0 }}
-                          transition={{ duration: 0.18 }}
-                          className="overflow-hidden whitespace-nowrap"
-                        >
-                          {label}
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                    {isActive && !collapsed && (
-                      <motion.div
-                        layoutId={`active-sub-${to}`}
-                        className="ml-auto w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: "var(--teal)" }}
-                      />
-                    )}
-                  </motion.div>
-                )}
-              </NavLink>
+            <div key={to} className={collapsed ? "" : "pl-3"} style={{ opacity: 0.85 }}>
+              <NavItem to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
             </div>
           ) : (
             <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
