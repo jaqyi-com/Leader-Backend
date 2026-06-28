@@ -108,7 +108,7 @@ let _schemaCache = null;
 // embedding : 512-dim vector (6 KB per row) → sent only in semantic-search
 // _row_hash : dedup utility column
 // unnamed_13: stale artifact column
-const SKIP_IN_SELECT = new Set(["embedding", "_row_hash", "unnamed_13"]);
+const SKIP_IN_SELECT = new Set(["embedding", "_row_hash", "unnamed_13", "uuid", "company_uuid", "id", "_id"]);
 
 async function getSchema() {
   if (_schemaCache) return _schemaCache;

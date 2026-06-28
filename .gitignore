@@ -10,7 +10,7 @@ logs/
 
 # Google Sheets service account credentials (keep out of git!)
 src/config/googleSheetsCredentials.json
-{src
+# Temporary folders
 
 # Frontend build output
 frontend/dist/

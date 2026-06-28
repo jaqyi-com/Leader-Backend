@@ -23,7 +23,7 @@ const PRIORITY_COLS = [
   { key: "address",       label: "Address"       },
 ];
 
-const HIDDEN_KEYS = new Set(["_id", "_row_hash", "unnamed_13", "url", "embedding"]);
+const HIDDEN_KEYS = new Set(["_id", "_row_hash", "unnamed_13", "url", "embedding", "uuid", "company_uuid", "id", "company_id"]);
 const BLANK = {
   search: "",
   category: "",

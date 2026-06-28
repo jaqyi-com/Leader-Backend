@@ -301,7 +301,7 @@ function DatabaseShowcase() {
           <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground mb-4">People table columns</p>
           <div className="flex flex-wrap gap-2">
             {[
-              "uuid", "company_uuid", "full_name", "first_name", "last_name",
+              "full_name", "first_name", "last_name",
               "job_title", "linked_url", "location", "city", "state",
               "pincode", "lat", "long", "geo_source", "emails", "phones", "created_at"
             ].map(col => (

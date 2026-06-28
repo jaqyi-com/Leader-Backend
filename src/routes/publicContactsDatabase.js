@@ -31,7 +31,7 @@ const STATS_KEY = "cache:public-contacts-stats";
 const STATS_TTL = 300; // 5 min
 
 // Columns to exclude from SELECT output
-const SKIP_IN_SELECT = new Set(["_row_hash", "xxxx", "ccc", "xxx"]);
+const SKIP_IN_SELECT = new Set(["_row_hash", "xxxx", "ccc", "xxx", "uuid", "company_uuid", "id", "_id"]);
 
 // ── Actual column mapping → standard API field names ───────
 // Maps actual DB column → frontend field key

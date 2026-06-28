@@ -35,6 +35,7 @@ const STATS_TTL = 300; // 5 min
 const SKIP_IN_SELECT = new Set([
   "_row_hash", "unnamed_13", "unnamed_14", "unnamed_12",
   "unnamed_15", "unnamed_16", "unnamed_17", "unnamed_18",
+  "uuid", "company_uuid", "id", "_id",
   // niche pivot columns (rarely useful in table view)
   "trucking","furniture_shop","landscape","custom_home_builder","solar",
   "irrigation_repair","roofing","window_installation","land_clearing",

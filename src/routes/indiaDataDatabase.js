@@ -31,7 +31,7 @@ const STATS_KEY = "cache:india-data-stats";
 const STATS_TTL = 300; // 5 min
 
 // Columns to exclude from SELECT output
-const SKIP_IN_SELECT = new Set(["_row_hash", "embedding"]);
+const SKIP_IN_SELECT = new Set(["_row_hash", "embedding", "uuid", "company_uuid", "id", "_id"]);
 
 // ── In-memory schema cache ─────────────────────────────────
 let _schemaCache = null;
