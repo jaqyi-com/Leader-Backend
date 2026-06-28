@@ -780,6 +780,8 @@ const publicContactsRouter     = require("./routes/publicContactsDatabase");
 const niches75mRouter          = require("./routes/niches75mDatabase");
 const indiaDataRouter          = require("./routes/indiaDataDatabase");
 const finalPeopleRouter        = require("./routes/finalPeopleDatabase");
+const finalPeopleEmailRouter   = require("./routes/finalPeopleEmail");
+const finalPeopleNumberRouter  = require("./routes/finalPeopleNumber");
 const finalCompaniesRouter     = require("./routes/finalCompaniesDatabase");
 app.use("/api/crawler",              crawlerRouter);
 app.use("/api/crawler/auto-scraper", autoScraperRouter);
@@ -790,6 +792,8 @@ app.use("/api/public-contacts",      publicContactsRouter);
 app.use("/api/niches75m",            niches75mRouter);
 app.use("/api/india-data",           indiaDataRouter);
 app.use("/api/final-people",         finalPeopleRouter);
+app.use("/api/final-people-email",   finalPeopleEmailRouter);
+app.use("/api/final-people-number",  finalPeopleNumberRouter);
 app.use("/api/final-companies",      finalCompaniesRouter);
 
 

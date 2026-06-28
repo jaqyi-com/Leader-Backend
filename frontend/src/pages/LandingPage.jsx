@@ -1,45 +1,100 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Network, Database, Target, Bot, RotateCcw, Sun, Moon, Map, Brain, BarChart3, Send } from "lucide-react";
+import {
+  Sun, Moon,
+  Users2, Building2, Database, MessageSquare,
+  GitBranch, Send, Globe, Brain, BarChart3, Map,
+  Zap, Phone, Mail, Search, ChevronDown,
+} from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 
-const agents = [
+// ── Current live features ──────────────────────────────────
+const FEATURES = [
   {
     n: "01",
-    name: "Extraction",
-    desc: "Scrapes infinite domains, unearthing deeply hidden technical capabilities and staff sizes.",
-    tools: ["webCrawler", "placesAPI", "semanticSearch", "techMatcher"],
+    icon: Users2,
+    title: "People Database",
+    subtitle: "2.4M+ verified contacts",
+    p1: "Browse and search the entire final_people dataset — 2.4 million real people records stored in Cloud SQL PostgreSQL. Filter by email availability, phone availability, name, company, or any column in the table.",
+    p2: "Three dedicated views: All People, Email (has verified email), and Number (has phone number). Export any filtered slice to CSV with one click. Backed by Redis caching for sub-second page loads.",
   },
   {
     n: "02",
-    name: "Enrichment",
-    desc: "Cross-references data. Identifies key decision makers. Cleans unformatted data streams.",
-    tools: ["dataNormalizer", "roleIdentifier", "contactFinder"],
+    icon: Building2,
+    title: "Companies Database",
+    subtitle: "Full firmographic data",
+    p1: "The companion to People — the final_companies table stores business-level records including names, industries, locations, website URLs, LinkedIn profiles, and technology signals.",
+    p2: "Fully sortable, paginated, and searchable across all columns. Smart cell rendering automatically detects URLs, emails, and phone numbers and renders them as interactive links.",
   },
   {
     n: "03",
-    name: "ICP Scoring",
-    desc: "Grades every lead against your custom Ideal Customer Profile blueprint.",
-    tools: ["scoreGenerator", "intentDetector", "budgetAnalyzer"],
+    icon: Database,
+    title: "In-Build Database",
+    subtitle: "742k+ US businesses + AI search",
+    p1: "An internal database of 742,000+ indexed US businesses powered by pgvector. Features a Smart Market Map heatmap visualizing business density by state and industry, and an AI Ideal Customer Profiler.",
+    p2: "Describe your ideal customer in plain English — GPT-4o extracts a structured filter, runs a cosine similarity search, and explains each match. One-click Campaign Builder packages selected leads directly into your CRM.",
   },
   {
     n: "04",
-    name: "Autonomous SDR",
-    desc: "Builds a deep dossier and writes hyper-personalized first touches for top-tier leads.",
-    tools: ["dossierBuilder", "emailDrafter", "signalDetector"],
+    icon: Brain,
+    title: "AI Chatbot (RAG)",
+    subtitle: "Organization-wide knowledge base",
+    p1: "Upload PDFs, text files, or any documents to your organization's private knowledge base. The AI chatbot uses Retrieval-Augmented Generation to answer questions with streaming responses via Server-Sent Events.",
+    p2: "Each organization has an isolated knowledge space. Powered by OpenAI embeddings + pgvector similarity search. The chatbot cites sources, respects organizational boundaries, and streams answers in real-time.",
   },
   {
     n: "05",
-    name: "Pipeline Ops",
-    desc: "Runs continuously 24/7. Auto-syncs everything direct to your Google Sheets.",
-    tools: ["cronDeployer", "sheetsSync", "errorHandler"],
+    icon: GitBranch,
+    title: "CRM Pipeline",
+    subtitle: "Deals · Activities · Invoices",
+    p1: "A fully integrated CRM with kanban deal pipeline, contact management, activity tracking, and quotation builder. Drag deals between stages, log calls and meetings, and generate PDF-ready quotations.",
+    p2: "Includes an invoicing module with line items, tax calculations, and status tracking. All CRM data is multi-tenant — each organization sees only its own deals and contacts. Tightly integrated with Smart Outreach.",
+  },
+  {
+    n: "06",
+    icon: Send,
+    title: "Smart Outreach",
+    subtitle: "AI-personalized email campaigns",
+    p1: "Build targeted email campaigns directly from the database. Select leads, configure follow-up sequences, and launch. The AI reads each prospect's context and generates personalized first-touch emails.",
+    p2: "Full campaign management with open/reply tracking, duplicate prevention, and CRM sync. Powered by SMTP integration with configurable sending schedules and smart rate limiting to protect your domain reputation.",
+  },
+  {
+    n: "07",
+    icon: Globe,
+    title: "Social Media Automation",
+    subtitle: "LinkedIn · Instagram · X · Facebook",
+    p1: "Generate keyword-driven social media posts with GPT-4o and publish to multiple platforms simultaneously via Unified.to. An email-based approval workflow lets team leads review content before it goes live.",
+    p2: "Supports LinkedIn, Instagram, Facebook, and X (Twitter). OAuth connections are managed per-organization. Content generation takes a topic/keywords → draft post → human approval → auto-publish pipeline.",
+  },
+  {
+    n: "08",
+    icon: Map,
+    title: "Market Intelligence",
+    subtitle: "Heatmaps · ICP profiling · Reports",
+    p1: "Enter any business category and US state — get back a full market intelligence report: total count, email/phone/website/LinkedIn coverage rates, top cities, revenue ranges, and team size distributions.",
+    p2: "Animated coverage rings and bar charts make data immediately scannable. A plain-language AI summary gives you the insight in two sentences. The Smart Map renders state-by-state density without any external map APIs.",
+  },
+  {
+    n: "09",
+    icon: Search,
+    title: "5-Stage Pipeline Crawler",
+    subtitle: "Scrape · Enrich · Score · Outreach · Report",
+    p1: "The original Doott engine: a fully automated 5-stage pipeline that scrapes target domains using Playwright, enriches the data via NLP normalization, scores leads against your ICP blueprint, and drafts personalized emails.",
+    p2: "Built-in cron scheduler lets you configure each pipeline stage to run independently on any schedule. All results sync to Google Sheets. Built on Node.js with FastAPI-style architecture for horizontal scaling.",
   },
 ];
 
-const logos = [
-  "Google Maps", "OpenAI", "Playwright", "Node.js", "FastAPI", "React",
-  "Google Sheets", "Vite", "Express", "Vercel", "Tailwind", "Python",
+const METRICS = [
+  { stat: "2.4M+", label: "People Indexed" },
+  { stat: "742K+", label: "US Businesses" },
+  { stat: "9",     label: "Live Features" },
+  { stat: "100%",  label: "Autonomous" },
+];
+
+const LOGOS = [
+  "OpenAI", "Google Cloud SQL", "PostgreSQL", "pgvector", "Redis",
+  "React", "Node.js", "Unified.to", "Google Sheets", "Playwright", "Express", "MongoDB",
 ];
 
 export default function LandingPage() {
@@ -49,7 +104,7 @@ export default function LandingPage() {
       <Hero />
       <Marquee />
       <BeforeAfter />
-      <SystemDeepDives />
+      <Features />
       <Metrics />
       <UseCases />
       <FAQ />
@@ -59,9 +114,9 @@ export default function LandingPage() {
   );
 }
 
+/* ── Nav ───────────────────────────────────────────────────── */
 function Nav() {
   const { dark, toggle } = useTheme();
-
   return (
     <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-6">
@@ -70,12 +125,11 @@ function Nav() {
           <span className="font-serif text-xl tracking-tight">Doott</span>
         </div>
         <nav className="hidden items-center gap-8 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground md:flex">
+          <a href="#features" className="transition hover:text-foreground">Features</a>
           <a href="#how" className="transition hover:text-foreground">How it works</a>
-          <a href="#agents" className="transition hover:text-foreground">Agents</a>
-          <Link to="/app" className="transition hover:text-foreground">Sign in</Link>
+          <Link to="/app" className="transition hover:text-foreground">Dashboard</Link>
         </nav>
         <div className="flex items-center gap-3">
-          {/* Dark / Light toggle */}
           <button
             onClick={toggle}
             aria-label="Toggle theme"
@@ -84,6 +138,12 @@ function Nav() {
           >
             {dark ? <Sun size={15} /> : <Moon size={15} />}
           </button>
+          <Link
+            to="/register"
+            className="inline-flex h-9 items-center border border-border bg-transparent px-4 font-mono text-[11px] uppercase tracking-[0.18em] text-foreground transition hover:bg-secondary mr-2"
+          >
+            Sign Up
+          </Link>
           <Link
             to="/app"
             className="inline-flex h-9 items-center rounded-none bg-primary px-4 font-mono text-[11px] uppercase tracking-[0.18em] text-primary-foreground transition hover:opacity-90"
@@ -105,6 +165,7 @@ function Mark() {
   );
 }
 
+/* ── Hero ──────────────────────────────────────────────────── */
 function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-border">
@@ -116,19 +177,18 @@ function Hero() {
             transition={{ duration: 0.5 }}
             className="eyebrow mb-6"
           >
-            ◆ Issue №01 — The Autonomous Data Workforce
+            ◆ The Complete AI-Powered Sales & Intelligence Platform
           </motion.p>
 
           <motion.h1
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.05 }}
-            className="display text-[44px] sm:text-[64px] md:text-[84px]"
+            className="display text-[44px] sm:text-[64px] md:text-[80px]"
           >
-            The first AI <br />
-            that doesn't just <em className="italic text-foreground/80">find</em> leads.
-            <br />
-            It <span className="italic">closes</span> them.
+            Find leads.<br />
+            Close deals.<br />
+            <em className="italic text-foreground/70">Automatically.</em>
           </motion.h1>
 
           <motion.p
@@ -137,9 +197,9 @@ function Hero() {
             transition={{ duration: 0.7, delay: 0.15 }}
             className="mt-8 max-w-xl text-lg leading-relaxed text-muted-foreground"
           >
-            Doott explores infinite web surfaces, normalizes complex data, runs the outreach,
-            and handles your entire top-of-funnel operations automatically. You wake up.
-            The pipeline is full. You didn't touch anything.
+            Doott is a unified platform combining a 2.4M+ contact database, AI-powered CRM,
+            smart email outreach, social media automation, and an RAG chatbot — all in one
+            beautifully orchestrated workspace.
           </motion.p>
 
           <motion.div
@@ -149,22 +209,47 @@ function Hero() {
             className="mt-10 flex flex-wrap items-center gap-4"
           >
             <Link
-              to="/app"
+              to="/register"
               className="inline-flex h-12 items-center px-6 border border-primary bg-primary font-mono text-[11px] uppercase tracking-[0.2em] text-primary-foreground transition hover:opacity-90"
             >
-              Access Dashboard →
+              Get Started Free →
             </Link>
             <a
-              href="#how"
+              href="#features"
               className="inline-flex h-12 items-center border border-border bg-transparent px-6 font-mono text-[11px] uppercase tracking-[0.2em] text-foreground transition hover:bg-secondary"
             >
-              See the pipeline
+              Explore features
             </a>
           </motion.div>
 
-          <div className="mt-10 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+          {/* Feature pills */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="mt-10 flex flex-wrap gap-2"
+          >
+            {[
+              { icon: Users2,   label: "2.4M People" },
+              { icon: Building2,label: "Companies DB" },
+              { icon: Brain,    label: "AI Chatbot" },
+              { icon: GitBranch,label: "CRM Pipeline" },
+              { icon: Send,     label: "Smart Outreach" },
+              { icon: Globe,    label: "Social Media" },
+            ].map(({ icon: Icon, label }) => (
+              <span
+                key={label}
+                className="flex items-center gap-1.5 border border-border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground"
+              >
+                <Icon size={10} />
+                {label}
+              </span>
+            ))}
+          </motion.div>
+
+          <div className="mt-8 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             <span className="h-1.5 w-1.5 rounded-full bg-foreground" />
-            Core systems active · Auto-sync enabled
+            9 live systems · Cloud SQL + MongoDB + Redis · Multi-tenant
           </div>
         </div>
       </div>
@@ -172,11 +257,12 @@ function Hero() {
   );
 }
 
+/* ── Marquee ───────────────────────────────────────────────── */
 function Marquee() {
   return (
     <section className="overflow-hidden border-b border-border bg-secondary py-5">
       <div className="flex w-max marquee-track gap-12 whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground opacity-60">
-        {[...logos, ...logos].map((l, i) => (
+        {[...LOGOS, ...LOGOS].map((l, i) => (
           <span key={i} className="flex items-center gap-12">
             {l}
             <span className="opacity-30">/</span>
@@ -187,19 +273,21 @@ function Marquee() {
   );
 }
 
+/* ── Before / After ────────────────────────────────────────── */
 function BeforeAfter() {
   return (
     <section id="how" className="border-b border-border">
       <div className="mx-auto grid max-w-6xl grid-cols-1 md:grid-cols-2">
         <div className="border-b border-border p-10 md:border-b-0 md:border-r md:p-14">
           <p className="eyebrow mb-6">Before Doott</p>
-          <h3 className="display mb-6 text-3xl md:text-4xl">A list of names. <br /> A wall of work.</h3>
+          <h3 className="display mb-6 text-3xl md:text-4xl">Scattered tools.<br /> Endless tabs.</h3>
           <ul className="space-y-4 text-muted-foreground">
             {[
-              "Hours of manual research per lead",
-              "Generic tools that cap out at 100 searches",
-              "Siloed spreadsheets that drift out of sync",
-              "You miss the buying window",
+              "Separate tools for data, CRM, email, and social",
+              "No contact data — buying lists from shady vendors",
+              "Generic email templates that get ignored",
+              "Manual LinkedIn outreach that takes hours",
+              "No visibility into what's working",
             ].map((t) => (
               <li key={t} className="flex gap-3">
                 <span className="mt-2 h-px w-4 shrink-0 bg-border" />
@@ -210,17 +298,17 @@ function BeforeAfter() {
         </div>
         <div className="bg-secondary p-10 md:p-14">
           <p className="eyebrow mb-6">With Doott</p>
-          <h3 className="display mb-6 text-3xl md:text-4xl">Total market. <br /> Perfect clarity.</h3>
+          <h3 className="display mb-6 text-3xl md:text-4xl">One platform.<br /> Total control.</h3>
           <ul className="space-y-4 text-foreground">
             {[
-              "Deep scraping across infinite web endpoints",
-              "Ideal Customer Profile intelligence grading",
-              "Continuous Google Sheets synchronization 24/7",
-              "Autonomous outreach to top-tier verified leads",
-              "Smart Market Map — visualize 742k+ US businesses by state",
-              "AI Ideal Customer Profiler — plain-English → perfect leads",
-              "Market Intelligence Dashboard — instant industry reports",
-              "One-click Campaign Builder — search → select → launch",
+              "2.4M+ people + companies in your database instantly",
+              "Filter by email or phone — only contact the reachable",
+              "AI-personalized outreach emails that convert",
+              "CRM pipeline to track every deal from lead to close",
+              "Social media posts generated and published automatically",
+              "RAG chatbot trained on your organization's knowledge",
+              "Market intelligence reports in seconds",
+              "All from a single beautiful dashboard",
             ].map((t) => (
               <li key={t} className="flex gap-3">
                 <span className="mt-2 h-px w-4 shrink-0 bg-foreground" />
@@ -234,146 +322,18 @@ function BeforeAfter() {
   );
 }
 
-function Pipeline() {
+/* ── Features (System Deep Dives) ─────────────────────────── */
+function Features() {
   return (
-    <section id="agents" className="border-b border-border bg-background">
-      <div className="mx-auto max-w-6xl px-6 py-24 md:py-32">
-        <div className="mb-16 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="eyebrow mb-4">The Pipeline</p>
-            <h2 className="display max-w-2xl text-4xl md:text-6xl">
-              Five systems.<br />One engine.
-            </h2>
-          </div>
-          <p className="max-w-sm text-muted-foreground">
-            Each stage is an isolated agent — with its own tools, memory, and 
-            execution protocols. They pass data forward with relentless precision.
-          </p>
-        </div>
-
-        <div className="border-t border-border">
-          {agents.map((a) => (
-            <article
-              key={a.n}
-              className="group grid grid-cols-1 gap-6 border-b border-border py-10 md:grid-cols-12 md:gap-10"
-            >
-              <div className="md:col-span-2">
-                <span className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground">
-                  {a.n}
-                </span>
-              </div>
-              <div className="md:col-span-5">
-                <h3 className="font-serif text-3xl tracking-tight md:text-4xl">{a.name}</h3>
-              </div>
-              <div className="md:col-span-5">
-                <p className="text-foreground tracking-wide">{a.desc}</p>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {a.tools.map((t) => (
-                    <span
-                      key={t}
-                      className="rounded-none border border-border px-3 py-1 font-mono text-[9px] uppercase tracking-[0.15em] text-muted-foreground"
-                    >
-                      {t}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-const deepDives = [
-  {
-    n: "01",
-    title: "Extraction via Headless Subsystems",
-    subtitle: "The raw ingest",
-    p1: "Using Playwright nodes and distributed proxies, the engine searches deeply within targeted domains. It extracts hidden DOM nodes, intercepts network requests, and scrapes localized mapping data.",
-    p2: "Unlike standard scrapers that hit bot protections, the Extraction phase simulates human browsing to bypass modern WAFs and unearth technical constraints, installed tech stacks, and team sizes.",
-    icon: Network
-  },
-  {
-    n: "02",
-    title: "NLP Enrichment & Normalization",
-    subtitle: "Contextualizing the noise",
-    p1: "Raw HTML and unstructured text are meaningless without context. The Enrichment module cross-references scraped names against role matrices to determine precise decision-making hierarchies within the target.",
-    p2: "All findings are funneled through a classification pipeline which normalizes the output into pure JSON structures, scrubbing invalid contact information and formatting names flawlessly for standard outreach.",
-    icon: Database
-  },
-  {
-    n: "03",
-    title: "Dynamic ICP Scoring Framework",
-    subtitle: "Mathematical qualification",
-    p1: "Stop guessing which leads are worth your time. The engine automatically evaluates every normalized entity against a dynamic Ideal Customer Profile (ICP) blueprint that you define.",
-    p2: "It assigns a composite score between 0 to 100 based on firmographic fit, technical compatibility, and budget signals. Low-scoring leads are actively suppressed from the outreach queue.",
-    icon: Target
-  },
-  {
-    n: "04",
-    title: "Autonomous SDR & Generation",
-    subtitle: "The human element",
-    p1: "For every highly qualified target, a localized sub-agent spins up to construct a comprehensive intelligence dossier containing recent company news, pain points, and personalized conversation starters.",
-    p2: "It seamlessly drafts an individualized first-touch email using this dossier. By eliminating generic templates, the SDR engine secures engagement rates drastically higher than standard automation.",
-    icon: Bot
-  },
-  {
-    n: "05",
-    title: "24/7 Pipeline Operations",
-    subtitle: "Relentless execution",
-    p1: "Doott is designed to run asynchronously in the background. Built on Node.js crons and FastAPI scaling, the entire pipeline processes thousands of records autonomously without human intervention.",
-    p2: "Every generated metric, drafted email, and scraped domain is continuously synchronized back to structured Google Sheets, providing absolute transparency into the engine's real-time internal state.",
-    icon: RotateCcw
-  },
-  {
-    n: "06",
-    title: "Smart Market Map",
-    subtitle: "Geographic intelligence",
-    p1: "Powered by 742,000+ indexed US businesses, the Smart Market Map renders a real-time state-by-state density heatmap for any industry you specify. Filter by category, instantly see where your market is concentrated.",
-    p2: "Built without any external mapping libraries — pure React and CSS grid — the tile map loads instantly and requires zero API keys. Hover any state to see exact business counts and top cities at a glance.",
-    icon: Map
-  },
-  {
-    n: "07",
-    title: "AI Ideal Customer Profiler",
-    subtitle: "Plain English → perfect leads",
-    p1: "Describe your ideal customer in plain English — industry, location, company size, contact requirements — and GPT-4o extracts a structured filter profile and optimized semantic search query automatically.",
-    p2: "The profiler then runs a pgvector cosine similarity search across the entire database, ranks matches by relevance, and generates a one-sentence AI explanation for each top match, so you know exactly why a lead qualifies.",
-    icon: Brain
-  },
-  {
-    n: "08",
-    title: "Market Intelligence Dashboard",
-    subtitle: "Instant industry analyst reports",
-    p1: "Enter any business category and state — get back a full market intelligence report in seconds. Total business count, phone/email/website/LinkedIn coverage rates, top states and cities, revenue ranges, and team size distributions.",
-    p2: "Animated coverage rings and horizontal bar charts make the data instantly scannable. A plain-language AI snapshot summarizes the market in two sentences, giving you the insight without the noise.",
-    icon: BarChart3
-  },
-  {
-    n: "09",
-    title: "One-Click Campaign Builder",
-    subtitle: "Search → select → launch",
-    p1: "Browse or semantically search the in-built database, check the checkbox next to any businesses you want to target, and hit Launch Campaign. Doott packages them into a structured outreach campaign in your CRM — no CSV exports, no copy-paste.",
-    p2: "The campaign is created as a draft in Smart Outreach with the leads pre-populated, initial contact and follow-up sequences pre-configured, and only contactable leads (those with an email or phone) included.",
-    icon: Send
-  },
-];
-
-function SystemDeepDives() {
-  return (
-    <div className="bg-background">
-      {deepDives.map((d, i) => (
+    <div id="features" className="bg-background">
+      {FEATURES.map((d, i) => (
         <section key={d.n} className={`border-b border-border ${i % 2 !== 0 ? "bg-secondary/30" : ""}`}>
           <div className="mx-auto grid max-w-6xl grid-cols-1 md:grid-cols-2">
-            
             {/* Text Side */}
             <div className={`p-10 md:p-20 flex flex-col justify-center ${i % 2 !== 0 ? "md:order-2" : "md:border-r border-border"}`}>
               <span className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground mb-4">SYSTEM {d.n}</span>
               <h3 className="font-serif text-3xl md:text-4xl leading-tight mb-2 tracking-tight">{d.title}</h3>
               <p className="eyebrow mb-8 text-foreground opacity-60">{d.subtitle}</p>
-              
               <div className="space-y-6 text-muted-foreground text-sm leading-relaxed">
                 <p>{d.p1}</p>
                 <p>{d.p2}</p>
@@ -382,24 +342,19 @@ function SystemDeepDives() {
 
             {/* Graphic Side */}
             <div className={`p-10 md:p-20 flex items-center justify-center ${i % 2 !== 0 ? "md:order-1 md:border-r border-border" : ""}`}>
-              <div className="w-full max-w-[280px] aspect-square rounded-none border border-border bg-secondary/20 flex flex-col items-center justify-center relative overflow-hidden group-hover:bg-secondary/50 transition-colors duration-500">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.04)_1px,transparent_1px)] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:16px_16px]"></div>
+              <div className="w-full max-w-[280px] aspect-square rounded-none border border-border bg-secondary/20 flex flex-col items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.04)_1px,transparent_1px)] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:16px_16px]" />
                 <d.icon size={80} strokeWidth={0.5} className="text-foreground relative z-10" />
-                
-                {/* Abstract decorative lines */}
-                <div className="absolute top-0 left-1/2 w-px h-16 bg-border"></div>
-                <div className="absolute bottom-0 left-1/2 w-px h-16 bg-border"></div>
-                <div className="absolute left-0 top-1/2 w-16 h-px bg-border"></div>
-                <div className="absolute right-0 top-1/2 w-16 h-px bg-border"></div>
-                
-                {/* Corner dots */}
-                <div className="absolute top-2 left-2 w-1 h-1 bg-border rounded-full"></div>
-                <div className="absolute top-2 right-2 w-1 h-1 bg-border rounded-full"></div>
-                <div className="absolute bottom-2 left-2 w-1 h-1 bg-border rounded-full"></div>
-                <div className="absolute bottom-2 right-2 w-1 h-1 bg-border rounded-full"></div>
+                <div className="absolute top-0 left-1/2 w-px h-16 bg-border" />
+                <div className="absolute bottom-0 left-1/2 w-px h-16 bg-border" />
+                <div className="absolute left-0 top-1/2 w-16 h-px bg-border" />
+                <div className="absolute right-0 top-1/2 w-16 h-px bg-border" />
+                <div className="absolute top-2 left-2 w-1 h-1 bg-border rounded-full" />
+                <div className="absolute top-2 right-2 w-1 h-1 bg-border rounded-full" />
+                <div className="absolute bottom-2 left-2 w-1 h-1 bg-border rounded-full" />
+                <div className="absolute bottom-2 right-2 w-1 h-1 bg-border rounded-full" />
               </div>
             </div>
-
           </div>
         </section>
       ))}
@@ -407,17 +362,13 @@ function SystemDeepDives() {
   );
 }
 
+/* ── Metrics ───────────────────────────────────────────────── */
 function Metrics() {
   return (
     <section className="border-b border-border bg-background">
       <div className="mx-auto max-w-6xl px-6 py-20 md:py-28">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12 md:gap-4 divide-y md:divide-y-0 md:divide-x divide-border">
-          {[
-            { stat: "2.4M+", label: "Entities Indexed" },
-            { stat: "99.8%", label: "Data Accuracy" },
-            { stat: "0.8s", label: "Query Latency" },
-            { stat: "100%", label: "Autonomous" },
-          ].map((m, i) => (
+          {METRICS.map((m, i) => (
             <div key={i} className={`flex flex-col items-center justify-center text-center px-4 ${i > 1 ? "pt-12 md:pt-0" : ""}`}>
               <span className="font-serif text-4xl md:text-5xl lg:text-6xl text-foreground mb-3">{m.stat}</span>
               <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{m.label}</span>
@@ -429,33 +380,34 @@ function Metrics() {
   );
 }
 
+/* ── Use Cases ─────────────────────────────────────────────── */
 function UseCases() {
   const cases = [
     {
-      title: "Agency Recruiters",
-      desc: "Stop hunting for hidden contact info. Let Doott automatically map out the engineering org chart of every startup that just raised a Series A.",
+      title: "Sales Teams",
+      desc: "Search 2.4M+ people, filter to those with verified emails, and launch a personalized campaign in minutes. Track every deal in the built-in CRM pipeline. No spreadsheets needed.",
     },
     {
-      title: "Software Sales",
-      desc: "Instantly know when a company installs a competitor's SDK. Doott crawls public repositories and DOMs to find exact capability signals.",
+      title: "Marketing Agencies",
+      desc: "Generate on-brand social media content for multiple clients simultaneously. Schedule posts across LinkedIn, Instagram, X, and Facebook with a built-in approval workflow.",
     },
     {
-      title: "M&A Intelligence",
-      desc: "Build massive market landscapes overnight. Doott scrapes and categorizes thousands of small businesses, finding exact employee headcounts and mapping localized data.",
-    }
+      title: "Founders & SDRs",
+      desc: "Use the AI Ideal Customer Profiler to define your ICP in plain English. Get back ranked leads with AI explanations for why each one fits. One click to add them to outreach.",
+    },
   ];
 
   return (
     <section className="border-b border-border bg-secondary/30">
       <div className="mx-auto max-w-6xl px-6 py-24 md:py-32">
         <div className="mb-16 text-center md:text-left">
-          <p className="eyebrow mb-4 opacity-60">Deployment Architecture</p>
-          <h2 className="display text-3xl md:text-4xl">Built for scale.</h2>
+          <p className="eyebrow mb-4 opacity-60">Who uses Doott</p>
+          <h2 className="display text-3xl md:text-4xl">Built for people who move fast.</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {cases.map((c, i) => (
             <div key={i} className="border border-border bg-background p-10 flex flex-col transition-colors hover:bg-secondary/20">
-              <div className="mb-6 h-10 w-10 border border-border flex items-center justify-center font-mono text-[10px] text-muted-foreground tracking-widest">{`0${i+1}`}</div>
+              <div className="mb-6 h-10 w-10 border border-border flex items-center justify-center font-mono text-[10px] text-muted-foreground tracking-widest">{`0${i + 1}`}</div>
               <h3 className="font-serif text-2xl mb-4 text-foreground">{c.title}</h3>
               <p className="text-muted-foreground text-sm leading-relaxed flex-1">{c.desc}</p>
             </div>
@@ -466,40 +418,42 @@ function UseCases() {
   );
 }
 
+/* ── FAQ ───────────────────────────────────────────────────── */
 function FAQ() {
   return (
     <section className="border-b border-border bg-background">
       <div className="mx-auto max-w-4xl px-6 py-24 md:py-32">
         <div className="text-center mb-16">
-          <p className="eyebrow mb-4 opacity-60">Technical Documentation</p>
-          <h2 className="display text-3xl md:text-4xl">System Architecture & FAQ.</h2>
+          <p className="eyebrow mb-4 opacity-60">Common Questions</p>
+          <h2 className="display text-3xl md:text-4xl">FAQ.</h2>
         </div>
-        
         <div className="space-y-4">
           {[
             {
-              q: "How does the extraction bypass standard Web Application Firewalls (WAF)?",
-              a: "Doott doesn't use standard GET requests for heavy collection. We orchestrate clusters of headless Chromium instances routed through localized residential proxies, fully mirroring organic user interactions spanning mouse jitters to dynamic scroll events."
+              q: "Where does the people and companies data come from?",
+              a: "The data is sourced from public web scraping, open datasets, and enrichment pipelines that run continuously. It's stored in Cloud SQL PostgreSQL (Google Cloud) and kept current via automated refresh cycles. You can also upload your own CSVs to supplement it.",
             },
             {
-              q: "Is the data synchronized locally or to a cloud provider?",
-              a: "Both. The initial extraction passes through our persistent Node microservices for NLP normalization. Once a lead is structured and scored against your ICP, it is actively synchronized directly to your connected Google Sheets via secure service accounts."
+              q: "Is the CRM integrated with the contact database?",
+              a: "Yes — deeply. When you select leads from the People or Companies database, you can add them directly to a CRM campaign or create a deal. The Smart Outreach module shares the same contact records with the CRM, so you never duplicate data.",
             },
             {
-              q: "Can the AI SDR write emails that don't sound robotic?",
-              a: "Yes. The AI does not use rigid templates. It aggregates the prospect's recent news, technical stack, and direct pain points to construct a highly personalized paragraph hook. It writes with strict grammatical constraints, explicitly avoiding overused sales buzzwords."
-            }
+              q: "How does the AI Chatbot work for my organization?",
+              a: "You upload documents (PDFs, text files) to your organization's private knowledge base. The system generates embeddings using OpenAI and stores them in pgvector. When you ask a question, the chatbot retrieves the most relevant chunks and generates an answer that cites its sources. Each organization's data is fully isolated.",
+            },
+            {
+              q: "Can multiple team members use the same account?",
+              a: "Yes — Doott is multi-tenant by design. Each organization can have multiple members. Data, CRM records, campaigns, chatbot knowledge bases, and social connections are all scoped to the organization, not the individual user.",
+            },
           ].map((faq, i) => (
             <details key={i} className="group border border-border bg-secondary/20 p-6 [&_summary::-webkit-details-marker]:hidden">
               <summary className="flex cursor-pointer items-center justify-between font-serif text-lg text-foreground">
                 <span className="pr-6">{faq.q}</span>
                 <span className="shrink-0 transition duration-300 group-open:-rotate-45">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                 </span>
               </summary>
-              <p className="mt-4 text-muted-foreground leading-relaxed text-sm">
-                {faq.a}
-              </p>
+              <p className="mt-4 text-muted-foreground leading-relaxed text-sm">{faq.a}</p>
             </details>
           ))}
         </div>
@@ -508,27 +462,38 @@ function FAQ() {
   );
 }
 
+/* ── Final CTA ─────────────────────────────────────────────── */
 function FinalCTA() {
   return (
     <section className="border-b border-border bg-foreground text-background">
       <div className="mx-auto max-w-6xl px-6 py-24 md:py-32 flex flex-col items-center text-center">
         <h2 className="font-serif font-bold tracking-tight text-background text-4xl md:text-6xl lg:text-7xl mb-8 max-w-3xl leading-tight">
-          Stop digging for leads.<br/>Start closing them.
+          Your entire GTM stack.<br />One platform.
         </h2>
         <p className="text-background/70 mb-10 max-w-xl font-serif text-lg">
-          Deploy the autonomous data workforce configured entirely for your exact pipeline needs.
+          People database, companies, CRM, outreach, social media, and AI — all talking to each other.
+          Start for free. No credit card required.
         </p>
-        <Link
-          to="/app"
-          className="inline-flex h-12 items-center px-10 border border-background bg-background font-mono text-[11px] uppercase tracking-[0.2em] text-foreground transition hover:bg-transparent hover:text-background"
-        >
-          Initialize Pipeline →
-        </Link>
+        <div className="flex flex-wrap gap-4 justify-center">
+          <Link
+            to="/register"
+            className="inline-flex h-12 items-center px-10 border border-background bg-background font-mono text-[11px] uppercase tracking-[0.2em] text-foreground transition hover:bg-transparent hover:text-background"
+          >
+            Create Free Account →
+          </Link>
+          <Link
+            to="/login"
+            className="inline-flex h-12 items-center px-10 border border-background/40 bg-transparent font-mono text-[11px] uppercase tracking-[0.2em] text-background/80 transition hover:border-background hover:text-background"
+          >
+            Sign In
+          </Link>
+        </div>
       </div>
     </section>
   );
 }
 
+/* ── Footer ────────────────────────────────────────────────── */
 function Footer() {
   return (
     <footer className="bg-background">
@@ -537,8 +502,13 @@ function Footer() {
           <Mark />
           <span className="font-serif text-lg">Doott</span>
         </div>
+        <div className="flex items-center gap-6 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+          <Link to="/login" className="hover:text-foreground transition">Sign In</Link>
+          <Link to="/register" className="hover:text-foreground transition">Register</Link>
+          <Link to="/app/docs" className="hover:text-foreground transition">Docs</Link>
+        </div>
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-          © {new Date().getFullYear()} · The Autonomous Pipeline
+          © {new Date().getFullYear()} Doott · All systems operational
         </p>
       </div>
     </footer>

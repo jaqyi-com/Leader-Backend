@@ -263,3 +263,20 @@ export const fcGetDatabase = (params = {}) => lgApi.get("/api/final-companies", 
 export const fcGetStats    = ()             => lgApi.get("/api/final-companies/stats");
 export const fcGetColumns  = ()             => lgApi.get("/api/final-companies/columns");
 export const fcRefresh     = ()             => lgApi.post("/api/final-companies/refresh");
+
+// ============================================================
+// FINAL PEOPLE — EMAIL (final.people WHERE email IS NOT NULL)
+// ============================================================
+export const fpeGetDatabase = (params = {}) => lgApi.get("/api/final-people-email", { params });
+export const fpeGetStats    = ()             => lgApi.get("/api/final-people-email/stats");
+export const fpeGetColumns  = ()             => lgApi.get("/api/final-people-email/columns");
+export const fpeRefresh     = ()             => lgApi.post("/api/final-people-email/refresh");
+
+// ============================================================
+// FINAL PEOPLE — NUMBER (final.people WHERE phone IS NOT NULL)
+// ============================================================
+export const fpnGetDatabase = (params = {}) => lgApi.get("/api/final-people-number", { params });
+export const fpnGetStats    = ()             => lgApi.get("/api/final-people-number/stats");
+export const fpnGetColumns  = ()             => lgApi.get("/api/final-people-number/columns");
+export const fpnRefresh     = ()             => lgApi.post("/api/final-people-number/refresh");
+
