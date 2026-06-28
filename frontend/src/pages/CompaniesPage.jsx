@@ -18,7 +18,7 @@ export default function CompaniesPage() {
   const [showF,      setShowF]      = useState(false);
   const [page,       setPage]       = useState(1);
   const [limit,      setLimit]      = useState(50);
-  const [sortBy,     setSortBy]     = useState("");
+  const [sortBy,     setSortBy]     = useState("city");
   const [sortDir,    setSortDir]    = useState("asc");
   const [search,     setSearch]     = useState("");
 
@@ -32,8 +32,8 @@ export default function CompaniesPage() {
           label: k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
         }));
         setCols(columns);
-        if (!sortBy && data.columns.length > 0) {
-          setSortBy(data.columns[0]);
+        if (!sortBy) {
+          setSortBy("city");
         }
       }
     } catch {
@@ -60,7 +60,7 @@ export default function CompaniesPage() {
   }, [page, limit, sortBy, sortDir, search]);
 
   useEffect(() => { loadColumns(); }, [loadColumns]);
-  useEffect(() => { if (sortBy) load(); }, [load, sortBy]);
+  useEffect(() => { load(); }, [load]);
   useEffect(() => {
     fcGetStats().then(({ data }) => setStats(data)).catch(() => {});
   }, []);
