@@ -9,18 +9,18 @@ import { fpGetDatabase, fpGetStats, fpGetColumns, fpRefresh } from "../api";
 import toast from "react-hot-toast";
 
 export default function PeoplePage() {
-  const [records,    setRecords]    = useState([]);
-  const [total,      setTotal]      = useState(0);
-  const [stats,      setStats]      = useState(null);
-  const [cols,       setCols]       = useState([]);
-  const [loading,    setLoading]    = useState(true);
+  const [records, setRecords] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState(null);
+  const [cols, setCols] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showF,      setShowF]      = useState(false);
-  const [page,       setPage]       = useState(1);
-  const [limit,      setLimit]      = useState(50);
-  const [sortBy,     setSortBy]     = useState("");
-  const [sortDir,    setSortDir]    = useState("asc");
-  const [search,     setSearch]     = useState("");
+  const [showF, setShowF] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [sortBy, setSortBy] = useState("");
+  const [sortDir, setSortDir] = useState("asc");
+  const [search, setSearch] = useState("");
 
   // ── Column discovery (only sets column headers, never triggers re-fetch) ────
   const loadColumns = useCallback(async () => {
@@ -60,7 +60,7 @@ export default function PeoplePage() {
   useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    fpGetStats().then(({ data }) => setStats(data)).catch(() => {});
+    fpGetStats().then(({ data }) => setStats(data)).catch(() => { });
   }, []);
 
   const handleSort = col => {
@@ -89,7 +89,7 @@ export default function PeoplePage() {
     if (!cols.length || !records.length) return;
     const hdrs = cols.map(c => c.label);
     const rows = records.map(r => cols.map(c => r[c.key] || ""));
-    const csv  = [hdrs, ...rows]
+    const csv = [hdrs, ...rows]
       .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const a = document.createElement("a");
@@ -98,9 +98,9 @@ export default function PeoplePage() {
     a.click();
   };
 
-  const pages    = Math.ceil(total / limit);
+  const pages = Math.ceil(total / limit);
   const statRows = stats ? [
-    { label: "Total People", val: stats.total, icon: Users,    color: "#E23744" },
+    { label: "Total People", val: stats.total, icon: Users, color: "#E23744" },
   ] : [];
 
   // Hide columns where EVERY visible row is empty — avoids showing all-dash columns
@@ -172,7 +172,7 @@ export default function PeoplePage() {
             People
           </h2>
           <p className="text-sm text-[var(--text-3)] mt-0.5">
-            {total.toLocaleString()} records · Live Cloud SQL ·{" "}
+            {total.toLocaleString()} records {" "}
             <span className="font-mono text-[11px] opacity-60">final_people</span>
           </p>
         </div>

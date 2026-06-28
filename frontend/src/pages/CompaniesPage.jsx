@@ -9,18 +9,18 @@ import { fcGetDatabase, fcGetStats, fcGetColumns, fcRefresh } from "../api";
 import toast from "react-hot-toast";
 
 export default function CompaniesPage() {
-  const [records,    setRecords]    = useState([]);
-  const [total,      setTotal]      = useState(0);
-  const [stats,      setStats]      = useState(null);
-  const [cols,       setCols]       = useState([]);
-  const [loading,    setLoading]    = useState(true);
+  const [records, setRecords] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState(null);
+  const [cols, setCols] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showF,      setShowF]      = useState(false);
-  const [page,       setPage]       = useState(1);
-  const [limit,      setLimit]      = useState(50);
-  const [sortBy,     setSortBy]     = useState("");
-  const [sortDir,    setSortDir]    = useState("asc");
-  const [search,     setSearch]     = useState("");
+  const [showF, setShowF] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [sortBy, setSortBy] = useState("");
+  const [sortDir, setSortDir] = useState("asc");
+  const [search, setSearch] = useState("");
 
   // ── Column discovery (only sets column headers, never triggers re-fetch) ────
   const loadColumns = useCallback(async () => {
@@ -60,7 +60,7 @@ export default function CompaniesPage() {
   useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    fcGetStats().then(({ data }) => setStats(data)).catch(() => {});
+    fcGetStats().then(({ data }) => setStats(data)).catch(() => { });
   }, []);
 
   const handleSort = col => {
@@ -89,7 +89,7 @@ export default function CompaniesPage() {
     if (!cols.length || !records.length) return;
     const hdrs = cols.map(c => c.label);
     const rows = records.map(r => cols.map(c => r[c.key] || ""));
-    const csv  = [hdrs, ...rows]
+    const csv = [hdrs, ...rows]
       .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const a = document.createElement("a");
@@ -98,7 +98,7 @@ export default function CompaniesPage() {
     a.click();
   };
 
-  const pages    = Math.ceil(total / limit);
+  const pages = Math.ceil(total / limit);
   const statRows = stats ? [
     { label: "Total Companies", val: stats.total, icon: Building2, color: "#22d3ee" },
   ] : [];
@@ -173,7 +173,7 @@ export default function CompaniesPage() {
             Companies
           </h2>
           <p className="text-sm text-[var(--text-3)] mt-0.5">
-            {total.toLocaleString()} records · Live Cloud SQL ·{" "}
+            {total.toLocaleString()} records {" "}
             <span className="font-mono text-[11px] opacity-60">final_companies</span>
           </p>
         </div>

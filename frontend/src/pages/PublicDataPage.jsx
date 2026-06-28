@@ -10,66 +10,66 @@ import toast from "react-hot-toast";
 
 // ── Columns matching actual DB schema ──────────────────────
 const PRIORITY_COLS = [
-  { key: "first_name",   label: "First Name"  },
-  { key: "middle_name",  label: "Middle"      },
-  { key: "last_name",    label: "Last Name"   },
-  { key: "email",        label: "Email"       },
-  { key: "phone",        label: "Phone"       },
-  { key: "city",         label: "City"        },
-  { key: "state",        label: "State"       },
-  { key: "zip",          label: "ZIP"         },
-  { key: "address",      label: "Address"     },
-  { key: "company",      label: "Company"     },
-  { key: "title",        label: "Title"       },
-  { key: "industry",     label: "Industry"    },
-  { key: "website",      label: "Website"     },
+  { key: "first_name", label: "First Name" },
+  { key: "middle_name", label: "Middle" },
+  { key: "last_name", label: "Last Name" },
+  { key: "email", label: "Email" },
+  { key: "phone", label: "Phone" },
+  { key: "city", label: "City" },
+  { key: "state", label: "State" },
+  { key: "zip", label: "ZIP" },
+  { key: "address", label: "Address" },
+  { key: "company", label: "Company" },
+  { key: "title", label: "Title" },
+  { key: "industry", label: "Industry" },
+  { key: "website", label: "Website" },
 ];
 
 const BLANK = {
-  search:    "",
-  name:      "",
-  email:     "",
-  phone:     "",
-  city:      "",
-  state:     "",
-  zip:       "",
-  company:   "",
+  search: "",
+  name: "",
+  email: "",
+  phone: "",
+  city: "",
+  state: "",
+  zip: "",
+  company: "",
   has_email: "",
   has_phone: "",
 };
 
 const US_STATES = [
-  "", "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
-  "KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
-  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT",
-  "VA","WA","WV","WI","WY","DC",
+  "", "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "ID", "IL", "IN", "IA",
+  "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+  "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT",
+  "VA", "WA", "WV", "WI", "WY", "DC",
 ];
 
 const STATE_NAMES = {
-  AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",
-  CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",
-  IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",
-  ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",
-  MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",
-  NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",
-  ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",
-  RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",
-  UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",
-  WI:"Wisconsin",WY:"Wyoming",DC:"Washington DC",
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California", CO: "Colorado",
+  CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia", HI: "Hawaii", ID: "Idaho",
+  IL: "Illinois", IN: "Indiana", IA: "Iowa", KS: "Kansas", KY: "Kentucky", LA: "Louisiana",
+  ME: "Maine", MD: "Maryland", MA: "Massachusetts", MI: "Michigan", MN: "Minnesota",
+  MS: "Mississippi", MO: "Missouri", MT: "Montana", NE: "Nebraska", NV: "Nevada",
+  NH: "New Hampshire", NJ: "New Jersey", NM: "New Mexico", NY: "New York", NC: "North Carolina",
+  ND: "North Dakota", OH: "Ohio", OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania",
+  RI: "Rhode Island", SC: "South Carolina", SD: "South Dakota", TN: "Tennessee", TX: "Texas",
+  UT: "Utah", VT: "Vermont", VA: "Virginia", WA: "Washington", WV: "West Virginia",
+  WI: "Wisconsin", WY: "Wyoming", DC: "Washington DC",
 };
 
 export default function PublicDataPage() {
-  const [records,    setRecords]    = useState([]);
-  const [total,      setTotal]      = useState(0);
-  const [stats,      setStats]      = useState(null);
-  const [loading,    setLoading]    = useState(true);
+  const [records, setRecords] = useState([]);
+  const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showF,      setShowF]      = useState(false);
-  const [page,       setPage]       = useState(1);
-  const [limit,      setLimit]      = useState(50);
-  const [sortBy,     setSortBy]     = useState("last_name");
-  const [sortDir,    setSortDir]    = useState("asc");
-  const [filters,    setFilters]    = useState(BLANK);
+  const [showF, setShowF] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(50);
+  const [sortBy, setSortBy] = useState("last_name");
+  const [sortDir, setSortDir] = useState("asc");
+  const [filters, setFilters] = useState(BLANK);
 
   const setF = (k, v) => { setFilters(p => ({ ...p, [k]: v })); setPage(1); };
 
@@ -93,7 +93,7 @@ export default function PublicDataPage() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    pcGetStats().then(({ data }) => setStats(data)).catch(() => {});
+    pcGetStats().then(({ data }) => setStats(data)).catch(() => { });
   }, []);
 
   const handleSort = col => {
@@ -120,7 +120,7 @@ export default function PublicDataPage() {
   const exportCSV = () => {
     const hdrs = PRIORITY_COLS.map(c => c.label);
     const rows = records.map(r => PRIORITY_COLS.map(c => r[c.key] || ""));
-    const csv  = [hdrs, ...rows]
+    const csv = [hdrs, ...rows]
       .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const a = document.createElement("a");
@@ -129,12 +129,12 @@ export default function PublicDataPage() {
     a.click();
   };
 
-  const pages  = Math.ceil(total / limit);
-  const chips  = Object.entries(filters).filter(([, v]) => v);
+  const pages = Math.ceil(total / limit);
+  const chips = Object.entries(filters).filter(([, v]) => v);
   const statRows = stats ? [
-    { label: "Total Records", val: stats.total,      icon: Database, color: "#E23744" },
-    { label: "With Email",    val: stats.with_email,  icon: Mail,     color: "#10b981" },
-    { label: "With Phone",    val: stats.with_phone,  icon: Phone,    color: "#22d3ee" },
+    { label: "Total Records", val: stats.total, icon: Database, color: "#E23744" },
+    { label: "With Email", val: stats.with_email, icon: Mail, color: "#10b981" },
+    { label: "With Phone", val: stats.with_phone, icon: Phone, color: "#22d3ee" },
   ] : [];
 
   return (
@@ -148,7 +148,7 @@ export default function PublicDataPage() {
             Public Data — 82M USA Contacts
           </h2>
           <p className="text-sm text-[var(--text-3)] mt-0.5">
-            {total.toLocaleString()} records · Live Cloud SQL ·{" "}
+            {total.toLocaleString()} records {" "}
             <span className="font-mono text-[11px] opacity-60">usa_public_contacts_82m</span>
           </p>
         </div>
@@ -189,8 +189,8 @@ export default function PublicDataPage() {
         {chips.map(([k, v]) => (
           <span key={k} className="badge badge-purple text-[10px] flex items-center gap-1">
             {k === "has_email" ? (v === "true" ? "Has Email" : "No Email")
-             : k === "has_phone" ? (v === "true" ? "Has Phone" : "No Phone")
-             : `${k.replace(/_/g, " ")}: ${v}`}
+              : k === "has_phone" ? (v === "true" ? "Has Phone" : "No Phone")
+                : `${k.replace(/_/g, " ")}: ${v}`}
             <button onClick={() => setF(k, "")} className="hover:text-[var(--rose)] ml-0.5"><X size={9} /></button>
           </span>
         ))}
@@ -286,8 +286,8 @@ export default function PublicDataPage() {
                       <td key={c.key} className="px-3 py-2.5">
                         {val
                           ? <a href={`mailto:${val}`} className="flex items-center gap-1 text-[11px] text-blue-400 hover:underline max-w-[200px] truncate" title={val}>
-                              <Mail size={9} className="flex-shrink-0" />{val}
-                            </a>
+                            <Mail size={9} className="flex-shrink-0" />{val}
+                          </a>
                           : <span className="text-[var(--text-3)]">—</span>}
                       </td>
                     );
@@ -295,9 +295,9 @@ export default function PublicDataPage() {
                       <td key={c.key} className="px-3 py-2.5">
                         {val
                           ? <p className="flex items-center gap-1 text-[var(--text-2)] text-[11px]">
-                              <Phone size={9} className="text-green-400 flex-shrink-0" />
-                              <span className="truncate max-w-[140px]" title={val}>{val}</span>
-                            </p>
+                            <Phone size={9} className="text-green-400 flex-shrink-0" />
+                            <span className="truncate max-w-[140px]" title={val}>{val}</span>
+                          </p>
                           : <span className="text-[var(--text-3)]">—</span>}
                       </td>
                     );
@@ -311,9 +311,9 @@ export default function PublicDataPage() {
                       <td key={c.key} className="px-3 py-2.5">
                         {val
                           ? <a href={val.startsWith("http") ? val : `https://${val}`} target="_blank" rel="noreferrer"
-                               className="text-[var(--text-3)] hover:text-blue-400 flex items-center gap-1">
-                              <Globe size={10} />Visit
-                            </a>
+                            className="text-[var(--text-3)] hover:text-blue-400 flex items-center gap-1">
+                            <Globe size={10} />Visit
+                          </a>
                           : "—"}
                       </td>
                     );
@@ -321,9 +321,9 @@ export default function PublicDataPage() {
                       <td key={c.key} className="px-3 py-2.5">
                         {val
                           ? <span className="flex items-center gap-1 text-[var(--text-2)]">
-                              <Building2 size={9} className="text-purple-400 flex-shrink-0" />
-                              <span className="truncate max-w-[140px]" title={val}>{val}</span>
-                            </span>
+                            <Building2 size={9} className="text-purple-400 flex-shrink-0" />
+                            <span className="truncate max-w-[140px]" title={val}>{val}</span>
+                          </span>
                           : "—"}
                       </td>
                     );
