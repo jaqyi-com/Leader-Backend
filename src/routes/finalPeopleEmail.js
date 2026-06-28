@@ -66,7 +66,9 @@ async function getSchema() {
 /** Find the actual email column name in the table schema */
 async function getEmailCol(schema) {
   if (_emailColCache) return _emailColCache;
-  const emailCandidates = ["email", "email_address", "work_email", "personal_email", "contact_email"];
+  const emailCandidates = [
+    "emails", "email", "email_address", "work_email", "personal_email", "contact_email",
+  ];
   for (const col of emailCandidates) {
     if (schema.actualCols.includes(col)) {
       _emailColCache = col;
@@ -102,7 +104,7 @@ async function buildWhere({ search = "" }, schema) {
 
   // Base filter: must have email
   if (emailCol) {
-    conditions.push(`("${emailCol}" IS NOT NULL AND "${emailCol}" <> '')`);
+    conditions.push(`("${emailCol}" IS NOT NULL AND "${emailCol}"::text NOT IN ('', '[]', 'null'))`);
   }
 
   if (search) {
@@ -133,7 +135,7 @@ router.get("/health", async (req, res) => {
     let totalRecords = 0;
     try {
       const filter = emailCol
-        ? `WHERE "${emailCol}" IS NOT NULL AND "${emailCol}" <> ''`
+        ? `WHERE "${emailCol}" IS NOT NULL AND "${emailCol}"::text NOT IN ('', '[]', 'null')`
         : "";
       const cnt = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${filter}`);
       totalRecords = parseInt(cnt.rows[0].cnt, 10);
@@ -169,7 +171,7 @@ router.get("/stats", async (req, res) => {
     const schema   = await getSchema();
     const emailCol = await getEmailCol(schema);
     const filter   = emailCol
-      ? `WHERE "${emailCol}" IS NOT NULL AND "${emailCol}" <> ''`
+      ? `WHERE "${emailCol}" IS NOT NULL AND "${emailCol}"::text NOT IN ('', '[]', 'null')`
       : "";
 
     const totalRes = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${filter}`);

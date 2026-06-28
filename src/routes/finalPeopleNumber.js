@@ -67,7 +67,7 @@ async function getSchema() {
 async function getPhoneCol(schema) {
   if (_phoneColCache) return _phoneColCache;
   const phoneCandidates = [
-    "phone", "mobile", "phone_number", "mobile_number",
+    "phones", "phone", "mobile", "phone_number", "mobile_number",
     "contact", "telephone", "cell", "direct_phone", "work_phone",
   ];
   for (const col of phoneCandidates) {
@@ -107,7 +107,7 @@ async function buildWhere({ search = "" }, schema) {
 
   // Base filter: must have phone/mobile
   if (phoneCol) {
-    conditions.push(`("${phoneCol}" IS NOT NULL AND "${phoneCol}" <> '')`);
+    conditions.push(`("${phoneCol}" IS NOT NULL AND "${phoneCol}"::text NOT IN ('', '[]', 'null'))`);
   }
 
   if (search) {
@@ -138,7 +138,7 @@ router.get("/health", async (req, res) => {
     let totalRecords = 0;
     try {
       const filter = phoneCol
-        ? `WHERE "${phoneCol}" IS NOT NULL AND "${phoneCol}" <> ''`
+        ? `WHERE "${phoneCol}" IS NOT NULL AND "${phoneCol}"::text NOT IN ('', '[]', 'null')`
         : "";
       const cnt = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${filter}`);
       totalRecords = parseInt(cnt.rows[0].cnt, 10);
@@ -174,7 +174,7 @@ router.get("/stats", async (req, res) => {
     const schema   = await getSchema();
     const phoneCol = await getPhoneCol(schema);
     const filter   = phoneCol
-      ? `WHERE "${phoneCol}" IS NOT NULL AND "${phoneCol}" <> ''`
+      ? `WHERE "${phoneCol}" IS NOT NULL AND "${phoneCol}"::text NOT IN ('', '[]', 'null')`
       : "";
 
     const totalRes = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${filter}`);

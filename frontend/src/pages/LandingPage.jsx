@@ -3,98 +3,15 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   Sun, Moon,
-  Users2, Building2, Database, MessageSquare,
-  GitBranch, Send, Globe, Brain, BarChart3, Map,
-  Zap, Phone, Mail, Search, ChevronDown,
+  Users2, Building2, Mail, Phone,
+  Database, Search, Download, Filter,
+  CheckCircle, Zap, Globe, Brain,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 
-// ── Current live features ──────────────────────────────────
-const FEATURES = [
-  {
-    n: "01",
-    icon: Users2,
-    title: "People Database",
-    subtitle: "2.4M+ verified contacts",
-    p1: "Browse and search the entire final_people dataset — 2.4 million real people records stored in Cloud SQL PostgreSQL. Filter by email availability, phone availability, name, company, or any column in the table.",
-    p2: "Three dedicated views: All People, Email (has verified email), and Number (has phone number). Export any filtered slice to CSV with one click. Backed by Redis caching for sub-second page loads.",
-  },
-  {
-    n: "02",
-    icon: Building2,
-    title: "Companies Database",
-    subtitle: "Full firmographic data",
-    p1: "The companion to People — the final_companies table stores business-level records including names, industries, locations, website URLs, LinkedIn profiles, and technology signals.",
-    p2: "Fully sortable, paginated, and searchable across all columns. Smart cell rendering automatically detects URLs, emails, and phone numbers and renders them as interactive links.",
-  },
-  {
-    n: "03",
-    icon: Database,
-    title: "In-Build Database",
-    subtitle: "742k+ US businesses + AI search",
-    p1: "An internal database of 742,000+ indexed US businesses powered by pgvector. Features a Smart Market Map heatmap visualizing business density by state and industry, and an AI Ideal Customer Profiler.",
-    p2: "Describe your ideal customer in plain English — GPT-4o extracts a structured filter, runs a cosine similarity search, and explains each match. One-click Campaign Builder packages selected leads directly into your CRM.",
-  },
-  {
-    n: "04",
-    icon: Brain,
-    title: "AI Chatbot (RAG)",
-    subtitle: "Organization-wide knowledge base",
-    p1: "Upload PDFs, text files, or any documents to your organization's private knowledge base. The AI chatbot uses Retrieval-Augmented Generation to answer questions with streaming responses via Server-Sent Events.",
-    p2: "Each organization has an isolated knowledge space. Powered by OpenAI embeddings + pgvector similarity search. The chatbot cites sources, respects organizational boundaries, and streams answers in real-time.",
-  },
-  {
-    n: "05",
-    icon: GitBranch,
-    title: "CRM Pipeline",
-    subtitle: "Deals · Activities · Invoices",
-    p1: "A fully integrated CRM with kanban deal pipeline, contact management, activity tracking, and quotation builder. Drag deals between stages, log calls and meetings, and generate PDF-ready quotations.",
-    p2: "Includes an invoicing module with line items, tax calculations, and status tracking. All CRM data is multi-tenant — each organization sees only its own deals and contacts. Tightly integrated with Smart Outreach.",
-  },
-  {
-    n: "06",
-    icon: Send,
-    title: "Smart Outreach",
-    subtitle: "AI-personalized email campaigns",
-    p1: "Build targeted email campaigns directly from the database. Select leads, configure follow-up sequences, and launch. The AI reads each prospect's context and generates personalized first-touch emails.",
-    p2: "Full campaign management with open/reply tracking, duplicate prevention, and CRM sync. Powered by SMTP integration with configurable sending schedules and smart rate limiting to protect your domain reputation.",
-  },
-  {
-    n: "07",
-    icon: Globe,
-    title: "Social Media Automation",
-    subtitle: "LinkedIn · Instagram · X · Facebook",
-    p1: "Generate keyword-driven social media posts with GPT-4o and publish to multiple platforms simultaneously via Unified.to. An email-based approval workflow lets team leads review content before it goes live.",
-    p2: "Supports LinkedIn, Instagram, Facebook, and X (Twitter). OAuth connections are managed per-organization. Content generation takes a topic/keywords → draft post → human approval → auto-publish pipeline.",
-  },
-  {
-    n: "08",
-    icon: Map,
-    title: "Market Intelligence",
-    subtitle: "Heatmaps · ICP profiling · Reports",
-    p1: "Enter any business category and US state — get back a full market intelligence report: total count, email/phone/website/LinkedIn coverage rates, top cities, revenue ranges, and team size distributions.",
-    p2: "Animated coverage rings and bar charts make data immediately scannable. A plain-language AI summary gives you the insight in two sentences. The Smart Map renders state-by-state density without any external map APIs.",
-  },
-  {
-    n: "09",
-    icon: Search,
-    title: "5-Stage Pipeline Crawler",
-    subtitle: "Scrape · Enrich · Score · Outreach · Report",
-    p1: "The original Doott engine: a fully automated 5-stage pipeline that scrapes target domains using Playwright, enriches the data via NLP normalization, scores leads against your ICP blueprint, and drafts personalized emails.",
-    p2: "Built-in cron scheduler lets you configure each pipeline stage to run independently on any schedule. All results sync to Google Sheets. Built on Node.js with FastAPI-style architecture for horizontal scaling.",
-  },
-];
-
-const METRICS = [
-  { stat: "2.4M+", label: "People Indexed" },
-  { stat: "742K+", label: "US Businesses" },
-  { stat: "9",     label: "Live Features" },
-  { stat: "100%",  label: "Autonomous" },
-];
-
 const LOGOS = [
-  "OpenAI", "Google Cloud SQL", "PostgreSQL", "pgvector", "Redis",
-  "React", "Node.js", "Unified.to", "Google Sheets", "Playwright", "Express", "MongoDB",
+  "Google Cloud SQL", "PostgreSQL", "Redis", "React",
+  "Node.js", "OpenAI", "MongoDB", "Vercel", "Express",
 ];
 
 export default function LandingPage() {
@@ -103,7 +20,7 @@ export default function LandingPage() {
       <Nav />
       <Hero />
       <Marquee />
-      <BeforeAfter />
+      <DatabaseShowcase />
       <Features />
       <Metrics />
       <UseCases />
@@ -125,8 +42,8 @@ function Nav() {
           <span className="font-serif text-xl tracking-tight">Doott</span>
         </div>
         <nav className="hidden items-center gap-8 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground md:flex">
+          <a href="#database" className="transition hover:text-foreground">Database</a>
           <a href="#features" className="transition hover:text-foreground">Features</a>
-          <a href="#how" className="transition hover:text-foreground">How it works</a>
           <Link to="/app" className="transition hover:text-foreground">Dashboard</Link>
         </nav>
         <div className="flex items-center gap-3">
@@ -170,36 +87,36 @@ function Hero() {
   return (
     <section className="relative overflow-hidden border-b border-border">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-14 px-6 pt-20 pb-24 md:grid-cols-12 md:pt-28 md:pb-32">
-        <div className="md:col-span-8">
+        <div className="md:col-span-9">
           <motion.p
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="eyebrow mb-6"
           >
-            ◆ The Complete AI-Powered Sales & Intelligence Platform
+            ◆ B2B Intelligence Platform
           </motion.p>
 
           <motion.h1
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.05 }}
-            className="display text-[44px] sm:text-[64px] md:text-[80px]"
+            className="display text-[44px] sm:text-[64px] md:text-[84px]"
           >
-            Find leads.<br />
-            Close deals.<br />
-            <em className="italic text-foreground/70">Automatically.</em>
+            43.9 million<br />
+            people.<br />
+            <em className="italic text-foreground/60">Instantly searchable.</em>
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.15 }}
-            className="mt-8 max-w-xl text-lg leading-relaxed text-muted-foreground"
+            className="mt-8 max-w-2xl text-lg leading-relaxed text-muted-foreground"
           >
-            Doott is a unified platform combining a 2.4M+ contact database, AI-powered CRM,
-            smart email outreach, social media automation, and an RAG chatbot — all in one
-            beautifully orchestrated workspace.
+            Doott gives you direct access to a live database of <strong className="text-foreground">43,932,594 people</strong> and
+            their company records — searchable, filterable, and exportable.
+            Filter by those who have verified emails, phone numbers, job titles, locations, and more.
           </motion.p>
 
           <motion.div
@@ -212,45 +129,37 @@ function Hero() {
               to="/register"
               className="inline-flex h-12 items-center px-6 border border-primary bg-primary font-mono text-[11px] uppercase tracking-[0.2em] text-primary-foreground transition hover:opacity-90"
             >
-              Get Started Free →
+              Access Database Free →
             </Link>
             <a
-              href="#features"
+              href="#database"
               className="inline-flex h-12 items-center border border-border bg-transparent px-6 font-mono text-[11px] uppercase tracking-[0.2em] text-foreground transition hover:bg-secondary"
             >
-              Explore features
+              See what's inside
             </a>
           </motion.div>
 
-          {/* Feature pills */}
+          {/* Live counts */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.4 }}
-            className="mt-10 flex flex-wrap gap-2"
+            transition={{ delay: 0.45 }}
+            className="mt-12 grid grid-cols-3 gap-0 border border-border max-w-lg"
           >
             {[
-              { icon: Users2,   label: "2.4M People" },
-              { icon: Building2,label: "Companies DB" },
-              { icon: Brain,    label: "AI Chatbot" },
-              { icon: GitBranch,label: "CRM Pipeline" },
-              { icon: Send,     label: "Smart Outreach" },
-              { icon: Globe,    label: "Social Media" },
-            ].map(({ icon: Icon, label }) => (
-              <span
-                key={label}
-                className="flex items-center gap-1.5 border border-border px-3 py-1 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground"
+              { n: "43.9M+", l: "People" },
+              { n: "100%",   l: "Searchable" },
+              { n: "CSV",    l: "Export" },
+            ].map((s, i) => (
+              <div
+                key={i}
+                className={`p-5 text-center ${i < 2 ? "border-r border-border" : ""}`}
               >
-                <Icon size={10} />
-                {label}
-              </span>
+                <p className="font-serif text-2xl md:text-3xl text-foreground">{s.n}</p>
+                <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground mt-1">{s.l}</p>
+              </div>
             ))}
           </motion.div>
-
-          <div className="mt-8 flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-            <span className="h-1.5 w-1.5 rounded-full bg-foreground" />
-            9 live systems · Cloud SQL + MongoDB + Redis · Multi-tenant
-          </div>
         </div>
       </div>
     </section>
@@ -273,92 +182,203 @@ function Marquee() {
   );
 }
 
-/* ── Before / After ────────────────────────────────────────── */
-function BeforeAfter() {
+/* ── Database Showcase ─────────────────────────────────────── */
+function DatabaseShowcase() {
   return (
-    <section id="how" className="border-b border-border">
-      <div className="mx-auto grid max-w-6xl grid-cols-1 md:grid-cols-2">
-        <div className="border-b border-border p-10 md:border-b-0 md:border-r md:p-14">
-          <p className="eyebrow mb-6">Before Doott</p>
-          <h3 className="display mb-6 text-3xl md:text-4xl">Scattered tools.<br /> Endless tabs.</h3>
-          <ul className="space-y-4 text-muted-foreground">
-            {[
-              "Separate tools for data, CRM, email, and social",
-              "No contact data — buying lists from shady vendors",
-              "Generic email templates that get ignored",
-              "Manual LinkedIn outreach that takes hours",
-              "No visibility into what's working",
-            ].map((t) => (
-              <li key={t} className="flex gap-3">
-                <span className="mt-2 h-px w-4 shrink-0 bg-border" />
-                <span className="text-sm md:text-base">{t}</span>
-              </li>
-            ))}
-          </ul>
+    <section id="database" className="border-b border-border bg-background">
+      <div className="mx-auto max-w-6xl px-6 py-24 md:py-32">
+        {/* Section header */}
+        <div className="mb-20">
+          <p className="eyebrow mb-4">The Data</p>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <h2 className="display text-4xl md:text-6xl max-w-xl">
+              Two databases.<br />One platform.
+            </h2>
+            <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
+              People and Companies — both live on Google Cloud SQL PostgreSQL,
+              cached with Redis, and instantly accessible through a clean,
+              sortable, searchable interface.
+            </p>
+          </div>
         </div>
-        <div className="bg-secondary p-10 md:p-14">
-          <p className="eyebrow mb-6">With Doott</p>
-          <h3 className="display mb-6 text-3xl md:text-4xl">One platform.<br /> Total control.</h3>
-          <ul className="space-y-4 text-foreground">
+
+        {/* People card */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="border border-border p-10 md:p-12 flex flex-col bg-secondary/10 hover:bg-secondary/30 transition-colors">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-12 border border-border flex items-center justify-center">
+                <Users2 size={20} />
+              </div>
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Table 01</p>
+                <h3 className="font-serif text-2xl">People</h3>
+              </div>
+            </div>
+
+            <p className="font-serif text-5xl md:text-6xl text-foreground mb-2">43.9M+</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-8">Individual contacts indexed</p>
+
+            <p className="text-muted-foreground text-sm leading-relaxed mb-8">
+              Every record includes full name, job title, company, location (city, state, pincode),
+              LinkedIn URL, geo source, emails, and phone numbers.
+              Filter, sort, search, and export any slice.
+            </p>
+
+            {/* Sub-views */}
+            <div className="grid grid-cols-2 gap-3 mt-auto">
+              <div className="border border-border p-4 bg-background">
+                <div className="flex items-center gap-2 mb-2">
+                  <Mail size={13} className="text-blue-400" />
+                  <span className="font-mono text-[10px] uppercase tracking-[0.15em]">Email</span>
+                </div>
+                <p className="text-sm text-muted-foreground">Filter to people with verified email addresses</p>
+              </div>
+              <div className="border border-border p-4 bg-background">
+                <div className="flex items-center gap-2 mb-2">
+                  <Phone size={13} className="text-green-400" />
+                  <span className="font-mono text-[10px] uppercase tracking-[0.15em]">Number</span>
+                </div>
+                <p className="text-sm text-muted-foreground">Filter to people with phone numbers</p>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <Link
+                to="/app/people"
+                className="inline-flex h-10 items-center border border-border px-5 font-mono text-[10px] uppercase tracking-[0.18em] text-foreground transition hover:bg-secondary"
+              >
+                Browse People →
+              </Link>
+            </div>
+          </div>
+
+          {/* Companies card */}
+          <div className="border border-border p-10 md:p-12 flex flex-col bg-secondary/10 hover:bg-secondary/30 transition-colors">
+            <div className="flex items-center gap-3 mb-8">
+              <div className="w-12 h-12 border border-border flex items-center justify-center">
+                <Building2 size={20} />
+              </div>
+              <div>
+                <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground">Table 02</p>
+                <h3 className="font-serif text-2xl">Companies</h3>
+              </div>
+            </div>
+
+            <p className="font-serif text-5xl md:text-6xl text-foreground mb-2">Millions</p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-8">Company records indexed</p>
+
+            <p className="text-muted-foreground text-sm leading-relaxed mb-8">
+              Business-level intelligence — company names, industries, website URLs,
+              LinkedIn profiles, location data, and employee headcounts.
+              Pair with People records to build complete contact lists.
+            </p>
+
+            {/* Fields */}
+            <div className="grid grid-cols-3 gap-2 mt-auto">
+              {["Name", "Industry", "Location", "Website", "LinkedIn", "Revenue"].map(f => (
+                <span
+                  key={f}
+                  className="border border-border px-3 py-1.5 font-mono text-[9px] uppercase tracking-[0.12em] text-muted-foreground text-center"
+                >
+                  {f}
+                </span>
+              ))}
+            </div>
+
+            <div className="mt-6">
+              <Link
+                to="/app/companies"
+                className="inline-flex h-10 items-center border border-border px-5 font-mono text-[10px] uppercase tracking-[0.18em] text-foreground transition hover:bg-secondary"
+              >
+                Browse Companies →
+              </Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Columns preview */}
+        <div className="mt-8 border border-border p-6 bg-secondary/10">
+          <p className="font-mono text-[9px] uppercase tracking-[0.2em] text-muted-foreground mb-4">People table columns</p>
+          <div className="flex flex-wrap gap-2">
             {[
-              "2.4M+ people + companies in your database instantly",
-              "Filter by email or phone — only contact the reachable",
-              "AI-personalized outreach emails that convert",
-              "CRM pipeline to track every deal from lead to close",
-              "Social media posts generated and published automatically",
-              "RAG chatbot trained on your organization's knowledge",
-              "Market intelligence reports in seconds",
-              "All from a single beautiful dashboard",
-            ].map((t) => (
-              <li key={t} className="flex gap-3">
-                <span className="mt-2 h-px w-4 shrink-0 bg-foreground" />
-                <span className="text-sm md:text-base">{t}</span>
-              </li>
+              "uuid", "company_uuid", "full_name", "first_name", "last_name",
+              "job_title", "linked_url", "location", "city", "state",
+              "pincode", "lat", "long", "geo_source", "emails", "phones", "created_at"
+            ].map(col => (
+              <span
+                key={col}
+                className="border border-border px-2.5 py-1 font-mono text-[9px] tracking-[0.08em] text-muted-foreground"
+              >
+                {col}
+              </span>
             ))}
-          </ul>
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-/* ── Features (System Deep Dives) ─────────────────────────── */
+/* ── Features ──────────────────────────────────────────────── */
 function Features() {
-  return (
-    <div id="features" className="bg-background">
-      {FEATURES.map((d, i) => (
-        <section key={d.n} className={`border-b border-border ${i % 2 !== 0 ? "bg-secondary/30" : ""}`}>
-          <div className="mx-auto grid max-w-6xl grid-cols-1 md:grid-cols-2">
-            {/* Text Side */}
-            <div className={`p-10 md:p-20 flex flex-col justify-center ${i % 2 !== 0 ? "md:order-2" : "md:border-r border-border"}`}>
-              <span className="font-mono text-[10px] tracking-[0.25em] text-muted-foreground mb-4">SYSTEM {d.n}</span>
-              <h3 className="font-serif text-3xl md:text-4xl leading-tight mb-2 tracking-tight">{d.title}</h3>
-              <p className="eyebrow mb-8 text-foreground opacity-60">{d.subtitle}</p>
-              <div className="space-y-6 text-muted-foreground text-sm leading-relaxed">
-                <p>{d.p1}</p>
-                <p>{d.p2}</p>
-              </div>
-            </div>
+  const items = [
+    {
+      icon: Search,
+      title: "Search & Filter",
+      desc: "Full-text search across all columns. Sort by any field. Filter to Email-only or Phone-only subsets. Results in milliseconds via Redis cache.",
+    },
+    {
+      icon: Download,
+      title: "One-Click Export",
+      desc: "Export any filtered result set to CSV instantly. Current page or full result — you pick. No row limits, no gated exports.",
+    },
+    {
+      icon: Filter,
+      title: "Smart Sub-Views",
+      desc: "Dedicated 'Email' and 'Number' tabs auto-filter the People database to only contacts you can actually reach. No manual filtering needed.",
+    },
+    {
+      icon: Brain,
+      title: "AI Chatbot",
+      desc: "Ask natural-language questions about your data. The RAG chatbot is trained on your uploaded documents and answers with cited sources.",
+    },
+    {
+      icon: Globe,
+      title: "Web Crawler",
+      desc: "Run a headless browser crawler on any list of URLs. Extract emails, phones, tech stacks, and AI summaries. Push results to your database.",
+    },
+    {
+      icon: Zap,
+      title: "Live Cloud SQL",
+      desc: "All data lives in Google Cloud SQL (PostgreSQL). No stale CSVs. Every query hits the live database, cached with Redis for speed.",
+    },
+  ];
 
-            {/* Graphic Side */}
-            <div className={`p-10 md:p-20 flex items-center justify-center ${i % 2 !== 0 ? "md:order-1 md:border-r border-border" : ""}`}>
-              <div className="w-full max-w-[280px] aspect-square rounded-none border border-border bg-secondary/20 flex flex-col items-center justify-center relative overflow-hidden">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0.04)_1px,transparent_1px)] dark:bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:16px_16px]" />
-                <d.icon size={80} strokeWidth={0.5} className="text-foreground relative z-10" />
-                <div className="absolute top-0 left-1/2 w-px h-16 bg-border" />
-                <div className="absolute bottom-0 left-1/2 w-px h-16 bg-border" />
-                <div className="absolute left-0 top-1/2 w-16 h-px bg-border" />
-                <div className="absolute right-0 top-1/2 w-16 h-px bg-border" />
-                <div className="absolute top-2 left-2 w-1 h-1 bg-border rounded-full" />
-                <div className="absolute top-2 right-2 w-1 h-1 bg-border rounded-full" />
-                <div className="absolute bottom-2 left-2 w-1 h-1 bg-border rounded-full" />
-                <div className="absolute bottom-2 right-2 w-1 h-1 bg-border rounded-full" />
+  return (
+    <section id="features" className="border-b border-border bg-secondary/20">
+      <div className="mx-auto max-w-6xl px-6 py-24 md:py-32">
+        <div className="mb-16">
+          <p className="eyebrow mb-4 opacity-60">Platform Capabilities</p>
+          <h2 className="display text-3xl md:text-5xl max-w-2xl">
+            Everything you need<br />to find and reach anyone.
+          </h2>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-0 border-t border-l border-border">
+          {items.map((item, i) => (
+            <div
+              key={i}
+              className="border-b border-r border-border p-8 md:p-10 flex flex-col gap-4 hover:bg-background transition-colors"
+            >
+              <div className="w-10 h-10 border border-border flex items-center justify-center">
+                <item.icon size={16} />
               </div>
+              <h3 className="font-serif text-xl">{item.title}</h3>
+              <p className="text-muted-foreground text-sm leading-relaxed">{item.desc}</p>
             </div>
-          </div>
-        </section>
-      ))}
-    </div>
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -368,8 +388,16 @@ function Metrics() {
     <section className="border-b border-border bg-background">
       <div className="mx-auto max-w-6xl px-6 py-20 md:py-28">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12 md:gap-4 divide-y md:divide-y-0 md:divide-x divide-border">
-          {METRICS.map((m, i) => (
-            <div key={i} className={`flex flex-col items-center justify-center text-center px-4 ${i > 1 ? "pt-12 md:pt-0" : ""}`}>
+          {[
+            { stat: "43.9M+", label: "People Records" },
+            { stat: "17",     label: "Data Columns" },
+            { stat: "Live",   label: "Cloud SQL" },
+            { stat: "100%",   label: "Exportable" },
+          ].map((m, i) => (
+            <div
+              key={i}
+              className={`flex flex-col items-center justify-center text-center px-4 ${i > 1 ? "pt-12 md:pt-0" : ""}`}
+            >
               <span className="font-serif text-4xl md:text-5xl lg:text-6xl text-foreground mb-3">{m.stat}</span>
               <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{m.label}</span>
             </div>
@@ -385,28 +413,28 @@ function UseCases() {
   const cases = [
     {
       title: "Sales Teams",
-      desc: "Search 2.4M+ people, filter to those with verified emails, and launch a personalized campaign in minutes. Track every deal in the built-in CRM pipeline. No spreadsheets needed.",
+      desc: "Stop buying stale lead lists. Search 43.9M real people by job title, location, and company. Export exactly who you need. No subscriptions. No per-seat limits.",
     },
     {
-      title: "Marketing Agencies",
-      desc: "Generate on-brand social media content for multiple clients simultaneously. Schedule posts across LinkedIn, Instagram, X, and Facebook with a built-in approval workflow.",
+      title: "Recruiters",
+      desc: "Find candidates by job title and location instantly. Filter to people with LinkedIn profiles. Export to CSV and start outreach immediately — no ATS required.",
     },
     {
-      title: "Founders & SDRs",
-      desc: "Use the AI Ideal Customer Profiler to define your ICP in plain English. Get back ranked leads with AI explanations for why each one fits. One click to add them to outreach.",
+      title: "Founders",
+      desc: "Build your ideal customer list from the ground up. Use the Email and Number tabs to only contact people you can actually reach. Go from search to outreach in minutes.",
     },
   ];
 
   return (
-    <section className="border-b border-border bg-secondary/30">
+    <section className="border-b border-border bg-secondary/10">
       <div className="mx-auto max-w-6xl px-6 py-24 md:py-32">
         <div className="mb-16 text-center md:text-left">
           <p className="eyebrow mb-4 opacity-60">Who uses Doott</p>
-          <h2 className="display text-3xl md:text-4xl">Built for people who move fast.</h2>
+          <h2 className="display text-3xl md:text-4xl">Built for people who need real data.</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {cases.map((c, i) => (
-            <div key={i} className="border border-border bg-background p-10 flex flex-col transition-colors hover:bg-secondary/20">
+            <div key={i} className="border border-border bg-background p-10 flex flex-col transition-colors hover:bg-secondary/10">
               <div className="mb-6 h-10 w-10 border border-border flex items-center justify-center font-mono text-[10px] text-muted-foreground tracking-widest">{`0${i + 1}`}</div>
               <h3 className="font-serif text-2xl mb-4 text-foreground">{c.title}</h3>
               <p className="text-muted-foreground text-sm leading-relaxed flex-1">{c.desc}</p>
@@ -424,29 +452,29 @@ function FAQ() {
     <section className="border-b border-border bg-background">
       <div className="mx-auto max-w-4xl px-6 py-24 md:py-32">
         <div className="text-center mb-16">
-          <p className="eyebrow mb-4 opacity-60">Common Questions</p>
+          <p className="eyebrow mb-4 opacity-60">Questions</p>
           <h2 className="display text-3xl md:text-4xl">FAQ.</h2>
         </div>
         <div className="space-y-4">
           {[
             {
-              q: "Where does the people and companies data come from?",
-              a: "The data is sourced from public web scraping, open datasets, and enrichment pipelines that run continuously. It's stored in Cloud SQL PostgreSQL (Google Cloud) and kept current via automated refresh cycles. You can also upload your own CSVs to supplement it.",
+              q: "How fresh is the data?",
+              a: "The People and Companies databases are stored in Google Cloud SQL PostgreSQL and updated via automated enrichment pipelines. The live record count of 43,932,594 reflects the current state of the database as of the last pipeline run.",
             },
             {
-              q: "Is the CRM integrated with the contact database?",
-              a: "Yes — deeply. When you select leads from the People or Companies database, you can add them directly to a CRM campaign or create a deal. The Smart Outreach module shares the same contact records with the CRM, so you never duplicate data.",
+              q: "What does the Email tab show?",
+              a: "The Email tab filters the full People database to show only contacts who have a non-empty 'emails' field. These are the people you can actually contact via email — making outreach targeting much cleaner.",
             },
             {
-              q: "How does the AI Chatbot work for my organization?",
-              a: "You upload documents (PDFs, text files) to your organization's private knowledge base. The system generates embeddings using OpenAI and stores them in pgvector. When you ask a question, the chatbot retrieves the most relevant chunks and generates an answer that cites its sources. Each organization's data is fully isolated.",
+              q: "What does the Number tab show?",
+              a: "The Number tab filters the People database to only contacts who have a non-empty 'phones' field — direct lines, mobile numbers, or business phones. Perfect for phone-based outreach.",
             },
             {
-              q: "Can multiple team members use the same account?",
-              a: "Yes — Doott is multi-tenant by design. Each organization can have multiple members. Data, CRM records, campaigns, chatbot knowledge bases, and social connections are all scoped to the organization, not the individual user.",
+              q: "Can I export the data?",
+              a: "Yes — every view (People, Email, Number, Companies) has a one-click Export CSV button. It exports the current filtered and paginated result set directly to your browser. No size limits on the export.",
             },
           ].map((faq, i) => (
-            <details key={i} className="group border border-border bg-secondary/20 p-6 [&_summary::-webkit-details-marker]:hidden">
+            <details key={i} className="group border border-border bg-secondary/10 p-6 [&_summary::-webkit-details-marker]:hidden">
               <summary className="flex cursor-pointer items-center justify-between font-serif text-lg text-foreground">
                 <span className="pr-6">{faq.q}</span>
                 <span className="shrink-0 transition duration-300 group-open:-rotate-45">
@@ -467,12 +495,13 @@ function FinalCTA() {
   return (
     <section className="border-b border-border bg-foreground text-background">
       <div className="mx-auto max-w-6xl px-6 py-24 md:py-32 flex flex-col items-center text-center">
+        <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-background/50 mb-6">Ready to search 43.9M people?</p>
         <h2 className="font-serif font-bold tracking-tight text-background text-4xl md:text-6xl lg:text-7xl mb-8 max-w-3xl leading-tight">
-          Your entire GTM stack.<br />One platform.
+          The data is live.<br />Start searching now.
         </h2>
-        <p className="text-background/70 mb-10 max-w-xl font-serif text-lg">
-          People database, companies, CRM, outreach, social media, and AI — all talking to each other.
-          Start for free. No credit card required.
+        <p className="text-background/60 mb-10 max-w-lg font-serif text-lg">
+          Free to start. No credit card required.
+          Access People, Email, Number, and Companies databases immediately.
         </p>
         <div className="flex flex-wrap gap-4 justify-center">
           <Link
@@ -483,7 +512,7 @@ function FinalCTA() {
           </Link>
           <Link
             to="/login"
-            className="inline-flex h-12 items-center px-10 border border-background/40 bg-transparent font-mono text-[11px] uppercase tracking-[0.2em] text-background/80 transition hover:border-background hover:text-background"
+            className="inline-flex h-12 items-center px-10 border border-background/40 bg-transparent font-mono text-[11px] uppercase tracking-[0.2em] text-background/70 transition hover:border-background hover:text-background"
           >
             Sign In
           </Link>
@@ -508,7 +537,7 @@ function Footer() {
           <Link to="/app/docs" className="hover:text-foreground transition">Docs</Link>
         </div>
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-          © {new Date().getFullYear()} Doott · All systems operational
+          © {new Date().getFullYear()} Doott · 43.9M people indexed
         </p>
       </div>
     </footer>
