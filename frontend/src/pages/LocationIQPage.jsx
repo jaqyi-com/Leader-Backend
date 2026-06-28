@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
 import {
   MapPin, Building2, Users, TrendingUp, AlertTriangle,
   CheckCircle2, XCircle, Clock, ChevronDown, Trash2,
@@ -207,6 +208,7 @@ function HistoryRow({ item, onLoad, onDelete }) {
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════
 export default function LocationIQPage() {
+  const { token } = useAuth();
   const [tab,      setTab]      = useState("score");   // "score" | "history"
   const [pin,      setPin]      = useState("");
   const [address,  setAddress]  = useState("");
@@ -220,7 +222,7 @@ export default function LocationIQPage() {
   const [histPage,     setHistPage]     = useState(1);
   const [histTotal,    setHistTotal]    = useState(0);
 
-  const token = localStorage.getItem("token") || sessionStorage.getItem("token");
+
 
   // ── Fetch history ─────────────────────────────────────────────────────
   async function loadHistory(page = 1) {
