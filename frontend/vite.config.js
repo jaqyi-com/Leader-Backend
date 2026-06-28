@@ -25,6 +25,9 @@ export default defineConfig({
         // Manual chunking as function — required by Vite 8 / rolldown
         manualChunks(id) {
           if (id.includes("node_modules")) {
+            if (id.includes("/react-leaflet/") || id.includes("/leaflet/")) {
+              return "vendor-map";
+            }
             if (id.includes("/react/") || id.includes("/react-dom/") || id.includes("/react-router-dom/")) {
               return "vendor-react";
             }
@@ -51,6 +54,6 @@ export default defineConfig({
 
   // Optimize dependencies at dev time for faster HMR
   optimizeDeps: {
-    include: ["react", "react-dom", "framer-motion", "lucide-react"],
+    include: ["react", "react-dom", "framer-motion", "lucide-react", "leaflet", "react-leaflet"],
   },
 });
