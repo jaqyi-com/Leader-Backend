@@ -22,7 +22,7 @@ export default function PeoplePage() {
   const [sortDir,    setSortDir]    = useState("asc");
   const [search,     setSearch]     = useState("");
 
-  // ── Column discovery ──────────────────────────────────────
+  // ── Column discovery (only sets column headers, never triggers re-fetch) ────
   const loadColumns = useCallback(async () => {
     try {
       const { data } = await fpGetColumns();
@@ -32,9 +32,7 @@ export default function PeoplePage() {
           label: k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
         }));
         setCols(columns);
-        if (!sortBy) {
-          setSortBy("city");
-        }
+        // NOTE: do NOT call setSortBy here — that would trigger a second fetch
       }
     } catch {
       // fallback — empty header
