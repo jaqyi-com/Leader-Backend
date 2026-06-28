@@ -321,8 +321,8 @@ export default function PublicData2Page() {
                     );
 
                     if (c.key === "niche" || c.key === "industry") return (
-                      <td key={c.key} className="px-3 py-2.5">
-                        {val ? <span className="badge badge-purple text-[9px]">{val}</span> : "—"}
+                      <td key={c.key} className="px-3 py-2.5 text-[var(--text-2)] max-w-[140px] truncate">
+                        {val || "—"}
                       </td>
                     );
 

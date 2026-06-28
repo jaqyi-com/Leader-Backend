@@ -154,7 +154,7 @@ export default function CompaniesPage() {
     );
 
     if (key.includes("industry") || key.includes("category") || key.includes("sector") || key.includes("type")) return (
-      <span className="badge badge-purple text-[9px]">{val}</span>
+      <span className="text-[var(--text-2)] truncate max-w-[180px] block" title={val}>{val}</span>
     );
 
     return (

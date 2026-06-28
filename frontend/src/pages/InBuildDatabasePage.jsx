@@ -550,8 +550,8 @@ export default function InBuildDatabasePage() {
                       </td>
                     );
                     if (c.key === "category") return (
-                      <td key={c.key} className="px-3 py-2.5">
-                        {val ? <span className="badge badge-purple text-[9px]">{val}</span> : "—"}
+                      <td key={c.key} className="px-3 py-2.5 text-[var(--text-2)] max-w-[140px] truncate">
+                        {val || "—"}
                       </td>
                     );
                     if (c.key === "city_file") return (
