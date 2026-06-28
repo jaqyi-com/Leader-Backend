@@ -18,7 +18,7 @@ export default function CompaniesPage() {
   const [showF,      setShowF]      = useState(false);
   const [page,       setPage]       = useState(1);
   const [limit,      setLimit]      = useState(50);
-  const [sortBy,     setSortBy]     = useState("city");
+  const [sortBy,     setSortBy]     = useState("");
   const [sortDir,    setSortDir]    = useState("asc");
   const [search,     setSearch]     = useState("");
 

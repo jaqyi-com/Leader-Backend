@@ -191,6 +191,17 @@ router.get("/", async (req, res) => {
     if (sort_by && selectCols.includes(sort_by)) {
       const dir = sort_dir === "desc" ? "DESC" : "ASC";
       orderClause = `ORDER BY "${sort_by}" ${dir} NULLS LAST`;
+    } else {
+      // Default: richest records first — score by number of key fields populated
+      orderClause = `ORDER BY (
+        (CASE WHEN business_name IS NOT NULL AND business_name <> '' THEN 3 ELSE 0 END) +
+        (CASE WHEN phone         IS NOT NULL AND phone         <> '' THEN 3 ELSE 0 END) +
+        (CASE WHEN website       IS NOT NULL AND website       <> '' THEN 2 ELSE 0 END) +
+        (CASE WHEN emails        IS NOT NULL AND array_length(emails, 1) > 0 THEN 2 ELSE 0 END) +
+        (CASE WHEN industry      IS NOT NULL AND industry      <> '' THEN 1 ELSE 0 END) +
+        (CASE WHEN rating        IS NOT NULL                         THEN 1 ELSE 0 END) +
+        (CASE WHEN city          IS NOT NULL AND city          <> '' THEN 1 ELSE 0 END)
+      ) DESC`;
     }
 
     const dataSQL = `
