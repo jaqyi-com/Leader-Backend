@@ -10,8 +10,14 @@ const PEOPLE_COLOR    = "#E23744";
 const COMPANIES_COLOR = "#22d3ee";
 
 const BLANK_FILTERS = {
-  city: "", state: "", industry: "",
-  has_email: "", has_phone: "", min_rating: "",
+  // Shared
+  city: "", state: "", pincode: "", geo_source: "",
+  // People-specific
+  full_name: "", job_title: "", location: "", industry: "",
+  has_email: "", has_phone: "",
+  // Companies-specific
+  business_name: "", website: "", domain: "", address: "",
+  min_rating: "", min_reviews: "",
 };
 
 function FitBounds({ clusters }) {
@@ -235,17 +241,13 @@ export default function LocationAnalysisPage() {
             <div style={{ padding: "16px 20px" }}>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 12 }}>
 
+                {/* ── SHARED FILTERS ─── */}
                 {/* City */}
                 <div>
                   <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>City</label>
                   <div style={{ position: "relative" }}>
                     <Search size={11} color="var(--text-3)" style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)" }} />
-                    <input
-                      value={draft.city}
-                      onChange={e => setDraft(d => ({ ...d, city: e.target.value }))}
-                      placeholder="e.g. Mumbai"
-                      style={{ ...INPUT_STYLE, paddingLeft: 26 }}
-                    />
+                    <input value={draft.city} onChange={e => setDraft(d => ({ ...d, city: e.target.value }))} placeholder="e.g. Mumbai" style={{ ...INPUT_STYLE, paddingLeft: 26 }} />
                   </div>
                 </div>
 
@@ -254,79 +256,109 @@ export default function LocationAnalysisPage() {
                   <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>State</label>
                   <div style={{ position: "relative" }}>
                     <Search size={11} color="var(--text-3)" style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)" }} />
-                    <input
-                      value={draft.state}
-                      onChange={e => setDraft(d => ({ ...d, state: e.target.value }))}
-                      placeholder="e.g. Maharashtra"
-                      style={{ ...INPUT_STYLE, paddingLeft: 26 }}
-                    />
+                    <input value={draft.state} onChange={e => setDraft(d => ({ ...d, state: e.target.value }))} placeholder="e.g. Maharashtra" style={{ ...INPUT_STYLE, paddingLeft: 26 }} />
                   </div>
                 </div>
 
-                {/* Industry / Job Title */}
+                {/* Pincode */}
                 <div>
-                  <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>
-                    {layer === "companies" ? "Industry" : "Job Title / Industry"}
-                  </label>
-                  <div style={{ position: "relative" }}>
-                    <Search size={11} color="var(--text-3)" style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)" }} />
-                    <input
-                      value={draft.industry}
-                      onChange={e => setDraft(d => ({ ...d, industry: e.target.value }))}
-                      placeholder={layer === "companies" ? "e.g. Retail" : "e.g. CEO, Manager"}
-                      style={{ ...INPUT_STYLE, paddingLeft: 26 }}
-                    />
-                  </div>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>Pincode</label>
+                  <input value={draft.pincode} onChange={e => setDraft(d => ({ ...d, pincode: e.target.value }))} placeholder="e.g. 400001" style={INPUT_STYLE} />
                 </div>
 
-                {/* Has Email — people only */}
-                {(layer === "people" || layer === "both") && (
+                {/* Geo Source */}
+                <div>
+                  <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>Geo Source</label>
+                  <select value={draft.geo_source} onChange={e => setDraft(d => ({ ...d, geo_source: e.target.value }))} style={INPUT_STYLE}>
+                    <option value="">Any</option>
+                    <option value="us_city">us_city</option>
+                    <option value="us_zip">us_zip</option>
+                    <option value="pincode">pincode</option>
+                    <option value="city">city</option>
+                    <option value="state">state</option>
+                  </select>
+                </div>
+
+                {/* ── PEOPLE FILTERS ─── */}
+                {(layer === "people" || layer === "both") && (<>
                   <div>
-                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>
-                      <Mail size={10} style={{ display: "inline", marginRight: 4 }} />Has Email
-                    </label>
-                    <select
-                      value={draft.has_email}
-                      onChange={e => setDraft(d => ({ ...d, has_email: e.target.value }))}
-                      style={{ ...INPUT_STYLE }}
-                    >
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>Full Name</label>
+                    <div style={{ position: "relative" }}>
+                      <Search size={11} color="var(--text-3)" style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)" }} />
+                      <input value={draft.full_name} onChange={e => setDraft(d => ({ ...d, full_name: e.target.value }))} placeholder="e.g. Rahul Sharma" style={{ ...INPUT_STYLE, paddingLeft: 26 }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>Job Title</label>
+                    <input value={draft.job_title} onChange={e => setDraft(d => ({ ...d, job_title: e.target.value }))} placeholder="e.g. CEO, Manager" style={INPUT_STYLE} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>Location</label>
+                    <input value={draft.location} onChange={e => setDraft(d => ({ ...d, location: e.target.value }))} placeholder="e.g. Delhi, India" style={INPUT_STYLE} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}><Mail size={10} style={{ display: "inline", marginRight: 4 }} />Has Email</label>
+                    <select value={draft.has_email} onChange={e => setDraft(d => ({ ...d, has_email: e.target.value }))} style={INPUT_STYLE}>
                       <option value="">Any</option>
                       <option value="true">✅ With Email</option>
                       <option value="false">❌ Without Email</option>
                     </select>
                   </div>
-                )}
-
-                {/* Has Phone — people only */}
-                {(layer === "people" || layer === "both") && (
                   <div>
-                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>
-                      <Phone size={10} style={{ display: "inline", marginRight: 4 }} />Has Phone
-                    </label>
-                    <select
-                      value={draft.has_phone}
-                      onChange={e => setDraft(d => ({ ...d, has_phone: e.target.value }))}
-                      style={{ ...INPUT_STYLE }}
-                    >
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}><Phone size={10} style={{ display: "inline", marginRight: 4 }} />Has Phone</label>
+                    <select value={draft.has_phone} onChange={e => setDraft(d => ({ ...d, has_phone: e.target.value }))} style={INPUT_STYLE}>
                       <option value="">Any</option>
                       <option value="true">✅ With Phone</option>
                       <option value="false">❌ Without Phone</option>
                     </select>
                   </div>
-                )}
+                </>)}
 
-                {/* Min Rating — companies only */}
-                {(layer === "companies" || layer === "both") && (
+                {/* ── COMPANIES FILTERS ─── */}
+                {(layer === "companies" || layer === "both") && (<>
                   <div>
-                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>
-                      <Star size={10} style={{ display: "inline", marginRight: 4 }} />Min Rating
-                    </label>
-                    <select
-                      value={draft.min_rating}
-                      onChange={e => setDraft(d => ({ ...d, min_rating: e.target.value }))}
-                      style={{ ...INPUT_STYLE }}
-                    >
-                      <option value="">Any Rating</option>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>Business Name</label>
+                    <div style={{ position: "relative" }}>
+                      <Search size={11} color="var(--text-3)" style={{ position: "absolute", left: 8, top: "50%", transform: "translateY(-50%)" }} />
+                      <input value={draft.business_name} onChange={e => setDraft(d => ({ ...d, business_name: e.target.value }))} placeholder="e.g. Reliance" style={{ ...INPUT_STYLE, paddingLeft: 26 }} />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>Industry</label>
+                    <input value={draft.industry} onChange={e => setDraft(d => ({ ...d, industry: e.target.value }))} placeholder="e.g. Retail, IT" style={INPUT_STYLE} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>Domain</label>
+                    <input value={draft.domain} onChange={e => setDraft(d => ({ ...d, domain: e.target.value }))} placeholder="e.g. reliance.com" style={INPUT_STYLE} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>Website</label>
+                    <input value={draft.website} onChange={e => setDraft(d => ({ ...d, website: e.target.value }))} placeholder="e.g. amazon" style={INPUT_STYLE} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>Address</label>
+                    <input value={draft.address} onChange={e => setDraft(d => ({ ...d, address: e.target.value }))} placeholder="e.g. MG Road" style={INPUT_STYLE} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}><Mail size={10} style={{ display: "inline", marginRight: 4 }} />Has Email</label>
+                    <select value={draft.has_email} onChange={e => setDraft(d => ({ ...d, has_email: e.target.value }))} style={INPUT_STYLE}>
+                      <option value="">Any</option>
+                      <option value="true">✅ With Email</option>
+                      <option value="false">❌ Without Email</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}><Phone size={10} style={{ display: "inline", marginRight: 4 }} />Has Phone</label>
+                    <select value={draft.has_phone} onChange={e => setDraft(d => ({ ...d, has_phone: e.target.value }))} style={INPUT_STYLE}>
+                      <option value="">Any</option>
+                      <option value="true">✅ With Phone</option>
+                      <option value="false">❌ Without Phone</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}><Star size={10} style={{ display: "inline", marginRight: 4 }} />Min Rating</label>
+                    <select value={draft.min_rating} onChange={e => setDraft(d => ({ ...d, min_rating: e.target.value }))} style={INPUT_STYLE}>
+                      <option value="">Any</option>
                       <option value="3">3.0+</option>
                       <option value="3.5">3.5+</option>
                       <option value="4">4.0+ ⭐</option>
@@ -334,8 +366,13 @@ export default function LocationAnalysisPage() {
                       <option value="5">5.0 only</option>
                     </select>
                   </div>
-                )}
-              </div>
+                  <div>
+                    <label style={{ fontSize: 10, fontWeight: 600, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.1em", display: "block", marginBottom: 5 }}>Min Reviews</label>
+                    <input value={draft.min_reviews} onChange={e => setDraft(d => ({ ...d, min_reviews: e.target.value }))} placeholder="e.g. 10" type="number" min="0" style={INPUT_STYLE} />
+                  </div>
+                </>)}
+
+              </div>{/* end grid */}
 
               {/* Action buttons */}
               <div style={{ display: "flex", gap: 8, marginTop: 14 }}>

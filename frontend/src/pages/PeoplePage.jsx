@@ -21,6 +21,15 @@ export default function PeoplePage() {
   const [sortBy, setSortBy] = useState("");
   const [sortDir, setSortDir] = useState("asc");
   const [search, setSearch] = useState("");
+  // Column-specific filters
+  const [fCity,     setFCity]     = useState("");
+  const [fState,    setFState]    = useState("");
+  const [fPincode,  setFPincode]  = useState("");
+  const [fJob,      setFJob]      = useState("");
+  const [fLocation, setFLocation] = useState("");
+  const [fGeo,      setFGeo]      = useState("");
+  const [fHasEmail, setFHasEmail] = useState("");
+  const [fHasPhone, setFHasPhone] = useState("");
 
   // ── Column discovery (only sets column headers, never triggers re-fetch) ────
   const loadColumns = useCallback(async () => {
@@ -47,6 +56,14 @@ export default function PeoplePage() {
         page, limit,
         sort_by: sortBy, sort_dir: sortDir,
         search,
+        ...(fCity     && { f_city:      fCity     }),
+        ...(fState    && { f_state:     fState    }),
+        ...(fPincode  && { f_pincode:   fPincode  }),
+        ...(fJob      && { f_job_title: fJob      }),
+        ...(fLocation && { f_location:  fLocation }),
+        ...(fGeo      && { f_geo_source: fGeo     }),
+        ...(fHasEmail && { f_has_email: fHasEmail }),
+        ...(fHasPhone && { f_has_phone: fHasPhone }),
       });
       setRecords(data.records || []);
       setTotal(data.total || 0);
@@ -55,7 +72,7 @@ export default function PeoplePage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, sortBy, sortDir, search]);
+  }, [page, limit, sortBy, sortDir, search, fCity, fState, fPincode, fJob, fLocation, fGeo, fHasEmail, fHasPhone]);
 
   useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
@@ -83,7 +100,11 @@ export default function PeoplePage() {
     finally { setRefreshing(false); }
   };
 
-  const clearAll = () => { setSearch(""); setPage(1); };
+  const clearAll = () => {
+    setSearch(""); setFCity(""); setFState(""); setFPincode("");
+    setFJob(""); setFLocation(""); setFGeo(""); setFHasEmail(""); setFHasPhone("");
+    setPage(1);
+  };
 
   const exportCSV = () => {
     if (!cols.length || !records.length) return;
@@ -205,18 +226,28 @@ export default function PeoplePage() {
         </div>
       )}
 
-      {/* Filter Bar */}
+      {/* Filter Bar — active chips */}
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={() => setShowF(p => !p)} className="btn-ghost text-xs gap-1.5">
-          <Filter size={12} />Filters {showF ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+          <Filter size={12} />Filters
+          {[search,fCity,fState,fPincode,fJob,fLocation,fGeo,fHasEmail,fHasPhone].filter(Boolean).length > 0 &&
+            <span className="ml-1 bg-[var(--accent)] text-white rounded-full px-1.5 py-0.5 text-[9px] font-bold">
+              {[search,fCity,fState,fPincode,fJob,fLocation,fGeo,fHasEmail,fHasPhone].filter(Boolean).length}
+            </span>
+          }
+          {showF ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
         </button>
-        {search && (
-          <span className="badge badge-purple text-[10px] flex items-center gap-1">
-            search: {search}
-            <button onClick={() => { setSearch(""); setPage(1); }} className="hover:text-[var(--rose)] ml-0.5"><X size={9} /></button>
-          </span>
-        )}
-        {search && (
+        {/* Active filter chips */}
+        {search    && <span className="badge badge-purple text-[10px] flex items-center gap-1">name: {search}    <button onClick={() => { setSearch("");    setPage(1); }}><X size={9}/></button></span>}
+        {fCity     && <span className="badge badge-purple text-[10px] flex items-center gap-1">city: {fCity}     <button onClick={() => { setFCity("");    setPage(1); }}><X size={9}/></button></span>}
+        {fState    && <span className="badge badge-purple text-[10px] flex items-center gap-1">state: {fState}   <button onClick={() => { setFState("");   setPage(1); }}><X size={9}/></button></span>}
+        {fPincode  && <span className="badge badge-purple text-[10px] flex items-center gap-1">pin: {fPincode}   <button onClick={() => { setFPincode(""); setPage(1); }}><X size={9}/></button></span>}
+        {fJob      && <span className="badge badge-purple text-[10px] flex items-center gap-1">job: {fJob}       <button onClick={() => { setFJob("");      setPage(1); }}><X size={9}/></button></span>}
+        {fLocation && <span className="badge badge-purple text-[10px] flex items-center gap-1">loc: {fLocation}  <button onClick={() => { setFLocation("");setPage(1); }}><X size={9}/></button></span>}
+        {fGeo      && <span className="badge badge-purple text-[10px] flex items-center gap-1">geo: {fGeo}       <button onClick={() => { setFGeo("");      setPage(1); }}><X size={9}/></button></span>}
+        {fHasEmail && <span className="badge badge-purple text-[10px] flex items-center gap-1">email: {fHasEmail}<button onClick={() => { setFHasEmail("");setPage(1); }}><X size={9}/></button></span>}
+        {fHasPhone && <span className="badge badge-purple text-[10px] flex items-center gap-1">phone: {fHasPhone}<button onClick={() => { setFHasPhone("");setPage(1); }}><X size={9}/></button></span>}
+        {[search,fCity,fState,fPincode,fJob,fLocation,fGeo,fHasEmail,fHasPhone].some(Boolean) && (
           <button onClick={clearAll} className="text-[10px] text-[var(--text-3)] hover:text-[var(--rose)] underline">Clear all</button>
         )}
       </div>
@@ -225,21 +256,97 @@ export default function PeoplePage() {
       <AnimatePresence>
         {showF && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <div className="relative col-span-2">
-                <Search size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
-                <input
-                  className="input pl-8 text-xs w-full"
-                  placeholder="Search across all columns…"
-                  value={search}
-                  onChange={e => { setSearch(e.target.value); setPage(1); }}
-                />
+            <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+
+              {/* Name search */}
+              <div className="relative col-span-2 sm:col-span-1">
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Name Search</label>
+                <div className="relative">
+                  <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
+                  <input className="input pl-7 text-xs w-full" placeholder="Full name…"
+                    value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+                </div>
               </div>
-              <select className="input text-xs" value={limit} onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}>
-                <option value={25}>25 / page</option>
-                <option value={50}>50 / page</option>
-                <option value={100}>100 / page</option>
-              </select>
+
+              {/* City */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">City</label>
+                <input className="input text-xs w-full" placeholder="e.g. Mumbai"
+                  value={fCity} onChange={e => { setFCity(e.target.value); setPage(1); }} />
+              </div>
+
+              {/* State */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">State</label>
+                <input className="input text-xs w-full" placeholder="e.g. Maharashtra"
+                  value={fState} onChange={e => { setFState(e.target.value); setPage(1); }} />
+              </div>
+
+              {/* Pincode */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Pincode</label>
+                <input className="input text-xs w-full" placeholder="e.g. 400001"
+                  value={fPincode} onChange={e => { setFPincode(e.target.value); setPage(1); }} />
+              </div>
+
+              {/* Job Title */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Job Title</label>
+                <input className="input text-xs w-full" placeholder="e.g. CEO, Manager"
+                  value={fJob} onChange={e => { setFJob(e.target.value); setPage(1); }} />
+              </div>
+
+              {/* Location */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Location</label>
+                <input className="input text-xs w-full" placeholder="e.g. Delhi, India"
+                  value={fLocation} onChange={e => { setFLocation(e.target.value); setPage(1); }} />
+              </div>
+
+              {/* Geo Source */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Geo Source</label>
+                <select className="input text-xs w-full" value={fGeo} onChange={e => { setFGeo(e.target.value); setPage(1); }}>
+                  <option value="">Any</option>
+                  <option value="us_city">us_city</option>
+                  <option value="us_zip">us_zip</option>
+                  <option value="us_state">us_state</option>
+                  <option value="pincode">pincode</option>
+                  <option value="city">city</option>
+                  <option value="state">state</option>
+                </select>
+              </div>
+
+              {/* Has Email */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block flex items-center gap-1"><Mail size={9}/>Has Email</label>
+                <select className="input text-xs w-full" value={fHasEmail} onChange={e => { setFHasEmail(e.target.value); setPage(1); }}>
+                  <option value="">Any</option>
+                  <option value="true">✅ With Email</option>
+                  <option value="false">❌ Without Email</option>
+                </select>
+              </div>
+
+              {/* Has Phone */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block flex items-center gap-1"><Phone size={9}/>Has Phone</label>
+                <select className="input text-xs w-full" value={fHasPhone} onChange={e => { setFHasPhone(e.target.value); setPage(1); }}>
+                  <option value="">Any</option>
+                  <option value="true">✅ With Phone</option>
+                  <option value="false">❌ Without Phone</option>
+                </select>
+              </div>
+
+              {/* Rows per page */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Rows / Page</label>
+                <select className="input text-xs w-full" value={limit} onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+
             </div>
           </motion.div>
         )}

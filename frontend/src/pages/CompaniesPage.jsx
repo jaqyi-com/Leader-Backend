@@ -21,6 +21,20 @@ export default function CompaniesPage() {
   const [sortBy, setSortBy] = useState("");
   const [sortDir, setSortDir] = useState("asc");
   const [search, setSearch] = useState("");
+  // Column-specific filters
+  const [fBizName,    setFBizName]    = useState("");
+  const [fCity,       setFCity]       = useState("");
+  const [fState,      setFState]      = useState("");
+  const [fPincode,    setFPincode]    = useState("");
+  const [fDomain,     setFDomain]     = useState("");
+  const [fIndustry,   setFIndustry]   = useState("");
+  const [fWebsite,    setFWebsite]    = useState("");
+  const [fAddress,    setFAddress]    = useState("");
+  const [fGeo,        setFGeo]        = useState("");
+  const [fHasEmail,   setFHasEmail]   = useState("");
+  const [fHasPhone,   setFHasPhone]   = useState("");
+  const [fMinRating,  setFMinRating]  = useState("");
+  const [fMinReviews, setFMinReviews] = useState("");
 
   // ── Column discovery (only sets column headers, never triggers re-fetch) ────
   const loadColumns = useCallback(async () => {
@@ -47,6 +61,19 @@ export default function CompaniesPage() {
         page, limit,
         sort_by: sortBy, sort_dir: sortDir,
         search,
+        ...(fBizName    && { f_business_name: fBizName    }),
+        ...(fCity       && { f_city:           fCity       }),
+        ...(fState      && { f_state:          fState      }),
+        ...(fPincode    && { f_pincode:        fPincode    }),
+        ...(fDomain     && { f_domain:         fDomain     }),
+        ...(fIndustry   && { f_industry:       fIndustry   }),
+        ...(fWebsite    && { f_website:        fWebsite    }),
+        ...(fAddress    && { f_address:        fAddress    }),
+        ...(fGeo        && { f_geo_source:     fGeo        }),
+        ...(fHasEmail   && { f_has_email:      fHasEmail   }),
+        ...(fHasPhone   && { f_has_phone:      fHasPhone   }),
+        ...(fMinRating  && { f_min_rating:     fMinRating  }),
+        ...(fMinReviews && { f_min_reviews:    fMinReviews }),
       });
       setRecords(data.records || []);
       setTotal(data.total || 0);
@@ -55,7 +82,7 @@ export default function CompaniesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, sortBy, sortDir, search]);
+  }, [page, limit, sortBy, sortDir, search, fBizName, fCity, fState, fPincode, fDomain, fIndustry, fWebsite, fAddress, fGeo, fHasEmail, fHasPhone, fMinRating, fMinReviews]);
 
   useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
@@ -83,7 +110,12 @@ export default function CompaniesPage() {
     finally { setRefreshing(false); }
   };
 
-  const clearAll = () => { setSearch(""); setPage(1); };
+  const clearAll = () => {
+    setSearch(""); setFBizName(""); setFCity(""); setFState(""); setFPincode("");
+    setFDomain(""); setFIndustry(""); setFWebsite(""); setFAddress(""); setFGeo("");
+    setFHasEmail(""); setFHasPhone(""); setFMinRating(""); setFMinReviews("");
+    setPage(1);
+  };
 
   const exportCSV = () => {
     if (!cols.length || !records.length) return;
@@ -206,18 +238,32 @@ export default function CompaniesPage() {
         </div>
       )}
 
-      {/* Filter Bar */}
+      {/* Filter Bar — active chips */}
       <div className="flex items-center gap-2 flex-wrap">
         <button onClick={() => setShowF(p => !p)} className="btn-ghost text-xs gap-1.5">
-          <Filter size={12} />Filters {showF ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+          <Filter size={12} />Filters
+          {[search,fBizName,fCity,fState,fPincode,fDomain,fIndustry,fWebsite,fAddress,fGeo,fHasEmail,fHasPhone,fMinRating,fMinReviews].filter(Boolean).length > 0 &&
+            <span className="ml-1 bg-[var(--accent)] text-white rounded-full px-1.5 py-0.5 text-[9px] font-bold">
+              {[search,fBizName,fCity,fState,fPincode,fDomain,fIndustry,fWebsite,fAddress,fGeo,fHasEmail,fHasPhone,fMinRating,fMinReviews].filter(Boolean).length}
+            </span>
+          }
+          {showF ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
         </button>
-        {search && (
-          <span className="badge badge-purple text-[10px] flex items-center gap-1">
-            search: {search}
-            <button onClick={() => { setSearch(""); setPage(1); }} className="hover:text-[var(--rose)] ml-0.5"><X size={9} /></button>
-          </span>
-        )}
-        {search && (
+        {search     && <span className="badge badge-purple text-[10px] flex items-center gap-1">search: {search}        <button onClick={() => { setSearch("");     setPage(1); }}><X size={9}/></button></span>}
+        {fBizName   && <span className="badge badge-purple text-[10px] flex items-center gap-1">name: {fBizName}        <button onClick={() => { setFBizName("");   setPage(1); }}><X size={9}/></button></span>}
+        {fCity      && <span className="badge badge-purple text-[10px] flex items-center gap-1">city: {fCity}           <button onClick={() => { setFCity("");      setPage(1); }}><X size={9}/></button></span>}
+        {fState     && <span className="badge badge-purple text-[10px] flex items-center gap-1">state: {fState}         <button onClick={() => { setFState("");     setPage(1); }}><X size={9}/></button></span>}
+        {fPincode   && <span className="badge badge-purple text-[10px] flex items-center gap-1">pin: {fPincode}         <button onClick={() => { setFPincode("");   setPage(1); }}><X size={9}/></button></span>}
+        {fDomain    && <span className="badge badge-purple text-[10px] flex items-center gap-1">domain: {fDomain}       <button onClick={() => { setFDomain("");    setPage(1); }}><X size={9}/></button></span>}
+        {fIndustry  && <span className="badge badge-purple text-[10px] flex items-center gap-1">industry: {fIndustry}   <button onClick={() => { setFIndustry("");  setPage(1); }}><X size={9}/></button></span>}
+        {fWebsite   && <span className="badge badge-purple text-[10px] flex items-center gap-1">website: {fWebsite}     <button onClick={() => { setFWebsite("");   setPage(1); }}><X size={9}/></button></span>}
+        {fAddress   && <span className="badge badge-purple text-[10px] flex items-center gap-1">address: {fAddress}     <button onClick={() => { setFAddress("");   setPage(1); }}><X size={9}/></button></span>}
+        {fGeo       && <span className="badge badge-purple text-[10px] flex items-center gap-1">geo: {fGeo}             <button onClick={() => { setFGeo("");       setPage(1); }}><X size={9}/></button></span>}
+        {fHasEmail  && <span className="badge badge-purple text-[10px] flex items-center gap-1">email: {fHasEmail}      <button onClick={() => { setFHasEmail("");  setPage(1); }}><X size={9}/></button></span>}
+        {fHasPhone  && <span className="badge badge-purple text-[10px] flex items-center gap-1">phone: {fHasPhone}      <button onClick={() => { setFHasPhone("");  setPage(1); }}><X size={9}/></button></span>}
+        {fMinRating && <span className="badge badge-purple text-[10px] flex items-center gap-1">rating ≥ {fMinRating}   <button onClick={() => { setFMinRating(""); setPage(1); }}><X size={9}/></button></span>}
+        {fMinReviews&& <span className="badge badge-purple text-[10px] flex items-center gap-1">reviews ≥ {fMinReviews}<button onClick={() => { setFMinReviews("");setPage(1); }}><X size={9}/></button></span>}
+        {[search,fBizName,fCity,fState,fPincode,fDomain,fIndustry,fWebsite,fAddress,fGeo,fHasEmail,fHasPhone,fMinRating,fMinReviews].some(Boolean) && (
           <button onClick={clearAll} className="text-[10px] text-[var(--text-3)] hover:text-[var(--rose)] underline">Clear all</button>
         )}
       </div>
@@ -226,21 +272,130 @@ export default function CompaniesPage() {
       <AnimatePresence>
         {showF && (
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              <div className="relative col-span-2">
-                <Search size={11} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
-                <input
-                  className="input pl-8 text-xs w-full"
-                  placeholder="Search across all columns…"
-                  value={search}
-                  onChange={e => { setSearch(e.target.value); setPage(1); }}
-                />
+            <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+
+              {/* Business Name Search */}
+              <div className="col-span-2 sm:col-span-1">
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Business Name</label>
+                <div className="relative">
+                  <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
+                  <input className="input pl-7 text-xs w-full" placeholder="Search name…"
+                    value={fBizName} onChange={e => { setFBizName(e.target.value); setPage(1); }} />
+                </div>
               </div>
-              <select className="input text-xs" value={limit} onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}>
-                <option value={25}>25 / page</option>
-                <option value={50}>50 / page</option>
-                <option value={100}>100 / page</option>
-              </select>
+
+              {/* City */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">City</label>
+                <input className="input text-xs w-full" placeholder="e.g. Mumbai"
+                  value={fCity} onChange={e => { setFCity(e.target.value); setPage(1); }} />
+              </div>
+
+              {/* State */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">State</label>
+                <input className="input text-xs w-full" placeholder="e.g. Maharashtra"
+                  value={fState} onChange={e => { setFState(e.target.value); setPage(1); }} />
+              </div>
+
+              {/* Pincode */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Pincode</label>
+                <input className="input text-xs w-full" placeholder="e.g. 400001"
+                  value={fPincode} onChange={e => { setFPincode(e.target.value); setPage(1); }} />
+              </div>
+
+              {/* Domain */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Domain</label>
+                <input className="input text-xs w-full" placeholder="e.g. reliance.com"
+                  value={fDomain} onChange={e => { setFDomain(e.target.value); setPage(1); }} />
+              </div>
+
+              {/* Industry */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Industry</label>
+                <input className="input text-xs w-full" placeholder="e.g. Retail, IT"
+                  value={fIndustry} onChange={e => { setFIndustry(e.target.value); setPage(1); }} />
+              </div>
+
+              {/* Website */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Website</label>
+                <input className="input text-xs w-full" placeholder="e.g. amazon"
+                  value={fWebsite} onChange={e => { setFWebsite(e.target.value); setPage(1); }} />
+              </div>
+
+              {/* Address */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Address</label>
+                <input className="input text-xs w-full" placeholder="e.g. MG Road"
+                  value={fAddress} onChange={e => { setFAddress(e.target.value); setPage(1); }} />
+              </div>
+
+              {/* Geo Source */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Geo Source</label>
+                <select className="input text-xs w-full" value={fGeo} onChange={e => { setFGeo(e.target.value); setPage(1); }}>
+                  <option value="">Any</option>
+                  <option value="us_city">us_city</option>
+                  <option value="us_zip">us_zip</option>
+                  <option value="pincode">pincode</option>
+                  <option value="city">city</option>
+                  <option value="state">state</option>
+                </select>
+              </div>
+
+              {/* Has Email */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Has Email</label>
+                <select className="input text-xs w-full" value={fHasEmail} onChange={e => { setFHasEmail(e.target.value); setPage(1); }}>
+                  <option value="">Any</option>
+                  <option value="true">✅ With Email</option>
+                  <option value="false">❌ Without Email</option>
+                </select>
+              </div>
+
+              {/* Has Phone */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Has Phone</label>
+                <select className="input text-xs w-full" value={fHasPhone} onChange={e => { setFHasPhone(e.target.value); setPage(1); }}>
+                  <option value="">Any</option>
+                  <option value="true">✅ With Phone</option>
+                  <option value="false">❌ Without Phone</option>
+                </select>
+              </div>
+
+              {/* Min Rating */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Min Rating ⭐</label>
+                <select className="input text-xs w-full" value={fMinRating} onChange={e => { setFMinRating(e.target.value); setPage(1); }}>
+                  <option value="">Any</option>
+                  <option value="3">3.0+</option>
+                  <option value="3.5">3.5+</option>
+                  <option value="4">4.0+</option>
+                  <option value="4.5">4.5+</option>
+                  <option value="5">5.0 only</option>
+                </select>
+              </div>
+
+              {/* Min Reviews */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Min Reviews</label>
+                <input className="input text-xs w-full" placeholder="e.g. 10" type="number" min="0"
+                  value={fMinReviews} onChange={e => { setFMinReviews(e.target.value); setPage(1); }} />
+              </div>
+
+              {/* Rows per page */}
+              <div>
+                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Rows / Page</label>
+                <select className="input text-xs w-full" value={limit} onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+              </div>
+
             </div>
           </motion.div>
         )}

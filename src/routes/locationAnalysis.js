@@ -30,13 +30,23 @@ function buildPeopleWhere(f) {
   const params = [];
   let idx = 1;
 
-  if (f.city)      { clauses.push(`city  ILIKE $${idx++}`);      params.push(`%${f.city}%`); }
-  if (f.state)     { clauses.push(`state ILIKE $${idx++}`);      params.push(`%${f.state}%`); }
-  if (f.industry)  { clauses.push(`job_title ILIKE $${idx++}`);  params.push(`%${f.industry}%`); }
-  if (f.has_email === "true")  { clauses.push(`emails IS NOT NULL AND array_length(emails, 1) > 0`); }
-  if (f.has_phone === "true")  { clauses.push(`phones IS NOT NULL AND array_length(phones, 1) > 0`); }
-  if (f.has_email === "false") { clauses.push(`(emails IS NULL OR array_length(emails, 1) = 0)`); }
-  if (f.has_phone === "false") { clauses.push(`(phones IS NULL OR array_length(phones, 1) = 0)`); }
+  // Text searches (using indexed columns)
+  if (f.full_name)   { clauses.push(`full_name  ILIKE $${idx++}`); params.push(`%${f.full_name}%`); }
+  if (f.job_title)   { clauses.push(`job_title  ILIKE $${idx++}`); params.push(`%${f.job_title}%`); }
+  if (f.location)    { clauses.push(`location   ILIKE $${idx++}`); params.push(`%${f.location}%`); }
+  if (f.industry)    { clauses.push(`job_title  ILIKE $${idx++}`); params.push(`%${f.industry}%`); }  // alias
+
+  // Exact-match columns (BTree indexed — fast)
+  if (f.city)        { clauses.push(`city       ILIKE $${idx++}`); params.push(`${f.city}%`); }
+  if (f.state)       { clauses.push(`state      ILIKE $${idx++}`); params.push(`${f.state}%`); }
+  if (f.pincode)     { clauses.push(`pincode    = $${idx++}`);      params.push(f.pincode); }
+  if (f.geo_source)  { clauses.push(`geo_source = $${idx++}`);      params.push(f.geo_source); }
+
+  // Array presence — cardinality() returns 0 for {} (safe, unlike array_length)
+  if (f.has_email === "true")  { clauses.push(`cardinality(emails) > 0`); }
+  if (f.has_email === "false") { clauses.push(`(emails IS NULL OR cardinality(emails) = 0)`); }
+  if (f.has_phone === "true")  { clauses.push(`cardinality(phones) > 0`); }
+  if (f.has_phone === "false") { clauses.push(`(phones IS NULL OR cardinality(phones) = 0)`); }
 
   return { where: clauses.join(" AND "), params };
 }
@@ -50,19 +60,46 @@ function buildCompaniesWhere(f) {
   const params = [];
   let idx = 1;
 
-  if (f.city)       { clauses.push(`city     ILIKE $${idx++}`); params.push(`%${f.city}%`); }
-  if (f.state)      { clauses.push(`state    ILIKE $${idx++}`); params.push(`%${f.state}%`); }
-  if (f.industry)   { clauses.push(`industry ILIKE $${idx++}`); params.push(`%${f.industry}%`); }
+  // Text searches
+  if (f.business_name) { clauses.push(`business_name ILIKE $${idx++}`); params.push(`%${f.business_name}%`); }
+  if (f.website)       { clauses.push(`website       ILIKE $${idx++}`); params.push(`%${f.website}%`); }
+  if (f.domain)        { clauses.push(`domain        ILIKE $${idx++}`); params.push(`%${f.domain}%`); }
+  if (f.address)       { clauses.push(`address       ILIKE $${idx++}`); params.push(`%${f.address}%`); }
+  if (f.industry)      { clauses.push(`industry      ILIKE $${idx++}`); params.push(`%${f.industry}%`); }
+
+  // Exact/prefix columns (BTree indexed — fast)
+  if (f.city)       { clauses.push(`city       ILIKE $${idx++}`); params.push(`${f.city}%`); }
+  if (f.state)      { clauses.push(`state      ILIKE $${idx++}`); params.push(`${f.state}%`); }
+  if (f.pincode)    { clauses.push(`pincode    = $${idx++}`);      params.push(f.pincode); }
+  if (f.geo_source) { clauses.push(`geo_source = $${idx++}`);      params.push(f.geo_source); }
+
+  // Numeric
   if (f.min_rating) {
     const r = parseFloat(f.min_rating);
     if (!isNaN(r)) { clauses.push(`rating >= $${idx++}`); params.push(r); }
   }
+  if (f.min_reviews) {
+    const rv = parseInt(f.min_reviews, 10);
+    if (!isNaN(rv)) { clauses.push(`reviews >= $${idx++}`); params.push(rv); }
+  }
+
+  // Phone (text column, not array)
+  if (f.has_phone === "true")  { clauses.push(`(phone IS NOT NULL AND phone <> '')`); }
+  if (f.has_phone === "false") { clauses.push(`(phone IS NULL OR phone = '')`); }
+
+  // Email array — cardinality() returns 0 for {} (safe)
+  if (f.has_email === "true")  { clauses.push(`cardinality(emails) > 0`); }
+  if (f.has_email === "false") { clauses.push(`(emails IS NULL OR cardinality(emails) = 0)`); }
 
   return { where: clauses.join(" AND "), params };
 }
 
 function hasFilters(f) {
-  return !!(f.city || f.state || f.industry || f.has_email || f.has_phone || f.min_rating);
+  return !!(
+    f.city || f.state || f.industry || f.has_email || f.has_phone || f.min_rating ||
+    f.full_name || f.job_title || f.location || f.pincode || f.geo_source || f.min_reviews ||
+    f.business_name || f.website || f.domain || f.address
+  );
 }
 
 // ── Cluster queries ────────────────────────────────────────────
@@ -198,12 +235,25 @@ async function getCompaniesStats() {
 
 // GET /api/location-analysis/clusters
 //   ?type=people|companies|both
-//   &city=Mumbai&state=Maharashtra&industry=IT
-//   &has_email=true&has_phone=true   (people only)
-//   &min_rating=4.0                  (companies only)
+//   People filters:   full_name, job_title, location, city, state, pincode, geo_source, has_email, has_phone
+//   Companies filters:business_name, website, domain, address, industry, city, state, pincode, geo_source, has_phone, has_email, min_rating, min_reviews
 router.get("/clusters", async (req, res) => {
-  const { type = "both", city, state, industry, has_email, has_phone, min_rating } = req.query;
-  const filters = { city, state, industry, has_email, has_phone, min_rating };
+  const {
+    type = "both",
+    // Shared
+    city, state, pincode, geo_source,
+    // People-specific
+    full_name, job_title, location, industry, has_email, has_phone,
+    // Companies-specific
+    business_name, website, domain, address, min_rating, min_reviews,
+  } = req.query;
+
+  const filters = {
+    city, state, pincode, geo_source,
+    full_name, job_title, location, industry, has_email, has_phone,
+    business_name, website, domain, address, min_rating, min_reviews,
+  };
+
   try {
     let people = [], companies = [];
     if (type === "people"    || type === "both") people    = await getPeopleClusters(filters);

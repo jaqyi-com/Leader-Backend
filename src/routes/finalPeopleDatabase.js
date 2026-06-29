@@ -84,26 +84,53 @@ function normalizeRow({ selectCols, colToField }, row) {
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // WHERE CLAUSE BUILDER
+// Supported params:
+//   search      — ILIKE on full_name only (GIN trgm indexed → fast on 43M rows)
+//   f_city      — city ILIKE 'value%'   (BTree indexed)
+//   f_state     — state ILIKE 'value%'  (BTree indexed)
+//   f_pincode   — pincode = 'value'     (BTree indexed)
+//   f_job_title — job_title ILIKE '%value%' (BTree indexed for prefix)
+//   f_location  — location ILIKE 'value%'
+//   f_geo_source— geo_source = 'value'
+//   f_has_email — 'true'/'false'        (GIN array indexed)
+//   f_has_phone — 'true'/'false'        (GIN array indexed)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function buildWhere({ search = "" }, { selectCols }) {
+function buildWhere({
+  search = "",
+  f_city, f_state, f_pincode, f_job_title, f_location, f_geo_source,
+  f_has_email, f_has_phone,
+}, _schema) {
   const conditions = [];
   const values     = [];
   let   idx        = 1;
 
+  // General text search — ONLY on full_name (GIN trgm index → fast)
   if (search) {
-    const searchTargets = selectCols.slice(0, 8);
-    const searchCols = searchTargets.map(c => `"${c}"::text ILIKE $${idx}`);
-    if (searchCols.length > 0) {
-      conditions.push(`(${searchCols.join(" OR ")})`);
-      values.push(`%${search}%`);
-      idx++;
-    }
+    conditions.push(`"full_name" ILIKE $${idx++}`);
+    values.push(`%${search}%`);
   }
 
+  // Column-specific filters — each uses its dedicated index
+  if (f_city)       { conditions.push(`city       ILIKE $${idx++}`); values.push(`${f_city}%`); }
+  if (f_state)      { conditions.push(`state      ILIKE $${idx++}`); values.push(`${f_state}%`); }
+  if (f_pincode)    { conditions.push(`pincode    = $${idx++}`);      values.push(f_pincode); }
+  if (f_job_title)  { conditions.push(`job_title  ILIKE $${idx++}`); values.push(`%${f_job_title}%`); }
+  if (f_location)   { conditions.push(`location   ILIKE $${idx++}`); values.push(`%${f_location}%`); }
+  if (f_geo_source) { conditions.push(`geo_source = $${idx++}`);      values.push(f_geo_source); }
+
+  // Array presence filters — cardinality() returns 0 for empty arrays (safe)
+  if (f_has_email === "true")  { conditions.push(`cardinality(emails) > 0`); }
+  if (f_has_email === "false") { conditions.push(`(emails IS NULL OR cardinality(emails) = 0)`); }
+  if (f_has_phone === "true")  { conditions.push(`cardinality(phones) > 0`); }
+  if (f_has_phone === "false") { conditions.push(`(phones IS NULL OR cardinality(phones) = 0)`); }
+
+  const hasFilters = conditions.length > 0;
+
   return {
-    whereStr: conditions.length ? `WHERE ${conditions.join(" AND ")}` : "",
+    whereStr: hasFilters ? `WHERE ${conditions.join(" AND ")}` : "",
     values,
     nextIdx: idx,
+    hasFilters,
   };
 }
 
@@ -185,6 +212,9 @@ router.get("/", async (req, res) => {
     search    = "",
     sort_by   = "",
     sort_dir  = "asc",
+    // Column-specific filters
+    f_city, f_state, f_pincode, f_job_title, f_location, f_geo_source,
+    f_has_email, f_has_phone,
   } = req.query;
 
   const pageNum  = Math.max(1, parseInt(page, 10));
@@ -194,7 +224,10 @@ router.get("/", async (req, res) => {
   try {
     const schema = await getSchema();
     const { selectSQL, selectCols } = schema;
-    const { whereStr, values, nextIdx } = buildWhere({ search }, schema);
+    const { whereStr, values, nextIdx, hasFilters } = buildWhere(
+      { search, f_city, f_state, f_pincode, f_job_title, f_location, f_geo_source, f_has_email, f_has_phone },
+      schema
+    );
 
     let orderClause = "";
     if (sort_by && selectCols.includes(sort_by)) {
@@ -220,7 +253,8 @@ router.get("/", async (req, res) => {
     `;
 
     let total;
-    if (!search) {
+    if (!hasFilters) {
+      // Unfiltered: use cached count
       const cachedCount = await cacheGet(COUNT_CACHE_KEY);
       if (cachedCount !== null && cachedCount !== undefined) {
         total = cachedCount;
@@ -230,7 +264,11 @@ router.get("/", async (req, res) => {
         await cacheSet(COUNT_CACHE_KEY, total, COUNT_TTL);
       }
     } else {
-      const countRes = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${whereStr}`, values, 60000);
+      // Filtered: capped count to avoid full-scan timeout
+      const countRes = await pgQuery(
+        `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 100001) subq`,
+        values, 30000
+      );
       total = parseInt(countRes.rows[0].cnt, 10);
     }
 

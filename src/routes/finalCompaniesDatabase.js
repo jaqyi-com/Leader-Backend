@@ -75,26 +75,73 @@ function normalizeRow({ selectCols, colToField }, row) {
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // WHERE CLAUSE BUILDER
+// Supported params:
+//   search         — ILIKE on business_name (GIN trgm if available, else BTree prefix)
+//   f_business_name— business_name ILIKE '%value%'
+//   f_city         — city ILIKE 'value%'     (BTree indexed)
+//   f_state        — state ILIKE 'value%'    (BTree indexed)
+//   f_pincode      — pincode = 'value'       (BTree indexed)
+//   f_domain       — domain = 'value'        (BTree indexed)
+//   f_industry     — industry ILIKE '%value%'(BTree indexed)
+//   f_website      — website ILIKE '%value%'
+//   f_address      — address ILIKE '%value%' (GIN trgm indexed)
+//   f_geo_source   — geo_source = 'value'
+//   f_has_email    — 'true'/'false'          (GIN array indexed)
+//   f_has_phone    — 'true'/'false'          (phone text column)
+//   f_min_rating   — numeric threshold (e.g. '4.0')
+//   f_min_reviews  — int threshold
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function buildWhere({ search = "" }, { selectCols }) {
+function buildWhere({
+  search = "",
+  f_business_name, f_city, f_state, f_pincode,
+  f_domain, f_industry, f_website, f_address, f_geo_source,
+  f_has_email, f_has_phone, f_min_rating, f_min_reviews,
+}, _schema) {
   const conditions = [];
   const values     = [];
   let   idx        = 1;
 
+  // General text search — business_name (BTree prefix match)
   if (search) {
-    const searchTargets = selectCols.slice(0, 8);
-    const searchCols = searchTargets.map(c => `"${c}"::text ILIKE $${idx}`);
-    if (searchCols.length > 0) {
-      conditions.push(`(${searchCols.join(" OR ")})`);
-      values.push(`%${search}%`);
-      idx++;
-    }
+    conditions.push(`"business_name" ILIKE $${idx++}`);
+    values.push(`%${search}%`);
   }
 
+  // Column-specific filters
+  if (f_business_name) { conditions.push(`business_name ILIKE $${idx++}`); values.push(`%${f_business_name}%`); }
+  if (f_city)          { conditions.push(`city          ILIKE $${idx++}`); values.push(`${f_city}%`); }
+  if (f_state)         { conditions.push(`state         ILIKE $${idx++}`); values.push(`${f_state}%`); }
+  if (f_pincode)       { conditions.push(`pincode       = $${idx++}`);      values.push(f_pincode); }
+  if (f_domain)        { conditions.push(`domain        ILIKE $${idx++}`); values.push(`%${f_domain}%`); }
+  if (f_industry)      { conditions.push(`industry      ILIKE $${idx++}`); values.push(`%${f_industry}%`); }
+  if (f_website)       { conditions.push(`website       ILIKE $${idx++}`); values.push(`%${f_website}%`); }
+  if (f_address)       { conditions.push(`address       ILIKE $${idx++}`); values.push(`%${f_address}%`); }
+  if (f_geo_source)    { conditions.push(`geo_source    = $${idx++}`);      values.push(f_geo_source); }
+
+  // Rating / reviews
+  if (f_min_rating) {
+    const r = parseFloat(f_min_rating);
+    if (!isNaN(r)) { conditions.push(`rating >= $${idx++}`); values.push(r); }
+  }
+  if (f_min_reviews) {
+    const rv = parseInt(f_min_reviews, 10);
+    if (!isNaN(rv)) { conditions.push(`reviews >= $${idx++}`); values.push(rv); }
+  }
+
+  // Array presence
+  if (f_has_email === "true")  { conditions.push(`cardinality(emails) > 0`); }
+  if (f_has_email === "false") { conditions.push(`(emails IS NULL OR cardinality(emails) = 0)`); }
+  // phone is a plain text column in companies
+  if (f_has_phone === "true")  { conditions.push(`(phone IS NOT NULL AND phone <> '')`); }
+  if (f_has_phone === "false") { conditions.push(`(phone IS NULL OR phone = '')`); }
+
+  const hasFilters = conditions.length > 0;
+
   return {
-    whereStr: conditions.length ? `WHERE ${conditions.join(" AND ")}` : "",
+    whereStr: hasFilters ? `WHERE ${conditions.join(" AND ")}` : "",
     values,
     nextIdx: idx,
+    hasFilters,
   };
 }
 
@@ -176,6 +223,10 @@ router.get("/", async (req, res) => {
     search    = "",
     sort_by   = "",
     sort_dir  = "asc",
+    // Column-specific filters
+    f_business_name, f_city, f_state, f_pincode,
+    f_domain, f_industry, f_website, f_address, f_geo_source,
+    f_has_email, f_has_phone, f_min_rating, f_min_reviews,
   } = req.query;
 
   const pageNum  = Math.max(1, parseInt(page, 10));
@@ -185,7 +236,10 @@ router.get("/", async (req, res) => {
   try {
     const schema = await getSchema();
     const { selectSQL, selectCols } = schema;
-    const { whereStr, values, nextIdx } = buildWhere({ search }, schema);
+    const { whereStr, values, nextIdx, hasFilters } = buildWhere(
+      { search, f_business_name, f_city, f_state, f_pincode, f_domain, f_industry, f_website, f_address, f_geo_source, f_has_email, f_has_phone, f_min_rating, f_min_reviews },
+      schema
+    );
 
     let orderClause = "";
     if (sort_by && selectCols.includes(sort_by)) {
@@ -212,7 +266,7 @@ router.get("/", async (req, res) => {
     `;
 
     let total;
-    if (!search) {
+    if (!hasFilters) {
       const cachedCount = await cacheGet(COUNT_CACHE_KEY);
       if (cachedCount !== null && cachedCount !== undefined) {
         total = cachedCount;
@@ -222,7 +276,11 @@ router.get("/", async (req, res) => {
         await cacheSet(COUNT_CACHE_KEY, total, COUNT_TTL);
       }
     } else {
-      const countRes = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${whereStr}`, values, 60000);
+      // Capped count — avoid full-scan timeout on 1.5M rows
+      const countRes = await pgQuery(
+        `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 100001) subq`,
+        values, 30000
+      );
       total = parseInt(countRes.rows[0].cnt, 10);
     }
 
