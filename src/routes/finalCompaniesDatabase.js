@@ -153,8 +153,12 @@ router.get("/health", async (req, res) => {
     const pingRes = await pgQuery("SELECT NOW() AS now");
     let totalRecords = 0;
     try {
-      const cnt = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}`);
-      totalRecords = parseInt(cnt.rows[0].cnt, 10);
+      const cnt = await pgQuery(
+        `SELECT reltuples::bigint AS cnt FROM pg_class WHERE oid = $1::regclass`,
+        [FULL_TABLE],
+        5000
+      );
+      totalRecords = parseInt(cnt.rows[0]?.cnt || "0", 10);
     } catch (_) {}
     res.json({ ok: true, source: "cloud_sql", table: FULL_TABLE,
       serverTime: pingRes.rows[0].now, totalRecords });
@@ -184,9 +188,13 @@ router.get("/stats", async (req, res) => {
     const cached = await cacheGet(STATS_KEY);
     if (cached) return res.json({ ...cached, _cache: "hit" });
 
-    const totalRes = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}`);
+    const totalRes = await pgQuery(
+      `SELECT reltuples::bigint AS cnt FROM pg_class WHERE oid = $1::regclass`,
+      [FULL_TABLE],
+      5000
+    );
     const payload = {
-      total:  parseInt(totalRes.rows[0].cnt, 10),
+      total:  parseInt(totalRes.rows[0]?.cnt || "0", 10),
       source: "cloud_sql",
       table:  FC_TABLE,
     };
@@ -245,17 +253,6 @@ router.get("/", async (req, res) => {
     if (sort_by && selectCols.includes(sort_by)) {
       const dir = sort_dir === "desc" ? "DESC" : "ASC";
       orderClause = `ORDER BY "${sort_by}" ${dir} NULLS LAST`;
-    } else {
-      // Default: richest records first — score by number of key fields populated
-      orderClause = `ORDER BY (
-        (CASE WHEN business_name IS NOT NULL AND business_name <> '' THEN 3 ELSE 0 END) +
-        (CASE WHEN phone         IS NOT NULL AND phone         <> '' THEN 3 ELSE 0 END) +
-        (CASE WHEN website       IS NOT NULL AND website       <> '' THEN 2 ELSE 0 END) +
-        (CASE WHEN emails        IS NOT NULL AND array_length(emails, 1) > 0 THEN 2 ELSE 0 END) +
-        (CASE WHEN industry      IS NOT NULL AND industry      <> '' THEN 1 ELSE 0 END) +
-        (CASE WHEN rating        IS NOT NULL                         THEN 1 ELSE 0 END) +
-        (CASE WHEN city          IS NOT NULL AND city          <> '' THEN 1 ELSE 0 END)
-      ) DESC`;
     }
 
     const dataSQL = `
@@ -271,8 +268,13 @@ router.get("/", async (req, res) => {
       if (cachedCount !== null && cachedCount !== undefined) {
         total = cachedCount;
       } else {
-        const countRes = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE}`, [], 60000);
-        total = parseInt(countRes.rows[0].cnt, 10);
+        // Fast estimate for large tables to avoid timeout
+        const countRes = await pgQuery(
+          `SELECT reltuples::bigint AS cnt FROM pg_class WHERE oid = $1::regclass`,
+          [FULL_TABLE],
+          5000
+        );
+        total = parseInt(countRes.rows[0]?.cnt || "0", 10);
         await cacheSet(COUNT_CACHE_KEY, total, COUNT_TTL);
       }
     } else {

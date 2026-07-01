@@ -143,7 +143,7 @@ router.get("/health", async (req, res) => {
       const filter = emailCol
         ? `WHERE "${emailCol}" IS NOT NULL AND "${emailCol}"::text NOT IN ('', '[]', 'null')`
         : "";
-      const cnt = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${filter}`);
+      const cnt = await pgQuery(`SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${filter} LIMIT 100001) subq`, [], 30000);
       totalRecords = parseInt(cnt.rows[0].cnt, 10);
     } catch (_) {}
     res.json({ ok: true, source: "cloud_sql", table: FULL_TABLE,
@@ -180,7 +180,7 @@ router.get("/stats", async (req, res) => {
       ? `WHERE "${emailCol}" IS NOT NULL AND "${emailCol}"::text NOT IN ('', '[]', 'null')`
       : "";
 
-    const totalRes = await pgQuery(`SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${filter}`);
+    const totalRes = await pgQuery(`SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${filter} LIMIT 100001) subq`, [], 30000);
     const payload = {
       total:  parseInt(totalRes.rows[0].cnt, 10),
       source: "cloud_sql",
@@ -252,18 +252,18 @@ router.get("/", async (req, res) => {
         total = cachedCount;
       } else {
         const countRes = await pgQuery(
-          `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${whereStr}`,
+          `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 100001) subq`,
           values,
-          60000
+          30000
         );
         total = parseInt(countRes.rows[0].cnt, 10);
         await cacheSet(COUNT_CACHE_KEY, total, COUNT_TTL);
       }
     } else {
       const countRes = await pgQuery(
-        `SELECT COUNT(*) AS cnt FROM ${FULL_TABLE} ${whereStr}`,
+        `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 100001) subq`,
         values,
-        60000
+        30000
       );
       total = parseInt(countRes.rows[0].cnt, 10);
     }
