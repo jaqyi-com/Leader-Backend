@@ -1,4 +1,4 @@
-// Build trigger: 2026-07-02-v2
+// Build trigger: 2026-07-02-v3
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -147,10 +147,8 @@ export default function PeoplePage() {
     { label: "Total People", val: stats.total, icon: Users, color: "#E23744" },
   ] : [];
 
-  // Hide columns where EVERY visible row is empty — avoids showing all-dash columns
-  const visibleCols = cols.filter(c =>
-    records.length === 0 || records.some(r => r[c.key] && r[c.key] !== "")
-  );
+  // Show all columns to ensure consistent layout and prevent columns from hiding dynamically
+  const visibleCols = cols;
 
   // ── Smart cell renderer ───────────────────────────────────
   const renderCell = (col, val) => {
