@@ -6,8 +6,8 @@
 // MongoDB Atlas remains untouched for all other features.
 //
 // Cloud SQL Instance : sigma-current-497209-i6:us-central1:leader
-// Public IP          : 34.71.167.187
-// Database           : doott  |  Schema: public  |  Table: usa_business_data
+// Public IP          : 34.9.35.25
+// Database           : doott_new  |  Schema: public  |  Table: usa_business_data
 //
 // ── Serverless (Vercel) considerations ───────────────────────
 //   • max: 3  — each function instance is short-lived; don't open 10 connections
@@ -37,9 +37,9 @@ function getPool() {
       : { rejectUnauthorized: false };
 
   _pool = new Pool({
-    host:                    process.env.CLOUD_SQL_HOST     || "34.71.167.187",
+    host:                    process.env.CLOUD_SQL_HOST     || "34.9.35.25",
     port:                    parseInt(process.env.CLOUD_SQL_PORT || "5432", 10),
-    database:                process.env.CLOUD_SQL_DB       || "doott",
+    database:                process.env.CLOUD_SQL_DB       || "doott_new",
     user:                    process.env.CLOUD_SQL_USER     || "postgres",
     password:                process.env.CLOUD_SQL_PASSWORD,
     ssl:                     sslConfig,
@@ -65,9 +65,9 @@ function getPool() {
   });
 
   console.log(
-    `[CloudSQL] ✅ Pool ready → ${process.env.CLOUD_SQL_HOST || "34.71.167.187"}` +
+    `[CloudSQL] ✅ Pool ready → ${process.env.CLOUD_SQL_HOST || "34.9.35.25"}` +
     `:${process.env.CLOUD_SQL_PORT || "5432"}` +
-    `/${process.env.CLOUD_SQL_DB || "doott"}`
+    `/${process.env.CLOUD_SQL_DB || "doott_new"}`
   );
 
   return _pool;
