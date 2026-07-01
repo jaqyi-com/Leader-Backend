@@ -124,22 +124,20 @@ function buildWhere({
   if (f_has_phone === "true")  { conditions.push(`cardinality(phones) > 0`); }
   if (f_has_phone === "false") { conditions.push(`(phones IS NULL OR cardinality(phones) = 0)`); }
 
-  const hasFilters = conditions.length > 0;
+  const userHasFilters = conditions.length > 0;
 
   // Default filter: require complete records (name, email, phone) if no search/filters are specified
-  if (!hasFilters) {
+  if (!userHasFilters) {
     conditions.push("full_name IS NOT NULL AND full_name <> '' AND full_name !~ '^[0-9\\-]+$'");
     conditions.push("emails IS NOT NULL AND cardinality(emails) > 0");
     conditions.push("phones IS NOT NULL AND cardinality(phones) > 0");
   }
 
-  const activeFilters = hasFilters || conditions.length > 0;
-
   return {
     whereStr: conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "",
     values,
     nextIdx: idx,
-    hasFilters: activeFilters,
+    userHasFilters,
   };
 }
 
@@ -241,7 +239,7 @@ router.get("/", async (req, res) => {
   try {
     const schema = await getSchema();
     const { selectSQL, selectCols } = schema;
-    const { whereStr, values, nextIdx, hasFilters } = buildWhere(
+    const { whereStr, values, nextIdx, userHasFilters } = buildWhere(
       { search, f_city, f_state, f_pincode, f_job_title, f_location, f_geo_source, f_has_email, f_has_phone },
       schema
     );
@@ -260,8 +258,8 @@ router.get("/", async (req, res) => {
     `;
 
     let total;
-    if (!hasFilters) {
-      // Unfiltered: use cached count
+    if (!userHasFilters) {
+      // Unfiltered (or using default filter): use cached count or fast estimate
       const cachedCount = await cacheGet(COUNT_CACHE_KEY);
       if (cachedCount !== null && cachedCount !== undefined) {
         total = cachedCount;

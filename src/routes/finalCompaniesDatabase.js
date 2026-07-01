@@ -135,23 +135,21 @@ function buildWhere({
   if (f_has_phone === "true")  { conditions.push(`(phone IS NOT NULL AND phone <> '')`); }
   if (f_has_phone === "false") { conditions.push(`(phone IS NULL OR phone = '')`); }
 
-  const hasFilters = conditions.length > 0;
+  const userHasFilters = conditions.length > 0;
 
   // Default filter: require complete records (business_name, phone, website, emails) if no search/filters are specified
-  if (!hasFilters) {
+  if (!userHasFilters) {
     conditions.push("business_name IS NOT NULL AND business_name <> '' AND business_name !~ '^[0-9\\-]+$'");
     conditions.push("phone IS NOT NULL AND phone <> ''");
     conditions.push("website IS NOT NULL AND website <> ''");
     conditions.push("emails IS NOT NULL AND cardinality(emails) > 0");
   }
 
-  const activeFilters = hasFilters || conditions.length > 0;
-
   return {
     whereStr: conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "",
     values,
     nextIdx: idx,
-    hasFilters: activeFilters,
+    userHasFilters,
   };
 }
 
@@ -254,7 +252,7 @@ router.get("/", async (req, res) => {
   try {
     const schema = await getSchema();
     const { selectSQL, selectCols } = schema;
-    const { whereStr, values, nextIdx, hasFilters } = buildWhere(
+    const { whereStr, values, nextIdx, userHasFilters } = buildWhere(
       { search, f_business_name, f_city, f_state, f_pincode, f_domain, f_industry, f_website, f_address, f_geo_source, f_has_email, f_has_phone, f_min_rating, f_min_reviews },
       schema
     );
@@ -273,7 +271,7 @@ router.get("/", async (req, res) => {
     `;
 
     let total;
-    if (!hasFilters) {
+    if (!userHasFilters) {
       const cachedCount = await cacheGet(COUNT_CACHE_KEY);
       if (cachedCount !== null && cachedCount !== undefined) {
         total = cachedCount;
