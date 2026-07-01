@@ -126,11 +126,20 @@ function buildWhere({
 
   const hasFilters = conditions.length > 0;
 
+  // Default filter: require complete records (name, email, phone) if no search/filters are specified
+  if (!hasFilters) {
+    conditions.push("full_name IS NOT NULL AND full_name <> '' AND full_name !~ '^[0-9\\-]+$'");
+    conditions.push("emails IS NOT NULL AND cardinality(emails) > 0");
+    conditions.push("phones IS NOT NULL AND cardinality(phones) > 0");
+  }
+
+  const activeFilters = hasFilters || conditions.length > 0;
+
   return {
-    whereStr: hasFilters ? `WHERE ${conditions.join(" AND ")}` : "",
+    whereStr: conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "",
     values,
     nextIdx: idx,
-    hasFilters,
+    hasFilters: activeFilters,
   };
 }
 

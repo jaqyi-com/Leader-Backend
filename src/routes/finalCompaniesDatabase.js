@@ -137,11 +137,21 @@ function buildWhere({
 
   const hasFilters = conditions.length > 0;
 
+  // Default filter: require complete records (business_name, phone, website, emails) if no search/filters are specified
+  if (!hasFilters) {
+    conditions.push("business_name IS NOT NULL AND business_name <> '' AND business_name !~ '^[0-9\\-]+$'");
+    conditions.push("phone IS NOT NULL AND phone <> ''");
+    conditions.push("website IS NOT NULL AND website <> ''");
+    conditions.push("emails IS NOT NULL AND cardinality(emails) > 0");
+  }
+
+  const activeFilters = hasFilters || conditions.length > 0;
+
   return {
-    whereStr: hasFilters ? `WHERE ${conditions.join(" AND ")}` : "",
+    whereStr: conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "",
     values,
     nextIdx: idx,
-    hasFilters,
+    hasFilters: activeFilters,
   };
 }
 
