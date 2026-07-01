@@ -65,7 +65,29 @@ export default function PeoplePage() {
         ...(fHasEmail && { f_has_email: fHasEmail }),
         ...(fHasPhone && { f_has_phone: fHasPhone }),
       });
-      setRecords(data.records || []);
+      const recordsData = data.records || [];
+      if (!sortBy) {
+        recordsData.sort((a, b) => {
+          const getScore = (r) => {
+            let score = 0;
+            if (r.full_name && String(r.full_name).trim() !== "") score += 2;
+            if (r.emails) {
+              if (Array.isArray(r.emails) && r.emails.length > 0) score += 3;
+              else if (typeof r.emails === "string" && r.emails.trim() !== "") score += 3;
+            }
+            if (r.phones) {
+              if (Array.isArray(r.phones) && r.phones.length > 0) score += 3;
+              else if (typeof r.phones === "string" && r.phones.trim() !== "") score += 3;
+            }
+            if (r.job_title && String(r.job_title).trim() !== "") score += 2;
+            if (r.linked_url && String(r.linked_url).trim() !== "") score += 1;
+            if (r.city && String(r.city).trim() !== "") score += 1;
+            return score;
+          };
+          return getScore(b) - getScore(a);
+        });
+      }
+      setRecords(recordsData);
       setTotal(data.total || 0);
     } catch {
       toast.error("Failed to load People data");

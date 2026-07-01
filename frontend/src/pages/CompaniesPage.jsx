@@ -75,7 +75,27 @@ export default function CompaniesPage() {
         ...(fMinRating  && { f_min_rating:     fMinRating  }),
         ...(fMinReviews && { f_min_reviews:    fMinReviews }),
       });
-      setRecords(data.records || []);
+      const recordsData = data.records || [];
+      if (!sortBy) {
+        recordsData.sort((a, b) => {
+          const getScore = (r) => {
+            let score = 0;
+            if (r.business_name && String(r.business_name).trim() !== "") score += 3;
+            if (r.phone && String(r.phone).trim() !== "") score += 3;
+            if (r.website && String(r.website).trim() !== "") score += 2;
+            if (r.emails) {
+              if (Array.isArray(r.emails) && r.emails.length > 0) score += 2;
+              else if (typeof r.emails === "string" && r.emails.trim() !== "") score += 2;
+            }
+            if (r.industry && String(r.industry).trim() !== "") score += 1;
+            if (r.rating !== null && r.rating !== undefined && r.rating !== "") score += 1;
+            if (r.city && String(r.city).trim() !== "") score += 1;
+            return score;
+          };
+          return getScore(b) - getScore(a);
+        });
+      }
+      setRecords(recordsData);
       setTotal(data.total || 0);
     } catch {
       toast.error("Failed to load Companies data");
