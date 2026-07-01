@@ -1,3 +1,4 @@
+// Build trigger: 2026-07-02
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
