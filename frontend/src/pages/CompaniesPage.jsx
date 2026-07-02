@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Building2, Search, Filter, Download, RefreshCw,
   Phone, Mail, MapPin, X,
@@ -8,6 +9,7 @@ import { fcGetDatabase, fcGetStats, fcGetColumns, fcRefresh } from "../api";
 import toast from "react-hot-toast";
 
 export default function CompaniesPage() {
+  const [searchParams] = useSearchParams();
   const [records, setRecords] = useState([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState(null);
@@ -25,7 +27,7 @@ export default function CompaniesPage() {
   const [fState,      setFState]      = useState("");
   const [fPincode,    setFPincode]    = useState("");
   const [fDomain,     setFDomain]     = useState("");
-  const [fIndustry,   setFIndustry]   = useState("");
+  const [fIndustry,   setFIndustry]   = useState(searchParams.get("f_industry") || "");
   const [fWebsite,    setFWebsite]    = useState("");
   const [fAddress,    setFAddress]    = useState("");
   const [fGeo,        setFGeo]        = useState("");

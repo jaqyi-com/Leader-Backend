@@ -1,5 +1,6 @@
 // Build trigger: 2026-07-02-v3
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import {
   Users, Search, Filter, Download, RefreshCw,
   Phone, Mail, MapPin, X,
@@ -9,6 +10,7 @@ import { fpGetDatabase, fpGetStats, fpGetColumns, fpRefresh } from "../api";
 import toast from "react-hot-toast";
 
 export default function PeoplePage() {
+  const [searchParams] = useSearchParams();
   const [records, setRecords] = useState([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState(null);
@@ -24,7 +26,7 @@ export default function PeoplePage() {
   const [fCity,      setFCity]      = useState("");
   const [fState,     setFState]     = useState("");
   const [fPincode,   setFPincode]   = useState("");
-  const [fJob,       setFJob]       = useState("");
+  const [fJob,       setFJob]       = useState(searchParams.get("f_job_title") || "");
   const [fLocation,  setFLocation]  = useState("");
   const [fGeo,       setFGeo]       = useState("");
   const [fHasEmail,  setFHasEmail]  = useState("");

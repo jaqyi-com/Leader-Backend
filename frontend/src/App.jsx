@@ -47,6 +47,7 @@ import PeoplePage               from "./pages/PeoplePage";
 import PeopleEmailPage          from "./pages/PeopleEmailPage";
 import PeopleNumberPage         from "./pages/PeopleNumberPage";
 import CompaniesPage            from "./pages/CompaniesPage";
+import CategoryExplorerPage     from "./pages/CategoryExplorerPage";
 // CRM
 import CrmPipelinePage    from "./pages/crm/CrmPipelinePage";
 import CrmDashboardPage   from "./pages/crm/CrmDashboardPage";
@@ -124,6 +125,7 @@ export default function App() {
             <Route path="people"              element={<PeoplePage />} />
             <Route path="people-email"        element={<PeopleEmailPage />} />
             <Route path="people-number"       element={<PeopleNumberPage />} />
+            <Route path="categories"          element={<CategoryExplorerPage />} />
             <Route path="companies"           element={<CompaniesPage />} />
             <Route path="lg/linkedin"       element={<LinkedInFinderPage />} />
             <Route path="lg/email"          element={<EmailFinderPage />} />
