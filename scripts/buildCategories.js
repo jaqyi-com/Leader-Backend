@@ -50,8 +50,8 @@ async function main() {
   console.log("✅ Connected to DB");
 
   try {
-    // ── PEOPLE: full GROUP BY on all 490k rows ──────────────
-    console.log("⏳ Querying people job_titles (all rows, no timeout)...");
+    // ── PEOPLE: full GROUP BY on all 43M rows ──────────────
+    console.log("⏳ Querying people job_titles (ALL 43M rows, no timeout)…");
     console.time("people");
     const peopleRows = await runQuery(client, `
       SELECT job_title, count(*) AS count
@@ -76,8 +76,8 @@ async function main() {
       .slice(0, 100)
       .map(([name, count]) => ({ name, count }));
 
-    // ── COMPANIES: full GROUP BY on all 20k rows ────────────
-    console.log("⏳ Querying company industries (all rows, no timeout)...");
+    // ── COMPANIES: full GROUP BY on all 1.78M rows ─────────
+    console.log("⏳ Querying company industries (ALL 1.78M rows, no timeout)…");
     console.time("companies");
     const companyRows = await runQuery(client, `
       SELECT industry, count(*) AS count
