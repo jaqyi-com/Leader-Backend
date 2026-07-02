@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Search, Filter, Download, RefreshCw,
-  Phone, Mail, MapPin, ChevronDown, ChevronUp, X,
-  Globe, Users, Database, Link,
+  Phone, Mail, MapPin, X,
+  Globe, Users, Database, Link, Linkedin,
 } from "lucide-react";
 import { fcGetDatabase, fcGetStats, fcGetColumns, fcRefresh } from "../api";
 import toast from "react-hot-toast";
@@ -15,7 +14,6 @@ export default function CompaniesPage() {
   const [cols, setCols] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showF, setShowF] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
   const [sortBy, setSortBy] = useState("");
@@ -35,6 +33,7 @@ export default function CompaniesPage() {
   const [fHasPhone,   setFHasPhone]   = useState("");
   const [fMinRating,  setFMinRating]  = useState("");
   const [fMinReviews, setFMinReviews] = useState("");
+  const [fLinkedIn,   setFLinkedIn]   = useState("");
 
   // ── Column discovery (only sets column headers, never triggers re-fetch) ────
   const loadColumns = useCallback(async () => {
@@ -74,6 +73,7 @@ export default function CompaniesPage() {
         ...(fHasPhone   && { f_has_phone:      fHasPhone   }),
         ...(fMinRating  && { f_min_rating:     fMinRating  }),
         ...(fMinReviews && { f_min_reviews:    fMinReviews }),
+        ...(fLinkedIn   && { f_linkedin:       fLinkedIn   }),
       });
       const recordsData = data.records || [];
       if (!sortBy) {
@@ -102,7 +102,7 @@ export default function CompaniesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, sortBy, sortDir, search, fBizName, fCity, fState, fPincode, fDomain, fIndustry, fWebsite, fAddress, fGeo, fHasEmail, fHasPhone, fMinRating, fMinReviews]);
+  }, [page, limit, sortBy, sortDir, search, fBizName, fCity, fState, fPincode, fDomain, fIndustry, fWebsite, fAddress, fGeo, fHasEmail, fHasPhone, fMinRating, fMinReviews, fLinkedIn]);
 
   useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
@@ -133,7 +133,7 @@ export default function CompaniesPage() {
   const clearAll = () => {
     setSearch(""); setFBizName(""); setFCity(""); setFState(""); setFPincode("");
     setFDomain(""); setFIndustry(""); setFWebsite(""); setFAddress(""); setFGeo("");
-    setFHasEmail(""); setFHasPhone(""); setFMinRating(""); setFMinReviews("");
+    setFHasEmail(""); setFHasPhone(""); setFMinRating(""); setFMinReviews(""); setFLinkedIn("");
     setPage(1);
   };
 
@@ -258,17 +258,9 @@ export default function CompaniesPage() {
         </div>
       )}
 
-      {/* Filter Bar — active chips */}
+      {/* Active filter chips */}
       <div className="flex items-center gap-2 flex-wrap">
-        <button onClick={() => setShowF(p => !p)} className="btn-ghost text-xs gap-1.5">
-          <Filter size={12} />Filters
-          {[search,fBizName,fCity,fState,fPincode,fDomain,fIndustry,fWebsite,fAddress,fGeo,fHasEmail,fHasPhone,fMinRating,fMinReviews].filter(Boolean).length > 0 &&
-            <span className="ml-1 bg-[var(--accent)] text-white rounded-full px-1.5 py-0.5 text-[9px] font-bold">
-              {[search,fBizName,fCity,fState,fPincode,fDomain,fIndustry,fWebsite,fAddress,fGeo,fHasEmail,fHasPhone,fMinRating,fMinReviews].filter(Boolean).length}
-            </span>
-          }
-          {showF ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-        </button>
+        <span className="flex items-center gap-1 text-xs text-[var(--text-3)] font-semibold"><Filter size={12} />Filters</span>
         {search     && <span className="badge badge-purple text-[10px] flex items-center gap-1">search: {search}        <button onClick={() => { setSearch("");     setPage(1); }}><X size={9}/></button></span>}
         {fBizName   && <span className="badge badge-purple text-[10px] flex items-center gap-1">name: {fBizName}        <button onClick={() => { setFBizName("");   setPage(1); }}><X size={9}/></button></span>}
         {fCity      && <span className="badge badge-purple text-[10px] flex items-center gap-1">city: {fCity}           <button onClick={() => { setFCity("");      setPage(1); }}><X size={9}/></button></span>}
@@ -283,143 +275,145 @@ export default function CompaniesPage() {
         {fHasPhone  && <span className="badge badge-purple text-[10px] flex items-center gap-1">phone: {fHasPhone}      <button onClick={() => { setFHasPhone("");  setPage(1); }}><X size={9}/></button></span>}
         {fMinRating && <span className="badge badge-purple text-[10px] flex items-center gap-1">rating ≥ {fMinRating}   <button onClick={() => { setFMinRating(""); setPage(1); }}><X size={9}/></button></span>}
         {fMinReviews&& <span className="badge badge-purple text-[10px] flex items-center gap-1">reviews ≥ {fMinReviews}<button onClick={() => { setFMinReviews("");setPage(1); }}><X size={9}/></button></span>}
-        {[search,fBizName,fCity,fState,fPincode,fDomain,fIndustry,fWebsite,fAddress,fGeo,fHasEmail,fHasPhone,fMinRating,fMinReviews].some(Boolean) && (
+        {fLinkedIn  && <span className="badge badge-purple text-[10px] flex items-center gap-1">linkedin: {fLinkedIn}   <button onClick={() => { setFLinkedIn("");  setPage(1); }}><X size={9}/></button></span>}
+        {[search,fBizName,fCity,fState,fPincode,fDomain,fIndustry,fWebsite,fAddress,fGeo,fHasEmail,fHasPhone,fMinRating,fMinReviews,fLinkedIn].some(Boolean) && (
           <button onClick={clearAll} className="text-[10px] text-[var(--text-3)] hover:text-[var(--rose)] underline">Clear all</button>
         )}
       </div>
 
-      {/* Filter Panel */}
-      <AnimatePresence>
-        {showF && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+      {/* Filter Panel — always visible */}
+      <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
 
-              {/* Business Name Search */}
-              <div className="col-span-2 sm:col-span-1">
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Business Name</label>
-                <div className="relative">
-                  <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
-                  <input className="input pl-7 text-xs w-full" placeholder="Search name…"
-                    value={fBizName} onChange={e => { setFBizName(e.target.value); setPage(1); }} />
-                </div>
-              </div>
+        {/* Business Name Search */}
+        <div className="col-span-2 sm:col-span-1">
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Business Name</label>
+          <div className="relative">
+            <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
+            <input className="input pl-7 text-xs w-full" placeholder="Search name…"
+              value={fBizName} onChange={e => { setFBizName(e.target.value); setPage(1); }} />
+          </div>
+        </div>
 
-              {/* City */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">City</label>
-                <input className="input text-xs w-full" placeholder="e.g. Mumbai"
-                  value={fCity} onChange={e => { setFCity(e.target.value); setPage(1); }} />
-              </div>
+        {/* City */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">City</label>
+          <input className="input text-xs w-full" placeholder="e.g. Mumbai"
+            value={fCity} onChange={e => { setFCity(e.target.value); setPage(1); }} />
+        </div>
 
-              {/* State */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">State</label>
-                <input className="input text-xs w-full" placeholder="e.g. Maharashtra"
-                  value={fState} onChange={e => { setFState(e.target.value); setPage(1); }} />
-              </div>
+        {/* State */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">State</label>
+          <input className="input text-xs w-full" placeholder="e.g. Maharashtra"
+            value={fState} onChange={e => { setFState(e.target.value); setPage(1); }} />
+        </div>
 
-              {/* Pincode */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Pincode</label>
-                <input className="input text-xs w-full" placeholder="e.g. 400001"
-                  value={fPincode} onChange={e => { setFPincode(e.target.value); setPage(1); }} />
-              </div>
+        {/* Pincode */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Pincode</label>
+          <input className="input text-xs w-full" placeholder="e.g. 400001"
+            value={fPincode} onChange={e => { setFPincode(e.target.value); setPage(1); }} />
+        </div>
 
-              {/* Domain */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Domain</label>
-                <input className="input text-xs w-full" placeholder="e.g. reliance.com"
-                  value={fDomain} onChange={e => { setFDomain(e.target.value); setPage(1); }} />
-              </div>
+        {/* Domain */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Domain</label>
+          <input className="input text-xs w-full" placeholder="e.g. reliance.com"
+            value={fDomain} onChange={e => { setFDomain(e.target.value); setPage(1); }} />
+        </div>
 
-              {/* Industry */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Industry</label>
-                <input className="input text-xs w-full" placeholder="e.g. Retail, IT"
-                  value={fIndustry} onChange={e => { setFIndustry(e.target.value); setPage(1); }} />
-              </div>
+        {/* Industry */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Industry</label>
+          <input className="input text-xs w-full" placeholder="e.g. Retail, IT"
+            value={fIndustry} onChange={e => { setFIndustry(e.target.value); setPage(1); }} />
+        </div>
 
-              {/* Website */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Website</label>
-                <input className="input text-xs w-full" placeholder="e.g. amazon"
-                  value={fWebsite} onChange={e => { setFWebsite(e.target.value); setPage(1); }} />
-              </div>
+        {/* Website */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Website</label>
+          <input className="input text-xs w-full" placeholder="e.g. amazon"
+            value={fWebsite} onChange={e => { setFWebsite(e.target.value); setPage(1); }} />
+        </div>
 
-              {/* Address */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Address</label>
-                <input className="input text-xs w-full" placeholder="e.g. MG Road"
-                  value={fAddress} onChange={e => { setFAddress(e.target.value); setPage(1); }} />
-              </div>
+        {/* Address */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Address</label>
+          <input className="input text-xs w-full" placeholder="e.g. MG Road"
+            value={fAddress} onChange={e => { setFAddress(e.target.value); setPage(1); }} />
+        </div>
 
-              {/* Geo Source */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Geo Source</label>
-                <select className="input text-xs w-full" value={fGeo} onChange={e => { setFGeo(e.target.value); setPage(1); }}>
-                  <option value="">Any</option>
-                  <option value="us_city">us_city</option>
-                  <option value="us_zip">us_zip</option>
-                  <option value="pincode">pincode</option>
-                  <option value="city">city</option>
-                  <option value="state">state</option>
-                </select>
-              </div>
+        {/* Geo Source */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Geo Source</label>
+          <select className="input text-xs w-full" value={fGeo} onChange={e => { setFGeo(e.target.value); setPage(1); }}>
+            <option value="">Any</option>
+            <option value="us_city">us_city</option>
+            <option value="us_zip">us_zip</option>
+            <option value="pincode">pincode</option>
+            <option value="city">city</option>
+            <option value="state">state</option>
+          </select>
+        </div>
 
-              {/* Has Email */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Has Email</label>
-                <select className="input text-xs w-full" value={fHasEmail} onChange={e => { setFHasEmail(e.target.value); setPage(1); }}>
-                  <option value="">Any</option>
-                  <option value="true">✅ With Email</option>
-                  <option value="false">❌ Without Email</option>
-                </select>
-              </div>
+        {/* Has Email */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block flex items-center gap-1"><Mail size={9}/>Has Email</label>
+          <select className="input text-xs w-full" value={fHasEmail} onChange={e => { setFHasEmail(e.target.value); setPage(1); }}>
+            <option value="">Any</option>
+            <option value="true">✅ With Email</option>
+            <option value="false">❌ Without Email</option>
+          </select>
+        </div>
 
-              {/* Has Phone */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Has Phone</label>
-                <select className="input text-xs w-full" value={fHasPhone} onChange={e => { setFHasPhone(e.target.value); setPage(1); }}>
-                  <option value="">Any</option>
-                  <option value="true">✅ With Phone</option>
-                  <option value="false">❌ Without Phone</option>
-                </select>
-              </div>
+        {/* Has Phone */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block flex items-center gap-1"><Phone size={9}/>Has Phone</label>
+          <select className="input text-xs w-full" value={fHasPhone} onChange={e => { setFHasPhone(e.target.value); setPage(1); }}>
+            <option value="">Any</option>
+            <option value="true">✅ With Phone</option>
+            <option value="false">❌ Without Phone</option>
+          </select>
+        </div>
 
-              {/* Min Rating */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Min Rating ⭐</label>
-                <select className="input text-xs w-full" value={fMinRating} onChange={e => { setFMinRating(e.target.value); setPage(1); }}>
-                  <option value="">Any</option>
-                  <option value="3">3.0+</option>
-                  <option value="3.5">3.5+</option>
-                  <option value="4">4.0+</option>
-                  <option value="4.5">4.5+</option>
-                  <option value="5">5.0 only</option>
-                </select>
-              </div>
+        {/* LinkedIn */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block flex items-center gap-1"><Linkedin size={9}/>LinkedIn</label>
+          <input className="input text-xs w-full" placeholder="linkedin.com/company/…"
+            value={fLinkedIn} onChange={e => { setFLinkedIn(e.target.value); setPage(1); }} />
+        </div>
 
-              {/* Min Reviews */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Min Reviews</label>
-                <input className="input text-xs w-full" placeholder="e.g. 10" type="number" min="0"
-                  value={fMinReviews} onChange={e => { setFMinReviews(e.target.value); setPage(1); }} />
-              </div>
+        {/* Min Rating */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Min Rating ⭐</label>
+          <select className="input text-xs w-full" value={fMinRating} onChange={e => { setFMinRating(e.target.value); setPage(1); }}>
+            <option value="">Any</option>
+            <option value="3">3.0+</option>
+            <option value="3.5">3.5+</option>
+            <option value="4">4.0+</option>
+            <option value="4.5">4.5+</option>
+            <option value="5">5.0 only</option>
+          </select>
+        </div>
 
-              {/* Rows per page */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Rows / Page</label>
-                <select className="input text-xs w-full" value={limit} onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </div>
+        {/* Min Reviews */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Min Reviews</label>
+          <input className="input text-xs w-full" placeholder="e.g. 10" type="number" min="0"
+            value={fMinReviews} onChange={e => { setFMinReviews(e.target.value); setPage(1); }} />
+        </div>
 
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {/* Rows per page */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Rows / Page</label>
+          <select className="input text-xs w-full" value={limit} onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </div>
+
+      </div>
 
       {/* Table */}
       <div className="card overflow-hidden flex-1">
