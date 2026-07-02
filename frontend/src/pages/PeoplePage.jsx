@@ -1,10 +1,9 @@
 // Build trigger: 2026-07-02-v3
 import { useState, useEffect, useCallback } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, Search, Filter, Download, RefreshCw,
-  Phone, Mail, MapPin, ChevronDown, ChevronUp, X,
-  Globe, Building2, Database,
+  Phone, Mail, MapPin, X,
+  Globe, Building2, Database, Linkedin,
 } from "lucide-react";
 import { fpGetDatabase, fpGetStats, fpGetColumns, fpRefresh } from "../api";
 import toast from "react-hot-toast";
@@ -16,21 +15,21 @@ export default function PeoplePage() {
   const [cols, setCols] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [showF, setShowF] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(50);
   const [sortBy, setSortBy] = useState("");
   const [sortDir, setSortDir] = useState("asc");
   const [search, setSearch] = useState("");
   // Column-specific filters
-  const [fCity,     setFCity]     = useState("");
-  const [fState,    setFState]    = useState("");
-  const [fPincode,  setFPincode]  = useState("");
-  const [fJob,      setFJob]      = useState("");
-  const [fLocation, setFLocation] = useState("");
-  const [fGeo,      setFGeo]      = useState("");
-  const [fHasEmail, setFHasEmail] = useState("");
-  const [fHasPhone, setFHasPhone] = useState("");
+  const [fCity,      setFCity]      = useState("");
+  const [fState,     setFState]     = useState("");
+  const [fPincode,   setFPincode]   = useState("");
+  const [fJob,       setFJob]       = useState("");
+  const [fLocation,  setFLocation]  = useState("");
+  const [fGeo,       setFGeo]       = useState("");
+  const [fHasEmail,  setFHasEmail]  = useState("");
+  const [fHasPhone,  setFHasPhone]  = useState("");
+  const [fLinkedIn,  setFLinkedIn]  = useState("");
 
   // ── Column discovery (only sets column headers, never triggers re-fetch) ────
   const loadColumns = useCallback(async () => {
@@ -57,14 +56,15 @@ export default function PeoplePage() {
         page, limit,
         sort_by: sortBy, sort_dir: sortDir,
         search,
-        ...(fCity     && { f_city:      fCity     }),
-        ...(fState    && { f_state:     fState    }),
-        ...(fPincode  && { f_pincode:   fPincode  }),
-        ...(fJob      && { f_job_title: fJob      }),
-        ...(fLocation && { f_location:  fLocation }),
-        ...(fGeo      && { f_geo_source: fGeo     }),
-        ...(fHasEmail && { f_has_email: fHasEmail }),
-        ...(fHasPhone && { f_has_phone: fHasPhone }),
+        ...(fCity     && { f_city:       fCity      }),
+        ...(fState    && { f_state:      fState     }),
+        ...(fPincode  && { f_pincode:    fPincode   }),
+        ...(fJob      && { f_job_title:  fJob       }),
+        ...(fLocation && { f_location:   fLocation  }),
+        ...(fGeo      && { f_geo_source: fGeo       }),
+        ...(fHasEmail && { f_has_email:  fHasEmail  }),
+        ...(fHasPhone && { f_has_phone:  fHasPhone  }),
+        ...(fLinkedIn && { f_linkedin:   fLinkedIn  }),
       });
       const recordsData = data.records || [];
       if (!sortBy) {
@@ -95,7 +95,7 @@ export default function PeoplePage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, sortBy, sortDir, search, fCity, fState, fPincode, fJob, fLocation, fGeo, fHasEmail, fHasPhone]);
+  }, [page, limit, sortBy, sortDir, search, fCity, fState, fPincode, fJob, fLocation, fGeo, fHasEmail, fHasPhone, fLinkedIn]);
 
   useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
@@ -125,7 +125,7 @@ export default function PeoplePage() {
 
   const clearAll = () => {
     setSearch(""); setFCity(""); setFState(""); setFPincode("");
-    setFJob(""); setFLocation(""); setFGeo(""); setFHasEmail(""); setFHasPhone("");
+    setFJob(""); setFLocation(""); setFGeo(""); setFHasEmail(""); setFHasPhone(""); setFLinkedIn("");
     setPage(1);
   };
 
@@ -247,18 +247,9 @@ export default function PeoplePage() {
         </div>
       )}
 
-      {/* Filter Bar — active chips */}
+      {/* Active filter chips */}
       <div className="flex items-center gap-2 flex-wrap">
-        <button onClick={() => setShowF(p => !p)} className="btn-ghost text-xs gap-1.5">
-          <Filter size={12} />Filters
-          {[search,fCity,fState,fPincode,fJob,fLocation,fGeo,fHasEmail,fHasPhone].filter(Boolean).length > 0 &&
-            <span className="ml-1 bg-[var(--accent)] text-white rounded-full px-1.5 py-0.5 text-[9px] font-bold">
-              {[search,fCity,fState,fPincode,fJob,fLocation,fGeo,fHasEmail,fHasPhone].filter(Boolean).length}
-            </span>
-          }
-          {showF ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
-        </button>
-        {/* Active filter chips */}
+        <span className="flex items-center gap-1 text-xs text-[var(--text-3)] font-semibold"><Filter size={12} />Filters</span>
         {search    && <span className="badge badge-purple text-[10px] flex items-center gap-1">name: {search}    <button onClick={() => { setSearch("");    setPage(1); }}><X size={9}/></button></span>}
         {fCity     && <span className="badge badge-purple text-[10px] flex items-center gap-1">city: {fCity}     <button onClick={() => { setFCity("");    setPage(1); }}><X size={9}/></button></span>}
         {fState    && <span className="badge badge-purple text-[10px] flex items-center gap-1">state: {fState}   <button onClick={() => { setFState("");   setPage(1); }}><X size={9}/></button></span>}
@@ -268,110 +259,112 @@ export default function PeoplePage() {
         {fGeo      && <span className="badge badge-purple text-[10px] flex items-center gap-1">geo: {fGeo}       <button onClick={() => { setFGeo("");      setPage(1); }}><X size={9}/></button></span>}
         {fHasEmail && <span className="badge badge-purple text-[10px] flex items-center gap-1">email: {fHasEmail}<button onClick={() => { setFHasEmail("");setPage(1); }}><X size={9}/></button></span>}
         {fHasPhone && <span className="badge badge-purple text-[10px] flex items-center gap-1">phone: {fHasPhone}<button onClick={() => { setFHasPhone("");setPage(1); }}><X size={9}/></button></span>}
-        {[search,fCity,fState,fPincode,fJob,fLocation,fGeo,fHasEmail,fHasPhone].some(Boolean) && (
+        {fLinkedIn && <span className="badge badge-purple text-[10px] flex items-center gap-1">linkedin: {fLinkedIn}<button onClick={() => { setFLinkedIn("");setPage(1); }}><X size={9}/></button></span>}
+        {[search,fCity,fState,fPincode,fJob,fLocation,fGeo,fHasEmail,fHasPhone,fLinkedIn].some(Boolean) && (
           <button onClick={clearAll} className="text-[10px] text-[var(--text-3)] hover:text-[var(--rose)] underline">Clear all</button>
         )}
       </div>
 
-      {/* Filter Panel */}
-      <AnimatePresence>
-        {showF && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden">
-            <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+      {/* Filter Panel — always visible */}
+      <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
 
-              {/* Name search */}
-              <div className="relative col-span-2 sm:col-span-1">
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Name Search</label>
-                <div className="relative">
-                  <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
-                  <input className="input pl-7 text-xs w-full" placeholder="Full name…"
-                    value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
-                </div>
-              </div>
+        {/* Name search */}
+        <div className="relative col-span-2 sm:col-span-1">
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Name Search</label>
+          <div className="relative">
+            <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
+            <input className="input pl-7 text-xs w-full" placeholder="Full name…"
+              value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+          </div>
+        </div>
 
-              {/* City */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">City</label>
-                <input className="input text-xs w-full" placeholder="e.g. Mumbai"
-                  value={fCity} onChange={e => { setFCity(e.target.value); setPage(1); }} />
-              </div>
+        {/* City */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">City</label>
+          <input className="input text-xs w-full" placeholder="e.g. Mumbai"
+            value={fCity} onChange={e => { setFCity(e.target.value); setPage(1); }} />
+        </div>
 
-              {/* State */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">State</label>
-                <input className="input text-xs w-full" placeholder="e.g. Maharashtra"
-                  value={fState} onChange={e => { setFState(e.target.value); setPage(1); }} />
-              </div>
+        {/* State */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">State</label>
+          <input className="input text-xs w-full" placeholder="e.g. Maharashtra"
+            value={fState} onChange={e => { setFState(e.target.value); setPage(1); }} />
+        </div>
 
-              {/* Pincode */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Pincode</label>
-                <input className="input text-xs w-full" placeholder="e.g. 400001"
-                  value={fPincode} onChange={e => { setFPincode(e.target.value); setPage(1); }} />
-              </div>
+        {/* Pincode */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Pincode</label>
+          <input className="input text-xs w-full" placeholder="e.g. 400001"
+            value={fPincode} onChange={e => { setFPincode(e.target.value); setPage(1); }} />
+        </div>
 
-              {/* Job Title */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Job Title</label>
-                <input className="input text-xs w-full" placeholder="e.g. CEO, Manager"
-                  value={fJob} onChange={e => { setFJob(e.target.value); setPage(1); }} />
-              </div>
+        {/* Job Title */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Job Title</label>
+          <input className="input text-xs w-full" placeholder="e.g. CEO, Manager"
+            value={fJob} onChange={e => { setFJob(e.target.value); setPage(1); }} />
+        </div>
 
-              {/* Location */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Location</label>
-                <input className="input text-xs w-full" placeholder="e.g. Delhi, India"
-                  value={fLocation} onChange={e => { setFLocation(e.target.value); setPage(1); }} />
-              </div>
+        {/* Location */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Location</label>
+          <input className="input text-xs w-full" placeholder="e.g. Delhi, India"
+            value={fLocation} onChange={e => { setFLocation(e.target.value); setPage(1); }} />
+        </div>
 
-              {/* Geo Source */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Geo Source</label>
-                <select className="input text-xs w-full" value={fGeo} onChange={e => { setFGeo(e.target.value); setPage(1); }}>
-                  <option value="">Any</option>
-                  <option value="us_city">us_city</option>
-                  <option value="us_zip">us_zip</option>
-                  <option value="us_state">us_state</option>
-                  <option value="pincode">pincode</option>
-                  <option value="city">city</option>
-                  <option value="state">state</option>
-                </select>
-              </div>
+        {/* Geo Source */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Geo Source</label>
+          <select className="input text-xs w-full" value={fGeo} onChange={e => { setFGeo(e.target.value); setPage(1); }}>
+            <option value="">Any</option>
+            <option value="us_city">us_city</option>
+            <option value="us_zip">us_zip</option>
+            <option value="us_state">us_state</option>
+            <option value="pincode">pincode</option>
+            <option value="city">city</option>
+            <option value="state">state</option>
+          </select>
+        </div>
 
-              {/* Has Email */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block flex items-center gap-1"><Mail size={9}/>Has Email</label>
-                <select className="input text-xs w-full" value={fHasEmail} onChange={e => { setFHasEmail(e.target.value); setPage(1); }}>
-                  <option value="">Any</option>
-                  <option value="true">✅ With Email</option>
-                  <option value="false">❌ Without Email</option>
-                </select>
-              </div>
+        {/* Has Email */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block flex items-center gap-1"><Mail size={9}/>Has Email</label>
+          <select className="input text-xs w-full" value={fHasEmail} onChange={e => { setFHasEmail(e.target.value); setPage(1); }}>
+            <option value="">Any</option>
+            <option value="true">✅ With Email</option>
+            <option value="false">❌ Without Email</option>
+          </select>
+        </div>
 
-              {/* Has Phone */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block flex items-center gap-1"><Phone size={9}/>Has Phone</label>
-                <select className="input text-xs w-full" value={fHasPhone} onChange={e => { setFHasPhone(e.target.value); setPage(1); }}>
-                  <option value="">Any</option>
-                  <option value="true">✅ With Phone</option>
-                  <option value="false">❌ Without Phone</option>
-                </select>
-              </div>
+        {/* Has Phone */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block flex items-center gap-1"><Phone size={9}/>Has Phone</label>
+          <select className="input text-xs w-full" value={fHasPhone} onChange={e => { setFHasPhone(e.target.value); setPage(1); }}>
+            <option value="">Any</option>
+            <option value="true">✅ With Phone</option>
+            <option value="false">❌ Without Phone</option>
+          </select>
+        </div>
 
-              {/* Rows per page */}
-              <div>
-                <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Rows / Page</label>
-                <select className="input text-xs w-full" value={limit} onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-              </div>
+        {/* LinkedIn */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block flex items-center gap-1"><Linkedin size={9}/>LinkedIn</label>
+          <input className="input text-xs w-full" placeholder="linkedin.com/in/…"
+            value={fLinkedIn} onChange={e => { setFLinkedIn(e.target.value); setPage(1); }} />
+        </div>
 
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+        {/* Rows per page */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Rows / Page</label>
+          <select className="input text-xs w-full" value={limit} onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+        </div>
+
+      </div>
 
       {/* Table */}
       <div className="card overflow-hidden flex-1">
