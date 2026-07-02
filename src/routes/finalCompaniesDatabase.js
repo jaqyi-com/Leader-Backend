@@ -223,8 +223,41 @@ router.post("/refresh", async (req, res) => {
     _schemaCache = null;
     await cacheDel(STATS_KEY);
     await cacheDel(COUNT_CACHE_KEY);
+    await cacheDel("cache:final-companies-categories-v1");
     res.json({ success: true, message: "Final Companies cache cleared." });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET /categories
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/categories", async (req, res) => {
+  try {
+    const cached = await cacheGet("cache:final-companies-categories-v1");
+    if (cached) return res.json(cached);
+
+    const queryRes = await pgQuery(
+      `SELECT industry, count(*) as count 
+       FROM ${FULL_TABLE} 
+       WHERE industry IS NOT NULL AND industry != '' 
+       GROUP BY industry 
+       ORDER BY count DESC 
+       LIMIT 100`,
+       [],
+       30000
+    );
+
+    const payload = queryRes.rows.map(r => ({
+      name: r.industry,
+      count: parseInt(r.count, 10)
+    }));
+
+    await cacheSet("cache:final-companies-categories-v1", payload, 86400); // 24 hours
+    res.json(payload);
+  } catch (err) {
+    logger.error(`[categories] ${err.message}`);
     res.status(500).json({ error: err.message });
   }
 });

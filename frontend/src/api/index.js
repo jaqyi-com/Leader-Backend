@@ -251,18 +251,20 @@ export const indiaRefresh     = ()             => lgApi.post("/api/india-data/re
 // ============================================================
 // FINAL PEOPLE DATABASE (final_people)
 // ============================================================
-export const fpGetDatabase = (params = {}) => lgApi.get("/api/final-people", { params });
-export const fpGetStats    = ()             => lgApi.get("/api/final-people/stats");
-export const fpGetColumns  = ()             => lgApi.get("/api/final-people/columns");
-export const fpRefresh     = ()             => lgApi.post("/api/final-people/refresh");
+export const fpGetDatabase   = (params = {}) => lgApi.get("/api/final-people", { params });
+export const fpGetStats      = ()             => lgApi.get("/api/final-people/stats");
+export const fpGetColumns    = ()             => lgApi.get("/api/final-people/columns");
+export const fpRefresh       = ()             => lgApi.post("/api/final-people/refresh");
+export const fpGetCategories = ()             => lgApi.get("/api/final-people/categories");
 
 // ============================================================
 // FINAL COMPANIES DATABASE (final_companies)
 // ============================================================
-export const fcGetDatabase = (params = {}) => lgApi.get("/api/final-companies", { params });
-export const fcGetStats    = ()             => lgApi.get("/api/final-companies/stats");
-export const fcGetColumns  = ()             => lgApi.get("/api/final-companies/columns");
-export const fcRefresh     = ()             => lgApi.post("/api/final-companies/refresh");
+export const fcGetDatabase   = (params = {}) => lgApi.get("/api/final-companies", { params });
+export const fcGetStats      = ()             => lgApi.get("/api/final-companies/stats");
+export const fcGetColumns    = ()             => lgApi.get("/api/final-companies/columns");
+export const fcRefresh       = ()             => lgApi.post("/api/final-companies/refresh");
+export const fcGetCategories = ()             => lgApi.get("/api/final-companies/categories");
 
 // ============================================================
 // FINAL PEOPLE — EMAIL (final.people WHERE email IS NOT NULL)

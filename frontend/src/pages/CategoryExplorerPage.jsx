@@ -5,16 +5,13 @@ import {
   Users2, Building2, Sparkles, ArrowRight, Search,
   RefreshCw, Grid3x3, Layers, Loader2,
 } from "lucide-react";
-import { fpGetDatabase, fcGetDatabase, fpGetStats, fcGetStats } from "../api";
+import { fpGetCategories, fcGetCategories } from "../api";
 
 // ── LocalStorage keys (bump version to bust old cache) ─────
-const LS_PEOPLE  = "doott_cat_people_v3";
-const LS_COMPANY = "doott_cat_company_v3";
-const BATCH_SIZE = 500;
+const LS_PEOPLE  = "doott_cat_people_v4";
+const LS_COMPANY = "doott_cat_company_v4";
 
 // ── Job-title normalization ────────────────────────────────
-// Strips " at Company", "- Company", "@Company", then takes
-// the first 3 meaningful words to form a groupable key.
 const STRIP_AT = /\s+(?:at|@|for|with|-)\s+.*/i;
 const STOP_WORDS = new Set([
   "a","an","the","of","in","and","or","for","to","at","by","on","as","is","with","from",
@@ -24,16 +21,12 @@ const STOP_WORDS = new Set([
 ]);
 
 function normalizeJobTitle(raw = "") {
-  // Remove "at CompanyName" and similar suffixes
   let s = raw.replace(STRIP_AT, "").trim();
-  // Remove special chars, collapse spaces
   s = s.replace(/[,;|#&*]/g, " ").replace(/\s{2,}/g, " ").trim();
-  // Take first 3 words, filter stop words
   const words = s.split(/\s+/)
     .filter(w => w.length > 1 && !STOP_WORDS.has(w.toLowerCase()))
     .slice(0, 3);
   if (!words.length) return "";
-  // Capitalise each word
   return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 }
 
@@ -43,18 +36,9 @@ function normalizeIndustry(raw = "") {
   return s.replace(/\b\w/g, c => c.toUpperCase());
 }
 
-function extractCategory(record, mode) {
-  if (mode === "people") {
-    const raw = record.job_title || record.occupation || record.role || "";
-    return normalizeJobTitle(raw);
-  }
-  const raw = record.industry || record.category || record.sector || record.business_type || "";
-  return normalizeIndustry(raw);
-}
-
 // ── Category emoji map ─────────────────────────────────────
 const EMOJI_MAP = {
-  manager: "💼", management: "💼", executive: "💼", director: "💼", vp: "💼",
+  manager: "💼", management: "💼", executive: "💼", director: "💼", vp: "💼", owner: "👑", president: "👔",
   engineer: "⚙️", developer: "💻", software: "💻", tech: "💻", programmer: "💻",
   sales: "📞", account: "📊", business: "💼", analyst: "📊", consultant: "🤝",
   marketing: "📣", digital: "📣", brand: "📣", media: "📺", content: "✍️",
@@ -105,7 +89,6 @@ const GRADIENTS = [
   "linear-gradient(135deg,#ff9a9e,#fecfef)",
 ];
 
-// ── localStorage helpers ───────────────────────────────────
 function lsRead(key) {
   try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
 }
@@ -121,15 +104,12 @@ export default function CategoryExplorerPage() {
   const [mode, setMode]             = useState("people");
   const [categories, setCategories] = useState([]);
   const [loading, setLoading]       = useState(false);
-  const [progress, setProgress]     = useState({ done: 0, total: 0 });
   const [searchQ, setSearchQ]       = useState("");
-  const abortRef = useRef(false);
 
-  // ── Load categories (cache-first) ──────────────────────
   const loadCategories = useCallback(async (forceRefresh = false) => {
     const lsKey = mode === "people" ? LS_PEOPLE : LS_COMPANY;
 
-    // ① Cache hit
+    // ① Check Cache
     if (!forceRefresh) {
       const cached = lsRead(lsKey);
       if (Array.isArray(cached) && cached.length > 0) {
@@ -140,70 +120,40 @@ export default function CategoryExplorerPage() {
       lsClear(lsKey);
     }
 
-    // ② Cache miss — paginate through ALL records
+    // ② Cache Miss — Fetch from Backend categories API
     setLoading(true);
-    setProgress({ done: 0, total: 0 });
-    abortRef.current = false;
-
     try {
-      const statsApi = mode === "people" ? fpGetStats : fcGetStats;
-      const dbApi    = mode === "people" ? fpGetDatabase : fcGetDatabase;
-
-      // Get total row count
-      const { data: statsData } = await statsApi();
-      const total = statsData?.total || 0;
-      setProgress({ done: 0, total });
-
-      const freq  = {};
-      let page    = 1;
-      let fetched = 0;
-
-      while (fetched < total) {
-        if (abortRef.current) break;
-
-        const { data } = await dbApi({ page, limit: BATCH_SIZE });
-        const records  = data?.records || [];
-        if (records.length === 0) break;
-
-        // Extract, normalise, count — discard raw records immediately
-        for (const r of records) {
-          const cat = extractCategory(r, mode);
-          if (!cat || cat.length < 2) continue;
-          freq[cat] = (freq[cat] || 0) + 1;
-        }
-
-        fetched += records.length;
-        setProgress({ done: fetched, total });
-        page++;
-        if (records.length < BATCH_SIZE) break;
+      const apiCall = mode === "people" ? fpGetCategories : fcGetCategories;
+      const { data } = await apiCall();
+      
+      // Normalize, group and count
+      const freq = {};
+      for (const item of (data || [])) {
+        const rawName = item.name || "";
+        const normalized = mode === "people" ? normalizeJobTitle(rawName) : normalizeIndustry(rawName);
+        if (!normalized || normalized.length < 2) continue;
+        freq[normalized] = (freq[normalized] || 0) + item.count;
       }
 
-      // ③ Build sorted list — only keep categories with count ≥ 2
-      //    (filters out one-off unique job titles)
-      const MIN_COUNT = mode === "people" ? 2 : 1;
       const sorted = Object.entries(freq)
-        .filter(([, count]) => count >= MIN_COUNT)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 100)
         .map(([name, count]) => ({ name, count }));
 
-      // ④ Save ONLY name+count to localStorage
+      // ③ Save to local storage
       lsWrite(lsKey, sorted);
       setCategories(sorted);
     } catch (err) {
-      console.error("Category fetch error:", err);
+      console.error("Failed to load categories:", err);
     } finally {
       setLoading(false);
-      setProgress({ done: 0, total: 0 });
     }
   }, [mode]);
 
   useEffect(() => {
-    abortRef.current = true;
     setCategories([]);
     setSearchQ("");
     loadCategories(false);
-    return () => { abortRef.current = true; };
   }, [loadCategories]);
 
   const handleCategoryClick = (cat) => {
@@ -219,10 +169,6 @@ export default function CategoryExplorerPage() {
     c.name.toLowerCase().includes(searchQ.toLowerCase())
   );
 
-  const pct = progress.total > 0
-    ? Math.round((progress.done / progress.total) * 100)
-    : 0;
-
   return (
     <div className="flex flex-col gap-6 h-full">
 
@@ -235,7 +181,7 @@ export default function CategoryExplorerPage() {
           </h2>
           <p className="text-sm text-[var(--text-3)] mt-0.5">
             {loading
-              ? "Building category index from full database…"
+              ? "Fetching category counts from database…"
               : isCached
                 ? "✅ Loaded from cache — no API call needed"
                 : `Browse ${mode === "people" ? "job roles" : "industries"} from your database`}
@@ -290,36 +236,19 @@ export default function CategoryExplorerPage() {
         </div>
       </div>
 
-      {/* ── Progress bar ──────────────────────────────────── */}
+      {/* ── Progress bar/loader ────────────────────────────── */}
       <AnimatePresence>
         {loading && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="card p-4 flex flex-col gap-3"
+            className="card p-4 flex flex-col gap-3 justify-center items-center py-10"
           >
-            <div className="flex items-center justify-between text-xs">
-              <span className="flex items-center gap-2 text-[var(--text-2)] font-medium">
-                <Loader2 size={13} className="animate-spin text-[var(--accent)]" />
-                Scanning all records — building category index…
-              </span>
-              <span className="text-[var(--text-3)] font-mono">
-                {progress.done.toLocaleString()} / {progress.total.toLocaleString()}
-                {progress.total > 0 && ` · ${pct}%`}
-              </span>
-            </div>
-            <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-2)" }}>
-              <motion.div
-                className="h-full rounded-full"
-                style={{ background: "linear-gradient(90deg,#667eea,#764ba2)" }}
-                animate={{ width: `${pct}%` }}
-                transition={{ ease: "linear", duration: 0.3 }}
-              />
-            </div>
-            <p className="text-[10px] text-[var(--text-3)]">
-              Only category names &amp; counts are saved to localStorage — raw records are discarded immediately.
-            </p>
+            <Loader2 size={24} className="animate-spin text-[var(--accent)]" />
+            <span className="text-xs text-[var(--text-2)] font-medium">
+              Generating category list from PostgreSQL database...
+            </span>
           </motion.div>
         )}
       </AnimatePresence>
@@ -349,7 +278,7 @@ export default function CategoryExplorerPage() {
           >
             <Layers size={40} className="opacity-30" />
             <p className="text-sm">No categories found.</p>
-            <p className="text-xs opacity-60">Try clicking Refresh Cache to scan the full database.</p>
+            <p className="text-xs opacity-60">Try clicking Refresh Cache to scan the database.</p>
           </motion.div>
         ) : !loading && filtered.length > 0 ? (
           <motion.div
