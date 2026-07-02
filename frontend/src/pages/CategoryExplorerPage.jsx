@@ -1,45 +1,51 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users2, Building2, Sparkles, ArrowRight, Search,
-  RefreshCw, Grid3x3, Layers,
+  RefreshCw, Grid3x3, Layers, Loader2,
 } from "lucide-react";
-import { fpGetDatabase, fcGetDatabase } from "../api";
+import { fpGetDatabase, fcGetDatabase, fpGetStats, fcGetStats } from "../api";
 
-// ── Category icons mapping (emoji per keyword) ──────────────
-const CATEGORY_EMOJI = {
-  auto: "🚗", car: "🚗", motor: "🚗", vehicle: "🚗",
-  health: "🏥", medical: "🏥", pharma: "💊", hospital: "🏥", clinic: "🏥",
-  tech: "💻", software: "💻", it: "💻", digital: "💻", cyber: "🔐",
-  food: "🍽️", restaurant: "🍽️", hotel: "🏨", hospitality: "🏨",
-  finance: "💰", bank: "🏦", insurance: "🛡️", invest: "📈",
-  retail: "🛍️", shop: "🛍️", ecommerce: "🛒", fashion: "👗",
-  real: "🏢", property: "🏢", estate: "🏢", construct: "🏗️", build: "🏗️",
-  edu: "🎓", school: "🎓", college: "🎓", train: "🎓",
-  legal: "⚖️", law: "⚖️",
-  market: "📣", advertis: "📣", media: "📺", entertainment: "🎭",
-  manufactur: "🏭", factory: "🏭", industri: "🏭",
-  transport: "🚚", logistics: "🚚", shipping: "🚢",
-  energy: "⚡", oil: "🛢️", gas: "🛢️", solar: "☀️",
-  telecom: "📡", network: "📡",
-  agri: "🌾", farm: "🌾",
-  consult: "🤝", service: "🤝", hr: "👥", recruit: "👥",
-  travel: "✈️", tour: "✈️",
-  art: "🎨", design: "🎨", creative: "🎨",
+// ── LocalStorage keys ──────────────────────────────────────
+const LS_PEOPLE   = "doott_cat_people_v1";
+const LS_COMPANY  = "doott_cat_company_v1";
+const BATCH_SIZE  = 500; // rows per API call while building cache
+
+// ── Category emoji map ─────────────────────────────────────
+const EMOJI_MAP = {
+  auto: "🚗", car: "🚗", motor: "🚗", vehicle: "🚗", drive: "🚗",
+  health: "🏥", medical: "🏥", pharma: "💊", hospital: "🏥", clinic: "🏥", doctor: "🏥",
+  tech: "💻", software: "💻", " it ": "💻", digital: "💻", cyber: "🔐", data: "🗄️",
+  food: "🍽️", restaurant: "🍽️", hotel: "🏨", hospitality: "🏨", catering: "🍽️",
+  finance: "💰", bank: "🏦", insurance: "🛡️", invest: "📈", account: "📊",
+  retail: "🛍️", shop: "🛍️", ecommerce: "🛒", fashion: "👗", cloth: "👗",
+  real: "🏢", property: "🏢", estate: "🏢", construct: "🏗️", build: "🏗️", architect: "🏗️",
+  edu: "🎓", school: "🎓", college: "🎓", train: "🎓", coach: "🎓",
+  legal: "⚖️", law: "⚖️", attorney: "⚖️",
+  market: "📣", advertis: "📣", media: "📺", entertainment: "🎭", publish: "📚",
+  manufactur: "🏭", factory: "🏭", industri: "🏭", product: "📦",
+  transport: "🚚", logistics: "🚚", shipping: "🚢", delivery: "🚚",
+  energy: "⚡", oil: "🛢️", gas: "🛢️", solar: "☀️", power: "⚡",
+  telecom: "📡", network: "📡", wireless: "📡",
+  agri: "🌾", farm: "🌾", food: "🌾",
+  consult: "🤝", service: "🤝", hr: "👥", recruit: "👥", staffing: "👥",
+  travel: "✈️", tour: "✈️", aviation: "✈️",
+  art: "🎨", design: "🎨", creative: "🎨", photo: "📷",
   security: "🔒", safety: "🔒",
-  ngo: "❤️", nonprofit: "❤️", charity: "❤️",
+  ngo: "❤️", nonprofit: "❤️", charity: "❤️", social: "❤️",
+  engineer: "⚙️", mechanic: "⚙️",
+  sales: "📞", business: "💼", manage: "💼", executive: "💼",
 };
 
-function getCategoryEmoji(name = "") {
-  const lower = name.toLowerCase();
-  for (const [key, emoji] of Object.entries(CATEGORY_EMOJI)) {
+function getEmoji(name = "") {
+  const lower = ` ${name.toLowerCase()} `;
+  for (const [key, emoji] of Object.entries(EMOJI_MAP)) {
     if (lower.includes(key)) return emoji;
   }
   return "🏷️";
 }
 
-// ── Vibrant gradient palettes per index ─────────────────────
 const GRADIENTS = [
   "linear-gradient(135deg,#667eea,#764ba2)",
   "linear-gradient(135deg,#f093fb,#f5576c)",
@@ -58,79 +64,140 @@ const GRADIENTS = [
   "linear-gradient(135deg,#ff9a9e,#fecfef)",
 ];
 
-export default function CategoryExplorerPage() {
-  const navigate = useNavigate();
-  const [mode, setMode] = useState("people"); // "people" | "company"
-  const [categories, setCategories] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQ, setSearchQ] = useState("");
+// ── Helpers ────────────────────────────────────────────────
+function lsRead(key) {
+  try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
+}
+function lsWrite(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+function lsClear(key) {
+  try { localStorage.removeItem(key); } catch {}
+}
 
-  // ── Fetch distinct categories from real data ───────────────
-  const load = useCallback(async () => {
-    setLoading(true);
-    setCategories([]);
-    try {
-      if (mode === "people") {
-        // Fetch a large sample and extract unique job_titles
-        const { data } = await fpGetDatabase({ page: 1, limit: 2000 });
-        const records = data.records || [];
-        const freq = {};
-        for (const r of records) {
-          const raw = r.job_title || r.industry || r.category || "";
-          if (!raw.trim()) continue;
-          // Normalize — capitalise first letter, trim
-          const key = raw.trim().replace(/\b\w/g, c => c.toUpperCase());
-          freq[key] = (freq[key] || 0) + 1;
-        }
-        const sorted = Object.entries(freq)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 60)
-          .map(([name, count]) => ({ name, count }));
-        setCategories(sorted);
-      } else {
-        // Fetch companies and extract industry
-        const { data } = await fcGetDatabase({ page: 1, limit: 2000 });
-        const records = data.records || [];
-        const freq = {};
-        for (const r of records) {
-          const raw = r.industry || r.category || r.sector || r.business_type || "";
-          if (!raw.trim()) continue;
-          const key = raw.trim().replace(/\b\w/g, c => c.toUpperCase());
-          freq[key] = (freq[key] || 0) + 1;
-        }
-        const sorted = Object.entries(freq)
-          .sort((a, b) => b[1] - a[1])
-          .slice(0, 60)
-          .map(([name, count]) => ({ name, count }));
-        setCategories(sorted);
+// Extract the category field from a people or company record
+function extractField(record, mode) {
+  if (mode === "people") {
+    return (record.job_title || record.industry || record.category || "").trim();
+  }
+  return (record.industry || record.category || record.sector || record.business_type || "").trim();
+}
+
+export default function CategoryExplorerPage() {
+  const navigate   = useNavigate();
+  const [mode, setMode]           = useState("people");
+  const [categories, setCategories] = useState([]);  // [{name, count}]
+  const [loading, setLoading]     = useState(false);
+  const [progress, setProgress]   = useState({ done: 0, total: 0 });
+  const [searchQ, setSearchQ]     = useState("");
+  const abortRef = useRef(false);
+
+  // ── Load from cache OR fetch all pages ──────────────────
+  const loadCategories = useCallback(async (forceRefresh = false) => {
+    const lsKey = mode === "people" ? LS_PEOPLE : LS_COMPANY;
+
+    // ① Try cache first
+    if (!forceRefresh) {
+      const cached = lsRead(lsKey);
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        setCategories(cached);
+        return;
       }
-    } catch {
-      setCategories([]);
+    } else {
+      lsClear(lsKey);
+    }
+
+    // ② Cache miss → fetch all records in batches
+    setLoading(true);
+    setProgress({ done: 0, total: 0 });
+    abortRef.current = false;
+
+    try {
+      // Get total count first
+      const statsApi = mode === "people" ? fpGetStats : fcGetStats;
+      const dbApi    = mode === "people" ? fpGetDatabase : fcGetDatabase;
+
+      const { data: statsData } = await statsApi();
+      const total = statsData?.total || 0;
+      setProgress({ done: 0, total });
+
+      const freq = {};
+      let page = 1;
+      let fetched = 0;
+
+      while (fetched < total) {
+        if (abortRef.current) break;
+
+        const { data } = await dbApi({ page, limit: BATCH_SIZE });
+        const records  = data?.records || [];
+        if (records.length === 0) break;
+
+        // Extract & count — only the category string, discard the record
+        for (const r of records) {
+          const raw = extractField(r, mode);
+          if (!raw) continue;
+          const key = raw.replace(/\b\w/g, c => c.toUpperCase());
+          freq[key] = (freq[key] || 0) + 1;
+        }
+
+        fetched += records.length;
+        setProgress({ done: fetched, total });
+        page++;
+
+        // If we got fewer rows than batch size we're done
+        if (records.length < BATCH_SIZE) break;
+      }
+
+      // ③ Build sorted array
+      const sorted = Object.entries(freq)
+        .filter(([name]) => name.length > 1)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 100)
+        .map(([name, count]) => ({ name, count }));
+
+      // ④ Save ONLY name+count to localStorage
+      lsWrite(lsKey, sorted);
+      setCategories(sorted);
+    } catch (err) {
+      console.error("Category fetch failed", err);
     } finally {
       setLoading(false);
+      setProgress({ done: 0, total: 0 });
     }
   }, [mode]);
 
-  useEffect(() => { load(); }, [load]);
+  // Abort in-flight fetch on mode change
+  useEffect(() => {
+    abortRef.current = true;
+    setCategories([]);
+    setSearchQ("");
+    loadCategories(false);
+    return () => { abortRef.current = true; };
+  }, [loadCategories]);
 
-  // ── Navigate to People/Company with pre-filled filter ──────
+  const handleRefresh = () => loadCategories(true);
+
   const handleCategoryClick = (cat) => {
-    const encoded = encodeURIComponent(cat.name);
-    if (mode === "people") {
-      navigate(`/app/people?f_job_title=${encoded}`);
-    } else {
-      navigate(`/app/companies?f_industry=${encoded}`);
-    }
+    const enc = encodeURIComponent(cat.name);
+    if (mode === "people") navigate(`/app/people?f_job_title=${enc}`);
+    else                    navigate(`/app/companies?f_industry=${enc}`);
   };
 
   const filtered = categories.filter(c =>
     c.name.toLowerCase().includes(searchQ.toLowerCase())
   );
 
+  const pct = progress.total > 0
+    ? Math.round((progress.done / progress.total) * 100)
+    : 0;
+
+  const lsKey = mode === "people" ? LS_PEOPLE : LS_COMPANY;
+  const isCached = !loading && lsRead(lsKey)?.length > 0;
+
   return (
     <div className="flex flex-col gap-6 h-full">
 
-      {/* ── Header ─────────────────────────────────────────── */}
+      {/* ── Header ─────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-[var(--text)] flex items-center gap-2">
@@ -138,26 +205,32 @@ export default function CategoryExplorerPage() {
             Category Explorer
           </h2>
           <p className="text-sm text-[var(--text-3)] mt-0.5">
-            Browse & jump into filtered {mode === "people" ? "People" : "Companies"} by category
+            {isCached
+              ? "✅ Loaded from cache — no API call needed"
+              : `Browse ${mode === "people" ? "job titles" : "industries"} from your full database`}
           </p>
         </div>
-        <button onClick={load} disabled={loading} className="btn-ghost text-xs gap-1.5">
+        <button
+          onClick={handleRefresh}
+          disabled={loading}
+          className="btn-ghost text-xs gap-1.5"
+          title="Clear cache & re-fetch all records"
+        >
           <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
-          Refresh
+          {loading ? "Fetching…" : "Refresh Cache"}
         </button>
       </div>
 
-      {/* ── Toggle — People / Company ───────────────────────── */}
+      {/* ── Toggle — People / Company ────────────────────── */}
       <div className="flex justify-center">
         <div
-          className="relative flex items-center rounded-full p-1 gap-1"
+          className="relative flex items-center rounded-full p-1"
           style={{
             background: "var(--surface-2)",
             border: "1px solid var(--border)",
             width: "fit-content",
           }}
         >
-          {/* Sliding pill */}
           <motion.div
             layout
             transition={{ type: "spring", stiffness: 400, damping: 35 }}
@@ -166,64 +239,81 @@ export default function CategoryExplorerPage() {
               background: mode === "people"
                 ? "linear-gradient(135deg,#667eea,#764ba2)"
                 : "linear-gradient(135deg,#22d3ee,#0ea5e9)",
-              left: mode === "people" ? "4px" : "calc(50% + 2px)",
+              left:  mode === "people" ? "4px" : "calc(50% + 2px)",
               width: "calc(50% - 6px)",
               zIndex: 0,
             }}
           />
           <button
             onClick={() => setMode("people")}
-            className="relative z-10 flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
+            disabled={loading}
+            className="relative z-10 flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors disabled:opacity-50"
             style={{ color: mode === "people" ? "#fff" : "var(--text-3)" }}
           >
-            <Users2 size={15} />
-            People
+            <Users2 size={15} /> People
           </button>
           <button
             onClick={() => setMode("company")}
-            className="relative z-10 flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
+            disabled={loading}
+            className="relative z-10 flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors disabled:opacity-50"
             style={{ color: mode === "company" ? "#fff" : "var(--text-3)" }}
           >
-            <Building2 size={15} />
-            Companies
+            <Building2 size={15} /> Companies
           </button>
         </div>
       </div>
 
-      {/* ── Search bar ─────────────────────────────────────── */}
-      <div className="relative max-w-sm mx-auto w-full">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
-        <input
-          className="input pl-9 w-full text-sm"
-          placeholder={`Search ${mode === "people" ? "job titles" : "industries"}…`}
-          value={searchQ}
-          onChange={e => setSearchQ(e.target.value)}
-        />
-      </div>
-
-      {/* ── Category Grid ───────────────────────────────────── */}
-      <AnimatePresence mode="wait">
-        {loading ? (
+      {/* ── Progress bar (only while fetching) ────────────── */}
+      <AnimatePresence>
+        {loading && (
           <motion.div
-            key="skeleton"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="card p-4 flex flex-col gap-3"
           >
-            {Array.from({ length: 20 }).map((_, i) => (
-              <div
-                key={i}
-                className="rounded-2xl animate-pulse"
-                style={{
-                  height: 110,
-                  background: "var(--surface-2)",
-                  border: "1px solid var(--border)",
-                }}
+            <div className="flex items-center justify-between text-xs">
+              <span className="flex items-center gap-2 text-[var(--text-2)] font-medium">
+                <Loader2 size={13} className="animate-spin text-[var(--accent)]" />
+                Scanning all records to build category index…
+              </span>
+              <span className="text-[var(--text-3)]">
+                {progress.done.toLocaleString()} / {progress.total.toLocaleString()} rows
+                {progress.total > 0 && ` (${pct}%)`}
+              </span>
+            </div>
+            {/* Progress bar */}
+            <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-2)" }}>
+              <motion.div
+                className="h-full rounded-full"
+                style={{ background: "linear-gradient(90deg,#667eea,#764ba2)" }}
+                animate={{ width: `${pct}%` }}
+                transition={{ ease: "linear", duration: 0.3 }}
               />
-            ))}
+            </div>
+            <p className="text-[10px] text-[var(--text-3)]">
+              Only category names &amp; counts will be saved to local storage — raw records are never stored.
+            </p>
           </motion.div>
-        ) : filtered.length === 0 ? (
+        )}
+      </AnimatePresence>
+
+      {/* ── Search bar ────────────────────────────────────── */}
+      {!loading && categories.length > 0 && (
+        <div className="relative max-w-sm mx-auto w-full">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
+          <input
+            className="input pl-9 w-full text-sm"
+            placeholder={`Search ${mode === "people" ? "job titles" : "industries"}…`}
+            value={searchQ}
+            onChange={e => setSearchQ(e.target.value)}
+          />
+        </div>
+      )}
+
+      {/* ── Category Grid ──────────────────────────────────── */}
+      <AnimatePresence mode="wait">
+        {!loading && filtered.length === 0 && categories.length === 0 ? (
           <motion.div
             key="empty"
             initial={{ opacity: 0 }}
@@ -232,10 +322,9 @@ export default function CategoryExplorerPage() {
             className="flex flex-col items-center justify-center py-20 gap-3 text-[var(--text-3)]"
           >
             <Layers size={40} className="opacity-30" />
-            <p className="text-sm">No categories found.</p>
-            <p className="text-xs opacity-60">Try refreshing or switching mode.</p>
+            <p className="text-sm">No categories found in the data.</p>
           </motion.div>
-        ) : (
+        ) : !loading && filtered.length > 0 ? (
           <motion.div
             key={`grid-${mode}`}
             initial={{ opacity: 0, y: 12 }}
@@ -252,7 +341,7 @@ export default function CategoryExplorerPage() {
                 whileTap={{ scale: 0.97 }}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.018, duration: 0.22 }}
+                transition={{ delay: i * 0.015, duration: 0.2 }}
                 className="relative rounded-2xl p-4 text-left overflow-hidden group cursor-pointer"
                 style={{
                   background: "var(--surface)",
@@ -260,34 +349,27 @@ export default function CategoryExplorerPage() {
                   minHeight: 110,
                 }}
               >
-                {/* Gradient accent strip at top */}
+                {/* Top gradient strip */}
                 <div
                   className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
                   style={{ background: GRADIENTS[i % GRADIENTS.length] }}
                 />
-
-                {/* Soft gradient glow on hover */}
+                {/* Hover glow */}
                 <div
                   className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-2xl"
                   style={{ background: GRADIENTS[i % GRADIENTS.length] }}
                 />
-
                 {/* Emoji */}
-                <div className="text-2xl mb-2 leading-none">
-                  {getCategoryEmoji(cat.name)}
-                </div>
-
-                {/* Category name */}
+                <div className="text-2xl mb-2 leading-none">{getEmoji(cat.name)}</div>
+                {/* Name */}
                 <p className="text-xs font-semibold text-[var(--text)] leading-snug line-clamp-2 mb-1">
                   {cat.name}
                 </p>
-
-                {/* Count badge */}
+                {/* Count */}
                 <p className="text-[10px] text-[var(--text-3)]">
                   {cat.count.toLocaleString()} {mode === "people" ? "people" : "companies"}
                 </p>
-
-                {/* Arrow — appears on hover */}
+                {/* Arrow on hover */}
                 <div
                   className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-full p-1"
                   style={{ background: GRADIENTS[i % GRADIENTS.length] }}
@@ -297,14 +379,14 @@ export default function CategoryExplorerPage() {
               </motion.button>
             ))}
           </motion.div>
-        )}
+        ) : null}
       </AnimatePresence>
 
-      {/* ── Footer hint ─────────────────────────────────────── */}
+      {/* ── Footer hint ───────────────────────────────────── */}
       {!loading && filtered.length > 0 && (
         <p className="text-center text-[11px] text-[var(--text-3)] pb-2 flex items-center justify-center gap-1">
           <Sparkles size={10} />
-          Click any category to open filtered {mode === "people" ? "People" : "Companies"} view
+          Click any card to open filtered {mode === "people" ? "People" : "Companies"} · cached in localStorage
         </p>
       )}
     </div>
