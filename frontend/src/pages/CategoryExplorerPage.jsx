@@ -7,39 +7,80 @@ import {
 } from "lucide-react";
 import { fpGetDatabase, fcGetDatabase, fpGetStats, fcGetStats } from "../api";
 
-// ── LocalStorage keys ──────────────────────────────────────
-const LS_PEOPLE   = "doott_cat_people_v1";
-const LS_COMPANY  = "doott_cat_company_v1";
-const BATCH_SIZE  = 500; // rows per API call while building cache
+// ── LocalStorage keys (bump version to bust old cache) ─────
+const LS_PEOPLE  = "doott_cat_people_v3";
+const LS_COMPANY = "doott_cat_company_v3";
+const BATCH_SIZE = 500;
+
+// ── Job-title normalization ────────────────────────────────
+// Strips " at Company", "- Company", "@Company", then takes
+// the first 3 meaningful words to form a groupable key.
+const STRIP_AT = /\s+(?:at|@|for|with|-)\s+.*/i;
+const STOP_WORDS = new Set([
+  "a","an","the","of","in","and","or","for","to","at","by","on","as","is","with","from",
+  "senior","junior","lead","principal","associate","assistant","chief","head","global",
+  "regional","national","corporate","interim","acting","part","time","full","part-time",
+  "full-time","sr","jr","ii","iii","iv","i",
+]);
+
+function normalizeJobTitle(raw = "") {
+  // Remove "at CompanyName" and similar suffixes
+  let s = raw.replace(STRIP_AT, "").trim();
+  // Remove special chars, collapse spaces
+  s = s.replace(/[,;|#&*]/g, " ").replace(/\s{2,}/g, " ").trim();
+  // Take first 3 words, filter stop words
+  const words = s.split(/\s+/)
+    .filter(w => w.length > 1 && !STOP_WORDS.has(w.toLowerCase()))
+    .slice(0, 3);
+  if (!words.length) return "";
+  // Capitalise each word
+  return words.map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
+}
+
+function normalizeIndustry(raw = "") {
+  const s = raw.replace(/[,;|#&*]/g, " ").replace(/\s{2,}/g, " ").trim();
+  if (!s) return "";
+  return s.replace(/\b\w/g, c => c.toUpperCase());
+}
+
+function extractCategory(record, mode) {
+  if (mode === "people") {
+    const raw = record.job_title || record.occupation || record.role || "";
+    return normalizeJobTitle(raw);
+  }
+  const raw = record.industry || record.category || record.sector || record.business_type || "";
+  return normalizeIndustry(raw);
+}
 
 // ── Category emoji map ─────────────────────────────────────
 const EMOJI_MAP = {
-  auto: "🚗", car: "🚗", motor: "🚗", vehicle: "🚗", drive: "🚗",
-  health: "🏥", medical: "🏥", pharma: "💊", hospital: "🏥", clinic: "🏥", doctor: "🏥",
-  tech: "💻", software: "💻", " it ": "💻", digital: "💻", cyber: "🔐", data: "🗄️",
-  food: "🍽️", restaurant: "🍽️", hotel: "🏨", hospitality: "🏨", catering: "🍽️",
-  finance: "💰", bank: "🏦", insurance: "🛡️", invest: "📈", account: "📊",
-  retail: "🛍️", shop: "🛍️", ecommerce: "🛒", fashion: "👗", cloth: "👗",
-  real: "🏢", property: "🏢", estate: "🏢", construct: "🏗️", build: "🏗️", architect: "🏗️",
-  edu: "🎓", school: "🎓", college: "🎓", train: "🎓", coach: "🎓",
-  legal: "⚖️", law: "⚖️", attorney: "⚖️",
-  market: "📣", advertis: "📣", media: "📺", entertainment: "🎭", publish: "📚",
-  manufactur: "🏭", factory: "🏭", industri: "🏭", product: "📦",
-  transport: "🚚", logistics: "🚚", shipping: "🚢", delivery: "🚚",
-  energy: "⚡", oil: "🛢️", gas: "🛢️", solar: "☀️", power: "⚡",
-  telecom: "📡", network: "📡", wireless: "📡",
-  agri: "🌾", farm: "🌾", food: "🌾",
-  consult: "🤝", service: "🤝", hr: "👥", recruit: "👥", staffing: "👥",
-  travel: "✈️", tour: "✈️", aviation: "✈️",
-  art: "🎨", design: "🎨", creative: "🎨", photo: "📷",
-  security: "🔒", safety: "🔒",
-  ngo: "❤️", nonprofit: "❤️", charity: "❤️", social: "❤️",
-  engineer: "⚙️", mechanic: "⚙️",
-  sales: "📞", business: "💼", manage: "💼", executive: "💼",
+  manager: "💼", management: "💼", executive: "💼", director: "💼", vp: "💼",
+  engineer: "⚙️", developer: "💻", software: "💻", tech: "💻", programmer: "💻",
+  sales: "📞", account: "📊", business: "💼", analyst: "📊", consultant: "🤝",
+  marketing: "📣", digital: "📣", brand: "📣", media: "📺", content: "✍️",
+  health: "🏥", medical: "🏥", nurse: "🏥", doctor: "🏥", pharma: "💊", clinical: "🏥",
+  finance: "💰", financial: "💰", bank: "🏦", insurance: "🛡️", invest: "📈", accounting: "📊",
+  real: "🏢", property: "🏢", estate: "🏢", construct: "🏗️", architect: "🏗️",
+  auto: "🚗", vehicle: "🚗", motor: "🚗", automobile: "🚗",
+  edu: "🎓", teacher: "🎓", professor: "🎓", school: "🎓", training: "🎓",
+  legal: "⚖️", law: "⚖️", attorney: "⚖️", compliance: "⚖️",
+  design: "🎨", creative: "🎨", art: "🎨", ui: "🎨", ux: "🎨",
+  hr: "👥", human: "👥", talent: "👥", recruit: "👥", staffing: "👥",
+  supply: "🚚", logistics: "🚚", transport: "🚚", operation: "🔧",
+  customer: "🎧", support: "🎧", service: "🎧",
+  project: "📋", product: "📦", program: "📋",
+  research: "🔬", scientist: "🔬", data: "🗄️",
+  security: "🔒", cyber: "🔐",
+  retail: "🛍️", shop: "🛍️", ecommerce: "🛒",
+  agri: "🌾", farm: "🌾",
+  energy: "⚡", oil: "🛢️", solar: "☀️",
+  telecom: "📡", network: "📡",
+  ngo: "❤️", nonprofit: "❤️", charity: "❤️",
+  food: "🍽️", restaurant: "🍽️", hospitality: "🏨",
 };
 
 function getEmoji(name = "") {
-  const lower = ` ${name.toLowerCase()} `;
+  const lower = name.toLowerCase();
   for (const [key, emoji] of Object.entries(EMOJI_MAP)) {
     if (lower.includes(key)) return emoji;
   }
@@ -64,7 +105,7 @@ const GRADIENTS = [
   "linear-gradient(135deg,#ff9a9e,#fecfef)",
 ];
 
-// ── Helpers ────────────────────────────────────────────────
+// ── localStorage helpers ───────────────────────────────────
 function lsRead(key) {
   try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
 }
@@ -75,31 +116,23 @@ function lsClear(key) {
   try { localStorage.removeItem(key); } catch {}
 }
 
-// Extract the category field from a people or company record
-function extractField(record, mode) {
-  if (mode === "people") {
-    return (record.job_title || record.industry || record.category || "").trim();
-  }
-  return (record.industry || record.category || record.sector || record.business_type || "").trim();
-}
-
 export default function CategoryExplorerPage() {
-  const navigate   = useNavigate();
-  const [mode, setMode]           = useState("people");
-  const [categories, setCategories] = useState([]);  // [{name, count}]
-  const [loading, setLoading]     = useState(false);
-  const [progress, setProgress]   = useState({ done: 0, total: 0 });
-  const [searchQ, setSearchQ]     = useState("");
+  const navigate = useNavigate();
+  const [mode, setMode]             = useState("people");
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading]       = useState(false);
+  const [progress, setProgress]     = useState({ done: 0, total: 0 });
+  const [searchQ, setSearchQ]       = useState("");
   const abortRef = useRef(false);
 
-  // ── Load from cache OR fetch all pages ──────────────────
+  // ── Load categories (cache-first) ──────────────────────
   const loadCategories = useCallback(async (forceRefresh = false) => {
     const lsKey = mode === "people" ? LS_PEOPLE : LS_COMPANY;
 
-    // ① Try cache first
+    // ① Cache hit
     if (!forceRefresh) {
       const cached = lsRead(lsKey);
-      if (cached && Array.isArray(cached) && cached.length > 0) {
+      if (Array.isArray(cached) && cached.length > 0) {
         setCategories(cached);
         return;
       }
@@ -107,22 +140,22 @@ export default function CategoryExplorerPage() {
       lsClear(lsKey);
     }
 
-    // ② Cache miss → fetch all records in batches
+    // ② Cache miss — paginate through ALL records
     setLoading(true);
     setProgress({ done: 0, total: 0 });
     abortRef.current = false;
 
     try {
-      // Get total count first
       const statsApi = mode === "people" ? fpGetStats : fcGetStats;
       const dbApi    = mode === "people" ? fpGetDatabase : fcGetDatabase;
 
+      // Get total row count
       const { data: statsData } = await statsApi();
       const total = statsData?.total || 0;
       setProgress({ done: 0, total });
 
-      const freq = {};
-      let page = 1;
+      const freq  = {};
+      let page    = 1;
       let fetched = 0;
 
       while (fetched < total) {
@@ -132,25 +165,24 @@ export default function CategoryExplorerPage() {
         const records  = data?.records || [];
         if (records.length === 0) break;
 
-        // Extract & count — only the category string, discard the record
+        // Extract, normalise, count — discard raw records immediately
         for (const r of records) {
-          const raw = extractField(r, mode);
-          if (!raw) continue;
-          const key = raw.replace(/\b\w/g, c => c.toUpperCase());
-          freq[key] = (freq[key] || 0) + 1;
+          const cat = extractCategory(r, mode);
+          if (!cat || cat.length < 2) continue;
+          freq[cat] = (freq[cat] || 0) + 1;
         }
 
         fetched += records.length;
         setProgress({ done: fetched, total });
         page++;
-
-        // If we got fewer rows than batch size we're done
         if (records.length < BATCH_SIZE) break;
       }
 
-      // ③ Build sorted array
+      // ③ Build sorted list — only keep categories with count ≥ 2
+      //    (filters out one-off unique job titles)
+      const MIN_COUNT = mode === "people" ? 2 : 1;
       const sorted = Object.entries(freq)
-        .filter(([name]) => name.length > 1)
+        .filter(([, count]) => count >= MIN_COUNT)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 100)
         .map(([name, count]) => ({ name, count }));
@@ -159,14 +191,13 @@ export default function CategoryExplorerPage() {
       lsWrite(lsKey, sorted);
       setCategories(sorted);
     } catch (err) {
-      console.error("Category fetch failed", err);
+      console.error("Category fetch error:", err);
     } finally {
       setLoading(false);
       setProgress({ done: 0, total: 0 });
     }
   }, [mode]);
 
-  // Abort in-flight fetch on mode change
   useEffect(() => {
     abortRef.current = true;
     setCategories([]);
@@ -175,13 +206,14 @@ export default function CategoryExplorerPage() {
     return () => { abortRef.current = true; };
   }, [loadCategories]);
 
-  const handleRefresh = () => loadCategories(true);
-
   const handleCategoryClick = (cat) => {
     const enc = encodeURIComponent(cat.name);
     if (mode === "people") navigate(`/app/people?f_job_title=${enc}`);
     else                    navigate(`/app/companies?f_industry=${enc}`);
   };
+
+  const lsKey   = mode === "people" ? LS_PEOPLE : LS_COMPANY;
+  const isCached = !loading && (lsRead(lsKey)?.length ?? 0) > 0;
 
   const filtered = categories.filter(c =>
     c.name.toLowerCase().includes(searchQ.toLowerCase())
@@ -191,13 +223,10 @@ export default function CategoryExplorerPage() {
     ? Math.round((progress.done / progress.total) * 100)
     : 0;
 
-  const lsKey = mode === "people" ? LS_PEOPLE : LS_COMPANY;
-  const isCached = !loading && lsRead(lsKey)?.length > 0;
-
   return (
     <div className="flex flex-col gap-6 h-full">
 
-      {/* ── Header ─────────────────────────────────────── */}
+      {/* ── Header ──────────────────────────────────────── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="text-2xl font-bold text-[var(--text)] flex items-center gap-2">
@@ -205,13 +234,15 @@ export default function CategoryExplorerPage() {
             Category Explorer
           </h2>
           <p className="text-sm text-[var(--text-3)] mt-0.5">
-            {isCached
-              ? "✅ Loaded from cache — no API call needed"
-              : `Browse ${mode === "people" ? "job titles" : "industries"} from your full database`}
+            {loading
+              ? "Building category index from full database…"
+              : isCached
+                ? "✅ Loaded from cache — no API call needed"
+                : `Browse ${mode === "people" ? "job roles" : "industries"} from your database`}
           </p>
         </div>
         <button
-          onClick={handleRefresh}
+          onClick={() => loadCategories(true)}
           disabled={loading}
           className="btn-ghost text-xs gap-1.5"
           title="Clear cache & re-fetch all records"
@@ -221,15 +252,11 @@ export default function CategoryExplorerPage() {
         </button>
       </div>
 
-      {/* ── Toggle — People / Company ────────────────────── */}
+      {/* ── Toggle — People / Company ─────────────────────── */}
       <div className="flex justify-center">
         <div
           className="relative flex items-center rounded-full p-1"
-          style={{
-            background: "var(--surface-2)",
-            border: "1px solid var(--border)",
-            width: "fit-content",
-          }}
+          style={{ background: "var(--surface-2)", border: "1px solid var(--border)", width: "fit-content" }}
         >
           <motion.div
             layout
@@ -263,7 +290,7 @@ export default function CategoryExplorerPage() {
         </div>
       </div>
 
-      {/* ── Progress bar (only while fetching) ────────────── */}
+      {/* ── Progress bar ──────────────────────────────────── */}
       <AnimatePresence>
         {loading && (
           <motion.div
@@ -275,14 +302,13 @@ export default function CategoryExplorerPage() {
             <div className="flex items-center justify-between text-xs">
               <span className="flex items-center gap-2 text-[var(--text-2)] font-medium">
                 <Loader2 size={13} className="animate-spin text-[var(--accent)]" />
-                Scanning all records to build category index…
+                Scanning all records — building category index…
               </span>
-              <span className="text-[var(--text-3)]">
-                {progress.done.toLocaleString()} / {progress.total.toLocaleString()} rows
-                {progress.total > 0 && ` (${pct}%)`}
+              <span className="text-[var(--text-3)] font-mono">
+                {progress.done.toLocaleString()} / {progress.total.toLocaleString()}
+                {progress.total > 0 && ` · ${pct}%`}
               </span>
             </div>
-            {/* Progress bar */}
             <div className="w-full h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-2)" }}>
               <motion.div
                 className="h-full rounded-full"
@@ -292,26 +318,26 @@ export default function CategoryExplorerPage() {
               />
             </div>
             <p className="text-[10px] text-[var(--text-3)]">
-              Only category names &amp; counts will be saved to local storage — raw records are never stored.
+              Only category names &amp; counts are saved to localStorage — raw records are discarded immediately.
             </p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Search bar ────────────────────────────────────── */}
+      {/* ── Search ─────────────────────────────────────────── */}
       {!loading && categories.length > 0 && (
         <div className="relative max-w-sm mx-auto w-full">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
           <input
             className="input pl-9 w-full text-sm"
-            placeholder={`Search ${mode === "people" ? "job titles" : "industries"}…`}
+            placeholder={`Search ${mode === "people" ? "job roles" : "industries"}…`}
             value={searchQ}
             onChange={e => setSearchQ(e.target.value)}
           />
         </div>
       )}
 
-      {/* ── Category Grid ──────────────────────────────────── */}
+      {/* ── Grid ───────────────────────────────────────────── */}
       <AnimatePresence mode="wait">
         {!loading && filtered.length === 0 && categories.length === 0 ? (
           <motion.div
@@ -322,7 +348,8 @@ export default function CategoryExplorerPage() {
             className="flex flex-col items-center justify-center py-20 gap-3 text-[var(--text-3)]"
           >
             <Layers size={40} className="opacity-30" />
-            <p className="text-sm">No categories found in the data.</p>
+            <p className="text-sm">No categories found.</p>
+            <p className="text-xs opacity-60">Try clicking Refresh Cache to scan the full database.</p>
           </motion.div>
         ) : !loading && filtered.length > 0 ? (
           <motion.div
@@ -341,35 +368,25 @@ export default function CategoryExplorerPage() {
                 whileTap={{ scale: 0.97 }}
                 initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.015, duration: 0.2 }}
+                transition={{ delay: Math.min(i * 0.015, 0.5), duration: 0.2 }}
                 className="relative rounded-2xl p-4 text-left overflow-hidden group cursor-pointer"
-                style={{
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
-                  minHeight: 110,
-                }}
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", minHeight: 110 }}
               >
-                {/* Top gradient strip */}
                 <div
                   className="absolute top-0 left-0 right-0 h-1 rounded-t-2xl"
                   style={{ background: GRADIENTS[i % GRADIENTS.length] }}
                 />
-                {/* Hover glow */}
                 <div
                   className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-2xl"
                   style={{ background: GRADIENTS[i % GRADIENTS.length] }}
                 />
-                {/* Emoji */}
                 <div className="text-2xl mb-2 leading-none">{getEmoji(cat.name)}</div>
-                {/* Name */}
                 <p className="text-xs font-semibold text-[var(--text)] leading-snug line-clamp-2 mb-1">
                   {cat.name}
                 </p>
-                {/* Count */}
                 <p className="text-[10px] text-[var(--text-3)]">
                   {cat.count.toLocaleString()} {mode === "people" ? "people" : "companies"}
                 </p>
-                {/* Arrow on hover */}
                 <div
                   className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-full p-1"
                   style={{ background: GRADIENTS[i % GRADIENTS.length] }}
@@ -382,11 +399,10 @@ export default function CategoryExplorerPage() {
         ) : null}
       </AnimatePresence>
 
-      {/* ── Footer hint ───────────────────────────────────── */}
       {!loading && filtered.length > 0 && (
         <p className="text-center text-[11px] text-[var(--text-3)] pb-2 flex items-center justify-center gap-1">
           <Sparkles size={10} />
-          Click any card to open filtered {mode === "people" ? "People" : "Companies"} · cached in localStorage
+          {filtered.length} categories · click any card to open filtered {mode === "people" ? "People" : "Companies"}
         </p>
       )}
     </div>
