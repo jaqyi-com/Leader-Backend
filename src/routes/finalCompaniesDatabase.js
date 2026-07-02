@@ -240,13 +240,17 @@ router.get("/categories", async (req, res) => {
 
     const queryRes = await pgQuery(
       `SELECT industry, count(*) as count 
-       FROM ${FULL_TABLE} 
-       WHERE industry IS NOT NULL AND industry != '' 
+       FROM (
+         SELECT industry 
+         FROM ${FULL_TABLE} 
+         WHERE industry IS NOT NULL AND industry != '' 
+         LIMIT 20000
+       ) AS sub 
        GROUP BY industry 
        ORDER BY count DESC 
        LIMIT 100`,
        [],
-       30000
+       10000
     );
 
     const payload = queryRes.rows.map(r => ({

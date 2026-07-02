@@ -228,13 +228,17 @@ router.get("/categories", async (req, res) => {
 
     const queryRes = await pgQuery(
       `SELECT job_title, count(*) as count 
-       FROM ${FULL_TABLE} 
-       WHERE job_title IS NOT NULL AND job_title != '' 
+       FROM (
+         SELECT job_title 
+         FROM ${FULL_TABLE} 
+         WHERE job_title IS NOT NULL AND job_title != '' 
+         LIMIT 20000
+       ) AS sub 
        GROUP BY job_title 
        ORDER BY count DESC 
        LIMIT 100`,
        [],
-       30000
+       10000
     );
 
     const payload = queryRes.rows.map(r => ({
