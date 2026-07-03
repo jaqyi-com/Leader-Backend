@@ -232,6 +232,10 @@ router.get("/", async (req, res) => {
     search    = "",
     sort_by   = "",
     sort_dir  = "asc",
+    f_city    = "",
+    f_state   = "",
+    f_job_title = "",
+    f_location = "",
   } = req.query;
 
   const pageNum  = Math.max(1, parseInt(page, 10));
@@ -241,7 +245,10 @@ router.get("/", async (req, res) => {
   try {
     const schema = await getSchema();
     const { selectSQL, selectCols } = schema;
-    const { whereStr, values, nextIdx } = await buildWhere({ search }, schema);
+    const { whereStr, values, nextIdx } = await buildWhere(
+      { search, f_city, f_state, f_job_title, f_location },
+      schema
+    );
 
     let orderClause = "";
     if (sort_by && selectCols.includes(sort_by)) {
@@ -257,7 +264,8 @@ router.get("/", async (req, res) => {
     `;
 
     let total;
-    if (!search) {
+    const hasFilter = search || f_city || f_state || f_job_title || f_location;
+    if (!hasFilter) {
       const cachedCount = await cacheGet(COUNT_CACHE_KEY);
       if (cachedCount !== null && cachedCount !== undefined) {
         total = cachedCount;
