@@ -797,6 +797,7 @@ app.use("/api/final-people",         finalPeopleRouter);
 app.use("/api/final-people-email",   finalPeopleEmailRouter);
 app.use("/api/final-people-number",  finalPeopleNumberRouter);
 app.use("/api/final-companies",      finalCompaniesRouter);
+app.use("/api/search/hybrid",        require("./routes/hybridSearch"));
 
 
 

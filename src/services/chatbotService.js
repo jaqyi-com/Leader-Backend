@@ -166,63 +166,99 @@ Answer NO for all other messages (greetings, company policy questions, general k
  * Runs cosine similarity search, returns top 10 leads formatted as a markdown table.
  * Returns { leads, contextBlock } or null on failure/no results.
  */
-async function searchInBuildDB(queryText) {
+/**
+ * Search the Final Database (Cloud SQL, pgvector) using local hybrid search.
+ * Returns { leads, contextBlock, entityType } or null on failure/no results.
+ */
+async function searchFinalDatabase(queryText) {
   try {
-    // IMPORTANT: use dimensions:512 to match the DB column (text-embedding-3-small@512)
-    const embRes = await openai.embeddings.create({
-      model:      "text-embedding-3-small",
-      input:      queryText.slice(0, 2000),
-      dimensions: 512,
+    // 1. Use gpt-4o-mini to extract parameters
+    const response = await openai.chat.completions.create({
+      model: FAST_MODEL,
+      response_format: { type: "json_object" },
+      temperature: 0,
+      messages: [
+        {
+          role: "system",
+          content: `You are a search parameter extractor for a B2B leads database.
+Given a natural language query, parse it into structured filters.
+Respond in JSON with:
+{
+  "entityType": "companies" or "people",
+  "search": "keywords for search",
+  "f_city": "city name if mentioned",
+  "f_state": "state name or abbreviation if mentioned",
+  "f_industry": "industry if company search",
+  "f_job_title": "job title if people search",
+  "f_has_email": "true" or "false" (or leave empty if not specified),
+  "f_has_phone": "true" or "false" (or leave empty if not specified)
+}
+Example: "Find software engineers in Delhi with verified emails"
+-> { "entityType": "people", "search": "software engineer", "f_city": "Delhi", "f_has_email": "true" }`
+        },
+        { role: "user", content: queryText }
+      ]
     });
-    const vecStr = `[${embRes.data[0].embedding.join(",")}]`;
 
-    // Semantic similarity search — top 10
-    const searchRes = await pgQuery(
-      `SELECT
-         "business_name",
-         "_category",
-         "city",
-         "state",
-         "phone",
-         "website",
-         "street_address",
-         "email",
-         ROUND((1 - (embedding <=> $1)::numeric) * 100, 1) AS similarity
-       FROM ${IB_FULL_TABLE}
-       WHERE embedding IS NOT NULL
-         AND "business_name" IS DISTINCT FROM 'business_name'
-       ORDER BY embedding <=> $1
-       LIMIT 10`,
-      [vecStr],
-      15000
-    );
+    const parsed = JSON.parse(response.choices[0].message.content || "{}");
+    logger.info(`[ChatbotSearch] Extracted parameters: ${JSON.stringify(parsed)}`);
 
-    const leads = searchRes.rows;
-    if (!leads.length) return null;
+    const { performHybridSearch } = require("./hybridSearchService");
+    const { records, total } = await performHybridSearch({
+      entityType: parsed.entityType || "companies",
+      search: parsed.search || "",
+      f_city: parsed.f_city || "",
+      f_state: parsed.f_state || "",
+      f_industry: parsed.f_industry || "",
+      f_job_title: parsed.f_job_title || "",
+      f_has_email: parsed.f_has_email || "",
+      f_has_phone: parsed.f_has_phone || "",
+      page: 1,
+      limit: 10,
+    });
 
-    // Format as markdown table for LLM context
-    const rows = leads.map((r, i) => {
-      const name  = r.business_name  || "—";
-      const cat   = r._category      || "—";
-      const loc   = [r.city, r.state].filter(Boolean).join(", ") || "—";
-      const phone = r.phone          || "—";
-      const web   = r.website        || "—";
-      const email = r.email          || "—";
-      const addr  = r.street_address || "—";
-      const score = r.similarity != null ? `${r.similarity}%` : "—";
-      return `| ${i+1} | ${name} | ${cat} | ${loc} | ${phone} | ${web} | ${email} | ${addr} | ${score} |`;
-    }).join("\n");
+    if (!records.length) return null;
 
-    const contextBlock =
-      `## 🗄️ Live In-Build Database Results\n` +
-      `> Searched 957,932 business records for: "${queryText}"\n\n` +
-      `| # | Business Name | Category | Location | Phone | Website | Email | Address | Match % |\n` +
-      `|---|---|---|---|---|---|---|---|---|\n` +
+    const isComp = parsed.entityType === "companies";
+    let rows;
+    if (isComp) {
+      rows = records.map((r, i) => {
+        const name = r.business_name || "—";
+        const loc = [r.city, r.state].filter(Boolean).join(", ") || "—";
+        const ind = r.industry || "—";
+        const email = Array.isArray(r.emails) ? r.emails.join(", ") : (r.emails || "—");
+        const phone = r.phone || "—";
+        const score = r.similarity_score != null ? `${Math.round(r.similarity_score * 100)}%` : "—";
+        return `| ${i+1} | ${name} | ${ind} | ${loc} | ${phone} | ${email} | ${score} |`;
+      }).join("\n");
+    } else {
+      rows = records.map((r, i) => {
+        const name = r.full_name || "—";
+        const title = r.job_title || "—";
+        const loc = [r.city, r.state].filter(Boolean).join(", ") || "—";
+        const email = Array.isArray(r.emails) ? r.emails.join(", ") : (r.emails || "—");
+        const phone = Array.isArray(r.phones) ? r.phones.join(", ") : (r.phones || "—");
+        const score = r.similarity_score != null ? `${Math.round(r.similarity_score * 100)}%` : "—";
+        return `| ${i+1} | ${name} | ${title} | ${loc} | ${phone} | ${email} | ${score} |`;
+      }).join("\n");
+    }
+
+    const header = isComp 
+      ? `| # | Company Name | Industry | Location | Phone | Emails | Match % |`
+      : `| # | Full Name | Job Title | Location | Phones | Emails | Match % |`;
+    const separator = isComp
+      ? `|---|---|---|---|---|---|---|`
+      : `|---|---|---|---|---|---|---|`;
+
+    const contextBlock = 
+      `## 🗄️ Live Database Search Results (${parsed.entityType || "companies"})\n` +
+      `> Searched database for: "${parsed.search || queryText}"\n\n` +
+      `${header}\n${separator}\n` +
       rows;
 
-    return { leads, contextBlock };
+    return { leads: records, contextBlock, entityType: parsed.entityType || "companies" };
   } catch (err) {
-    logger.error(`[InBuildDB] searchInBuildDB failed: ${err.message}`);
+    logger.error(`[ChatbotSearch] searchFinalDatabase failed: ${err.message}`);
     return null;
   }
 }
@@ -547,26 +583,40 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
         await ChatMessage.findByIdAndUpdate(userMsg._id, { expandedPrompt });
       }
 
-      dbResult = await searchInBuildDB(expandedPrompt);
+      dbResult = await searchFinalDatabase(userMessage);
       if (dbResult) {
-        logger.info(`[Chat] InBuildDB: found ${dbResult.leads.length} leads`);
+        logger.info(`[Chat] Hybrid Search: found ${dbResult.leads.length} leads`);
         // Send leads data to frontend for UI rendering
         sendEvent({
           type:   "db_results",
           count:  dbResult.leads.length,
-          total:  957932,
-          query:  expandedPrompt,
-          leads:  dbResult.leads.map(r => ({
-            name:     r.business_name  || "",
-            category: r._category      || "",
-            city:     r.city           || "",
-            state:    r.state          || "",
-            phone:    r.phone          || "",
-            website:  r.website        || "",
-            email:    r.email          || "",
-            address:  r.street_address || "",
-            match:    r.similarity     || null,
-          })),
+          total:  dbResult.entityType === "companies" ? 1781218 : 43932594,
+          query:  userMessage,
+          leads:  dbResult.leads.map(r => {
+            if (dbResult.entityType === "companies") {
+              return {
+                name:     r.business_name  || "",
+                category: r.industry       || "",
+                city:     r.city           || "",
+                state:    r.state          || "",
+                phone:    r.phone          || "",
+                website:  r.website        || "",
+                email:    Array.isArray(r.emails) ? r.emails.join(", ") : (r.emails || ""),
+                match:    r.similarity_score != null ? Math.round(r.similarity_score * 100) : null,
+              };
+            } else {
+              return {
+                name:     r.full_name      || "",
+                category: r.job_title      || "",
+                city:     r.city           || "",
+                state:    r.state          || "",
+                phone:    Array.isArray(r.phones) ? r.phones.join(", ") : (r.phones || ""),
+                website:  r.linked_url     || "",
+                email:    Array.isArray(r.emails) ? r.emails.join(", ") : (r.emails || ""),
+                match:    r.similarity_score != null ? Math.round(r.similarity_score * 100) : null,
+              };
+            }
+          }),
         });
       }
     }
