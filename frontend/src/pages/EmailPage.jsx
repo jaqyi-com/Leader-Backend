@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Mail, Search, Download, RefreshCw,
-  Phone, MapPin, Globe, Building2, Database, Users2,
+  Mail, Search, Download, RefreshCw, Filter, X,
+  Phone, MapPin, Globe, Building2, Database, Users2, ChevronDown, ChevronUp,
 } from "lucide-react";
 import {
-  fpeGetDatabase, fpeGetStats, fpeGetColumns, fpeRefresh,
-  fcGetDatabase,  fcGetStats,  fcGetColumns,  fcRefresh,
+  fpeGetDatabase, fpeGetColumns, fpeRefresh,
+  fcGetDatabase,  fcGetColumns,  fcRefresh,
 } from "../api";
 import toast from "react-hot-toast";
 
@@ -16,11 +16,8 @@ import toast from "react-hot-toast";
 function renderCell(col, val) {
   if (!val) return <span className="text-[var(--text-3)]">—</span>;
   const key = col.key.toLowerCase();
-
   if (key.includes("email")) return (
-    <a href={`mailto:${val}`}
-      className="flex items-center gap-1 text-[11px] text-blue-400 hover:underline max-w-[200px] truncate"
-      title={val}>
+    <a href={`mailto:${val}`} className="flex items-center gap-1 text-[11px] text-blue-400 hover:underline max-w-[200px] truncate" title={val}>
       <Mail size={9} className="flex-shrink-0" />{val}
     </a>
   );
@@ -54,7 +51,7 @@ function renderCell(col, val) {
 }
 
 /* ──────────────────────────────────────────────────
-   Inner table panel — one per mode
+   TablePanel — mounts fresh for each mode
 ────────────────────────────────────────────────── */
 function TablePanel({ mode }) {
   const isPeople = mode === "people";
@@ -64,20 +61,25 @@ function TablePanel({ mode }) {
   const [cols,       setCols]       = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [showF,      setShowF]      = useState(false);
   const [page,       setPage]       = useState(1);
   const [limit,      setLimit]      = useState(50);
   const [sortBy,     setSortBy]     = useState("");
   const [sortDir,    setSortDir]    = useState("asc");
+  // Shared filter
   const [search,     setSearch]     = useState("");
+  // People-specific filters
+  const [fCity,      setFCity]      = useState("");
+  const [fState,     setFState]     = useState("");
+  const [fJobTitle,  setFJobTitle]  = useState("");
+  // Company-specific filters
+  const [fIndustry,  setFIndustry]  = useState("");
 
-  const getDB     = isPeople ? fpeGetDatabase : (p) => fcGetDatabase({ ...p, f_has_email: "true" });
-  const getCols   = isPeople ? fpeGetColumns  : fcGetColumns;
-  const getStats  = isPeople ? fpeGetStats    : fcGetStats;
-  const doRefresh = isPeople ? fpeRefresh     : fcRefresh;
-
+  // ── Column discovery ────────────────────────────────────────
   const loadColumns = useCallback(async () => {
     try {
-      const { data } = await getCols();
+      const fn = isPeople ? fpeGetColumns : fcGetColumns;
+      const { data } = await fn();
       if (data?.columns?.length) {
         setCols(data.columns.map(k => ({
           key: k,
@@ -85,22 +87,36 @@ function TablePanel({ mode }) {
         })));
       }
     } catch { /* ignore */ }
-  }, [mode]); // eslint-disable-line
+  }, [isPeople]);
 
+  // ── Load records ────────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await getDB({ page, limit, sort_by: sortBy, sort_dir: sortDir, search });
-      setRecords(data.records || []);
-      setTotal(data.total || 0);
+      const params = { page, limit, sort_by: sortBy, sort_dir: sortDir, search };
+      if (isPeople) {
+        // People tab — email endpoint with column filters
+        params.f_city      = fCity;
+        params.f_state     = fState;
+        params.f_job_title = fJobTitle;
+        const { data } = await fpeGetDatabase(params);
+        setRecords(data.records || []);
+        setTotal(data.total || 0);
+      } else {
+        // Companies tab — companies endpoint with email filter
+        params.f_has_email = "true";
+        params.f_industry  = fIndustry;
+        const { data } = await fcGetDatabase(params);
+        setRecords(data.records || []);
+        setTotal(data.total || 0);
+      }
     } catch {
       toast.error("Failed to load data");
     } finally {
       setLoading(false);
     }
-  }, [mode, page, limit, sortBy, sortDir, search]); // eslint-disable-line
+  }, [isPeople, page, limit, sortBy, sortDir, search, fCity, fState, fJobTitle, fIndustry]);
 
-  useEffect(() => { setPage(1); setSearch(""); setSortBy(""); }, [mode]);
   useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
 
@@ -113,12 +129,19 @@ function TablePanel({ mode }) {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await doRefresh();
+      const fn = isPeople ? fpeRefresh : fcRefresh;
+      await fn();
       await Promise.all([loadColumns(), load()]);
       toast.success("Cache refreshed!");
     } catch { toast.error("Refresh failed"); }
     finally { setRefreshing(false); }
   };
+
+  const clearAll = () => {
+    setSearch(""); setFCity(""); setFState(""); setFJobTitle(""); setFIndustry(""); setPage(1);
+  };
+
+  const hasFilters = search || fCity || fState || fJobTitle || fIndustry;
 
   const exportCSV = () => {
     if (!cols.length || !records.length) return;
@@ -137,11 +160,11 @@ function TablePanel({ mode }) {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Toolbar */}
+      {/* ── Toolbar ─────────────────────────────────────────── */}
       <div className="flex items-center gap-2 flex-wrap justify-between">
         <div className="flex items-center gap-2 flex-wrap flex-1">
           {/* Search */}
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <div className="relative min-w-[220px] max-w-sm flex-1">
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
             <input
               className="input pl-8 text-xs w-full"
@@ -150,6 +173,10 @@ function TablePanel({ mode }) {
               onChange={e => { setSearch(e.target.value); setPage(1); }}
             />
           </div>
+          {/* Filters toggle */}
+          <button onClick={() => setShowF(p => !p)} className="btn-ghost text-xs gap-1.5">
+            <Filter size={12} />Filters {showF ? <ChevronUp size={11} /> : <ChevronDown size={11} />}
+          </button>
           {/* Rows per page */}
           <select className="input text-xs w-28" value={limit} onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}>
             <option value={25}>25 / page</option>
@@ -169,13 +196,51 @@ function TablePanel({ mode }) {
         </div>
       </div>
 
-      {/* Total count badge */}
+      {/* ── Filter Panel ─────────────────────────────────────── */}
+      <AnimatePresence>
+        {showF && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {isPeople ? (
+                <>
+                  <input className="input text-xs" placeholder="City…" value={fCity} onChange={e => { setFCity(e.target.value); setPage(1); }} />
+                  <input className="input text-xs" placeholder="State…" value={fState} onChange={e => { setFState(e.target.value); setPage(1); }} />
+                  <input className="input text-xs col-span-2" placeholder="Job title…" value={fJobTitle} onChange={e => { setFJobTitle(e.target.value); setPage(1); }} />
+                </>
+              ) : (
+                <>
+                  <input className="input text-xs col-span-2" placeholder="Industry…" value={fIndustry} onChange={e => { setFIndustry(e.target.value); setPage(1); }} />
+                </>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Active filter badges ──────────────────────────────── */}
+      {hasFilters && (
+        <div className="flex items-center gap-2 flex-wrap text-[10px]">
+          {search     && <span className="badge badge-purple flex items-center gap-1">search: {search}<button onClick={() => { setSearch(""); setPage(1); }}><X size={9} /></button></span>}
+          {fCity      && <span className="badge badge-purple flex items-center gap-1">city: {fCity}<button onClick={() => { setFCity(""); setPage(1); }}><X size={9} /></button></span>}
+          {fState     && <span className="badge badge-purple flex items-center gap-1">state: {fState}<button onClick={() => { setFState(""); setPage(1); }}><X size={9} /></button></span>}
+          {fJobTitle  && <span className="badge badge-purple flex items-center gap-1">job: {fJobTitle}<button onClick={() => { setFJobTitle(""); setPage(1); }}><X size={9} /></button></span>}
+          {fIndustry  && <span className="badge badge-purple flex items-center gap-1">industry: {fIndustry}<button onClick={() => { setFIndustry(""); setPage(1); }}><X size={9} /></button></span>}
+          <button onClick={clearAll} className="text-[var(--text-3)] hover:text-[var(--rose)] underline">Clear all</button>
+        </div>
+      )}
+
+      {/* ── Count badge ──────────────────────────────────────── */}
       <p className="text-xs text-[var(--text-3)]">
         <span className="font-semibold text-[var(--text)]">{total.toLocaleString()}</span>{" "}
         {isPeople ? "people" : "companies"} with email
       </p>
 
-      {/* Table */}
+      {/* ── Table ────────────────────────────────────────────── */}
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -205,7 +270,7 @@ function TablePanel({ mode }) {
                   <td colSpan={cols.length || 1} className="py-16 text-center text-[var(--text-3)]">
                     <Database size={32} className="mx-auto mb-3 opacity-30" />
                     <p>No records found.</p>
-                    <p className="text-[10px] mt-1 opacity-60">Try adjusting your search.</p>
+                    <p className="text-[10px] mt-1 opacity-60">Try adjusting your search or clearing filters.</p>
                   </td>
                 </tr>
               ) : records.map((r, i) => (
@@ -248,70 +313,50 @@ export default function EmailPage() {
     <div className="flex flex-col gap-5 h-full">
 
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h2 className="text-2xl font-bold text-[var(--text)] flex items-center gap-2">
-            <Mail size={22} className="text-blue-400" />
-            Email
-            <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full"
-              style={{ background: "rgba(59,130,246,0.15)", color: "#3B82F6" }}>
-              Verified Emails
-            </span>
-          </h2>
-          <p className="text-sm text-[var(--text-3)] mt-0.5">
-            Browse {mode === "people" ? "people" : "companies"} who have confirmed email addresses
-          </p>
-        </div>
+      <div>
+        <h2 className="text-2xl font-bold text-[var(--text)] flex items-center gap-2">
+          <Mail size={22} className="text-blue-400" />
+          Email
+          <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full"
+            style={{ background: "rgba(59,130,246,0.15)", color: "#3B82F6" }}>
+            Verified Emails
+          </span>
+        </h2>
+        <p className="text-sm text-[var(--text-3)] mt-0.5">
+          Browse {mode === "people" ? "people" : "companies"} with confirmed email addresses
+        </p>
       </div>
 
-      {/* Toggle — People / Companies */}
+      {/* ── Toggle — People / Companies ─────────────────────── */}
       <div className="flex justify-center">
-        <div
-          className="relative flex items-center rounded-full p-1"
-          style={{ background: "var(--surface-2)", border: "1px solid var(--border)", width: "fit-content" }}
-        >
+        <div className="relative flex items-center rounded-full p-1"
+          style={{ background: "var(--surface-2)", border: "1px solid var(--border)", width: "fit-content" }}>
           <motion.div
             layout
             transition={{ type: "spring", stiffness: 400, damping: 35 }}
             className="absolute top-1 bottom-1 rounded-full"
             style={{
-              background: mode === "people"
-                ? "linear-gradient(135deg,#3b82f6,#6366f1)"
-                : "linear-gradient(135deg,#8b5cf6,#a855f7)",
-              left:  mode === "people" ? "4px" : "calc(50% + 2px)",
+              background: mode === "people" ? "linear-gradient(135deg,#3b82f6,#6366f1)" : "linear-gradient(135deg,#8b5cf6,#a855f7)",
+              left: mode === "people" ? "4px" : "calc(50% + 2px)",
               width: "calc(50% - 6px)",
               zIndex: 0,
             }}
           />
-          <button
-            onClick={() => setMode("people")}
+          <button onClick={() => setMode("people")}
             className="relative z-10 flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
-            style={{ color: mode === "people" ? "#fff" : "var(--text-3)" }}
-          >
+            style={{ color: mode === "people" ? "#fff" : "var(--text-3)" }}>
             <Users2 size={15} /> People
           </button>
-          <button
-            onClick={() => setMode("company")}
+          <button onClick={() => setMode("company")}
             className="relative z-10 flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
-            style={{ color: mode === "company" ? "#fff" : "var(--text-3)" }}
-          >
+            style={{ color: mode === "company" ? "#fff" : "var(--text-3)" }}>
             <Building2 size={15} /> Companies
           </button>
         </div>
       </div>
 
-      {/* Table Panel — remounts on mode change */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={mode}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.2 }}
-        >
-          <TablePanel mode={mode} />
-        </motion.div>
-      </AnimatePresence>
+      {/* ── Table Panel (key forces remount on mode switch) ─── */}
+      <TablePanel key={mode} mode={mode} />
     </div>
   );
 }

@@ -36,13 +36,13 @@ export default function Layout() {
 
           {isChatbot ? (
             /* Chatbot: full bleed, no wrapper constraints */
-            <AnimatePresence mode="wait">
+            <AnimatePresence>
               <motion.div
                 key={pathname}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.18 }}
+                transition={{ duration: 0.15 }}
                 style={{ height: "100%", display: "flex", flexDirection: "column" }}
               >
                 <Outlet />
@@ -50,13 +50,13 @@ export default function Layout() {
             </AnimatePresence>
           ) : (
             <div className="relative z-10 max-w-[1600px] mx-auto">
-              <AnimatePresence mode="wait">
+              <AnimatePresence>
                 <motion.div
                   key={pathname}
-                  initial={{ opacity: 0, y: 12 }}
+                  initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -6 }}
-                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
                 >
                   <Outlet />
                 </motion.div>

@@ -100,7 +100,10 @@ function normalizeRow({ selectCols, colToField }, row) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // WHERE CLAUSE BUILDER
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function buildWhere({ search = "" }, schema) {
+async function buildWhere(
+  { search = "", f_city = "", f_state = "", f_job_title = "", f_location = "" },
+  schema
+) {
   const { selectCols } = schema;
   const emailCol = await getEmailCol(schema);
 
@@ -122,6 +125,11 @@ async function buildWhere({ search = "" }, schema) {
       idx++;
     }
   }
+
+  if (f_city)      { conditions.push(`"city"::text      ILIKE $${idx++}`); values.push(`%${f_city}%`); }
+  if (f_state)     { conditions.push(`"state"::text     ILIKE $${idx++}`); values.push(`%${f_state}%`); }
+  if (f_job_title) { conditions.push(`"job_title"::text ILIKE $${idx++}`); values.push(`%${f_job_title}%`); }
+  if (f_location)  { conditions.push(`"location"::text  ILIKE $${idx++}`); values.push(`%${f_location}%`); }
 
   return {
     whereStr: conditions.length ? `WHERE ${conditions.join(" AND ")}` : "",
