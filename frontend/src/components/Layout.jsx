@@ -36,7 +36,7 @@ export default function Layout() {
 
           {isChatbot ? (
             /* Chatbot: full bleed, no wrapper constraints */
-            <AnimatePresence>
+            <AnimatePresence mode="popLayout">
               <motion.div
                 key={pathname}
                 initial={{ opacity: 0 }}
@@ -50,7 +50,7 @@ export default function Layout() {
             </AnimatePresence>
           ) : (
             <div className="relative z-10 max-w-[1600px] mx-auto">
-              <AnimatePresence>
+              <AnimatePresence mode="popLayout">
                 <motion.div
                   key={pathname}
                   initial={{ opacity: 0, y: 8 }}
