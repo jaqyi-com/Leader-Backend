@@ -14,8 +14,8 @@ import {
 
 const LEAD_GEN_LINKS = [
   { to: "/app/people",     label: "People",     icon: Users2,    sub: false },
-  { to: "/app/email",      label: "Email",      icon: Mail,      sub: true  },
-  { to: "/app/number",     label: "Number",     icon: Phone,     sub: true  },
+  { to: "/app/email",      label: "Email",      icon: Mail,      sub: false },
+  { to: "/app/number",     label: "Number",     icon: Phone,     sub: false },
   { to: "/app/categories", label: "Categories", icon: Grid3x3,   sub: false },
   { to: "/app/companies",  label: "Companies",  icon: Building2, sub: false },
 ];
