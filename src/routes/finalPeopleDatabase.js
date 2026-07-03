@@ -97,15 +97,21 @@ function normalizeRow({ selectCols, colToField }, row) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function buildWhere({
   search = "",
+  embedding = null,
   f_city, f_state, f_pincode, f_job_title, f_location, f_geo_source,
   f_has_email, f_has_phone,
 }, _schema) {
   const conditions = [];
   const values     = [];
   let   idx        = 1;
+  let   vectorIdx  = null;
 
-  // General text search — ONLY on full_name (GIN trgm index → fast)
-  if (search) {
+  // If vector embedding is available, use vector search; fallback to text ILIKE
+  if (embedding && embedding.length === 384) {
+    conditions.push("embedding IS NOT NULL");
+    vectorIdx = idx++;
+    values.push(JSON.stringify(embedding));
+  } else if (search) {
     conditions.push(`"full_name" ILIKE $${idx++}`);
     values.push(`%${search}%`);
   }
@@ -124,7 +130,8 @@ function buildWhere({
   if (f_has_phone === "true")  { conditions.push(`cardinality(phones) > 0`); }
   if (f_has_phone === "false") { conditions.push(`(phones IS NULL OR cardinality(phones) = 0)`); }
 
-  const userHasFilters = conditions.length > 0;
+  const hasFilters = conditions.length > 0;
+  const userHasFilters = hasFilters || (embedding && embedding.length === 384);
 
   // Default filter: require complete records (name, email, phone) if no search/filters are specified
   if (!userHasFilters) {
@@ -137,6 +144,7 @@ function buildWhere({
     whereStr: conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "",
     values,
     nextIdx: idx,
+    vectorIdx,
     userHasFilters,
   };
 }
@@ -274,21 +282,40 @@ router.get("/", async (req, res) => {
   const offset   = (pageNum - 1) * limitNum;
 
   try {
+    const { getLocalQueryEmbedding } = require("../services/localEmbedService");
+    let embedding = null;
+    if (search && search.trim().length > 0) {
+      try {
+        embedding = await getLocalQueryEmbedding(search);
+      } catch (err) {
+        logger.error(`Failed to generate query embedding for people search: ${err.message}`);
+      }
+    }
+
     const schema = await getSchema();
     const { selectSQL, selectCols } = schema;
-    const { whereStr, values, nextIdx, userHasFilters } = buildWhere(
-      { search, f_city, f_state, f_pincode, f_job_title, f_location, f_geo_source, f_has_email, f_has_phone },
+    const { whereStr, values, nextIdx, vectorIdx, userHasFilters } = buildWhere(
+      { search, embedding, f_city, f_state, f_pincode, f_job_title, f_location, f_geo_source, f_has_email, f_has_phone },
       schema
     );
 
+    let customSelectSQL = selectSQL;
+    if (vectorIdx !== null) {
+      customSelectSQL += `, (1 - (embedding <=> $${vectorIdx}::vector)) AS similarity_score`;
+    }
+
     let orderClause = "";
-    if (sort_by && selectCols.includes(sort_by)) {
+    if (vectorIdx !== null) {
+      orderClause = `ORDER BY embedding <=> $${vectorIdx}::vector ASC`;
+    } else if (sort_by && selectCols.includes(sort_by)) {
       const dir = sort_dir === "desc" ? "DESC" : "ASC";
       orderClause = `ORDER BY "${sort_by}" ${dir} NULLS LAST`;
+    } else {
+      orderClause = `ORDER BY created_at DESC`;
     }
 
     const dataSQL = `
-      SELECT ${selectSQL} FROM ${FULL_TABLE}
+      SELECT ${customSelectSQL} FROM ${FULL_TABLE}
       ${whereStr}
       ${orderClause}
       LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
