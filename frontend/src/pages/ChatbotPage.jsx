@@ -21,10 +21,10 @@ import FeatureInvocationPanel from "../components/chatbot/FeatureInvocationPanel
 const MAX_CONTEXT = 100000;
 
 const SUGGESTIONS = [
-  "What does our company do?",
-  "What are our key products or services?",
-  "Who are our target customers?",
-  "What is our company's mission?",
+  "Find software engineers in Chennai",
+  "Search companies in the medical industry",
+  "List businesses located in Bangalore",
+  "Find doctors with verified emails",
 ];
 
 function TypingDots() {
@@ -952,24 +952,7 @@ export default function ChatbotPage() {
           )}
         </div>
 
-        {/* Knowledge base link */}
-        <div style={{ padding: "12px 12px", borderTop: "1px solid var(--border)" }}>
-          <button
-            onClick={() => navigate("/app/chatbot/data")}
-            style={{
-              width: "100%", display: "flex", alignItems: "center", gap: 8,
-              background: "rgba(226,55,68,0.08)", border: "1px solid rgba(226,55,68,0.2)",
-              borderRadius: 10, padding: "10px 12px", cursor: "pointer",
-              color: "var(--accent)", fontSize: 12, fontWeight: 500,
-            }}
-          >
-            <Database size={14} />
-            <div style={{ textAlign: "left" }}>
-              <div style={{ fontWeight: 600 }}>Knowledge Base</div>
-              <div style={{ fontSize: 11, opacity: 0.7, color: "var(--text-3)" }}>Manage org data & memory</div>
-            </div>
-          </button>
-        </div>
+
       </div>
 
       {/* ── Right Panel: Chat ── */}
@@ -1047,7 +1030,7 @@ export default function ChatbotPage() {
                   Doott AI Assistant
                 </h2>
                 <p style={{ margin: "8px 0 0", fontSize: 14, color: "var(--text-3)" }}>
-                  Ask anything about your knowledge base
+                  Search leads, companies, and people in the database
                 </p>
               </div>
 
