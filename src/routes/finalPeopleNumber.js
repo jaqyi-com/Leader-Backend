@@ -87,7 +87,7 @@ function buildWhere(
 
   // Base filter: must have phone
   if (phoneCol) {
-    conditions.push(`("${phoneCol}" IS NOT NULL AND "${phoneCol}"::text NOT IN ('', '[]', 'null'))`);
+    conditions.push(`("${phoneCol}" IS NOT NULL AND cardinality("${phoneCol}") > 0)`);
   }
 
   // search: ILIKE on full_name only (trgm GIN indexed -> super fast!)
@@ -114,7 +114,7 @@ router.get("/health", async (req, res) => {
     const schema  = await getSchema();
     const phoneCol = await getPhoneCol(schema);
     const filter = phoneCol
-      ? `WHERE "${phoneCol}" IS NOT NULL AND "${phoneCol}"::text NOT IN ('', '[]', 'null')`
+      ? `WHERE "${phoneCol}" IS NOT NULL AND cardinality("${phoneCol}") > 0`
       : "";
     const cnt = await pgQuery(`SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${filter} LIMIT 10001) subq`, [], 15000);
     const totalRecords = parseInt(cnt.rows[0].cnt, 10);
@@ -138,7 +138,7 @@ router.get("/stats", async (req, res) => {
     const schema   = await getSchema();
     const phoneCol = await getPhoneCol(schema);
     const filter   = phoneCol
-      ? `WHERE "${phoneCol}" IS NOT NULL AND "${phoneCol}"::text NOT IN ('', '[]', 'null')`
+      ? `WHERE "${phoneCol}" IS NOT NULL AND cardinality("${phoneCol}") > 0`
       : "";
     const totalRes = await pgQuery(`SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${filter} LIMIT 100001) subq`, [], 20000);
     res.json({
