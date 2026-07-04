@@ -44,64 +44,11 @@ def main():
     batch_size = 500
 
     # 1. PROCESS COMPANIES
-    print("⏳ Starting Company Embeddings...")
-    while True:
-        try:
-            cursor.execute("""
-                SELECT uuid, business_name, website, domain, address, city, state, industry
-                FROM final.companies
-                WHERE embedding IS NULL
-                LIMIT %s
-            """, (batch_size,))
-            rows = cursor.fetchall()
-            if not rows:
-                print("✅ All companies processed.")
-                break
-
-            uuids = []
-            texts = []
-            for r in rows:
-                uuid, name, website, domain, address, city, state, industry = r
-                name_str = name if name else ""
-                web_str = website if website else ""
-                dom_str = domain if domain else ""
-                addr_str = address if address else ""
-                city_str = city if city else ""
-                state_str = state if state else ""
-                ind_str = str(industry) if industry else ""
-                doc = f"Company: {name_str}. Website: {web_str} / {dom_str}. Address: {addr_str}, {city_str}, {state_str}. Industry: {ind_str}."
-                uuids.append(uuid)
-                texts.append(doc)
-
-            # Generate embeddings
-            embeddings = model.encode(texts, show_progress_bar=False)
-
-            # Bulk update
-            update_data = [(embeddings[i].tolist(), uuids[i]) for i in range(len(uuids))]
-            execute_values(cursor, """
-                UPDATE final.companies AS c
-                SET embedding = v.embedding::vector
-                FROM (VALUES %s) AS v(embedding, uuid)
-                WHERE c.uuid = v.uuid::uuid
-            """, update_data)
-            
-            print(f"   Indexed {len(rows)} companies...")
-        
-        except (psycopg2.OperationalError, psycopg2.InterfaceError) as err:
-            print(f"⚠️ Connection lost during company batch ({err}). Reconnecting...")
-            try:
-                cursor.close()
-                conn.close()
-            except Exception:
-                pass
-            conn, cursor = get_connection_and_cursor()
-            time.sleep(2)
-        except Exception as e:
-            print(f"❌ Unexpected error: {e}. Retrying batch in 5 seconds...")
-            time.sleep(5)
+    print("✅ All companies processed (skipped check).")
 
     # 2. PROCESS PEOPLE
     print("⏳ Starting People Embeddings...")
+    people_batch_size = 250
     while True:
         try:
             cursor.execute("""
@@ -109,7 +56,7 @@ def main():
                 FROM final.people
                 WHERE embedding IS NULL
                 LIMIT %s
-            """, (batch_size,))
+            """, (people_batch_size,))
             rows = cursor.fetchall()
             if not rows:
                 print("✅ All people processed.")
@@ -141,6 +88,7 @@ def main():
             """, update_data)
 
             print(f"   Indexed {len(rows)} people...")
+            time.sleep(0.5)
 
         except (psycopg2.OperationalError, psycopg2.InterfaceError) as err:
             print(f"⚠️ Connection lost during people batch ({err}). Reconnecting...")
@@ -158,6 +106,7 @@ def main():
     cursor.close()
     conn.close()
     print("🎉 Embedding process completed successfully!")
+
 
 if __name__ == '__main__':
     main()
