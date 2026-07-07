@@ -141,10 +141,10 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         values.push(`%${val}`);
       }
     } else if (op === "nonempty") {
-      // Handle both text[] arrays and plain text columns
-      conditions.push(`(${doubleQuotedCol} IS NOT NULL AND array_length(${doubleQuotedCol}::text[], 1) > 0)`);
+      // Works for plain TEXT columns AND array-literal strings ({} / {val1,val2})
+      conditions.push(`(${doubleQuotedCol} IS NOT NULL AND ${doubleQuotedCol} <> '' AND ${doubleQuotedCol} <> '{}')`);
     } else if (op === "empty") {
-      conditions.push(`(${doubleQuotedCol} IS NULL OR array_length(${doubleQuotedCol}::text[], 1) IS NULL)`);
+      conditions.push(`(${doubleQuotedCol} IS NULL OR ${doubleQuotedCol} = '' OR ${doubleQuotedCol} = '{}')`);
     } else if (op === "contains") {
       if (val !== "") {
         if (val === "true" || val === "false") {
@@ -170,9 +170,9 @@ function buildWhere(queryParams, emailCol, schemaColumns) {
   const values     = [];
   let   idx        = 1;
 
-  // Base filter: must have email (emails is a text[] array, so check array_length)
+  // Base filter: must have email (emails is TEXT storing array-literal like {user@x.com} or {})
   if (emailCol) {
-    conditions.push(`("${emailCol}" IS NOT NULL AND array_length("${emailCol}", 1) > 0)`);
+    conditions.push(`("${emailCol}" IS NOT NULL AND "${emailCol}" <> '' AND "${emailCol}" <> '{}')`);
   }
 
   // search: ILIKE on full_name only (trgm GIN indexed -> super fast!)
