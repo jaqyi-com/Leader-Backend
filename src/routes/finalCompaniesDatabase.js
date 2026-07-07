@@ -128,7 +128,20 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       col = "emails";
       op = val === "true" ? "nonempty" : "empty";
     } else if (col === "has_phone") {
-      col = schemaColumns.includes("phone") ? "phone" : "phones";
+      // companies has BOTH: phone (plain text) AND phones (array-literal text like {+1...})
+      // Check either column has data
+      const hasPhone  = schemaColumns.includes("phone");
+      const hasPhones = schemaColumns.includes("phones");
+      if (hasPhone && hasPhones) {
+        const isNonempty = val === "true";
+        if (isNonempty) {
+          conditions.push(`(("phone" IS NOT NULL AND "phone" <> '') OR ("phones" IS NOT NULL AND "phones" <> '' AND "phones" <> '{}'))`);
+        } else {
+          conditions.push(`(("phone" IS NULL OR "phone" = '') AND ("phones" IS NULL OR "phones" = '' OR "phones" = '{}'))`);
+        }
+        continue; // already pushed, skip generic op handling below
+      }
+      col = hasPhone ? "phone" : "phones";
       op = val === "true" ? "nonempty" : "empty";
     }
 
