@@ -124,11 +124,11 @@ function buildWhere({
   if (f_location)   { conditions.push(`location   ILIKE $${idx++}`); values.push(`%${f_location}%`); }
   if (f_geo_source) { conditions.push(`geo_source = $${idx++}`);      values.push(f_geo_source); }
 
-  // Array presence filters — cardinality() returns 0 for empty arrays (safe)
-  if (f_has_email === "true")  { conditions.push(`cardinality(emails) > 0`); }
-  if (f_has_email === "false") { conditions.push(`(emails IS NULL OR cardinality(emails) = 0)`); }
-  if (f_has_phone === "true")  { conditions.push(`cardinality(phones) > 0`); }
-  if (f_has_phone === "false") { conditions.push(`(phones IS NULL OR cardinality(phones) = 0)`); }
+  // Email / phone presence — emails & phones are TEXT in Neon (not arrays)
+  if (f_has_email === "true")  { conditions.push(`(emails IS NOT NULL AND emails <> '')`); }
+  if (f_has_email === "false") { conditions.push(`(emails IS NULL OR emails = '')`); }
+  if (f_has_phone === "true")  { conditions.push(`(phones IS NOT NULL AND phones <> '')`); }
+  if (f_has_phone === "false") { conditions.push(`(phones IS NULL OR phones = '')`); }
 
   const hasFilters = conditions.length > 0;
   const userHasFilters = hasFilters || (embedding && embedding.length === 384);
@@ -136,8 +136,8 @@ function buildWhere({
   // Default filter: require complete records (name, email, phone) if no search/filters are specified
   if (!userHasFilters) {
     conditions.push("full_name IS NOT NULL AND full_name <> '' AND full_name !~ '^[0-9\\-]+$'");
-    conditions.push("emails IS NOT NULL AND cardinality(emails) > 0");
-    conditions.push("phones IS NOT NULL AND cardinality(phones) > 0");
+    conditions.push("(emails IS NOT NULL AND emails <> '')");
+    conditions.push("(phones IS NOT NULL AND phones <> '')");
   }
 
   return {

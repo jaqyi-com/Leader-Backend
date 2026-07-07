@@ -87,7 +87,7 @@ function buildWhere(
 
   // Base filter: must have email
   if (emailCol) {
-    conditions.push(`("${emailCol}" IS NOT NULL AND cardinality("${emailCol}") > 0)`);
+    conditions.push(`("${emailCol}" IS NOT NULL AND "${emailCol}" <> '')`);
   }
 
   // search: ILIKE on full_name only (trgm GIN indexed -> super fast!)
@@ -114,7 +114,7 @@ router.get("/health", async (req, res) => {
     const schema  = await getSchema();
     const emailCol = await getEmailCol(schema);
     const filter = emailCol
-      ? `WHERE "${emailCol}" IS NOT NULL AND cardinality("${emailCol}") > 0`
+      ? `WHERE "${emailCol}" IS NOT NULL AND "${emailCol}" <> ''`
       : "";
     const cnt = await pgQuery(`SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${filter} LIMIT 10001) subq`, [], 15000);
     const totalRecords = parseInt(cnt.rows[0].cnt, 10);
@@ -138,7 +138,7 @@ router.get("/stats", async (req, res) => {
     const schema   = await getSchema();
     const emailCol = await getEmailCol(schema);
     const filter   = emailCol
-      ? `WHERE "${emailCol}" IS NOT NULL AND cardinality("${emailCol}") > 0`
+      ? `WHERE "${emailCol}" IS NOT NULL AND "${emailCol}" <> ''`
       : "";
     const totalRes = await pgQuery(`SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${filter} LIMIT 100001) subq`, [], 20000);
     res.json({

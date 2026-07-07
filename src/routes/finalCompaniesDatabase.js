@@ -134,9 +134,9 @@ function buildWhere({
     if (!isNaN(rv)) { conditions.push(`reviews >= $${idx++}`); values.push(rv); }
   }
 
-  // Array presence
-  if (f_has_email === "true")  { conditions.push(`cardinality(emails) > 0`); }
-  if (f_has_email === "false") { conditions.push(`(emails IS NULL OR cardinality(emails) = 0)`); }
+  // Email / phone presence — emails & phones are TEXT in Neon (not arrays)
+  if (f_has_email === "true")  { conditions.push(`(emails IS NOT NULL AND emails <> '')`); }
+  if (f_has_email === "false") { conditions.push(`(emails IS NULL OR emails = '')`); }
   // phone is a plain text column in companies
   if (f_has_phone === "true")  { conditions.push(`(phone IS NOT NULL AND phone <> '')`); }
   if (f_has_phone === "false") { conditions.push(`(phone IS NULL OR phone = '')`); }
@@ -144,12 +144,12 @@ function buildWhere({
   const hasFilters = conditions.length > 0;
   const userHasFilters = hasFilters || (embedding && embedding.length === 384);
 
-  // Default filter: require complete records (business_name, phone, website, emails) if no search/filters are specified
+  // Default filter: require complete records if no search/filters are specified
   if (!userHasFilters) {
     conditions.push("business_name IS NOT NULL AND business_name <> '' AND business_name !~ '^[0-9\\-]+$'");
     conditions.push("phone IS NOT NULL AND phone <> ''");
     conditions.push("website IS NOT NULL AND website <> ''");
-    conditions.push("emails IS NOT NULL AND cardinality(emails) > 0");
+    conditions.push("(emails IS NOT NULL AND emails <> '')");
   }
 
   return {

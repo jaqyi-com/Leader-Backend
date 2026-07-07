@@ -42,11 +42,11 @@ function buildPeopleWhere(f) {
   if (f.pincode)     { clauses.push(`pincode    = $${idx++}`);      params.push(f.pincode); }
   if (f.geo_source)  { clauses.push(`geo_source = $${idx++}`);      params.push(f.geo_source); }
 
-  // Array presence — cardinality() returns 0 for {} (safe, unlike array_length)
-  if (f.has_email === "true")  { clauses.push(`cardinality(emails) > 0`); }
-  if (f.has_email === "false") { clauses.push(`(emails IS NULL OR cardinality(emails) = 0)`); }
-  if (f.has_phone === "true")  { clauses.push(`cardinality(phones) > 0`); }
-  if (f.has_phone === "false") { clauses.push(`(phones IS NULL OR cardinality(phones) = 0)`); }
+  // Email / phone presence — TEXT columns in Neon (not arrays)
+  if (f.has_email === "true")  { clauses.push(`(emails IS NOT NULL AND emails <> '')`); }
+  if (f.has_email === "false") { clauses.push(`(emails IS NULL OR emails = '')`); }
+  if (f.has_phone === "true")  { clauses.push(`(phones IS NOT NULL AND phones <> '')`); }
+  if (f.has_phone === "false") { clauses.push(`(phones IS NULL OR phones = '')`); }
 
   return { where: clauses.join(" AND "), params };
 }
@@ -87,9 +87,9 @@ function buildCompaniesWhere(f) {
   if (f.has_phone === "true")  { clauses.push(`(phone IS NOT NULL AND phone <> '')`); }
   if (f.has_phone === "false") { clauses.push(`(phone IS NULL OR phone = '')`); }
 
-  // Email array — cardinality() returns 0 for {} (safe)
-  if (f.has_email === "true")  { clauses.push(`cardinality(emails) > 0`); }
-  if (f.has_email === "false") { clauses.push(`(emails IS NULL OR cardinality(emails) = 0)`); }
+  // Email — TEXT column in Neon (not array)
+  if (f.has_email === "true")  { clauses.push(`(emails IS NOT NULL AND emails <> '')`); }
+  if (f.has_email === "false") { clauses.push(`(emails IS NULL OR emails = '')`); }
 
   return { where: clauses.join(" AND "), params };
 }

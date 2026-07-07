@@ -70,9 +70,9 @@ async function performHybridSearch({
       queryParams.push(`%${f_industry}%`);
     }
     if (f_has_email === "true") {
-      conditions.push(`cardinality(emails) > 0`);
+      conditions.push(`(emails IS NOT NULL AND emails <> '')`);
     } else if (f_has_email === "false") {
-      conditions.push(`(emails IS NULL OR cardinality(emails) = 0)`);
+      conditions.push(`(emails IS NULL OR emails = '')`);
     }
     if (f_has_phone === "true") {
       conditions.push(`(phone IS NOT NULL AND phone <> '')`);
@@ -86,14 +86,14 @@ async function performHybridSearch({
       queryParams.push(`%${f_job_title}%`);
     }
     if (f_has_email === "true") {
-      conditions.push(`cardinality(emails) > 0`);
+      conditions.push(`(emails IS NOT NULL AND emails <> '')`);
     } else if (f_has_email === "false") {
-      conditions.push(`(emails IS NULL OR cardinality(emails) = 0)`);
+      conditions.push(`(emails IS NULL OR emails = '')`);
     }
     if (f_has_phone === "true") {
-      conditions.push(`cardinality(phones) > 0`);
+      conditions.push(`(phones IS NOT NULL AND phones <> '')`);
     } else if (f_has_phone === "false") {
-      conditions.push(`(phones IS NULL OR cardinality(phones) = 0)`);
+      conditions.push(`(phones IS NULL OR phones = '')`);
     }
   }
 
@@ -104,11 +104,11 @@ async function performHybridSearch({
       conditions.push("business_name IS NOT NULL AND business_name <> ''");
       conditions.push("phone IS NOT NULL AND phone <> ''");
       conditions.push("website IS NOT NULL AND website <> ''");
-      conditions.push("emails IS NOT NULL AND cardinality(emails) > 0");
+      conditions.push("(emails IS NOT NULL AND emails <> '')");
     } else {
       conditions.push("full_name IS NOT NULL AND full_name <> ''");
-      conditions.push("emails IS NOT NULL AND cardinality(emails) > 0");
-      conditions.push("phones IS NOT NULL AND cardinality(phones) > 0");
+      conditions.push("(emails IS NOT NULL AND emails <> '')");
+      conditions.push("(phones IS NOT NULL AND phones <> '')");
     }
   }
 
