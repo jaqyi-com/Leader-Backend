@@ -1,16 +1,18 @@
 import os
 import sys
 import time
+from dotenv import load_dotenv
 from psycopg2.extras import execute_values
 import psycopg2
 
+# Load environment variables from .env
+load_dotenv(dotenv_path="/Volumes/akshat/LeadGenerator/.env")
+
 # ── Neon PostgreSQL Connection ──
-NEON_DSN = (
-    "postgresql://neondb_owner:npg_0RCpItxXTuf6"
-    "@ep-cool-shape-aik0wbtp-pooler.c-4.us-east-1.aws.neon.tech"
-    "/neondb"
-    "?sslmode=require&channel_binding=require"
-)
+# Read from NEON_DATABASE_URL env var — NEVER hardcode credentials here!
+NEON_DSN = os.getenv("NEON_DATABASE_URL")
+if not NEON_DSN:
+    raise RuntimeError("NEON_DATABASE_URL env var is not set. Check your .env file.")
 
 def connect_db():
     return psycopg2.connect(dsn=NEON_DSN)
