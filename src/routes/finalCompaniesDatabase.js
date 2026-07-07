@@ -155,9 +155,10 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         values.push(`%${val}`);
       }
     } else if (op === "nonempty") {
-      conditions.push(`(${doubleQuotedCol} IS NOT NULL AND ${doubleQuotedCol} <> '')`);
+      // Handle text[] arrays (phones, emails) and plain text columns
+      conditions.push(`(${doubleQuotedCol} IS NOT NULL AND array_length(${doubleQuotedCol}::text[], 1) > 0)`);
     } else if (op === "empty") {
-      conditions.push(`(${doubleQuotedCol} IS NULL OR ${doubleQuotedCol} = '')`);
+      conditions.push(`(${doubleQuotedCol} IS NULL OR array_length(${doubleQuotedCol}::text[], 1) IS NULL)`);
     } else if (op === "contains") {
       if (val !== "") {
         if (val === "true" || val === "false") {
