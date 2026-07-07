@@ -159,10 +159,10 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         values.push(`%${val}`);
       }
     } else if (op === "nonempty") {
-      // Handle text[] arrays (phones, emails) and plain text columns
-      conditions.push(`(${doubleQuotedCol} IS NOT NULL AND array_length(${doubleQuotedCol}::text[], 1) > 0)`);
+      // Works for plain TEXT columns AND array-literal strings ({} / {val1,val2})
+      conditions.push(`(${doubleQuotedCol} IS NOT NULL AND ${doubleQuotedCol} <> '' AND ${doubleQuotedCol} <> '{}')`);
     } else if (op === "empty") {
-      conditions.push(`(${doubleQuotedCol} IS NULL OR array_length(${doubleQuotedCol}::text[], 1) IS NULL)`);
+      conditions.push(`(${doubleQuotedCol} IS NULL OR ${doubleQuotedCol} = '' OR ${doubleQuotedCol} = '{}')`);
     } else if (op === "contains") {
       if (val !== "") {
         if (val === "true" || val === "false") {
