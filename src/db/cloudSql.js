@@ -20,10 +20,15 @@ const { Pool } = require("pg");
 const SCHEMA = process.env.NEON_SCHEMA || "final";
 const TABLE  = process.env.NEON_TABLE  || "companies";
 
-// Neon connection string — supports both env var override and hardcoded default.
-const NEON_DSN =
-  process.env.NEON_DATABASE_URL ||
-  "postgresql://neondb_owner:npg_0RCpItxXTuf6@ep-cool-shape-aik0wbtp-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
+// Neon connection string — MUST be set via NEON_DATABASE_URL env var.
+// Never hardcode credentials here. Set the value in your .env file.
+const NEON_DSN = process.env.NEON_DATABASE_URL;
+if (!NEON_DSN) {
+  throw new Error(
+    "[NeonDB] ❌ NEON_DATABASE_URL environment variable is not set. " +
+    "Add it to your .env file and restart the server."
+  );
+}
 
 let _pool = null;
 
