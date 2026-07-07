@@ -1,80 +1,65 @@
 "use strict";
 // ============================================================
-// CLOUD SQL — PostgreSQL Connection Pool
+// NEON PostgreSQL — Connection Pool
 // ============================================================
-// Used ONLY for the In-Build Database feature.
+// Used for the In-Build Database feature (companies + people).
 // MongoDB Atlas remains untouched for all other features.
 //
-// Cloud SQL Instance : sigma-current-497209-i6:us-central1:leader
-// Public IP          : 34.9.35.25
-// Database           : doott_new  |  Schema: public  |  Table: usa_business_data
+// Neon instance  : ep-cool-shape-aik0wbtp-pooler.c-4.us-east-1.aws.neon.tech
+// Database       : neondb   |  Schema: final
+// Tables         : final.companies  |  final.people
 //
 // ── Serverless (Vercel) considerations ───────────────────────
-//   • max: 3  — each function instance is short-lived; don't open 10 connections
-//   • keepAlive: true  — prevents idle TCP drops on Cloud SQL
-//   • idleTimeoutMillis: 10000  — release connections quickly after use
-//   • connectionTimeoutMillis: 10000  — allow extra time for SSL handshake on cold start
-//   • statement_timeout (per-query via options)  — prevent runaway queries
+//   • max: 5  — Neon's pooler handles connection limits serverside
+//   • idleTimeoutMillis: 10000  — release idle connections quickly
+//   • connectionTimeoutMillis: 10000  — allow time for SSL handshake
 // ============================================================
 
 const { Pool } = require("pg");
 
-const SCHEMA = process.env.CLOUD_SQL_SCHEMA || "public";
-const TABLE  = process.env.CLOUD_SQL_TABLE  || "usa_business_data";
+const SCHEMA = process.env.NEON_SCHEMA || "final";
+const TABLE  = process.env.NEON_TABLE  || "companies";
+
+// Neon connection string — supports both env var override and hardcoded default.
+const NEON_DSN =
+  process.env.NEON_DATABASE_URL ||
+  "postgresql://neondb_owner:npg_0RCpItxXTuf6@ep-cool-shape-aik0wbtp-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
 
 let _pool = null;
 
 function getPool() {
   if (_pool) return _pool;
 
-  // Cloud SQL public IP requires SSL.
-  // rejectUnauthorized: false avoids needing to bundle the server cert — safe for
-  // backend-to-Cloud-SQL internal traffic (not user-facing TLS).
-  // Override with CLOUD_SQL_SSL=false ONLY for local plain Postgres testing.
-  const sslConfig =
-    process.env.CLOUD_SQL_SSL === "false"
-      ? false
-      : { rejectUnauthorized: false };
-
   _pool = new Pool({
-    host:                    process.env.CLOUD_SQL_HOST     || "34.9.35.25",
-    port:                    parseInt(process.env.CLOUD_SQL_PORT || "5432", 10),
-    database:                process.env.CLOUD_SQL_DB       || "doott_new",
-    user:                    process.env.CLOUD_SQL_USER     || "postgres",
-    password:                process.env.CLOUD_SQL_PASSWORD,
-    ssl:                     sslConfig,
+    connectionString:        NEON_DSN,
 
-    // ── Pool tuning for Vercel serverless ───────────────────────
-    max:                     3,      // serverless: keep pool small
+    // ── Pool tuning ──────────────────────────────────────────
+    max:                     5,      // Neon pooler handles many connections well
     min:                     0,      // don't hold connections between invocations
     idleTimeoutMillis:       10000,  // release idle connections quickly
     connectionTimeoutMillis: 10000,  // SSL handshake on cold start needs time
 
-    // ── TCP keep-alive prevents Cloud SQL from closing idle sockets ──
+    // ── TCP keep-alive prevents Neon from closing idle sockets ──
     keepAlive:               true,
     keepAliveInitialDelayMillis: 10000,
 
-    // ── Identify the app in Cloud SQL logs ───────────────────────
+    // ── Identify the app in Neon logs ────────────────────────
     application_name:        "leader-backend",
   });
 
   _pool.on("error", (err) => {
     // Log pool-level errors (e.g. connection dropped mid-pool)
     // These are non-fatal — the pool will reconnect automatically.
-    console.error("[CloudSQL] ⚠️  Pool error (will auto-reconnect):", err.message);
+    console.error("[NeonDB] ⚠️  Pool error (will auto-reconnect):", err.message);
   });
 
-  console.log(
-    `[CloudSQL] ✅ Pool ready → ${process.env.CLOUD_SQL_HOST || "34.9.35.25"}` +
-    `:${process.env.CLOUD_SQL_PORT || "5432"}` +
-    `/${process.env.CLOUD_SQL_DB || "doott_new"}`
-  );
+  console.log("[NeonDB] ✅ Pool ready → Neon PostgreSQL (neondb / final schema)");
 
   return _pool;
 }
 
 /**
- * Run a parameterised query against Cloud SQL.
+ * Run a parameterised query against Neon PostgreSQL.
  * Automatically acquires and releases a client from the pool.
  *
  * @param {string} text     SQL with $1, $2, … placeholders
@@ -98,10 +83,10 @@ async function query(text, params = [], timeoutMs = 30000) {
 async function testConnection() {
   try {
     const res = await query("SELECT NOW() AS now", [], 5000);
-    console.log("[CloudSQL] ✅ Connected. Server time:", res.rows[0].now);
+    console.log("[NeonDB] ✅ Connected. Server time:", res.rows[0].now);
     return true;
   } catch (err) {
-    console.error("[CloudSQL] ❌ Connection failed:", err.message);
+    console.error("[NeonDB] ❌ Connection failed:", err.message);
     return false;
   }
 }
@@ -111,7 +96,7 @@ async function closePool() {
   if (_pool) {
     await _pool.end();
     _pool = null;
-    console.log("[CloudSQL] Pool closed.");
+    console.log("[NeonDB] Pool closed.");
   }
 }
 

@@ -1,29 +1,19 @@
 import os
 import sys
 import time
-from dotenv import load_dotenv
 from psycopg2.extras import execute_values
 import psycopg2
 
-# Load environment variables
-load_dotenv(dotenv_path="/Volumes/akshat/LeadGenerator/.env")
-
-# Database Connection Info
-DB_HOST = os.getenv("CLOUD_SQL_HOST", "34.9.35.25")
-DB_PORT = os.getenv("CLOUD_SQL_PORT", "5432")
-DB_NAME = os.getenv("CLOUD_SQL_DB", "doott_new")
-DB_USER = os.getenv("CLOUD_SQL_USER", "postgres")
-DB_PASS = os.getenv("CLOUD_SQL_PASSWORD")
+# ── Neon PostgreSQL Connection ──
+NEON_DSN = (
+    "postgresql://neondb_owner:npg_0RCpItxXTuf6"
+    "@ep-cool-shape-aik0wbtp-pooler.c-4.us-east-1.aws.neon.tech"
+    "/neondb"
+    "?sslmode=require&channel_binding=require"
+)
 
 def connect_db():
-    return psycopg2.connect(
-        host=DB_HOST,
-        port=DB_PORT,
-        database=DB_NAME,
-        user=DB_USER,
-        password=DB_PASS,
-        sslmode="require"
-    )
+    return psycopg2.connect(dsn=NEON_DSN)
 
 def get_connection_and_cursor():
     while True:
@@ -47,8 +37,8 @@ def main():
     print("✅ All companies processed (skipped check).")
 
     # 2. PROCESS PEOPLE
-    print("⏳ Starting People Embeddings...")
-    people_batch_size = 250
+    print("⏳ Starting People Embeddings...", flush=True)
+    people_batch_size = 2000
     while True:
         try:
             cursor.execute("""
@@ -87,8 +77,7 @@ def main():
                 WHERE p.uuid = v.uuid::uuid
             """, update_data)
 
-            print(f"   Indexed {len(rows)} people...")
-            time.sleep(0.5)
+            print(f"   Indexed {len(rows)} people...", flush=True)
 
         except (psycopg2.OperationalError, psycopg2.InterfaceError) as err:
             print(f"⚠️ Connection lost during people batch ({err}). Reconnecting...")
