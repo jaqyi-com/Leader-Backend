@@ -13,11 +13,13 @@ import {
 } from "lucide-react";
 
 const LEAD_GEN_LINKS = [
-  { to: "/app/people",     label: "People",     icon: Users2,    sub: false },
-  { to: "/app/email",      label: "Email",      icon: Mail,      sub: false },
-  { to: "/app/number",     label: "Number",     icon: Phone,     sub: false },
-  { to: "/app/categories", label: "Categories", icon: Grid3x3,   sub: false },
-  { to: "/app/companies",  label: "Companies",  icon: Building2, sub: false },
+  { to: "/app/people",            label: "People",            icon: Users2,    sub: false },
+  { to: "/app/companies",         label: "Companies",         icon: Building2, sub: false },
+  { to: "/app/email",             label: "Emails",            icon: Mail,      sub: false },
+  { to: "/app/number",            label: "Numbers",           icon: Phone,     sub: false },
+  { to: "/app/locationiq",        label: "Location IQ",       icon: MapPin,    sub: false },
+  { to: "/app/location-analysis", label: "Location Analysis", icon: Globe,     sub: false },
+  { to: "/app/categories",        label: "Categories",        icon: Grid3x3,   sub: false },
 ];
 
 /* ── Nav item ─────────────────────────────────────────────── */
@@ -355,10 +357,6 @@ export default function Sidebar({ collapsed, onToggle }) {
       </div>
 
       <nav className="flex-1 px-2 pt-2 pb-4 flex flex-col gap-0.5 overflow-y-auto no-scrollbar">
-        {/* LocationIQ — Featured */}
-        <NavItem to="/app/locationiq"         label="Location IQ"       icon={MapPin} collapsed={collapsed} end={false} />
-        <NavItem to="/app/location-analysis"  label="Location Analysis" icon={Globe}  collapsed={collapsed} end={false} />
-
         {LEAD_GEN_LINKS.map(({ to, label, icon, sub }) => (
           sub ? (
             <div key={to} className={collapsed ? "" : "pl-3"} style={{ opacity: 0.85 }}>
