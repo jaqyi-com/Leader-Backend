@@ -77,10 +77,94 @@ function normalizeRow({ selectCols, colToField }, row) {
   return out;
 }
 
-function buildWhere(
-  { search = "", f_city = "", f_state = "", f_job_title = "", f_location = "" },
-  emailCol
-) {
+function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
+  const conditions = [];
+  let idx = startIdx;
+
+  for (const [key, rawVal] of Object.entries(queryParams)) {
+    if (!key.startsWith("f_")) continue;
+    const val = rawVal ? String(rawVal).trim() : "";
+
+    // Parse the column and operator suffix
+    let col = null;
+    let op = null;
+
+    if (key.endsWith("_eq")) {
+      col = key.substring(2, key.length - 3);
+      op = "eq";
+    } else if (key.endsWith("_sw")) {
+      col = key.substring(2, key.length - 3);
+      op = "sw";
+    } else if (key.endsWith("_ew")) {
+      col = key.substring(2, key.length - 3);
+      op = "ew";
+    } else if (key.endsWith("_nonempty")) {
+      col = key.substring(2, key.length - 9);
+      op = "nonempty";
+    } else if (key.endsWith("_empty")) {
+      col = key.substring(2, key.length - 6);
+      op = "empty";
+    } else {
+      col = key.substring(2);
+      op = "contains";
+    }
+
+    // Special compatibility mapping for legacy filters
+    if (col === "has_email") {
+      col = "emails";
+      op = val === "true" ? "nonempty" : "empty";
+    } else if (col === "has_phone") {
+      col = schemaColumns.includes("phone") ? "phone" : "phones";
+      op = val === "true" ? "nonempty" : "empty";
+    }
+
+    // Verify column exists in the schema to prevent SQL injection
+    if (!schemaColumns.includes(col)) {
+      continue;
+    }
+
+    const doubleQuotedCol = `"${col}"`;
+
+    if (op === "eq") {
+      if (val !== "") {
+        conditions.push(`${doubleQuotedCol} = $${idx++}`);
+        values.push(val);
+      }
+    } else if (op === "sw") {
+      if (val !== "") {
+        conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
+        values.push(`${val}%`);
+      }
+    } else if (op === "ew") {
+      if (val !== "") {
+        conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
+        values.push(`%${val}`);
+      }
+    } else if (op === "nonempty") {
+      conditions.push(`(${doubleQuotedCol} IS NOT NULL AND ${doubleQuotedCol} <> '')`);
+    } else if (op === "empty") {
+      conditions.push(`(${doubleQuotedCol} IS NULL OR ${doubleQuotedCol} = '')`);
+    } else if (op === "contains") {
+      if (val !== "") {
+        if (val === "true" || val === "false") {
+          conditions.push(`${doubleQuotedCol} = $${idx++}`);
+          values.push(val);
+        } else {
+          conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
+          values.push(`%${val}%`);
+        }
+      }
+    }
+  }
+
+  return { conditions, nextIdx: idx };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// WHERE CLAUSE BUILDER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildWhere(queryParams, emailCol, schemaColumns) {
+  const { search = "" } = queryParams;
   const conditions = [];
   const values     = [];
   let   idx        = 1;
@@ -96,10 +180,15 @@ function buildWhere(
     values.push(`%${search}%`);
   }
 
-  if (f_city)      { conditions.push(`"city"      ILIKE $${idx++}`); values.push(`${f_city}%`); }
-  if (f_state)     { conditions.push(`"state"     ILIKE $${idx++}`); values.push(`${f_state}%`); }
-  if (f_job_title) { conditions.push(`"job_title" ILIKE $${idx++}`); values.push(`%${f_job_title}%`); }
-  if (f_location)  { conditions.push(`"location"  ILIKE $${idx++}`); values.push(`%${f_location}%`); }
+  // Parse all query filters dynamically
+  const { conditions: dynamicConditions, nextIdx } = parseQueryParamsToSQL(
+    queryParams,
+    schemaColumns,
+    values,
+    idx
+  );
+  conditions.push(...dynamicConditions);
+  idx = nextIdx;
 
   return {
     whereStr: conditions.length ? `WHERE ${conditions.join(" AND ")}` : "",
@@ -180,8 +269,9 @@ router.get("/", async (req, res) => {
     const emailCol = await getEmailCol(schema);
 
     const { whereStr, values, nextIdx } = buildWhere(
-      { search, f_city, f_state, f_job_title, f_location },
-      emailCol
+      req.query,
+      emailCol,
+      selectCols
     );
 
     let orderClause = "";

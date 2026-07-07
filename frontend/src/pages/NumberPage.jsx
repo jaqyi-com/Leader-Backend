@@ -9,6 +9,7 @@ import {
   fcGetDatabase,  fcGetColumns,  fcRefresh,
 } from "../api";
 import toast from "react-hot-toast";
+import QueryBuilder, { qbFiltersToParams } from "../components/QueryBuilder";
 
 /* ──────────────────────────────────────────────────
    Smart cell renderer
@@ -67,12 +68,8 @@ function TablePanel({ mode }) {
   const [sortDir,    setSortDir]    = useState("asc");
   // Shared filter
   const [search,     setSearch]     = useState("");
-  // People-specific filters
-  const [fCity,      setFCity]      = useState("");
-  const [fState,     setFState]     = useState("");
-  const [fJobTitle,  setFJobTitle]  = useState("");
-  // Company-specific filters
-  const [fIndustry,  setFIndustry]  = useState("");
+  // Dynamic QueryBuilder Filters
+  const [filters,    setFilters]    = useState([]);
 
   // ── Column discovery ────────────────────────────────────────
   const loadColumns = useCallback(async () => {
@@ -83,6 +80,7 @@ function TablePanel({ mode }) {
         setCols(data.columns.map(k => ({
           key: k,
           label: k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+          type: k === "has_email" || k === "has_phone" ? "bool" : "text"
         })));
       }
     } catch { /* ignore */ }
@@ -92,19 +90,16 @@ function TablePanel({ mode }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params = { page, limit, sort_by: sortBy, sort_dir: sortDir, search };
+      const filterParams = qbFiltersToParams(filters);
+      const params = { page, limit, sort_by: sortBy, sort_dir: sortDir, search, ...filterParams };
       if (isPeople) {
         // People tab — number endpoint with column filters
-        params.f_city      = fCity;
-        params.f_state     = fState;
-        params.f_job_title = fJobTitle;
         const { data } = await fpnGetDatabase(params);
         setRecords(data.records || []);
         setTotal(data.total || 0);
       } else {
         // Companies tab — companies endpoint with phone filter
         params.f_has_phone = "true";
-        params.f_industry  = fIndustry;
         const { data } = await fcGetDatabase(params);
         setRecords(data.records || []);
         setTotal(data.total || 0);
@@ -114,7 +109,7 @@ function TablePanel({ mode }) {
     } finally {
       setLoading(false);
     }
-  }, [isPeople, page, limit, sortBy, sortDir, search, fCity, fState, fJobTitle, fIndustry]);
+  }, [isPeople, page, limit, sortBy, sortDir, search, filters]);
 
   useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
@@ -137,10 +132,12 @@ function TablePanel({ mode }) {
   };
 
   const clearAll = () => {
-    setSearch(""); setFCity(""); setFState(""); setFJobTitle(""); setFIndustry(""); setPage(1);
+    setSearch("");
+    setFilters([]);
+    setPage(1);
   };
 
-  const hasFilters = search || fCity || fState || fJobTitle || fIndustry;
+  const hasFilters = search || filters.length > 0;
 
   const exportCSV = () => {
     if (!cols.length || !records.length) return;
@@ -204,16 +201,12 @@ function TablePanel({ mode }) {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {isPeople ? (
-                <>
-                  <input className="input text-xs" placeholder="City…" value={fCity} onChange={e => { setFCity(e.target.value); setPage(1); }} />
-                  <input className="input text-xs" placeholder="State…" value={fState} onChange={e => { setFState(e.target.value); setPage(1); }} />
-                  <input className="input text-xs col-span-2" placeholder="Job title…" value={fJobTitle} onChange={e => { setFJobTitle(e.target.value); setPage(1); }} />
-                </>
-              ) : (
-                <input className="input text-xs col-span-2" placeholder="Industry…" value={fIndustry} onChange={e => { setFIndustry(e.target.value); setPage(1); }} />
-              )}
+            <div className="card p-4">
+              <QueryBuilder
+                columns={cols}
+                filters={filters}
+                onChange={f => { setFilters(f); setPage(1); }}
+              />
             </div>
           </motion.div>
         )}
@@ -222,11 +215,20 @@ function TablePanel({ mode }) {
       {/* ── Active filter badges ──────────────────────────────── */}
       {hasFilters && (
         <div className="flex items-center gap-2 flex-wrap text-[10px]">
-          {search     && <span className="badge badge-purple flex items-center gap-1">search: {search}<button onClick={() => { setSearch(""); setPage(1); }}><X size={9} /></button></span>}
-          {fCity      && <span className="badge badge-purple flex items-center gap-1">city: {fCity}<button onClick={() => { setFCity(""); setPage(1); }}><X size={9} /></button></span>}
-          {fState     && <span className="badge badge-purple flex items-center gap-1">state: {fState}<button onClick={() => { setFState(""); setPage(1); }}><X size={9} /></button></span>}
-          {fJobTitle  && <span className="badge badge-purple flex items-center gap-1">job: {fJobTitle}<button onClick={() => { setFJobTitle(""); setPage(1); }}><X size={9} /></button></span>}
-          {fIndustry  && <span className="badge badge-purple flex items-center gap-1">industry: {fIndustry}<button onClick={() => { setFIndustry(""); setPage(1); }}><X size={9} /></button></span>}
+          {search && (
+            <span className="badge badge-purple flex items-center gap-1">
+              search: {search}
+              <button onClick={() => { setSearch(""); setPage(1); }}><X size={9} /></button>
+            </span>
+          )}
+          {filters.map((f, i) => (
+            <span key={i} className="badge badge-purple flex items-center gap-1">
+              {f.col} {f.op} {f.val}
+              <button onClick={() => { setFilters(prev => prev.filter((_, idx) => idx !== i)); setPage(1); }}>
+                <X size={9} />
+              </button>
+            </span>
+          ))}
           <button onClick={clearAll} className="text-[var(--text-3)] hover:text-[var(--rose)] underline">Clear all</button>
         </div>
       )}
