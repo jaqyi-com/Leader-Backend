@@ -91,13 +91,94 @@ function normalizeRow({ selectCols, colToField }, row) {
 //   f_min_rating   — numeric threshold (e.g. '4.0')
 //   f_min_reviews  — int threshold
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function buildWhere({
-  search = "",
-  embedding = null,
-  f_business_name, f_city, f_state, f_pincode,
-  f_domain, f_industry, f_website, f_address, f_geo_source,
-  f_has_email, f_has_phone, f_min_rating, f_min_reviews,
-}, _schema) {
+function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
+  const conditions = [];
+  let idx = startIdx;
+
+  for (const [key, rawVal] of Object.entries(queryParams)) {
+    if (!key.startsWith("f_")) continue;
+    const val = rawVal ? String(rawVal).trim() : "";
+
+    // Parse the column and operator suffix
+    let col = null;
+    let op = null;
+
+    if (key.endsWith("_eq")) {
+      col = key.substring(2, key.length - 3);
+      op = "eq";
+    } else if (key.endsWith("_sw")) {
+      col = key.substring(2, key.length - 3);
+      op = "sw";
+    } else if (key.endsWith("_ew")) {
+      col = key.substring(2, key.length - 3);
+      op = "ew";
+    } else if (key.endsWith("_nonempty")) {
+      col = key.substring(2, key.length - 9);
+      op = "nonempty";
+    } else if (key.endsWith("_empty")) {
+      col = key.substring(2, key.length - 6);
+      op = "empty";
+    } else {
+      col = key.substring(2);
+      op = "contains";
+    }
+
+    // Special compatibility mapping for legacy filters
+    if (col === "has_email") {
+      col = "emails";
+      op = val === "true" ? "nonempty" : "empty";
+    } else if (col === "has_phone") {
+      col = schemaColumns.includes("phone") ? "phone" : "phones";
+      op = val === "true" ? "nonempty" : "empty";
+    }
+
+    // Verify column exists in the schema to prevent SQL injection
+    if (!schemaColumns.includes(col)) {
+      continue;
+    }
+
+    const doubleQuotedCol = `"${col}"`;
+
+    if (op === "eq") {
+      if (val !== "") {
+        conditions.push(`${doubleQuotedCol} = $${idx++}`);
+        values.push(val);
+      }
+    } else if (op === "sw") {
+      if (val !== "") {
+        conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
+        values.push(`${val}%`);
+      }
+    } else if (op === "ew") {
+      if (val !== "") {
+        conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
+        values.push(`%${val}`);
+      }
+    } else if (op === "nonempty") {
+      conditions.push(`(${doubleQuotedCol} IS NOT NULL AND ${doubleQuotedCol} <> '')`);
+    } else if (op === "empty") {
+      conditions.push(`(${doubleQuotedCol} IS NULL OR ${doubleQuotedCol} = '')`);
+    } else if (op === "contains") {
+      if (val !== "") {
+        if (val === "true" || val === "false") {
+          conditions.push(`${doubleQuotedCol} = $${idx++}`);
+          values.push(val);
+        } else {
+          conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
+          values.push(`%${val}%`);
+        }
+      }
+    }
+  }
+
+  return { conditions, nextIdx: idx };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// WHERE CLAUSE BUILDER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildWhere(queryParams, embedding, _schema) {
+  const { search = "" } = queryParams;
   const conditions = [];
   const values     = [];
   let   idx        = 1;
@@ -113,35 +194,17 @@ function buildWhere({
     values.push(`%${search}%`);
   }
 
-  // Column-specific filters
-  if (f_business_name) { conditions.push(`business_name ILIKE $${idx++}`); values.push(`%${f_business_name}%`); }
-  if (f_city)          { conditions.push(`city          ILIKE $${idx++}`); values.push(`${f_city}%`); }
-  if (f_state)         { conditions.push(`state         ILIKE $${idx++}`); values.push(`${f_state}%`); }
-  if (f_pincode)       { conditions.push(`pincode       = $${idx++}`);      values.push(f_pincode); }
-  if (f_domain)        { conditions.push(`domain        ILIKE $${idx++}`); values.push(`%${f_domain}%`); }
-  if (f_industry)      { conditions.push(`industry      ILIKE $${idx++}`); values.push(`%${f_industry}%`); }
-  if (f_website)       { conditions.push(`website       ILIKE $${idx++}`); values.push(`%${f_website}%`); }
-  if (f_address)       { conditions.push(`address       ILIKE $${idx++}`); values.push(`%${f_address}%`); }
-  if (f_geo_source)    { conditions.push(`geo_source    = $${idx++}`);      values.push(f_geo_source); }
+  // Parse all query filters dynamically
+  const { conditions: dynamicConditions, nextIdx } = parseQueryParamsToSQL(
+    queryParams,
+    _schema.actualCols,
+    values,
+    idx
+  );
+  conditions.push(...dynamicConditions);
+  idx = nextIdx;
 
-  // Rating / reviews
-  if (f_min_rating) {
-    const r = parseFloat(f_min_rating);
-    if (!isNaN(r)) { conditions.push(`rating >= $${idx++}`); values.push(r); }
-  }
-  if (f_min_reviews) {
-    const rv = parseInt(f_min_reviews, 10);
-    if (!isNaN(rv)) { conditions.push(`reviews >= $${idx++}`); values.push(rv); }
-  }
-
-  // Email / phone presence — emails & phones are TEXT in Neon (not arrays)
-  if (f_has_email === "true")  { conditions.push(`(emails IS NOT NULL AND emails <> '')`); }
-  if (f_has_email === "false") { conditions.push(`(emails IS NULL OR emails = '')`); }
-  // phone is a plain text column in companies
-  if (f_has_phone === "true")  { conditions.push(`(phone IS NOT NULL AND phone <> '')`); }
-  if (f_has_phone === "false") { conditions.push(`(phone IS NULL OR phone = '')`); }
-
-  const hasFilters = conditions.length > 0;
+  const hasFilters = dynamicConditions.length > 0;
   const userHasFilters = hasFilters || (embedding && embedding.length === 384);
 
   // Default filter: require complete records if no search/filters are specified
@@ -308,7 +371,8 @@ router.get("/", async (req, res) => {
     const schema = await getSchema();
     const { selectSQL, selectCols } = schema;
     const { whereStr, values, nextIdx, vectorIdx, userHasFilters } = buildWhere(
-      { search, embedding, f_business_name, f_city, f_state, f_pincode, f_domain, f_industry, f_website, f_address, f_geo_source, f_has_email, f_has_phone, f_min_rating, f_min_reviews },
+      req.query,
+      embedding,
       schema
     );
 

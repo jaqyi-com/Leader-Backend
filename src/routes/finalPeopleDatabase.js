@@ -95,12 +95,94 @@ function normalizeRow({ selectCols, colToField }, row) {
 //   f_has_email — 'true'/'false'        (GIN array indexed)
 //   f_has_phone — 'true'/'false'        (GIN array indexed)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-function buildWhere({
-  search = "",
-  embedding = null,
-  f_city, f_state, f_pincode, f_job_title, f_location, f_geo_source,
-  f_has_email, f_has_phone,
-}, _schema) {
+function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
+  const conditions = [];
+  let idx = startIdx;
+
+  for (const [key, rawVal] of Object.entries(queryParams)) {
+    if (!key.startsWith("f_")) continue;
+    const val = rawVal ? String(rawVal).trim() : "";
+
+    // Parse the column and operator suffix
+    let col = null;
+    let op = null;
+
+    if (key.endsWith("_eq")) {
+      col = key.substring(2, key.length - 3);
+      op = "eq";
+    } else if (key.endsWith("_sw")) {
+      col = key.substring(2, key.length - 3);
+      op = "sw";
+    } else if (key.endsWith("_ew")) {
+      col = key.substring(2, key.length - 3);
+      op = "ew";
+    } else if (key.endsWith("_nonempty")) {
+      col = key.substring(2, key.length - 9);
+      op = "nonempty";
+    } else if (key.endsWith("_empty")) {
+      col = key.substring(2, key.length - 6);
+      op = "empty";
+    } else {
+      col = key.substring(2);
+      op = "contains";
+    }
+
+    // Special compatibility mapping for legacy filters
+    if (col === "has_email") {
+      col = "emails";
+      op = val === "true" ? "nonempty" : "empty";
+    } else if (col === "has_phone") {
+      col = schemaColumns.includes("phone") ? "phone" : "phones";
+      op = val === "true" ? "nonempty" : "empty";
+    }
+
+    // Verify column exists in the schema to prevent SQL injection
+    if (!schemaColumns.includes(col)) {
+      continue;
+    }
+
+    const doubleQuotedCol = `"${col}"`;
+
+    if (op === "eq") {
+      if (val !== "") {
+        conditions.push(`${doubleQuotedCol} = $${idx++}`);
+        values.push(val);
+      }
+    } else if (op === "sw") {
+      if (val !== "") {
+        conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
+        values.push(`${val}%`);
+      }
+    } else if (op === "ew") {
+      if (val !== "") {
+        conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
+        values.push(`%${val}`);
+      }
+    } else if (op === "nonempty") {
+      conditions.push(`(${doubleQuotedCol} IS NOT NULL AND ${doubleQuotedCol} <> '')`);
+    } else if (op === "empty") {
+      conditions.push(`(${doubleQuotedCol} IS NULL OR ${doubleQuotedCol} = '')`);
+    } else if (op === "contains") {
+      if (val !== "") {
+        if (val === "true" || val === "false") {
+          conditions.push(`${doubleQuotedCol} = $${idx++}`);
+          values.push(val);
+        } else {
+          conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
+          values.push(`%${val}%`);
+        }
+      }
+    }
+  }
+
+  return { conditions, nextIdx: idx };
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// WHERE CLAUSE BUILDER
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+function buildWhere(queryParams, embedding, _schema) {
+  const { search = "" } = queryParams;
   const conditions = [];
   const values     = [];
   let   idx        = 1;
@@ -116,21 +198,17 @@ function buildWhere({
     values.push(`%${search}%`);
   }
 
-  // Column-specific filters — each uses its dedicated index
-  if (f_city)       { conditions.push(`city       ILIKE $${idx++}`); values.push(`${f_city}%`); }
-  if (f_state)      { conditions.push(`state      ILIKE $${idx++}`); values.push(`${f_state}%`); }
-  if (f_pincode)    { conditions.push(`pincode    = $${idx++}`);      values.push(f_pincode); }
-  if (f_job_title)  { conditions.push(`job_title  ILIKE $${idx++}`); values.push(`%${f_job_title}%`); }
-  if (f_location)   { conditions.push(`location   ILIKE $${idx++}`); values.push(`%${f_location}%`); }
-  if (f_geo_source) { conditions.push(`geo_source = $${idx++}`);      values.push(f_geo_source); }
+  // Parse all query filters dynamically
+  const { conditions: dynamicConditions, nextIdx } = parseQueryParamsToSQL(
+    queryParams,
+    _schema.actualCols,
+    values,
+    idx
+  );
+  conditions.push(...dynamicConditions);
+  idx = nextIdx;
 
-  // Email / phone presence — emails & phones are TEXT in Neon (not arrays)
-  if (f_has_email === "true")  { conditions.push(`(emails IS NOT NULL AND emails <> '')`); }
-  if (f_has_email === "false") { conditions.push(`(emails IS NULL OR emails = '')`); }
-  if (f_has_phone === "true")  { conditions.push(`(phones IS NOT NULL AND phones <> '')`); }
-  if (f_has_phone === "false") { conditions.push(`(phones IS NULL OR phones = '')`); }
-
-  const hasFilters = conditions.length > 0;
+  const hasFilters = dynamicConditions.length > 0;
   const userHasFilters = hasFilters || (embedding && embedding.length === 384);
 
   // Default filter: require complete records (name, email, phone) if no search/filters are specified
@@ -295,7 +373,8 @@ router.get("/", async (req, res) => {
     const schema = await getSchema();
     const { selectSQL, selectCols } = schema;
     const { whereStr, values, nextIdx, vectorIdx, userHasFilters } = buildWhere(
-      { search, embedding, f_city, f_state, f_pincode, f_job_title, f_location, f_geo_source, f_has_email, f_has_phone },
+      req.query,
+      embedding,
       schema
     );
 

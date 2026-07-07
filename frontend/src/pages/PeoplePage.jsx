@@ -1,4 +1,3 @@
-// Build trigger: 2026-07-02-v3
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -8,6 +7,7 @@ import {
 } from "lucide-react";
 import { fpGetDatabase, fpGetStats, fpGetColumns, fpRefresh } from "../api";
 import toast from "react-hot-toast";
+import QueryBuilder, { qbFiltersToParams } from "../components/QueryBuilder";
 
 export default function PeoplePage() {
   const [searchParams] = useSearchParams();
@@ -22,18 +22,17 @@ export default function PeoplePage() {
   const [sortBy, setSortBy] = useState("");
   const [sortDir, setSortDir] = useState("asc");
   const [search, setSearch] = useState("");
-  // Column-specific filters
-  const [fCity,      setFCity]      = useState("");
-  const [fState,     setFState]     = useState("");
-  const [fPincode,   setFPincode]   = useState("");
-  const [fJob,       setFJob]       = useState(searchParams.get("f_job_title") || "");
-  const [fLocation,  setFLocation]  = useState("");
-  const [fGeo,       setFGeo]       = useState("");
-  const [fHasEmail,  setFHasEmail]  = useState("");
-  const [fHasPhone,  setFHasPhone]  = useState("");
-  const [fLinkedIn,  setFLinkedIn]  = useState("");
+  
+  // Dynamic QueryBuilder Filters
+  const [filters, setFilters] = useState(() => {
+    const initialJob = searchParams.get("f_job_title") || "";
+    if (initialJob) {
+      return [{ col: "job_title", op: "contains", val: initialJob }];
+    }
+    return [];
+  });
 
-  // ── Column discovery (only sets column headers, never triggers re-fetch) ────
+  // ── Column discovery ────
   const loadColumns = useCallback(async () => {
     try {
       const { data } = await fpGetColumns();
@@ -41,32 +40,25 @@ export default function PeoplePage() {
         const columns = data.columns.map(k => ({
           key: k,
           label: k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+          type: k === "has_email" || k === "has_phone" ? "bool" : "text"
         }));
         setCols(columns);
-        // NOTE: do NOT call setSortBy here — that would trigger a second fetch
       }
     } catch {
-      // fallback — empty header
+      // fallback
     }
-  }, []); // eslint-disable-line
+  }, []);
 
   // ── Load records ──────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
     try {
+      const filterParams = qbFiltersToParams(filters);
       const { data } = await fpGetDatabase({
         page, limit,
         sort_by: sortBy, sort_dir: sortDir,
         search,
-        ...(fCity     && { f_city:       fCity      }),
-        ...(fState    && { f_state:      fState     }),
-        ...(fPincode  && { f_pincode:    fPincode   }),
-        ...(fJob      && { f_job_title:  fJob       }),
-        ...(fLocation && { f_location:   fLocation  }),
-        ...(fGeo      && { f_geo_source: fGeo       }),
-        ...(fHasEmail && { f_has_email:  fHasEmail  }),
-        ...(fHasPhone && { f_has_phone:  fHasPhone  }),
-        ...(fLinkedIn && { f_linkedin:   fLinkedIn  }),
+        ...filterParams,
       });
       const recordsData = data.records || [];
       if (!sortBy) {
@@ -97,7 +89,7 @@ export default function PeoplePage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, sortBy, sortDir, search, fCity, fState, fPincode, fJob, fLocation, fGeo, fHasEmail, fHasPhone, fLinkedIn]);
+  }, [page, limit, sortBy, sortDir, search, filters]);
 
   useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
@@ -126,8 +118,8 @@ export default function PeoplePage() {
   };
 
   const clearAll = () => {
-    setSearch(""); setFCity(""); setFState(""); setFPincode("");
-    setFJob(""); setFLocation(""); setFGeo(""); setFHasEmail(""); setFHasPhone(""); setFLinkedIn("");
+    setSearch("");
+    setFilters([]);
     setPage(1);
   };
 
@@ -249,29 +241,10 @@ export default function PeoplePage() {
         </div>
       )}
 
-      {/* Active filter chips */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="flex items-center gap-1 text-xs text-[var(--text-3)] font-semibold"><Filter size={12} />Filters</span>
-        {search    && <span className="badge badge-purple text-[10px] flex items-center gap-1">name: {search}    <button onClick={() => { setSearch("");    setPage(1); }}><X size={9}/></button></span>}
-        {fCity     && <span className="badge badge-purple text-[10px] flex items-center gap-1">city: {fCity}     <button onClick={() => { setFCity("");    setPage(1); }}><X size={9}/></button></span>}
-        {fState    && <span className="badge badge-purple text-[10px] flex items-center gap-1">state: {fState}   <button onClick={() => { setFState("");   setPage(1); }}><X size={9}/></button></span>}
-        {fPincode  && <span className="badge badge-purple text-[10px] flex items-center gap-1">pin: {fPincode}   <button onClick={() => { setFPincode(""); setPage(1); }}><X size={9}/></button></span>}
-        {fJob      && <span className="badge badge-purple text-[10px] flex items-center gap-1">job: {fJob}       <button onClick={() => { setFJob("");      setPage(1); }}><X size={9}/></button></span>}
-        {fLocation && <span className="badge badge-purple text-[10px] flex items-center gap-1">loc: {fLocation}  <button onClick={() => { setFLocation("");setPage(1); }}><X size={9}/></button></span>}
-        {fGeo      && <span className="badge badge-purple text-[10px] flex items-center gap-1">geo: {fGeo}       <button onClick={() => { setFGeo("");      setPage(1); }}><X size={9}/></button></span>}
-        {fHasEmail && <span className="badge badge-purple text-[10px] flex items-center gap-1">email: {fHasEmail}<button onClick={() => { setFHasEmail("");setPage(1); }}><X size={9}/></button></span>}
-        {fHasPhone && <span className="badge badge-purple text-[10px] flex items-center gap-1">phone: {fHasPhone}<button onClick={() => { setFHasPhone("");setPage(1); }}><X size={9}/></button></span>}
-        {fLinkedIn && <span className="badge badge-purple text-[10px] flex items-center gap-1">linkedin: {fLinkedIn}<button onClick={() => { setFLinkedIn("");setPage(1); }}><X size={9}/></button></span>}
-        {[search,fCity,fState,fPincode,fJob,fLocation,fGeo,fHasEmail,fHasPhone,fLinkedIn].some(Boolean) && (
-          <button onClick={clearAll} className="text-[10px] text-[var(--text-3)] hover:text-[var(--rose)] underline">Clear all</button>
-        )}
-      </div>
-
-      {/* Filter Panel — always visible */}
-      <div className="card p-4 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-
+      {/* Controls: Search & Rows per page */}
+      <div className="flex flex-col sm:flex-row gap-3 items-end">
         {/* Name search */}
-        <div className="relative col-span-2 sm:col-span-1">
+        <div className="relative w-full sm:w-72">
           <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Name Search</label>
           <div className="relative">
             <Search size={10} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
@@ -280,84 +253,8 @@ export default function PeoplePage() {
           </div>
         </div>
 
-        {/* City */}
-        <div>
-          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">City</label>
-          <input className="input text-xs w-full" placeholder="e.g. Mumbai"
-            value={fCity} onChange={e => { setFCity(e.target.value); setPage(1); }} />
-        </div>
-
-        {/* State */}
-        <div>
-          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">State</label>
-          <input className="input text-xs w-full" placeholder="e.g. Maharashtra"
-            value={fState} onChange={e => { setFState(e.target.value); setPage(1); }} />
-        </div>
-
-        {/* Pincode */}
-        <div>
-          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Pincode</label>
-          <input className="input text-xs w-full" placeholder="e.g. 400001"
-            value={fPincode} onChange={e => { setFPincode(e.target.value); setPage(1); }} />
-        </div>
-
-        {/* Job Title */}
-        <div>
-          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Job Title</label>
-          <input className="input text-xs w-full" placeholder="e.g. CEO, Manager"
-            value={fJob} onChange={e => { setFJob(e.target.value); setPage(1); }} />
-        </div>
-
-        {/* Location */}
-        <div>
-          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Location</label>
-          <input className="input text-xs w-full" placeholder="e.g. Delhi, India"
-            value={fLocation} onChange={e => { setFLocation(e.target.value); setPage(1); }} />
-        </div>
-
-        {/* Geo Source */}
-        <div>
-          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Geo Source</label>
-          <select className="input text-xs w-full" value={fGeo} onChange={e => { setFGeo(e.target.value); setPage(1); }}>
-            <option value="">Any</option>
-            <option value="us_city">us_city</option>
-            <option value="us_zip">us_zip</option>
-            <option value="us_state">us_state</option>
-            <option value="pincode">pincode</option>
-            <option value="city">city</option>
-            <option value="state">state</option>
-          </select>
-        </div>
-
-        {/* Has Email */}
-        <div>
-          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block flex items-center gap-1"><Mail size={9}/>Has Email</label>
-          <select className="input text-xs w-full" value={fHasEmail} onChange={e => { setFHasEmail(e.target.value); setPage(1); }}>
-            <option value="">Any</option>
-            <option value="true">✅ With Email</option>
-            <option value="false">❌ Without Email</option>
-          </select>
-        </div>
-
-        {/* Has Phone */}
-        <div>
-          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block flex items-center gap-1"><Phone size={9}/>Has Phone</label>
-          <select className="input text-xs w-full" value={fHasPhone} onChange={e => { setFHasPhone(e.target.value); setPage(1); }}>
-            <option value="">Any</option>
-            <option value="true">✅ With Phone</option>
-            <option value="false">❌ Without Phone</option>
-          </select>
-        </div>
-
-        {/* LinkedIn */}
-        <div>
-          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block flex items-center gap-1"><Linkedin size={9}/>LinkedIn</label>
-          <input className="input text-xs w-full" placeholder="linkedin.com/in/…"
-            value={fLinkedIn} onChange={e => { setFLinkedIn(e.target.value); setPage(1); }} />
-        </div>
-
         {/* Rows per page */}
-        <div>
+        <div className="w-full sm:w-32">
           <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Rows / Page</label>
           <select className="input text-xs w-full" value={limit} onChange={e => { setLimit(Number(e.target.value)); setPage(1); }}>
             <option value={25}>25</option>
@@ -365,8 +262,14 @@ export default function PeoplePage() {
             <option value={100}>100</option>
           </select>
         </div>
-
       </div>
+
+      {/* Supabase/Airtable style filter query builder */}
+      <QueryBuilder
+        columns={cols}
+        filters={filters}
+        onChange={f => { setFilters(f); setPage(1); }}
+      />
 
       {/* Table */}
       <div className="card overflow-hidden flex-1">
