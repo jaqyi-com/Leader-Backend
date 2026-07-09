@@ -40,7 +40,9 @@ def main():
 
     # 2. PROCESS PEOPLE
     print("⏳ Starting People Embeddings...", flush=True)
-    people_batch_size = 2000
+    people_batch_size = 1000  # ⚠️ Thermal balance: 1000 batch + 1s sleep. Sleep is the real protection, not small batch.
+    total_processed = 0
+    batch_count = 0
     while True:
         try:
             cursor.execute("""
@@ -79,7 +81,13 @@ def main():
                 WHERE p.uuid = v.uuid::uuid
             """, update_data)
 
-            print(f"   Indexed {len(rows)} people...", flush=True)
+            total_processed += len(rows)
+            batch_count += 1
+            print(f"   Batch #{batch_count}: Indexed {len(rows)} people (total so far: {total_processed:,})...", flush=True)
+
+            # ⚠️ THERMAL SAFETY: 1s sleep between batches prevents CPU from pegging at 100%
+            # and shutting down the MacBook. DO NOT remove this sleep.
+            time.sleep(1.0)
 
         except (psycopg2.OperationalError, psycopg2.InterfaceError) as err:
             print(f"⚠️ Connection lost during people batch ({err}). Reconnecting...")

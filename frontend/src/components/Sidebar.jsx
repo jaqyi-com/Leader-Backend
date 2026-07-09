@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 
 const LEAD_GEN_LINKS = [
-  { to: "/app/people",            label: "People",            icon: Users2,    sub: false },
   { to: "/app/companies",         label: "Companies",         icon: Building2, sub: false },
+  { to: "/app/people",            label: "People",            icon: Users2,    sub: false },
   { to: "/app/email",             label: "Emails",            icon: Mail,      sub: false },
   { to: "/app/number",            label: "Numbers",           icon: Phone,     sub: false },
   { to: "/app/locationiq",        label: "Location IQ",       icon: MapPin,    sub: false },
