@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail, Search, Download, RefreshCw, Filter, X,
-  Phone, MapPin, Globe, Building2, Database, Users2, ChevronDown, ChevronUp,
+  Phone, MapPin, Globe, Building2, Database, ChevronDown, ChevronUp,
 } from "lucide-react";
 import {
   fpeGetDatabase, fpeGetColumns, fpeRefresh,
@@ -19,19 +19,19 @@ function renderCell(col, val) {
   if (!val) return <span className="text-[var(--text-3)]">—</span>;
   const key = col.key.toLowerCase();
   if (key.includes("email")) return (
-    <a href={`mailto:${val}`} className="flex items-center gap-1 text-[11px] text-blue-400 hover:underline max-w-[200px] truncate" title={val}>
+    <a href={`mailto:${val}`} className="flex items-center gap-1 text-[11px] text-[var(--accent)] hover:underline max-w-[200px] truncate" title={val}>
       <Mail size={9} className="flex-shrink-0" />{val}
     </a>
   );
   if (key.includes("phone") || key === "mobile") return (
     <p className="flex items-center gap-1 text-[var(--text-2)] text-[11px]">
-      <Phone size={9} className="text-green-400 flex-shrink-0" />
+      <Phone size={9} className="flex-shrink-0" />
       <span className="truncate max-w-[140px]" title={val}>{val}</span>
     </p>
   );
   if (key.includes("website") || key === "url" || key.includes("linkedin")) return (
     <a href={val.startsWith("http") ? val : `https://${val}`} target="_blank" rel="noreferrer"
-      className="text-[var(--text-3)] hover:text-blue-400 flex items-center gap-1">
+      className="text-[var(--text-3)] hover:text-[var(--accent)] flex items-center gap-1">
       <Globe size={10} />Visit
     </a>
   );
@@ -42,7 +42,7 @@ function renderCell(col, val) {
   );
   if (key.includes("company") || key === "organization" || key.includes("business")) return (
     <span className="flex items-center gap-1 text-[var(--text-2)]">
-      <Building2 size={9} className="text-purple-400 flex-shrink-0" />
+      <Building2 size={9} className="flex-shrink-0" />
       <span className="truncate max-w-[140px]" title={val}>{val}</span>
     </span>
   );
@@ -316,12 +316,8 @@ export default function EmailPage() {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-[var(--text)] flex items-center gap-2">
-          <Mail size={22} className="text-blue-400" />
+          <Mail size={22} className="text-[var(--accent)]" />
           Email
-          <span className="ml-2 text-xs font-semibold px-2 py-0.5 rounded-full"
-            style={{ background: "rgba(59,130,246,0.15)", color: "#3B82F6" }}>
-            Verified Emails
-          </span>
         </h2>
         <p className="text-sm text-[var(--text-3)] mt-0.5">
           Browse {mode === "people" ? "people" : "companies"} with confirmed email addresses
@@ -337,21 +333,21 @@ export default function EmailPage() {
             transition={{ type: "spring", stiffness: 400, damping: 35 }}
             className="absolute top-1 bottom-1 rounded-full"
             style={{
-              background: mode === "people" ? "linear-gradient(135deg,#3b82f6,#6366f1)" : "linear-gradient(135deg,#8b5cf6,#a855f7)",
+              background: "var(--accent)",
               left: mode === "people" ? "4px" : "calc(50% + 2px)",
               width: "calc(50% - 6px)",
               zIndex: 0,
             }}
           />
           <button onClick={() => setMode("people")}
-            className="relative z-10 flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
+            className="relative z-10 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
             style={{ color: mode === "people" ? "#fff" : "var(--text-3)" }}>
-            <Users2 size={15} /> People
+            People
           </button>
           <button onClick={() => setMode("company")}
-            className="relative z-10 flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
+            className="relative z-10 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
             style={{ color: mode === "company" ? "#fff" : "var(--text-3)" }}>
-            <Building2 size={15} /> Companies
+            Companies
           </button>
         </div>
       </div>
