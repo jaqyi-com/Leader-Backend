@@ -33,7 +33,6 @@ function NavItem({ to, label, icon: Icon, collapsed, end }) {
           title={collapsed ? label : undefined}
           className={isActive ? "nav-item-active" : "nav-item"}
         >
-          <Icon size={16} className="flex-shrink-0" />
           <AnimatePresence initial={false}>
             {!collapsed && (
               <motion.span
