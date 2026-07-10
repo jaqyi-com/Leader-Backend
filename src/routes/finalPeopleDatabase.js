@@ -212,13 +212,8 @@ function buildWhere(queryParams, embedding, _schema) {
   const hasFilters = dynamicConditions.length > 0;
   const userHasFilters = hasFilters || (embedding && embedding.length === 384);
 
-  // Default filter: require complete records (name, email, phone) if no search/filters are specified
-  if (!userHasFilters) {
-    conditions.push("full_name IS NOT NULL AND full_name <> '' AND full_name !~ '^[0-9\\-]+$'");
-    conditions.push("(emails IS NOT NULL AND emails <> '' AND emails <> '{}')");
-    conditions.push("(phones IS NOT NULL AND phones <> '' AND phones <> '{}')");
-
-  }
+  // NOTE: No default filter applied on unfiltered load — avoids full table scan on 43M row table.
+  // Filtering by emails/phones without an index causes statement timeout.
 
   return {
     whereStr: conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "",
@@ -392,7 +387,8 @@ router.get("/", async (req, res) => {
       const dir = sort_dir === "desc" ? "DESC" : "ASC";
       orderClause = `ORDER BY "${sort_by}" ${dir} NULLS LAST`;
     } else {
-      orderClause = `ORDER BY created_at DESC`;
+      // Use uuid (primary key B-tree index) for fast default pagination — avoids full table sort on 43M rows
+      orderClause = `ORDER BY uuid`;
     }
 
     const dataSQL = `
