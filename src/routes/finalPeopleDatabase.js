@@ -215,8 +215,8 @@ function buildWhere(queryParams, embedding, _schema) {
   // Default filter: require complete records (name, email, phone) if no search/filters are specified
   if (!userHasFilters) {
     conditions.push("full_name IS NOT NULL AND full_name <> '' AND full_name !~ '^[0-9\\-]+$'");
-    conditions.push("(emails IS NOT NULL AND array_length(emails, 1) > 0)");
-    conditions.push("(phones IS NOT NULL AND array_length(phones, 1) > 0)");
+    conditions.push("(emails IS NOT NULL AND emails <> '' AND emails <> '{}')");
+    conditions.push("(phones IS NOT NULL AND phones <> '' AND phones <> '{}')");
 
   }
 
