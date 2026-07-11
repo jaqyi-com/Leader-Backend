@@ -47,7 +47,7 @@ export default function ProtectedRoute({ children }) {
             overflow: "hidden",
             animation: "logo-float 3s ease-in-out infinite",
           }}>
-            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: "scale(1.75)" }} />
           </div>
 
         {/* Brand name */}

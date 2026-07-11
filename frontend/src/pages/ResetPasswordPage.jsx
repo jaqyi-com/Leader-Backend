@@ -67,7 +67,7 @@ export default function ResetPasswordPage() {
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{ width: 72, height: 72, borderRadius: "50%", overflow: "hidden", margin: "0 auto 16px" }}>
-            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: "scale(1.75)" }} />
           </div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px" }}>
             {done ? "Password reset!" : "Set new password"}
