@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap } from "lucide-react";
+
 
 const PAGE_META = {
   "/app":                 { title: "Overview",        sub: "Real-time pipeline intelligence" },
@@ -41,26 +41,12 @@ export default function Topbar() {
     >
       {/* ── Left: Doott brand identity ────────────────────────────── */}
       <div className="flex items-center gap-3">
-        <motion.div
-          whileHover={{ scale: 1.06 }}
-          whileTap={{ scale: 0.96 }}
-          className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{
-            background: "linear-gradient(135deg, var(--accent) 0%, #f4576a 100%)",
-            boxShadow: "0 0 18px var(--accent-glow)",
-          }}
+        <span
+          className="font-bold text-xl tracking-tight select-none"
+          style={{ color: "var(--text)", letterSpacing: "-0.5px" }}
         >
-          <Zap size={16} className="text-white" />
-        </motion.div>
-
-        <div className="flex items-baseline gap-1">
-          <span
-            className="font-bold text-xl tracking-tight select-none"
-            style={{ color: "var(--text)", letterSpacing: "-0.5px" }}
-          >
-            Doott
-          </span>
-        </div>
+          Doott
+        </span>
       </div>
 
       {/* ── Right: current page context ──────────────────────────── */}
