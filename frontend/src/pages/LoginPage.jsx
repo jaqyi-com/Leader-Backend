@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, Zap, ArrowRight, AlertCircle, CheckCircle } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle, CheckCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import doottLogo from "../assets/doott-logo.png";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
@@ -145,18 +146,15 @@ export default function LoginPage() {
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div
             style={{
-              width: 52,
-              height: 52,
+              width: 64,
+              height: 64,
               borderRadius: 16,
-              background: "linear-gradient(135deg, var(--accent) 0%, #f4576a 100%)",
-              boxShadow: "0 0 32px var(--accent-glow)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              overflow: "hidden",
+              boxShadow: "0 0 32px rgba(204,0,0,0.35)",
               margin: "0 auto 16px",
             }}
           >
-            <Zap size={24} color="#fff" />
+            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           <h1
             style={{

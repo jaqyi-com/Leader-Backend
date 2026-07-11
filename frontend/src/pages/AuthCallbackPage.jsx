@@ -3,8 +3,9 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import {
-  AlertTriangle, RefreshCw, ArrowLeft, Zap, ShieldAlert, WifiOff, ServerCrash
+  AlertTriangle, RefreshCw, ArrowLeft, ShieldAlert, WifiOff, ServerCrash
 } from "lucide-react";
+import doottLogo from "../assets/doott-logo.png";
 
 // ── Floating particle background ────────────────────────────────────────────
 function Particles() {
@@ -68,9 +69,9 @@ function SpinnerRing() {
       {/* Logo center */}
       <div
         className="absolute inset-[6px] rounded-full flex items-center justify-center"
-        style={{ background: "var(--surface-2)" }}
+        style={{ background: "var(--surface-2)", overflow: "hidden" }}
       >
-        <Zap size={16} style={{ color: "var(--accent)" }} />
+        <img src={doottLogo} alt="Doott" style={{ width: "80%", height: "80%", objectFit: "cover", borderRadius: "50%" }} />
       </div>
     </div>
   );
@@ -415,13 +416,13 @@ export default function AuthCallbackPage() {
           className="flex items-center justify-center gap-2 mb-8"
         >
           <div
-            className="w-7 h-7 rounded-lg flex items-center justify-center"
+            className="w-8 h-8 rounded-lg"
             style={{
-              background: "linear-gradient(135deg, var(--accent) 0%, #f4576a 100%)",
-              boxShadow: "0 0 16px var(--accent-glow)",
+              overflow: "hidden",
+              boxShadow: "0 0 16px rgba(204,0,0,0.35)",
             }}
           >
-            <Zap size={13} className="text-white" />
+            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           <span
             className="font-bold text-base tracking-tight"

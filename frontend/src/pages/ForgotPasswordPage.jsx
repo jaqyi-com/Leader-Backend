@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Zap, ArrowRight, ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
+import { Mail, ArrowRight, ArrowLeft, CheckCircle, AlertCircle } from "lucide-react";
+import doottLogo from "../assets/doott-logo.png";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
@@ -45,8 +46,8 @@ export default function ForgotPasswordPage() {
 
         {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <div style={{ width: 52, height: 52, borderRadius: 16, background: "linear-gradient(135deg, var(--accent), #f4576a)", boxShadow: "0 0 32px var(--accent-glow)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-            <Zap size={24} color="#fff" />
+          <div style={{ width: 64, height: 64, borderRadius: 16, overflow: "hidden", boxShadow: "0 0 32px rgba(204,0,0,0.35)", margin: "0 auto 16px" }}>
+            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--text)", margin: 0, letterSpacing: "-0.5px" }}>
             {sent ? "Check your inbox" : "Forgot password?"}

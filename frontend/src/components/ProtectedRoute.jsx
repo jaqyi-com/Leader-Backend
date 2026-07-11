@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Zap } from "lucide-react";
+import doottLogo from "../assets/doott-logo.png";
 
 /**
  * Wraps a route and redirects to /login if the user is not authenticated.
@@ -51,13 +51,13 @@ export default function ProtectedRoute({ children }) {
           }} />
           {/* Logo circle */}
           <div style={{
-            width: 64, height: 64, borderRadius: 20,
-            background: "linear-gradient(135deg, #E23744 0%, #f4576a 100%)",
+            width: 72, height: 72, borderRadius: 20,
+            overflow: "hidden",
             display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 0 32px rgba(226,55,68,0.4), 0 0 64px rgba(226,55,68,0.15)",
+            boxShadow: "0 0 32px rgba(204,0,0,0.4), 0 0 64px rgba(204,0,0,0.15)",
             animation: "logo-float 3s ease-in-out infinite",
           }}>
-            <Zap size={28} color="#fff" />
+            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
         </div>
 

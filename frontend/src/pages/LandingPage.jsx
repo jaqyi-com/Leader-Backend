@@ -8,6 +8,7 @@ import {
   CheckCircle, Zap, Globe, Brain,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import doottLogo from "../assets/doott-logo.png";
 
 const LOGOS = [
   "Google Cloud SQL", "PostgreSQL", "Redis", "React",
@@ -75,10 +76,7 @@ function Nav() {
 
 function Mark() {
   return (
-    <svg width="22" height="22" viewBox="0 0 22 22" className="text-foreground">
-      <rect x="0.5" y="0.5" width="21" height="21" rx="3" stroke="currentColor" fill="none" />
-      <path d="M5 16 L5 6 L11 12 L17 6 L17 16" stroke="currentColor" strokeWidth="1.5" fill="none" />
-    </svg>
+    <img src={doottLogo} alt="Doott" style={{ width: 32, height: 32, borderRadius: 8, objectFit: "cover" }} />
   );
 }
 
