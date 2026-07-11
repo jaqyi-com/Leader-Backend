@@ -76,7 +76,7 @@ function Nav() {
 
 function Mark() {
   return (
-    <img src={doottLogo} alt="Doott" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover", display: "block", transform: "scale(1.3)" }} />
+    <img src={doottLogo} alt="Doott" style={{ width: 36, height: 36, borderRadius: 10, objectFit: "cover", display: "block" }} />
   );
 }
 
