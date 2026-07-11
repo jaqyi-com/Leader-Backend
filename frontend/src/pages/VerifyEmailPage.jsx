@@ -77,7 +77,7 @@ export default function VerifyEmailPage() {
             margin: "0 auto 28px",
           }}
         >
-          <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: "scale(1.75)" }} />
+          <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "contain", display: "block" }} />
         </div>
 
         {status === "verifying" && (

@@ -42,12 +42,12 @@ export default function ProtectedRoute({ children }) {
 
         {/* Animated logo */}
         {/* Logo circle */}
-          <div style={{
-            width: 80, height: 80, borderRadius: "50%",
+        <div style={{
+            width: 80, height: 80, borderRadius: 18,
             overflow: "hidden",
             animation: "logo-float 3s ease-in-out infinite",
           }}>
-            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: "scale(1.75)" }} />
+            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
 
         {/* Brand name */}

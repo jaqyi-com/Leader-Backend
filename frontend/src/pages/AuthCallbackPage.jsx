@@ -68,10 +68,10 @@ function SpinnerRing() {
       />
       {/* Logo center */}
       <div
-        className="absolute inset-[6px] rounded-full"
+        className="absolute inset-[6px] rounded-xl"
         style={{ overflow: "hidden" }}
       >
-        <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: "scale(1.75)" }} />
+        <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       </div>
     </div>
   );
@@ -416,10 +416,10 @@ export default function AuthCallbackPage() {
           className="flex items-center justify-center gap-2 mb-8"
         >
           <div
-            className="w-9 h-9 rounded-full"
+            className="w-9 h-9 rounded-xl"
             style={{ overflow: "hidden" }}
           >
-            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transform: "scale(1.75)" }} />
+            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
           <span
             className="font-bold text-base tracking-tight"
