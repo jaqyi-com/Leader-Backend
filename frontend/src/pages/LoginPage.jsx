@@ -146,15 +146,14 @@ export default function LoginPage() {
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div
             style={{
-              width: 64,
-              height: 64,
-              borderRadius: 16,
+              width: 72,
+              height: 72,
+              borderRadius: "50%",
               overflow: "hidden",
-              boxShadow: "0 0 32px rgba(204,0,0,0.35)",
               margin: "0 auto 16px",
             }}
           >
-            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
           <h1
             style={{

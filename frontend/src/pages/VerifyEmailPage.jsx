@@ -70,15 +70,14 @@ export default function VerifyEmailPage() {
         {/* Logo */}
         <div
           style={{
-            width: 64,
-            height: 64,
-            borderRadius: 16,
+            width: 72,
+            height: 72,
+            borderRadius: "50%",
             overflow: "hidden",
-            boxShadow: "0 0 32px rgba(204,0,0,0.35)",
             margin: "0 auto 28px",
           }}
         >
-          <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
         </div>
 
         {status === "verifying" && (

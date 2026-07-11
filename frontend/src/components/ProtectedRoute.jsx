@@ -41,25 +41,14 @@ export default function ProtectedRoute({ children }) {
         }} />
 
         {/* Animated logo */}
-        <div style={{ position: "relative" }}>
-          {/* Outer ring pulse */}
+        {/* Logo circle */}
           <div style={{
-            position: "absolute", inset: -12,
-            borderRadius: "50%",
-            border: "1px solid rgba(226,55,68,0.3)",
-            animation: "ring-pulse 2s ease-in-out infinite",
-          }} />
-          {/* Logo circle */}
-          <div style={{
-            width: 72, height: 72, borderRadius: 20,
+            width: 80, height: 80, borderRadius: "50%",
             overflow: "hidden",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            boxShadow: "0 0 32px rgba(204,0,0,0.4), 0 0 64px rgba(204,0,0,0.15)",
             animation: "logo-float 3s ease-in-out infinite",
           }}>
-            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
-        </div>
 
         {/* Brand name */}
         <div style={{ textAlign: "center" }}>
