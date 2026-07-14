@@ -890,11 +890,13 @@ export default function ChatbotPage() {
   return (
     <div style={{ display: "flex", height: "100%", overflow: "hidden", background: "var(--bg)" }}>
 
-      {/* ── Left Panel: Conversations ── */}
+      {/* ── Conversations panel — right side ── */}
       <div style={{
         width: 280, flexShrink: 0, display: "flex", flexDirection: "column",
-        borderRight: "1px solid var(--border)", background: "var(--surface)",
+        borderLeft: "1px solid var(--border)", background: "var(--surface)",
+        order: 2,
       }}>
+
         {/* Header */}
         <div style={{
           padding: "18px 16px 12px", borderBottom: "1px solid var(--border)",
@@ -955,8 +957,8 @@ export default function ChatbotPage() {
 
       </div>
 
-      {/* ── Right Panel: Chat ── */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      {/* ── Chat panel — left side (main area) ── */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", order: 1 }}>
 
         {/* Chat header */}
         <div style={{
