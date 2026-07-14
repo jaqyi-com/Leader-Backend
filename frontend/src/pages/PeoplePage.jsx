@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   Users, Search, Filter, Download, RefreshCw,
   Phone, Mail, MapPin, X,
-  Globe, Building2, Database, Linkedin,
+  Globe, Building2, Database, Linkedin, Navigation,
 } from "lucide-react";
 import { fpGetDatabase, fpGetStats, fpGetColumns, fpRefresh } from "../api";
 import toast from "react-hot-toast";
@@ -192,6 +192,18 @@ export default function PeoplePage() {
       <span className="text-[var(--text-2)] truncate max-w-[180px] block" title={val}>{val}</span>
     );
 
+    if (key === "lat" || key === "latitude") {
+      const lat = parseFloat(val);
+      if (isNaN(lat)) return <span className="text-[var(--text-3)]">—</span>;
+      return <span className="font-mono text-[10px] text-[var(--text-3)]">{lat.toFixed(6)}</span>;
+    }
+
+    if (key === "long" || key === "lng" || key === "longitude") {
+      const lng = parseFloat(val);
+      if (isNaN(lng)) return <span className="text-[var(--text-3)]">—</span>;
+      return <span className="font-mono text-[10px] text-[var(--text-3)]">{lng.toFixed(6)}</span>;
+    }
+
     return (
       <span className="text-[var(--text-2)] truncate max-w-[180px] block" title={val}>{val}</span>
     );
@@ -283,6 +295,10 @@ export default function PeoplePage() {
                     {c.label}{sortBy === c.key ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
                   </th>
                 ))}
+                {/* Maps column */}
+                <th className="text-left px-3 py-3 text-[var(--text-3)] font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap">
+                  <span className="flex items-center gap-1"><Navigation size={10} />Maps</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -311,6 +327,31 @@ export default function PeoplePage() {
                       {renderCell(c, r[c.key])}
                     </td>
                   ))}
+                  {/* Google Maps button */}
+                  <td className="px-3 py-2.5">
+                    {r.lat && r.long ? (
+                      <a
+                        href={`https://www.google.com/maps?q=${r.lat},${r.long}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={`Open in Google Maps (${r.lat}, ${r.long})`}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all"
+                        style={{
+                          background: "rgba(66,133,244,0.12)",
+                          color: "#4285f4",
+                          border: "1px solid rgba(66,133,244,0.25)",
+                          whiteSpace: "nowrap",
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(66,133,244,0.22)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = "rgba(66,133,244,0.12)"; }}
+                      >
+                        <Navigation size={10} />
+                        View Map
+                      </a>
+                    ) : (
+                      <span className="text-[var(--text-3)] text-[10px]">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>
