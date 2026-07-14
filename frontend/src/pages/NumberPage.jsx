@@ -325,7 +325,7 @@ export default function NumberPage() {
       {/* ── Toggle — People / Companies ─────────────────────── */}
       <div className="flex justify-center">
         <div className="relative flex items-center rounded-full p-1"
-          style={{ background: "var(--surface-2)", border: "1px solid var(--border)", width: "fit-content" }}>
+          style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}>
           <motion.div
             layout
             transition={{ type: "spring", stiffness: 400, damping: 35 }}
@@ -338,13 +338,13 @@ export default function NumberPage() {
             }}
           />
           <button onClick={() => setMode("people")}
-            className="relative z-10 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
-            style={{ color: mode === "people" ? "#fff" : "var(--text-3)" }}>
+            className="relative z-10 flex items-center justify-center px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
+            style={{ color: mode === "people" ? "#fff" : "var(--text-3)", minWidth: 120 }}>
             People
           </button>
           <button onClick={() => setMode("company")}
-            className="relative z-10 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
-            style={{ color: mode === "company" ? "#fff" : "var(--text-3)" }}>
+            className="relative z-10 flex items-center justify-center px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
+            style={{ color: mode === "company" ? "#fff" : "var(--text-3)", minWidth: 120 }}>
             Companies
           </button>
         </div>

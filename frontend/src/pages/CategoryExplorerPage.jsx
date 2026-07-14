@@ -54,7 +54,7 @@ export default function CategoryExplorerPage() {
       <div className="flex justify-center">
         <div
           className="relative flex items-center rounded-full p-1"
-          style={{ background: "var(--surface-2)", border: "1px solid var(--border)", width: "fit-content" }}
+          style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
         >
           <motion.div
             layout
@@ -69,15 +69,15 @@ export default function CategoryExplorerPage() {
           />
           <button
             onClick={() => { setMode("people"); setSearchQ(""); }}
-            className="relative z-10 flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
-            style={{ color: mode === "people" ? "#fff" : "var(--text-3)" }}
+            className="relative z-10 flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
+            style={{ color: mode === "people" ? "#fff" : "var(--text-3)", minWidth: 120 }}
           >
             People
           </button>
           <button
             onClick={() => { setMode("company"); setSearchQ(""); }}
-            className="relative z-10 flex items-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
-            style={{ color: mode === "company" ? "#fff" : "var(--text-3)" }}
+            className="relative z-10 flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
+            style={{ color: mode === "company" ? "#fff" : "var(--text-3)", minWidth: 120 }}
           >
             Companies
           </button>
