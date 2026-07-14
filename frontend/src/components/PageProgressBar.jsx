@@ -1,73 +1,64 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import NProgress from "nprogress";
 
 /**
- * Indeterminate sweeping progress bar — shows on every route change.
- * No logo, no text. Just the animated gradient bar at the very top.
+ * PageProgressBar — NProgress-powered top navigation bar.
+ * Fires on every route change. Clean, slim, professional.
  */
+
+// Configure NProgress globally once
+NProgress.configure({
+  showSpinner: false,      // no spinning circle
+  minimum: 0.15,
+  easing: "ease",
+  speed: 400,
+  trickleSpeed: 180,
+});
+
 export default function PageProgressBar() {
   const { pathname } = useLocation();
-  const [visible, setVisible]   = useState(false);
-  const showRef  = useRef(null);
-  const hideRef  = useRef(null);
 
   useEffect(() => {
-    clearTimeout(showRef.current);
-    clearTimeout(hideRef.current);
-
-    // Show bar immediately
-    setVisible(true);
-
-    // Auto-hide after 800ms (enough for most route transitions)
-    hideRef.current = setTimeout(() => setVisible(false), 800);
-
+    NProgress.start();
+    const timer = setTimeout(() => NProgress.done(), 500);
     return () => {
-      clearTimeout(showRef.current);
-      clearTimeout(hideRef.current);
+      clearTimeout(timer);
+      NProgress.done();
     };
   }, [pathname]);
 
-  if (!visible) return null;
-
   return (
-    <>
-      {/* Top bar container */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: 4,
-          zIndex: 99999,
-          pointerEvents: "none",
-          background: "var(--surface-3, #1d1d28)",
-          overflow: "hidden",
-        }}
-      >
-        {/* Sweeping gradient fill — same style as loading screen */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            height: "100%",
-            background: "linear-gradient(90deg, #E23744, #f47a88, #22d3ee)",
-            boxShadow: "0 0 12px rgba(226,55,68,0.8), 0 0 24px rgba(226,55,68,0.4)",
-            borderRadius: 9999,
-            animation: "ppb-sweep 1s cubic-bezier(0.4, 0, 0.2, 1) infinite",
-          }}
-        />
-      </div>
+    <style>{`
+      /* ── NProgress bar ───────────────────────────────────── */
+      #nprogress {
+        pointer-events: none;
+      }
 
-      <style>{`
-        @keyframes ppb-sweep {
-          0%   { width: 0%;   margin-left: 0%; }
-          50%  { width: 65%;  margin-left: 17%; }
-          100% { width: 0%;   margin-left: 100%; }
-        }
-      `}</style>
-    </>
+      #nprogress .bar {
+        background: #E23744;
+        position: fixed;
+        z-index: 99999;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 2.5px;
+      }
+
+      /* Glowing tip at the leading edge */
+      #nprogress .peg {
+        display: block;
+        position: absolute;
+        right: 0px;
+        width: 100px;
+        height: 100%;
+        box-shadow: 0 0 10px #E23744, 0 0 5px #E23744;
+        opacity: 1;
+        transform: rotate(3deg) translate(0px, -4px);
+      }
+
+      /* Hide the spinner entirely */
+      #nprogress .spinner { display: none !important; }
+    `}</style>
   );
 }

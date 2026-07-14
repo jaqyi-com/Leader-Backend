@@ -126,17 +126,40 @@ function PhaseRow({ phase, val, unit, color, progress, delay }) {
         <p className="text-sm font-semibold" style={{ color: "var(--text)" }}>{phase}</p>
         <p className="text-xs" style={{ color: "var(--text-3)" }}>{unit}</p>
       </div>
-      <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--surface-3)" }}>
+      {/* Track */}
+      <div
+        className="flex-1 rounded-full overflow-hidden"
+        style={{ height: 6, background: "var(--surface-3)", position: "relative" }}
+      >
+        {/* Fill */}
         <motion.div
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
-          transition={{ delay: delay + 0.2, duration: 0.7, ease: "easeOut" }}
-          className="h-full rounded-full"
-          style={{ background: color }}
+          transition={{ delay: delay + 0.2, duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+          style={{
+            position: "absolute",
+            top: 0, left: 0,
+            height: "100%",
+            background: color,
+            borderRadius: 9999,
+          }}
+        />
+        {/* Shine overlay on fill */}
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${progress}%` }}
+          transition={{ delay: delay + 0.2, duration: 0.8, ease: [0.4, 0, 0.2, 1] }}
+          style={{
+            position: "absolute",
+            top: 0, left: 0,
+            height: "50%",
+            background: "rgba(255,255,255,0.18)",
+            borderRadius: 9999,
+          }}
         />
       </div>
       <span
-        className="w-10 text-right text-sm font-bold flex-shrink-0"
+        className="w-10 text-right text-sm font-bold flex-shrink-0 tabular-nums"
         style={{ color: "var(--text)" }}
       >
         {val ?? "—"}
