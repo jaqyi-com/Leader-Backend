@@ -41,10 +41,9 @@ export default function ProtectedRoute({ children }) {
           filter: "blur(60px)", pointerEvents: "none",
         }} />
 
-        {/* Animated logo */}
-        {/* Logo circle */}
+        {/* Animated logo — circle */}
         <div style={{
-            width: 80, height: 80, borderRadius: 18,
+            width: 90, height: 90, borderRadius: "50%",
             overflow: "hidden",
             animation: "logo-float 3s ease-in-out infinite",
           }}>
