@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Fragment } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Building2, Search, Filter, Download, RefreshCw,
@@ -291,15 +291,18 @@ export default function CompaniesPage() {
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
                 {cols.map(c => (
-                  <th key={c.key} onClick={() => handleSort(c.key)}
-                    className="text-left px-3 py-3 text-[var(--text-3)] font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap cursor-pointer hover:text-[var(--text-2)] select-none">
-                    {c.label}{sortBy === c.key ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
-                  </th>
+                  <Fragment key={c.key}>
+                    <th onClick={() => handleSort(c.key)}
+                      className="text-left px-3 py-3 text-[var(--text-3)] font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap cursor-pointer hover:text-[var(--text-2)] select-none">
+                      {c.label}{sortBy === c.key ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
+                    </th>
+                    {(c.key === "long" || c.key === "lng" || c.key === "longitude") && (
+                      <th className="text-left px-3 py-3 text-[var(--text-3)] font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap">
+                        <span className="flex items-center gap-1"><Navigation size={10} />Maps</span>
+                      </th>
+                    )}
+                  </Fragment>
                 ))}
-                {/* Maps column */}
-                <th className="text-left px-3 py-3 text-[var(--text-3)] font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap">
-                  <span className="flex items-center gap-1"><Navigation size={10} />Maps</span>
-                </th>
               </tr>
             </thead>
             <tbody>
@@ -324,35 +327,38 @@ export default function CompaniesPage() {
               ) : records.map((r, i) => (
                 <tr key={i} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors">
                   {cols.map(c => (
-                    <td key={c.key} className="px-3 py-2.5">
-                      {renderCell(c, r[c.key])}
-                    </td>
+                    <Fragment key={c.key}>
+                      <td className="px-3 py-2.5">
+                        {renderCell(c, r[c.key])}
+                      </td>
+                      {(c.key === "long" || c.key === "lng" || c.key === "longitude") && (
+                        <td className="px-3 py-2.5">
+                          {r.lat && r.long ? (
+                            <a
+                              href={`https://www.google.com/maps?q=${r.lat},${r.long}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={`Open in Google Maps (${r.lat}, ${r.long})`}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all"
+                              style={{
+                                background: "rgba(66,133,244,0.12)",
+                                color: "#4285f4",
+                                border: "1px solid rgba(66,133,244,0.25)",
+                                whiteSpace: "nowrap",
+                              }}
+                              onMouseEnter={e => { e.currentTarget.style.background = "rgba(66,133,244,0.22)"; }}
+                              onMouseLeave={e => { e.currentTarget.style.background = "rgba(66,133,244,0.12)"; }}
+                            >
+                              <Navigation size={10} />
+                              View Map
+                            </a>
+                          ) : (
+                            <span className="text-[var(--text-3)] text-[10px]">—</span>
+                          )}
+                        </td>
+                      )}
+                    </Fragment>
                   ))}
-                  {/* Google Maps button */}
-                  <td className="px-3 py-2.5">
-                    {r.lat && r.long ? (
-                      <a
-                        href={`https://www.google.com/maps?q=${r.lat},${r.long}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        title={`Open in Google Maps (${r.lat}, ${r.long})`}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-semibold transition-all"
-                        style={{
-                          background: "rgba(66,133,244,0.12)",
-                          color: "#4285f4",
-                          border: "1px solid rgba(66,133,244,0.25)",
-                          whiteSpace: "nowrap",
-                        }}
-                        onMouseEnter={e => { e.currentTarget.style.background = "rgba(66,133,244,0.22)"; }}
-                        onMouseLeave={e => { e.currentTarget.style.background = "rgba(66,133,244,0.12)"; }}
-                      >
-                        <Navigation size={10} />
-                        View Map
-                      </a>
-                    ) : (
-                      <span className="text-[var(--text-3)] text-[10px]">—</span>
-                    )}
-                  </td>
                 </tr>
               ))}
             </tbody>
