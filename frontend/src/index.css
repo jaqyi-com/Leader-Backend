@@ -321,6 +321,7 @@
     50%       { opacity: 0.5; transform: scale(0.8); }
   }
 
+} /* end @layer components */
 
 
 /* ── Query Builder Styles ─────────────────────────────────── */
