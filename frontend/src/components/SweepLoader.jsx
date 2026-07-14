@@ -12,7 +12,8 @@ export default function SweepLoader({
   height = 3,
   fullPage = false,
   className = "",
-  value = null, // if set → determinate mode
+  value = null,
+  style = {},
 }) {
   const isDeterminate = value !== null;
 
@@ -30,6 +31,7 @@ export default function SweepLoader({
         borderRadius: 9999,
         overflow: "hidden",
         position: "relative",
+        ...style,
       }}
     >
       {isDeterminate ? (

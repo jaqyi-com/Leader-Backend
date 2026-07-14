@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import doottLogo from "../assets/doott-logo.png";
+import SweepLoader from "./SweepLoader";
 
 /**
  * Wraps a route and redirects to /login if the user is not authenticated.
@@ -64,31 +65,12 @@ export default function ProtectedRoute({ children }) {
         </div>
 
         {/* Progress bar */}
-        <div style={{
-          width: 200, height: 3, background: "var(--surface-3)",
-          borderRadius: 9999, overflow: "hidden", position: "relative",
-        }}>
-          <div style={{
-            position: "absolute", top: 0, left: 0, height: "100%",
-            background: "linear-gradient(90deg, #E23744, #f47a88, #22d3ee)",
-            borderRadius: 9999,
-            animation: "bar-slide 1.6s ease-in-out infinite",
-          }} />
-        </div>
+        <SweepLoader height={3} style={{ width: 200 }} />
 
         <style>{`
-          @keyframes ring-pulse {
-            0%, 100% { opacity: 0.4; transform: scale(1); }
-            50%       { opacity: 0.8; transform: scale(1.08); }
-          }
           @keyframes logo-float {
             0%, 100% { transform: translateY(0px); }
             50%       { transform: translateY(-6px); }
-          }
-          @keyframes bar-slide {
-            0%   { width: 0%;   margin-left: 0%; }
-            50%  { width: 70%;  margin-left: 15%; }
-            100% { width: 0%;   margin-left: 100%; }
           }
           @keyframes dot-flash {
             0%   { opacity: 0.2; }
