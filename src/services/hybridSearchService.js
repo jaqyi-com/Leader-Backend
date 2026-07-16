@@ -14,7 +14,7 @@
 // ============================================================
 
 const { getLocalQueryEmbedding } = require("./localEmbedService");
-const { query: pgQuery, directQuery } = require("../db/cloudSql");
+const { query: pgQuery, directQuery, directQueryWithSession } = require("../db/cloudSql");
 const logger = require("../utils/logger").forAgent("HybridSearchService");
 
 // ── Timeouts ─────────────────────────────────────────────────────
@@ -75,16 +75,25 @@ async function performHybridSearch({
   const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
   const offset   = (pageNum - 1) * limitNum;
 
+  // Combine search keywords with extracted industry and job title semantically
+  let semanticSearchTerm = (search || "").trim();
+  if (f_industry && !semanticSearchTerm.toLowerCase().includes(f_industry.toLowerCase())) {
+    semanticSearchTerm = `${semanticSearchTerm} ${f_industry}`.trim();
+  }
+  if (f_job_title && !semanticSearchTerm.toLowerCase().includes(f_job_title.toLowerCase())) {
+    semanticSearchTerm = `${semanticSearchTerm} ${f_job_title}`.trim();
+  }
+
   // ── 1. Generate embedding for semantic search ─────────────────
   let embedding = null;
-  if (search && search.trim().length > 0) {
+  if (semanticSearchTerm) {
     try {
-      embedding = await getLocalQueryEmbedding(search.trim());
+      embedding = await getLocalQueryEmbedding(semanticSearchTerm);
       if (!Array.isArray(embedding) || embedding.length !== 384) {
-        logger.warn(`[HybridSearch] Bad embedding for "${search}" — skipping vector`);
+        logger.warn(`[HybridSearch] Bad embedding for "${semanticSearchTerm}" — skipping vector`);
         embedding = null;
       } else {
-        logger.info(`[HybridSearch] Embedding ready (384-dim) for: "${search}"`);
+        logger.info(`[HybridSearch] Embedding ready (384-dim) for: "${semanticSearchTerm}"`);
       }
     } catch (err) {
       logger.error(`[HybridSearch] Embedding failed: ${err.message}`);
@@ -105,19 +114,11 @@ async function performHybridSearch({
     structParams.push(`${f_state}%`);
   }
   if (isCompanies) {
-    if (f_industry) {
-      structConditions.push(`industry::text ILIKE $${idx++}`);
-      structParams.push(`%${f_industry}%`);
-    }
     if (f_has_email === "true")        structConditions.push(`(emails IS NOT NULL AND emails <> '')`);
     else if (f_has_email === "false")  structConditions.push(`(emails IS NULL OR emails = '')`);
     if (f_has_phone === "true")        structConditions.push(`(phone IS NOT NULL AND phone <> '')`);
     else if (f_has_phone === "false")  structConditions.push(`(phone IS NULL OR phone = '')`);
   } else {
-    if (f_job_title) {
-      structConditions.push(`job_title ILIKE $${idx++}`);
-      structParams.push(`%${f_job_title}%`);
-    }
     if (f_has_email === "true")        structConditions.push(`(emails IS NOT NULL AND emails <> '')`);
     else if (f_has_email === "false")  structConditions.push(`(emails IS NULL OR emails = '')`);
     if (f_has_phone === "true")        structConditions.push(`(phones IS NOT NULL AND phones <> '')`);
@@ -150,20 +151,20 @@ async function performHybridSearch({
   }
 
   // ── 5. Choose search strategy ────────────────────────────────
-  // Vector ANN is only used when:
+  // Vector ANN is used when:
   //   a) HNSW_READY is true for this entity type
-  //   b) No structured filters (HNSW index can't combine with WHERE efficiently)
-  //   c) An embedding was generated
+  //   b) An embedding was generated
+  //   c) There are no structured filters (OR it's the companies table which is small enough to filter + vector search)
   const hasStructuredFilters = structConditions.length > 0;
   const entityKey = isCompanies ? "companies" : "people";
-  const canUseVector = embedding && !hasStructuredFilters && HNSW_READY[entityKey];
+  const canUseVector = embedding && (!hasStructuredFilters || isCompanies) && HNSW_READY[entityKey];
 
   if (canUseVector) {
-    // ── Pure HNSW vector ANN — fastest, most semantic ─────────
+    // ── HNSW vector ANN (with optional fast structured filters) ──
     try {
       const result = await runVectorSearch({
-        tableName, embedding, structConditions: [], structParams: [],
-        idx: 1, limitNum, offset, isCompanies,
+        tableName, embedding, structConditions, structParams,
+        idx, limitNum, offset, isCompanies,
       });
       return { ...result, mode: "vector" };
     } catch (err) {
@@ -219,8 +220,24 @@ async function runVectorSearch({
 
   logger.info(`[HybridSearch] Vector query:\n${dataSQL.slice(0, 200)}`);
 
-  // Use directQuery (non-pooler) for pgvector — PgBouncer strips SET statements
-  const dataRes = await directQuery(dataSQL, [...queryParams, limitNum, offset], VECTOR_QUERY_TIMEOUT_MS);
+  // Use direct pool for pgvector queries (pooler strips SET statements)
+  // If structured filters are present, we use session configuration to set ef_search to 1000 for accurate post-filtering recall.
+  let dataRes;
+  if (structConditions.length > 0) {
+    dataRes = await directQueryWithSession(
+      dataSQL,
+      [...queryParams, limitNum, offset],
+      ["SET LOCAL hnsw.ef_search = 1000;"],
+      VECTOR_QUERY_TIMEOUT_MS
+    );
+  } else {
+    dataRes = await directQuery(
+      dataSQL,
+      [...queryParams, limitNum, offset],
+      VECTOR_QUERY_TIMEOUT_MS
+    );
+  }
+  
   const records = dataRes.rows.map(row => {
     const out = { ...row };
     delete out.embedding; // strip binary blob

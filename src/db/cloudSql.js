@@ -135,6 +135,41 @@ async function directQuery(text, params = [], timeoutMs = 25000) {
   }
 }
 
+/**
+ * Run a query against the DIRECT Neon connection with temporary session settings
+ * (e.g. SET LOCAL hnsw.ef_search = 1000). Runs everything in a transaction block.
+ *
+ * @param {string} text     SQL with $1, $2, … placeholders
+ * @param {Array}  params   Array of parameter values
+ * @param {Array<string>} sessionCommands Commands to run inside transaction before query
+ * @param {number} [timeoutMs=25000]  Per-query statement timeout in ms
+ * @returns {Promise<import('pg').QueryResult>}
+ */
+async function directQueryWithSession(text, params = [], sessionCommands = [], timeoutMs = 25000) {
+  const client = await getDirectPool().connect();
+  try {
+    await client.query(`SET statement_timeout = ${timeoutMs}`);
+    if (sessionCommands.length > 0) {
+      await client.query("BEGIN;");
+      for (const cmd of sessionCommands) {
+        await client.query(cmd);
+      }
+      const res = await client.query(text, params);
+      await client.query("COMMIT;");
+      return res;
+    } else {
+      return await client.query(text, params);
+    }
+  } catch (err) {
+    if (sessionCommands.length > 0) {
+      try { await client.query("ROLLBACK;"); } catch (_) {}
+    }
+    throw err;
+  } finally {
+    client.release();
+  }
+}
+
 /** Quick connectivity check — logs result and returns true/false. */
 async function testConnection() {
   try {
@@ -156,4 +191,4 @@ async function closePool() {
   }
 }
 
-module.exports = { query, directQuery, testConnection, closePool, getPool, getDirectPool, SCHEMA, TABLE };
+module.exports = { query, directQuery, directQueryWithSession, testConnection, closePool, getPool, getDirectPool, SCHEMA, TABLE };
