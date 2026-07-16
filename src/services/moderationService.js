@@ -18,7 +18,17 @@
 const OpenAI = require("openai");
 const logger = require("../utils/logger").forAgent("Moderation");
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// OpenRouter does not support the /moderations endpoint.
+// When routed through OpenRouter, skip moderation (pass-through).
+const IS_OPENROUTER = (process.env.OPENAI_BASE_URL || "").includes("openrouter");
+if (IS_OPENROUTER) {
+  logger.warn("OpenRouter detected — moderation API skipped (not supported). Input safety relying on LLM system prompt.");
+}
+
+const openai = new OpenAI({
+  apiKey:  process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
+});
 
 // Categories we care about and their score thresholds
 // Lower threshold = stricter moderation
@@ -45,6 +55,11 @@ const CATEGORY_THRESHOLDS = {
  */
 async function moderate(text, role = "input") {
   if (!text || text.trim().length < 5) {
+    return { flagged: false, categories: [], reason: null };
+  }
+
+  // OpenRouter doesn't have a /moderations endpoint — skip it
+  if (IS_OPENROUTER) {
     return { flagged: false, categories: [], reason: null };
   }
 

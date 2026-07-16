@@ -20,11 +20,21 @@ const logger = require("../utils/logger").forAgent("ChatbotService");
 const { moderate, getSafeDeclineMessage } = require("./moderationService");
 const { DB_TOTALS } = require("./hybridSearchService");
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
+// ── OpenAI-compatible client (routed through OpenRouter) ───────
+// OpenRouter uses the same SDK — just a different baseURL + key.
+const openai = new OpenAI({
+  apiKey:  process.env.OPENAI_API_KEY || "dummy",
+  baseURL: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
+  defaultHeaders: {
+    "HTTP-Referer": "https://doott.in",   // shown in OpenRouter dashboard
+    "X-Title":      "Ask Doott",
+  },
+});
 
-// ── Config ─────────────────────────────────────────────────────
-const CHAT_MODEL     = "gpt-4o";
-const FAST_MODEL     = "gpt-4o-mini";
+// ── Config ───────────────────────────────────────────────────────
+// OpenRouter model IDs  (prefix: provider/model-name)
+const CHAT_MODEL     = "openai/gpt-4o-mini";   // fast + cheap for most queries
+const FAST_MODEL     = "openai/gpt-4o-mini";   // intent classification
 const MAX_CONTEXT_TOKENS = 100_000;
 const AVG_TOKENS_PER_CHAR = 0.25;
 
