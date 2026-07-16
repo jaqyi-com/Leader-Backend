@@ -28,10 +28,13 @@ const COUNT_QUERY_TIMEOUT_MS   = 8000;   //  8s — count (fails safely → DB_T
 // Flip PEOPLE to true once: SELECT indisvalid FROM pg_index WHERE indexrelid='final.idx_people_hnsw'::regclass;
 const HNSW_READY = {
   companies: true,
-  people:    false,   // set true once idx_people_hnsw is confirmed valid
+  people:    false,   // ❌ idx_people_hnsw still invalid — building via Neon Console
 };
 
 // ── DB total row estimates ────────────────────────────────────────
+// Btree indexes (ALL ✅ READY):
+//   idx_people_city, idx_people_state, idx_people_job_title
+//   idx_companies_city, idx_companies_state
 const DB_TOTALS = {
   companies: 1_781_218,
   people:   43_932_594,
