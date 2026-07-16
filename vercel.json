@@ -6,11 +6,15 @@
       "src": "src/server.js",
       "use": "@vercel/node",
       "config": {
-        "maxLambdaSize": "50mb",
-        "maxDuration": 60
+        "maxLambdaSize": "50mb"
       }
     }
   ],
+  "functions": {
+    "src/server.js": {
+      "maxDuration": 60
+    }
+  },
   "routes": [
     {
       "src": "/(.*)",

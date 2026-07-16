@@ -154,6 +154,10 @@ Answer NO for greetings, general knowledge questions, math, jokes, etc.`,
 }
 
 async function searchFinalDatabase(queryText) {
+  const { performHybridSearch } = require("./hybridSearchService");
+
+  // ── Step 1: Try LLM-based parameter extraction ───────────────
+  let parsed = null;
   try {
     const response = await openai.chat.completions.create({
       model: FAST_MODEL,
@@ -186,16 +190,22 @@ Examples:
         { role: "user", content: queryText }
       ]
     });
+    parsed = JSON.parse(response.choices[0].message.content || "{}");
+    logger.info(`[ChatbotSearch] LLM extracted: ${JSON.stringify(parsed)}`);
+  } catch (err) {
+    // ── Step 2: Regex fallback — no LLM needed ───────────────
+    // If LLM is unavailable (quota/error), extract params from raw text
+    logger.warn(`[ChatbotSearch] LLM extraction failed (${err.message}) — using regex fallback`);
+    parsed = extractParamsByRegex(queryText);
+    logger.info(`[ChatbotSearch] Regex fallback extracted: ${JSON.stringify(parsed)}`);
+  }
 
-    const parsed = JSON.parse(response.choices[0].message.content || "{}");
-    logger.info(`[ChatbotSearch] Extracted parameters: ${JSON.stringify(parsed)}`);
-
-    const { performHybridSearch } = require("./hybridSearchService");
+  try {
     const { records, total, mode } = await performHybridSearch({
       entityType: parsed.entityType || "companies",
-      search: parsed.search || "",
-      f_city: parsed.f_city || "",
-      f_state: parsed.f_state || "",
+      search:     parsed.search    || queryText,  // use raw query if no search term extracted
+      f_city:     parsed.f_city    || "",
+      f_state:    parsed.f_state   || "",
       f_industry: parsed.f_industry || "",
       f_job_title: parsed.f_job_title || "",
       f_has_email: parsed.f_has_email || "",
@@ -222,9 +232,9 @@ Examples:
     let rows;
     if (isComp) {
       rows = records.map((r, i) => {
-        const name = r.business_name || "—";
-        const loc = [r.city, r.state].filter(Boolean).join(", ") || "—";
-        const ind = r.industry || "—";
+        const name  = r.business_name || "—";
+        const loc   = [r.city, r.state].filter(Boolean).join(", ") || "—";
+        const ind   = r.industry || "—";
         const email = Array.isArray(r.emails) ? r.emails.join(", ") : (r.emails || "—");
         const phone = r.phone || "—";
         const score = r.similarity_score != null ? `${Math.round(r.similarity_score * 100)}%` : "—";
@@ -232,9 +242,9 @@ Examples:
       }).join("\n");
     } else {
       rows = records.map((r, i) => {
-        const name = r.full_name || "—";
+        const name  = r.full_name || "—";
         const title = r.job_title || "—";
-        const loc = [r.city, r.state].filter(Boolean).join(", ") || "—";
+        const loc   = [r.city, r.state].filter(Boolean).join(", ") || "—";
         const email = Array.isArray(r.emails) ? r.emails.join(", ") : (r.emails || "—");
         const phone = Array.isArray(r.phones) ? r.phones.join(", ") : (r.phones || "—");
         const score = r.similarity_score != null ? `${Math.round(r.similarity_score * 100)}%` : "—";
@@ -242,23 +252,53 @@ Examples:
       }).join("\n");
     }
 
-    const header = isComp 
+    const header    = isComp
       ? `| # | Company Name | Industry | Location | Phone | Emails | Match % |`
       : `| # | Full Name | Job Title | Location | Phones | Emails | Match % |`;
     const separator = `|---|---|---|---|---|---|---|`;
-
-    const contextBlock = 
+    const contextBlock =
       `## 🗄️ Live Database Search Results (${parsed.entityType || "companies"})\n` +
       `> Searched database for: "${parsed.search || queryText}"\n\n` +
-      `${header}\n${separator}\n` +
-      rows;
+      `${header}\n${separator}\n` + rows;
 
     return { leads: records, contextBlock, entityType: parsed.entityType || "companies", total, mode };
+
   } catch (err) {
-    logger.error(`[ChatbotSearch] searchFinalDatabase failed: ${err.message}`);
+    logger.error(`[ChatbotSearch] DB query failed: ${err.message}`);
     return null;
   }
 }
+
+// ── Regex-based parameter extractor (LLM fallback) ───────────────
+function extractParamsByRegex(query) {
+  const q = query.toLowerCase();
+
+  // Detect entity type
+  const peopleWords = /\b(engineer|developer|manager|ceo|cfo|cto|founder|director|executive|doctor|nurse|teacher|professor|lawyer|consultant|analyst|designer|marketer|accountant|officer|professional|people|person|candidate|talent|staff|employee)\b/i;
+  const entityType  = peopleWords.test(query) ? "people" : "companies";
+
+  // Extract city
+  const CITIES = ["mumbai","delhi","bangalore","bengaluru","chennai","hyderabad","pune","kolkata","ahmedabad","jaipur","surat","indore","bhopal","lucknow","nagpur","los angeles","new york","chicago","houston","dallas","austin","san francisco","seattle","boston","miami","atlanta","phoenix","denver","portland"];
+  let f_city = "";
+  for (const city of CITIES) {
+    if (q.includes(city)) { f_city = city.split(" ").map(w => w[0].toUpperCase()+w.slice(1)).join(" "); break; }
+  }
+
+  // Extract has_email / has_phone
+  const f_has_email = /\b(email|emails|verified email)\b/i.test(query) ? "true" : "";
+  const f_has_phone = /\b(phone|phones|number|contact)\b/i.test(query) ? "true" : "";
+
+  // Core search term — strip filler words
+  const search = query
+    .replace(/find|show|list|get|give|fetch|search|display|tell me|i need|i want|me the|give me|atleast|at least|\d+/gi, "")
+    .replace(/\bin\s+(mumbai|delhi|bangalore|bengaluru|chennai|hyderabad|pune|kolkata|ahmedabad|jaipur|surat|indore|bhopal|lucknow|nagpur|los angeles|new york|chicago|houston|dallas|austin)/gi, "")
+    .replace(/with (email|phone|number|contact|verified)/gi, "")
+    .replace(/\s+/g, " ").trim()
+    .slice(0, 60);
+
+  return { entityType, search: search || query.slice(0, 60), f_city, f_has_email, f_has_phone };
+}
+
 
 // ── Intent classifier ───────────────────────────────────────────
 async function classifyIntent(userMessage, orgName, conversationHistory = []) {
