@@ -21,10 +21,10 @@ import FeatureInvocationPanel from "../components/chatbot/FeatureInvocationPanel
 const MAX_CONTEXT = 100000;
 
 const SUGGESTIONS = [
-  "Find software engineers in Chennai",
-  "Search companies in the medical industry",
-  "List businesses located in Bangalore",
-  "Find doctors with verified emails",
+  "Find software engineers in Delhi with emails",
+  "Search dentists in Bangalore with phone numbers",
+  "List IT companies in Pune",
+  "Find restaurants in Mumbai",
 ];
 
 function TypingDots() {
@@ -140,7 +140,8 @@ function SourceCitations({ chunks }) {
 function InBuildDBBadge({ dbResults }) {
   const [open, setOpen] = useState(false);
   if (!dbResults || !dbResults.leads || dbResults.leads.length === 0) return null;
-  const { count, total, query } = dbResults;
+  const { count, total, query, mode } = dbResults;
+  const isVector = mode === "vector";
   return (
     <div style={{ marginTop: 10 }}>
       <button
@@ -152,7 +153,8 @@ function InBuildDBBadge({ dbResults }) {
         }}
       >
         <Database size={11} />
-        <span>In-Build Database · {count} result{count !== 1 ? "s" : ""}</span>
+        <span>Neon DB · {count} result{count !== 1 ? "s" : ""}</span>
+        {isVector && <span style={{ background: "rgba(139,92,246,0.15)", color: "#a78bfa", borderRadius: 4, padding: "1px 5px", fontSize: 10 }}>⚡ semantic</span>}
         {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
       </button>
       <AnimatePresence>
@@ -173,12 +175,13 @@ function InBuildDBBadge({ dbResults }) {
               display: "flex", flexDirection: "column", gap: 3,
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ fontWeight: 700, color: "#22c55e" }}>🗄️ In-Build Database</span>
-                <span style={{ opacity: 0.6 }}>Cloud SQL · pgvector semantic search</span>
+                <span style={{ fontWeight: 700, color: "#22c55e" }}>🗄️ Neon PostgreSQL (pgvector)</span>
+                <span style={{ opacity: 0.6 }}>{isVector ? "HNSW semantic search" : "structured filter search"}</span>
               </div>
               <div style={{ opacity: 0.75 }}>
-                Searched <b style={{ color: "var(--text)" }}>{total?.toLocaleString()}</b> business records
-                {query && <> for <b style={{ color: "var(--text)" }}>"{query.slice(0, 60)}{query.length > 60 ? "…" : ""}"</b></>}
+                Searched across <b style={{ color: "var(--text)" }}>{total?.toLocaleString()}</b> records
+                {query && <> for <b style={{ color: "var(--text)" }}>"{ query.slice(0, 60)}{query.length > 60 ? "…" : ""}"
+                </b></>}
                 {" · "}<b style={{ color: "#22c55e" }}>{count} match{count !== 1 ? "es" : ""} found</b>
               </div>
             </div>

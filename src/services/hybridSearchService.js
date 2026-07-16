@@ -1,24 +1,57 @@
 "use strict";
 
+// ============================================================
+// HYBRID SEARCH SERVICE — Neon PostgreSQL (pgvector)
+// ============================================================
+// Strategy:
+//   1. Pure vector ANN (no filters) → HNSW directQuery (fast, ~1-3s after warmup)
+//   2. City/state/field filters → structured ILIKE + keyword search
+//   3. Automatic fallback: if vector times out → structured search
+//
+// Tables: final.companies  |  final.people
+// Model:  all-MiniLM-L6-v2  (384-dim)  — matches embed_neon.py
+// Indexes: idx_companies_hnsw (HNSW, cosine)  |  idx_people_hnsw (building...)
+// ============================================================
+
 const { getLocalQueryEmbedding } = require("./localEmbedService");
-const { query: pgQuery } = require("../db/cloudSql");
+const { query: pgQuery, directQuery } = require("../db/cloudSql");
 const logger = require("../utils/logger").forAgent("HybridSearchService");
+
+// ── Timeouts ─────────────────────────────────────────────────────
+const VECTOR_QUERY_TIMEOUT_MS  = 28000;  // 28s — HNSW ANN via direct conn
+const STRUCT_QUERY_TIMEOUT_MS  = 30000;  // 30s — structured search (btree)
+const COUNT_QUERY_TIMEOUT_MS   = 8000;   //  8s — count (fails safely → DB_TOTALS)
+
+// ── HNSW index availability ───────────────────────────────────────
+// idx_companies_hnsw  ✅ VALID — vector search enabled for companies
+// idx_people_hnsw     ❌ INVALID (Neon timeout during build) — use structured
+// Flip PEOPLE to true once: SELECT indisvalid FROM pg_index WHERE indexrelid='final.idx_people_hnsw'::regclass;
+const HNSW_READY = {
+  companies: true,
+  people:    false,   // set true once idx_people_hnsw is confirmed valid
+};
+
+// ── DB total row estimates ────────────────────────────────────────
+const DB_TOTALS = {
+  companies: 1_781_218,
+  people:   43_932_594,
+};
 
 /**
  * Perform a hybrid (structured + semantic vector) search on companies or people.
- * 
+ *
  * @param {object} params
- * @param {string} params.entityType "companies" or "people"
- * @param {string} params.search Natural language query to search semantically
- * @param {string} params.f_city City filter
- * @param {string} params.f_state State filter
- * @param {string} params.f_industry Industry filter (companies only)
- * @param {string} params.f_job_title Job title filter (people only)
- * @param {string} params.f_has_email "true" or "false"
- * @param {string} params.f_has_phone "true" or "false"
- * @param {number} params.page Page number (1-indexed)
- * @param {number} params.limit Number of items per page
- * @returns {Promise<{ records: any[], total: number }>}
+ * @param {string} params.entityType     "companies" or "people"
+ * @param {string} params.search         Natural language query (embedded → vector)
+ * @param {string} params.f_city         City filter
+ * @param {string} params.f_state        State filter
+ * @param {string} params.f_industry     Industry filter (companies only)
+ * @param {string} params.f_job_title    Job title filter (people only)
+ * @param {string} params.f_has_email    "true" | "false" | ""
+ * @param {string} params.f_has_phone    "true" | "false" | ""
+ * @param {number} params.page           Page number (1-indexed)
+ * @param {number} params.limit          Results per page (max 100)
+ * @returns {Promise<{ records: any[], total: number, mode: string }>}
  */
 async function performHybridSearch({
   entityType = "companies",
@@ -33,141 +66,229 @@ async function performHybridSearch({
   limit = 25,
 }) {
   const isCompanies = entityType === "companies";
-  const tableName = isCompanies ? '"final"."companies"' : '"final"."people"';
-  
-  const pageNum = Math.max(1, parseInt(page, 10));
-  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
-  const offset = (pageNum - 1) * limitNum;
+  const tableName   = isCompanies ? '"final"."companies"' : '"final"."people"';
 
-  // 1. Generate query embedding if search string is provided
+  const pageNum  = Math.max(1, parseInt(page, 10));
+  const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10)));
+  const offset   = (pageNum - 1) * limitNum;
+
+  // ── 1. Generate embedding for semantic search ─────────────────
   let embedding = null;
   if (search && search.trim().length > 0) {
     try {
-      embedding = await getLocalQueryEmbedding(search);
-      logger.info(`Generated local query embedding for: "${search}"`);
+      embedding = await getLocalQueryEmbedding(search.trim());
+      if (!Array.isArray(embedding) || embedding.length !== 384) {
+        logger.warn(`[HybridSearch] Bad embedding for "${search}" — skipping vector`);
+        embedding = null;
+      } else {
+        logger.info(`[HybridSearch] Embedding ready (384-dim) for: "${search}"`);
+      }
     } catch (err) {
-      logger.error(`Failed to generate query embedding: ${err.message}`);
+      logger.error(`[HybridSearch] Embedding failed: ${err.message}`);
     }
   }
 
-  // 2. Build PostgreSQL where clause
-  const conditions = [];
-  const queryParams = [];
+  // ── 2. Build structured WHERE filters ────────────────────────
+  const structConditions = [];
+  const structParams     = [];
   let idx = 1;
 
   if (f_city) {
-    conditions.push(`city ILIKE $${idx++}`);
-    queryParams.push(`${f_city}%`);
+    structConditions.push(`city ILIKE $${idx++}`);
+    structParams.push(`${f_city}%`);
   }
   if (f_state) {
-    conditions.push(`state ILIKE $${idx++}`);
-    queryParams.push(`${f_state}%`);
+    structConditions.push(`state ILIKE $${idx++}`);
+    structParams.push(`${f_state}%`);
   }
-
   if (isCompanies) {
     if (f_industry) {
-      conditions.push(`industry::text ILIKE $${idx++}`);
-      queryParams.push(`%${f_industry}%`);
+      structConditions.push(`industry::text ILIKE $${idx++}`);
+      structParams.push(`%${f_industry}%`);
     }
-    if (f_has_email === "true") {
-      conditions.push(`(emails IS NOT NULL AND emails <> '')`);
-    } else if (f_has_email === "false") {
-      conditions.push(`(emails IS NULL OR emails = '')`);
-    }
-    if (f_has_phone === "true") {
-      conditions.push(`(phone IS NOT NULL AND phone <> '')`);
-    } else if (f_has_phone === "false") {
-      conditions.push(`(phone IS NULL OR phone = '')`);
-    }
+    if (f_has_email === "true")        structConditions.push(`(emails IS NOT NULL AND emails <> '')`);
+    else if (f_has_email === "false")  structConditions.push(`(emails IS NULL OR emails = '')`);
+    if (f_has_phone === "true")        structConditions.push(`(phone IS NOT NULL AND phone <> '')`);
+    else if (f_has_phone === "false")  structConditions.push(`(phone IS NULL OR phone = '')`);
   } else {
-    // People
     if (f_job_title) {
-      conditions.push(`job_title ILIKE $${idx++}`);
-      queryParams.push(`%${f_job_title}%`);
+      structConditions.push(`job_title ILIKE $${idx++}`);
+      structParams.push(`%${f_job_title}%`);
     }
-    if (f_has_email === "true") {
-      conditions.push(`(emails IS NOT NULL AND emails <> '')`);
-    } else if (f_has_email === "false") {
-      conditions.push(`(emails IS NULL OR emails = '')`);
-    }
-    if (f_has_phone === "true") {
-      conditions.push(`(phones IS NOT NULL AND phones <> '')`);
-    } else if (f_has_phone === "false") {
-      conditions.push(`(phones IS NULL OR phones = '')`);
-    }
+    if (f_has_email === "true")        structConditions.push(`(emails IS NOT NULL AND emails <> '')`);
+    else if (f_has_email === "false")  structConditions.push(`(emails IS NULL OR emails = '')`);
+    if (f_has_phone === "true")        structConditions.push(`(phones IS NOT NULL AND phones <> '')`);
+    else if (f_has_phone === "false")  structConditions.push(`(phones IS NULL OR phones = '')`);
   }
 
-  // If there are no filters and no search query, add a base complete-profile filter
-  const hasFilters = conditions.length > 0;
-  if (!hasFilters && !embedding) {
+  // ── 3. Add text keyword fallback if search term but no filters ─
+  const hasStructFilters = structConditions.length > 0;
+  if (search && search.trim() && !hasStructFilters && !embedding) {
+    // Pure text keyword fallback (no vector, no filters)
     if (isCompanies) {
-      conditions.push("business_name IS NOT NULL AND business_name <> ''");
-      conditions.push("phone IS NOT NULL AND phone <> ''");
-      conditions.push("website IS NOT NULL AND website <> ''");
-      conditions.push("(emails IS NOT NULL AND emails <> '')");
+      structConditions.push(`business_name ILIKE $${idx++}`);
+      structParams.push(`%${search.trim()}%`);
     } else {
-      conditions.push("full_name IS NOT NULL AND full_name <> ''");
-      conditions.push("(emails IS NOT NULL AND emails <> '')");
-      conditions.push("(phones IS NOT NULL AND phones <> '')");
+      structConditions.push(`(full_name ILIKE $${idx++} OR job_title ILIKE $${idx++})`);
+      const term = `%${search.trim()}%`;
+      structParams.push(term, term);
     }
   }
 
-  // 3. Build selection, ordering, and execution logic
-  let selectSQL = "*";
-  let orderBySQL = "ORDER BY created_at DESC";
-
-  // If vector embedding exists, rank by cosine distance
-  if (embedding && embedding.length === 384) {
-    const vectorIdx = idx++;
-    queryParams.push(JSON.stringify(embedding));
-    
-    selectSQL = `*, (1 - (embedding <=> $${vectorIdx}::vector)) AS similarity_score`;
-    // We only rank rows where embedding is not null to ensure HNSW index is utilized
-    conditions.push("embedding IS NOT NULL");
-    orderBySQL = `ORDER BY embedding <=> $${vectorIdx}::vector`;
+  // ── 4. Default quality filter when nothing specified ─────────
+  if (structConditions.length === 0 && !embedding) {
+    if (isCompanies) {
+      structConditions.push("business_name IS NOT NULL AND business_name <> ''");
+      structConditions.push("phone IS NOT NULL AND phone <> ''");
+    } else {
+      structConditions.push("full_name IS NOT NULL AND full_name <> ''");
+      structConditions.push("(emails IS NOT NULL AND emails <> '')");
+    }
   }
 
-  const whereStr = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  // ── 5. Choose search strategy ────────────────────────────────
+  // Vector ANN is only used when:
+  //   a) HNSW_READY is true for this entity type
+  //   b) No structured filters (HNSW index can't combine with WHERE efficiently)
+  //   c) An embedding was generated
+  const hasStructuredFilters = structConditions.length > 0;
+  const entityKey = isCompanies ? "companies" : "people";
+  const canUseVector = embedding && !hasStructuredFilters && HNSW_READY[entityKey];
 
-  // Query records
+  if (canUseVector) {
+    // ── Pure HNSW vector ANN — fastest, most semantic ─────────
+    try {
+      const result = await runVectorSearch({
+        tableName, embedding, structConditions: [], structParams: [],
+        idx: 1, limitNum, offset, isCompanies,
+      });
+      return { ...result, mode: "vector" };
+    } catch (err) {
+      logger.warn(`[HybridSearch] Vector search failed (${err.message}), falling back to structured`);
+      // Fall through to structured search below
+    }
+  } else if (embedding && hasStructuredFilters) {
+    // ── Structured + keyword ILIKE boost ──────────────────────
+    const keywordTerm = `%${search.trim()}%`;
+    if (isCompanies) {
+      structConditions.push(`(business_name ILIKE $${idx++} OR industry::text ILIKE $${idx - 1})`);
+      structParams.push(keywordTerm);
+    } else {
+      structConditions.push(`(full_name ILIKE $${idx++} OR job_title ILIKE $${idx - 1})`);
+      structParams.push(keywordTerm);
+    }
+  }
+
+  // ── 6. Structured-only search ─────────────────────────────────
+  const result = await runStructuredSearch({
+    tableName, structConditions, structParams, idx, limitNum, offset,
+  });
+  return { ...result, mode: "structured" };
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// VECTOR SEARCH (HNSW cosine similarity — fast after index build)
+// ─────────────────────────────────────────────────────────────────
+async function runVectorSearch({
+  tableName, embedding, structConditions, structParams,
+  idx, limitNum, offset, isCompanies,
+}) {
+  // Clone params to avoid mutation
+  const queryParams = [...structParams];
+
+  // Append vector param
+  const vectorIdx = idx;
+  queryParams.push(JSON.stringify(embedding));
+  idx++;
+
+  // Add embedding IS NOT NULL so HNSW index is used
+  const allConditions = [...structConditions, "embedding IS NOT NULL"];
+  const whereStr = allConditions.length > 0 ? `WHERE ${allConditions.join(" AND ")}` : "";
+
   const dataSQL = `
-    SELECT ${selectSQL}
+    SELECT *, (1 - (embedding <=> $${vectorIdx}::vector)) AS similarity_score
     FROM ${tableName}
     ${whereStr}
-    ${orderBySQL}
+    ORDER BY embedding <=> $${vectorIdx}::vector
     LIMIT $${idx++} OFFSET $${idx++}
   `;
 
-  // Count total matching records (limit to 10K for fast UX)
+  logger.info(`[HybridSearch] Vector query:\n${dataSQL.slice(0, 200)}`);
+
+  // Use directQuery (non-pooler) for pgvector — PgBouncer strips SET statements
+  const dataRes = await directQuery(dataSQL, [...queryParams, limitNum, offset], VECTOR_QUERY_TIMEOUT_MS);
+  const records = dataRes.rows.map(row => {
+    const out = { ...row };
+    delete out.embedding; // strip binary blob
+    return out;
+  });
+
+  // Use approximate total (skip count for vector search — too slow on 43M rows)
+  const total = isCompanies ? DB_TOTALS.companies : DB_TOTALS.people;
+
+  logger.info(`[HybridSearch] Vector search returned ${records.length} records`);
+  return { records, total };
+}
+
+
+// ─────────────────────────────────────────────────────────────────
+// STRUCTURED SEARCH (Filter + ORDER BY created_at)
+// ─────────────────────────────────────────────────────────────────
+async function runStructuredSearch({ tableName, structConditions, structParams, idx, limitNum, offset }) {
+  const whereStr = structConditions.length > 0 ? `WHERE ${structConditions.join(" AND ")}` : "";
+  const isCompanies = tableName.includes("companies");
+
+  const dataSQL = `
+    SELECT *
+    FROM ${tableName}
+    ${whereStr}
+    ORDER BY created_at DESC
+    LIMIT $${idx++} OFFSET $${idx++}
+  `;
+
+  // Count limited to 10,001 rows for UI performance
+  // Run count and data in parallel — if count times out, use DB_TOTALS estimate
   const countSQL = `
-    SELECT COUNT(*) AS cnt 
+    SELECT COUNT(*) AS cnt
     FROM (
-      SELECT 1 
+      SELECT 1
       FROM ${tableName}
       ${whereStr}
       LIMIT 10001
     ) subq
   `;
 
-  try {
-    const totalRes = await pgQuery(countSQL, queryParams.slice(0, idx - 3), 20000);
-    const total = parseInt(totalRes.rows[0].cnt, 10);
+  const countParams = [...structParams];
+  const dataParams  = [...structParams, limitNum, offset];
 
-    const dataRes = await pgQuery(dataSQL, [...queryParams, limitNum, offset], 30000);
-    const records = dataRes.rows.map(row => {
-      // Normalize columns
-      const out = { ...row };
-      delete out.embedding; // do not send binary vectors to frontend
-      return out;
-    });
+  logger.info(`[HybridSearch] Structured query`);
 
-    return { records, total };
-  } catch (err) {
-    logger.error(`Database query failed: ${err.message}`);
-    throw err;
-  }
+  // Run both in parallel — count can fail safely
+  const [countResult, dataRes] = await Promise.all([
+    pgQuery(countSQL, countParams, COUNT_QUERY_TIMEOUT_MS).catch(err => {
+      logger.warn(`[HybridSearch] Count query timed out (${err.message}) — using estimate`);
+      return null;
+    }),
+    pgQuery(dataSQL, dataParams, STRUCT_QUERY_TIMEOUT_MS),
+  ]);
+
+  const total = countResult
+    ? parseInt(countResult.rows[0].cnt, 10)
+    : (isCompanies ? DB_TOTALS.companies : DB_TOTALS.people);
+
+  const records = dataRes.rows.map(row => {
+    const out = { ...row };
+    delete out.embedding;
+    return out;
+  });
+
+  logger.info(`[HybridSearch] Structured search returned ${records.length} of ${total} records`);
+  return { records, total };
 }
+
 
 module.exports = {
   performHybridSearch,
+  DB_TOTALS,
 };

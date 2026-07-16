@@ -20,10 +20,18 @@ const { Pool } = require("pg");
 const SCHEMA = process.env.NEON_SCHEMA || "final";
 const TABLE  = process.env.NEON_TABLE  || "companies";
 
-// Neon connection string — MUST be set via NEON_DATABASE_URL env var.
-// Never hardcode credentials here. Set the value in your .env file.
-const NEON_DSN = process.env.NEON_DATABASE_URL;
-if (!NEON_DSN) {
+// ── Neon connection strings ─────────────────────────────────────
+// Two connections:
+//   POOLER  — PgBouncer (low latency, many connections, good for short queries)
+//   DIRECT  — Neon compute directly (required for pgvector/HNSW ANN queries)
+//
+// The pooler strips SET statements that pgvector relies on.
+// Vector similarity searches must use the direct connection.
+const NEON_POOLER_DSN = process.env.NEON_DATABASE_URL;
+const NEON_DIRECT_DSN = process.env.NEON_DIRECT_URL ||
+  (NEON_POOLER_DSN ? NEON_POOLER_DSN.replace("-pooler.", ".") : null);
+
+if (!NEON_POOLER_DSN) {
   throw new Error(
     "[NeonDB] ❌ NEON_DATABASE_URL environment variable is not set. " +
     "Add it to your .env file and restart the server."
@@ -31,12 +39,13 @@ if (!NEON_DSN) {
 }
 
 let _pool = null;
+let _directPool = null;
 
 function getPool() {
   if (_pool) return _pool;
 
   _pool = new Pool({
-    connectionString:        NEON_DSN,
+    connectionString:        NEON_POOLER_DSN,
 
     // ── Pool tuning ──────────────────────────────────────────
     max:                     5,      // Neon pooler handles many connections well
@@ -53,14 +62,36 @@ function getPool() {
   });
 
   _pool.on("error", (err) => {
-    // Log pool-level errors (e.g. connection dropped mid-pool)
-    // These are non-fatal — the pool will reconnect automatically.
     console.error("[NeonDB] ⚠️  Pool error (will auto-reconnect):", err.message);
   });
 
   console.log("[NeonDB] ✅ Pool ready → Neon PostgreSQL (neondb / final schema)");
 
   return _pool;
+}
+
+/** Direct connection pool for pgvector/HNSW queries. */
+function getDirectPool() {
+  if (_directPool) return _directPool;
+
+  _directPool = new Pool({
+    connectionString:        NEON_DIRECT_DSN,
+    max:                     2,      // Only for vector search — limit connections
+    min:                     0,
+    idleTimeoutMillis:       30000,  // Keep warm — HNSW cold starts are expensive
+    connectionTimeoutMillis: 15000,  // Direct connections take longer
+    keepAlive:               true,
+    keepAliveInitialDelayMillis: 10000,
+    application_name:        "leader-backend-vector",
+  });
+
+  _directPool.on("error", (err) => {
+    console.error("[NeonDB/vector] ⚠️  Direct pool error:", err.message);
+  });
+
+  console.log("[NeonDB] ✅ Direct pool ready → Neon (vector/pgvector queries)");
+
+  return _directPool;
 }
 
 /**
@@ -77,6 +108,26 @@ async function query(text, params = [], timeoutMs = 30000) {
   try {
     // Set per-query statement timeout to prevent long-running queries from
     // blocking Vercel's serverless function timeout (max 60s on free tier).
+    await client.query(`SET statement_timeout = ${timeoutMs}`);
+    return await client.query(text, params);
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Run a query against the DIRECT Neon connection (non-pooler).
+ * Required for pgvector/HNSW ANN queries — PgBouncer pooler does not
+ * preserve the session-level SET statements pgvector requires.
+ *
+ * @param {string} text     SQL with $1, $2, … placeholders
+ * @param {Array}  params   Array of parameter values
+ * @param {number} [timeoutMs=25000]  Per-query statement timeout in ms
+ * @returns {Promise<import('pg').QueryResult>}
+ */
+async function directQuery(text, params = [], timeoutMs = 25000) {
+  const client = await getDirectPool().connect();
+  try {
     await client.query(`SET statement_timeout = ${timeoutMs}`);
     return await client.query(text, params);
   } finally {
@@ -105,4 +156,4 @@ async function closePool() {
   }
 }
 
-module.exports = { query, testConnection, closePool, getPool, SCHEMA, TABLE };
+module.exports = { query, directQuery, testConnection, closePool, getPool, getDirectPool, SCHEMA, TABLE };

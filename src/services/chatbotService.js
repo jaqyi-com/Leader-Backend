@@ -1,10 +1,10 @@
 // ============================================================
-// CHATBOT SERVICE — Search-Engine Chat Integration
+// CHATBOT SERVICE — "Ask Doott" AI Search Assistant
 // ============================================================
 // Pipeline:
 //  1. moderate()           — OpenAI Moderation API (input safety)
 //  2. classifyIntent()     — LLM decides: GENERAL_CHAT | DB_SEARCH
-//  3. searchFinalDatabase()— Smart parameter extraction + local pgvector/FTS search
+//  3. searchFinalDatabase()— Smart parameter extraction + Neon pgvector/HNSW search
 //  4. trimHistoryToTokens()— BPE token counting via js-tiktoken
 //  5. streamChat()         — Smart system prompt + GPT-4o streaming → SSE
 // ============================================================
@@ -18,7 +18,7 @@ const {
 } = require("../db/mongoose");
 const logger = require("../utils/logger").forAgent("ChatbotService");
 const { moderate, getSafeDeclineMessage } = require("./moderationService");
-const { query: pgQuery } = require("../db/cloudSql");
+const { DB_TOTALS } = require("./hybridSearchService");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
 
@@ -102,7 +102,9 @@ Answer YES if the user is asking to search for, find, or list business records s
 - Businesses, companies, cafes, restaurants, dentists, gyms, stores, agencies, clinics, shops
 - Leads, contacts, prospects, phone numbers, emails, websites
 - Any B2B or business directory search (e.g. "find X in Y city", "show me businesses with websites", "list dentists in Austin")
-Answer NO for all other messages (greetings, general knowledge, math, etc.).`,
+- People, professionals, executives, engineers, doctors (e.g. "find software engineers in Delhi")
+- Indian cities/states searches: Mumbai, Delhi, Bangalore, Chennai, Hyderabad, Pune, etc.
+Answer NO for all other messages (greetings, general knowledge, math, jokes, etc.).`,
         },
         { role: "user", content: userMessage },
       ],
@@ -124,21 +126,26 @@ async function searchFinalDatabase(queryText) {
       messages: [
         {
           role: "system",
-          content: `You are a search parameter extractor for a B2B leads database.
+          content: `You are a search parameter extractor for a B2B leads database containing Indian and global businesses.
 Given a natural language query, parse it into structured filters.
 Respond in JSON with:
 {
   "entityType": "companies" or "people",
-  "search": "keywords for search",
-  "f_city": "city name if mentioned",
-  "f_state": "state name or abbreviation if mentioned",
-  "f_industry": "industry if company search",
-  "f_job_title": "job title if people search",
-  "f_has_email": "true" or "false" (or leave empty if not specified),
-  "f_has_phone": "true" or "false" (or leave empty if not specified)
+  "search": "core search keywords (e.g. 'dentist', 'software engineer', 'restaurant')",
+  "f_city": "city name if mentioned (e.g. 'Mumbai', 'Delhi', 'Bangalore', 'Austin')",
+  "f_state": "state/province if mentioned (e.g. 'Maharashtra', 'Texas', 'California')",
+  "f_industry": "industry if company search (e.g. 'healthcare', 'technology', 'food')",
+  "f_job_title": "job title if people search (e.g. 'software engineer', 'doctor', 'CEO')",
+  "f_has_email": "true" or "false" (or omit if not specified),
+  "f_has_phone": "true" or "false" (or omit if not specified)
 }
-Example: "Find software engineers in Delhi with verified emails"
--> { "entityType": "people", "search": "software engineer", "f_city": "Delhi", "f_has_email": "true" }`
+Examples:
+  "Find software engineers in Delhi with verified emails"
+  -> { "entityType": "people", "search": "software engineer", "f_city": "Delhi", "f_has_email": "true" }
+  "Show dentists in Bangalore"
+  -> { "entityType": "companies", "search": "dentist", "f_city": "Bangalore", "f_industry": "healthcare" }
+  "List restaurants in Mumbai with phone numbers"
+  -> { "entityType": "companies", "search": "restaurant", "f_city": "Mumbai", "f_has_phone": "true" }`
         },
         { role: "user", content: queryText }
       ]
@@ -148,7 +155,7 @@ Example: "Find software engineers in Delhi with verified emails"
     logger.info(`[ChatbotSearch] Extracted parameters: ${JSON.stringify(parsed)}`);
 
     const { performHybridSearch } = require("./hybridSearchService");
-    const { records, total } = await performHybridSearch({
+    const { records, total, mode } = await performHybridSearch({
       entityType: parsed.entityType || "companies",
       search: parsed.search || "",
       f_city: parsed.f_city || "",
@@ -160,6 +167,8 @@ Example: "Find software engineers in Delhi with verified emails"
       page: 1,
       limit: 10,
     });
+
+    logger.info(`[ChatbotSearch] Search mode: ${mode} | Found: ${records.length} records`);
 
     if (!records.length) return null;
 
@@ -190,9 +199,7 @@ Example: "Find software engineers in Delhi with verified emails"
     const header = isComp 
       ? `| # | Company Name | Industry | Location | Phone | Emails | Match % |`
       : `| # | Full Name | Job Title | Location | Phones | Emails | Match % |`;
-    const separator = isComp
-      ? `|---|---|---|---|---|---|---|`
-      : `|---|---|---|---|---|---|---|`;
+    const separator = `|---|---|---|---|---|---|---|`;
 
     const contextBlock = 
       `## 🗄️ Live Database Search Results (${parsed.entityType || "companies"})\n` +
@@ -200,7 +207,7 @@ Example: "Find software engineers in Delhi with verified emails"
       `${header}\n${separator}\n` +
       rows;
 
-    return { leads: records, contextBlock, entityType: parsed.entityType || "companies" };
+    return { leads: records, contextBlock, entityType: parsed.entityType || "companies", total, mode };
   } catch (err) {
     logger.error(`[ChatbotSearch] searchFinalDatabase failed: ${err.message}`);
     return null;
@@ -275,30 +282,45 @@ function buildSystemPrompt(orgName, dbResult = null) {
   });
 
   if (hasDbResult) {
-    return `You are the AI assistant for "${orgName}". You have access to a live business database.
+    const searchTerm = dbResult.contextBlock.match(/for: "([^"]+)"/)?.[1] || "business search";
+    const entityLabel = dbResult.entityType === "people" ? "contacts/people" : "companies";
+    const searchMode  = dbResult.mode === "vector" ? "semantic AI" : "structured";
+    return `You are Ask Doott, the AI assistant for "${orgName}".
 Current date and time: ${nowString}
 
-The user asked: "${dbResult.contextBlock.match(/for: "([^"]+)"/)?.[1] || "business search"}"
+The user searched for: "${searchTerm}" (${searchMode} search across ${entityLabel})
 
-The search results have already been displayed to the user as a visual card panel in the UI.
-Do NOT list or repeat the business records — the user can already see them.
+The search results are already displayed as cards in the UI. Do NOT list or repeat the records.
 
 INSTRUCTIONS:
-- Briefly confirm how many results were found and what was searched.
-- Offer to help the user filter, sort, or export the results.
-- If the user asks for more details about a specific business, answer based on the data.
-- Suggest useful next steps (e.g. "Want me to filter by phone number?" or "I can search a specific city.").
-- Keep your response SHORT (2-3 sentences max) since the data is already visible.
-- Always answer in a friendly, professional tone.`;
+- Briefly confirm the results found and what was searched.
+- Offer to refine: filter by city, state, industry, email/phone availability.
+- Suggest next steps: "Want to export these as CSV?" or "I can search a specific city."
+- Keep response SHORT (2-3 sentences) — the data panel is visible to the user.
+- Be friendly and professional.`;
   }
 
-  return `You are "Ask Doott", a helpful, friendly AI assistant for the B2B Lead Generator platform "${orgName}".
+  return `You are Ask Doott, a powerful AI-powered B2B lead intelligence assistant for "${orgName}".
 Current date and time: ${nowString}
-Engage naturally in conversation. Answer general questions from your own knowledge.
+
+You have access to a live Neon PostgreSQL database with:
+- 🏢 1,781,218 verified companies (India + global)
+- 👥 43,932,594 professional people records
+- Vector-powered semantic search (all-MiniLM-L6-v2 embeddings)
+
+When the user wants to search for leads, businesses, or people, just ask their query naturally:
+  Examples:
+  - "Find software engineers in Delhi with emails"
+  - "Show dentists in Bangalore with phone numbers"
+  - "List IT companies in Pune"
+  - "Find restaurant businesses in Mumbai"
+
+You will instantly pull live records from the database.
+
+For general questions (greetings, knowledge questions, etc.) — answer naturally.
 You know the current date and time — use it when asked.
-If the user wants to search for leads, companies, or people, let them know they can type their query here (e.g., "Find software engineers in Chennai") and you will pull the live records directly.
-Keep answers concise and friendly.
-Format responses with markdown where it improves readability.`;
+Keep answers concise, friendly, and professional.
+Format responses with markdown where helpful.`;
 }
 
 // ── Main streaming chat function ────────────────────────────────
@@ -356,12 +378,13 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
     if (isDataSearch) {
       dbResult = await searchFinalDatabase(userMessage);
       if (dbResult) {
-        logger.info(`[Chat] Hybrid Search: found ${dbResult.leads.length} leads`);
+        logger.info(`[Chat] ${dbResult.mode || "hybrid"} search: found ${dbResult.leads.length} leads (total in DB: ${dbResult.total?.toLocaleString()})`);
         sendEvent({
           type:   "db_results",
           count:  dbResult.leads.length,
-          total:  dbResult.entityType === "companies" ? 1781218 : 43932594,
+          total:  dbResult.total || (dbResult.entityType === "companies" ? DB_TOTALS.companies : DB_TOTALS.people),
           query:  userMessage,
+          mode:   dbResult.mode || "hybrid",
           leads:  dbResult.leads.map(r => {
             if (dbResult.entityType === "companies") {
               return {
