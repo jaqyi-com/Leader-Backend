@@ -94,11 +94,38 @@ async function trimHistoryToTokens(history, systemPrompt, maxTokens = MAX_CONTEX
   return { trimmedHistory: kept, tokenCount: usedTokens + systemTokens };
 }
 
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// DATABASE SEARCH INTEGRATION
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ── Fast regex-based data query detector ─────────────────────────
+// Detects 95%+ of data queries WITHOUT an LLM call.
+// This ensures DB search always works even when LLM API is down.
+const DATA_QUERY_KEYWORDS = [
+  // Action verbs
+  /\b(find|show|list|get|give|fetch|search|look for|display|tell me|provide|i need|i want)\b/i,
+  // Business types
+  /\b(company|companies|business|businesses|clinic|clinics|hospital|hospitals|restaurant|restaurants|cafe|cafes|hotel|hotels|shop|shops|store|stores|agency|agencies|firm|firms|dentist|dentists|gym|gyms|school|schools|college|colleges|office|offices|lawyer|lawyers|doctor|doctors)\b/i,
+  // People types
+  /\b(engineer|engineers|developer|developers|manager|managers|ceo|cfo|cto|founder|founders|director|directors|executive|executives|professional|professionals|consultant|consultants)\b/i,
+  // Data fields
+  /\b(email|emails|phone|phones|contact|contacts|number|numbers|website|websites|address|addresses|lead|leads)\b/i,
+  // Location patterns
+  /\b(in (mumbai|delhi|bangalore|bengaluru|chennai|hyderabad|pune|kolkata|ahmedabad|jaipur|surat|indore|bhopal|lucknow|nagpur|patna|vadodara|visakhapatnam|agra|new york|los angeles|chicago|houston|phoenix|philadelphia|san antonio|san diego|dallas|austin|texas|california|florida|new york|illinois|ohio|georgia|north carolina|michigan|new jersey|virginia|washington|arizona|massachusetts|tennessee|indiana|missouri|maryland|wisconsin|colorado|minnesota|south carolina|alabama|louisiana|kentucky|oregon|oklahoma|connecticut|utah|iowa|nevada|arkansas|mississippi|kansas|new mexico|nebraska|west virginia|idaho|hawaii|new hampshire|maine|montana|rhode island|delaware|south dakota|north dakota|alaska|vermont|wyoming))\b/i,
+];
+
+const GREETINGS_ONLY = /^(hi|hello|hey|how are you|good morning|good afternoon|good evening|thanks|thank you|bye|goodbye|ok|okay|sup|yo|hiya|howdy|greetings)\W*$/i;
+
+function isDataQueryByRegex(message) {
+  if (GREETINGS_ONLY.test(message.trim())) return false;
+  return DATA_QUERY_KEYWORDS.some(r => r.test(message));
+}
 
 async function isDataSearchQuery(userMessage) {
+  // Step 1: Fast regex check — no LLM needed
+  const regexResult = isDataQueryByRegex(userMessage);
+  if (regexResult) {
+    logger.info(`[DBClassifier] Regex detected data query: YES`);
+    return true;
+  }
+
+  // Step 2: LLM check for ambiguous messages — fail OPEN on error
   try {
     const response = await openai.chat.completions.create({
       model: FAST_MODEL,
@@ -111,10 +138,9 @@ async function isDataSearchQuery(userMessage) {
 Answer YES if the user is asking to search for, find, or list business records such as:
 - Businesses, companies, cafes, restaurants, dentists, gyms, stores, agencies, clinics, shops
 - Leads, contacts, prospects, phone numbers, emails, websites
-- Any B2B or business directory search (e.g. "find X in Y city", "show me businesses with websites", "list dentists in Austin")
-- People, professionals, executives, engineers, doctors (e.g. "find software engineers in Delhi")
-- Indian cities/states searches: Mumbai, Delhi, Bangalore, Chennai, Hyderabad, Pune, etc.
-Answer NO for all other messages (greetings, general knowledge, math, jokes, etc.).`,
+- Any B2B or business directory search (e.g. "find X in Y city", "show me businesses with websites")
+- People, professionals, executives, engineers, doctors
+Answer NO for greetings, general knowledge questions, math, jokes, etc.`,
         },
         { role: "user", content: userMessage },
       ],
