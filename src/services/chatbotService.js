@@ -175,12 +175,22 @@ Examples:
       f_has_email: parsed.f_has_email || "",
       f_has_phone: parsed.f_has_phone || "",
       page: 1,
-      limit: 10,
+      limit: 20,
     });
 
     logger.info(`[ChatbotSearch] Search mode: ${mode} | Found: ${records.length} records`);
 
-    if (!records.length) return null;
+    // Always return a result object — never return null for data queries.
+    // Returning null causes the LLM to hallucinate fake data.
+    if (!records.length) {
+      return {
+        leads: [],
+        contextBlock: `## 🗄️ Database Search Results\n> No records found for: "${parsed.search || queryText}" in ${parsed.f_city || "all locations"}`,
+        entityType: parsed.entityType || "companies",
+        total: 0,
+        mode,
+      };
+    }
 
     const isComp = parsed.entityType === "companies";
     let rows;
@@ -302,6 +312,12 @@ The user searched for: "${searchTerm}" (${searchMode} search across ${entityLabe
 
 The search results are already displayed as cards in the UI. Do NOT list or repeat the records.
 
+⚠️ CRITICAL RULES — YOU MUST FOLLOW THESE:
+1. NEVER invent, fabricate, or guess ANY business names, addresses, phone numbers, emails, or contact details.
+2. ONLY reference data that was actually returned from the Neon database search above.
+3. The real data is shown in the UI cards — DO NOT make up additional records.
+4. If results are empty, say "No records found" — do NOT fill in with made-up data.
+
 INSTRUCTIONS:
 - Briefly confirm the results found and what was searched.
 - Offer to refine: filter by city, state, industry, email/phone availability.
@@ -310,8 +326,31 @@ INSTRUCTIONS:
 - Be friendly and professional.`;
   }
 
+  // No DB results case — when DB returned empty or errored
+  if (dbResult && dbResult.leads !== undefined) {
+    // dbResult exists but leads is empty — DB was searched but no results found
+    return `You are Ask Doott, the AI assistant for "${orgName}".
+Current date and time: ${nowString}
+
+⚠️ CRITICAL RULES — YOU MUST FOLLOW THESE:
+1. NEVER invent, fabricate, or guess ANY business names, addresses, phone numbers, emails, or contact details.
+2. The database search returned NO records for this query.
+3. Do NOT make up data. Do NOT use your training knowledge to provide fake business listings.
+4. Tell the user honestly that no records were found and suggest they try different search terms.
+
+You searched the Neon database (1.78M companies, 43.9M people) but found no matching records.
+Tell the user politely, suggest refining their search (different city, broader terms, etc.).`;
+  }
+
   return `You are Ask Doott, a powerful AI-powered B2B lead intelligence assistant for "${orgName}".
 Current date and time: ${nowString}
+
+⚠️ CRITICAL RULES — YOU MUST ALWAYS FOLLOW:
+1. NEVER invent, fabricate, or guess ANY business names, addresses, phone numbers, emails, or any contact details.
+2. NEVER use your training data to generate business listings, company records, or people records.
+3. ALL lead data MUST come from the live Neon PostgreSQL database search results ONLY.
+4. If the database returns no results, say so clearly — do NOT fill in with made-up records.
+5. You are a search interface, not a knowledge base — only report what the database returns.
 
 You have access to a live Neon PostgreSQL database with:
 - 🏢 1,781,218 verified companies (India + global)
@@ -387,6 +426,11 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
     // ── 6. DB search ──
     if (isDataSearch) {
       dbResult = await searchFinalDatabase(userMessage);
+      // If searchFinalDatabase threw an error and returned null,
+      // set an empty result so the LLM uses the no-hallucination prompt
+      if (!dbResult) {
+        dbResult = { leads: [], contextBlock: "Database search encountered an error.", entityType: "companies", total: 0, mode: "error" };
+      }
       if (dbResult) {
         logger.info(`[Chat] ${dbResult.mode || "hybrid"} search: found ${dbResult.leads.length} leads (total in DB: ${dbResult.total?.toLocaleString()})`);
         sendEvent({
