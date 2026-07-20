@@ -284,23 +284,6 @@ const { StockGroup, StockItem, StockMovement, Order } = require("./models/invent
 // Payroll models
 const { Employee, SalaryStructure, Payslip, Attendance } = require("./models/payroll");
 
-// ─── LocationIQ — Hyperlocal Demand Scoring ─────────────────────────────────
-const locationIQQuerySchema = new mongoose.Schema({
-  pin_code:          String,
-  address:           String,
-  formatted_address: String,
-  business_category: { type: String, required: true },
-  lat:               Number,
-  lng:               Number,
-  result:            mongoose.Schema.Types.Mixed,  // Full AI scoring result JSON
-  overall_score:     Number,
-  final_recommendation: String,
-  orgId:             { type: mongoose.Schema.Types.ObjectId, ref: "Organization", index: true },
-}, { timestamps: true });
-locationIQQuerySchema.index({ orgId: 1, createdAt: -1 });
-locationIQQuerySchema.index({ pin_code: 1, business_category: 1 });
-const LocationIQQuery = mongoose.models.LocationIQQuery || mongoose.model("LocationIQQuery", locationIQQuerySchema);
-
 // ─── Auto Scraper ────────────────────────────────────────────────────────────
 const autoScraperSessionSchema = new mongoose.Schema({
   sessionId:   { type: String, required: true, unique: true, index: true },
@@ -423,7 +406,6 @@ const GeneratedLead = mongoose.models.GeneratedLead || mongoose.model("Generated
 
 
 module.exports = {
-  LocationIQQuery,
   connectDB,
   Company,
   Contact,

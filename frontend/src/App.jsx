@@ -63,8 +63,6 @@ import InventoryPage      from "./pages/inventory/InventoryPage";
 import PayrollPage        from "./pages/payroll/PayrollPage";
 import AdminAnalyticsPage from "./pages/AdminAnalyticsPage";
 import PageTracker        from "./components/PageTracker";
-import LocationIQPage     from "./pages/LocationIQPage";
-import LocationAnalysisPage from "./pages/LocationAnalysisPage";
 
 import { ThemeProvider } from "./context/ThemeContext";
 
@@ -149,9 +147,6 @@ export default function App() {
             <Route path="payroll"           element={<PayrollPage />} />
             {/* Admin */}
             <Route path="admin"             element={<AdminAnalyticsPage />} />
-            {/* LocationIQ */}
-            <Route path="locationiq"        element={<LocationIQPage />} />
-            <Route path="location-analysis" element={<LocationAnalysisPage />} />
 
           </Route>
 

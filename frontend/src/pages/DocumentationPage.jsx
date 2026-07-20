@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen, ChevronDown, ChevronRight, ArrowRight, Info,
-  Users2, Bot, Map, MapPin, Filter, Layers,
+  Users2, Bot, Filter, Layers,
 } from "lucide-react";
 
 const sections = [
@@ -17,10 +17,8 @@ const sections = [
 1. **Companies & People** — Browse and search millions of live records. Filter by any column, export to CSV instantly.
 2. **Emails** — Auto-filtered view of People with confirmed email addresses.
 3. **Numbers** — Auto-filtered view of People with confirmed phone numbers.
-4. **Location IQ** — Visualise where your prospects are on an interactive heatmap.
-5. **Location Analysis** — Deep geographic clustering and density analysis on a live map.
-6. **Categories** — Explore job roles (People) and industries (Companies) as browsable tag clouds.
-7. **Ask Doott** — AI assistant trained on your own uploaded documents. Ask it anything about your data.`,
+4. **Categories** — Explore job roles (People) and industries (Companies) as browsable tag clouds.
+5. **Ask Doott** — AI assistant trained on your own uploaded documents. Ask it anything about your data.`,
   },
   {
     id: "people-companies",
@@ -44,45 +42,6 @@ name, industry, website, location, employee_count, revenue_range, tech_stack, em
 
 **Emails & Numbers tabs:**
 The Emails tab auto-filters People to only records with a confirmed email address. The Numbers tab filters to records with a confirmed phone number. No manual filtering needed — just switch tabs.`,
-  },
-  {
-    id: "location-iq",
-    icon: Map,
-    title: "Location IQ",
-    color: "from-emerald-500 to-teal-500",
-    content: `Location IQ overlays your People and Companies data on an interactive heatmap, letting you see exactly where your prospects are concentrated geographically.
-
-**How it works:**
-1. Select the data layer — People, Companies, or Both
-2. The map renders a live density heatmap using lat/long coordinates from the database
-3. Zoom and pan to explore regional clusters
-4. Click any point or cluster to see the underlying records
-5. Use radius filters to count records within 1 km or 5 km of any dropped pin
-
-**Use cases:**
-- Identify cities with the highest concentration of your target job titles
-- Find industry clusters for field sales territory planning
-- Validate that a geographic market is large enough before entering it`,
-  },
-  {
-    id: "location-analysis",
-    icon: MapPin,
-    title: "Location Analysis",
-    color: "from-sky-500 to-blue-500",
-    content: `Location Analysis provides deeper geographic intelligence than the heatmap. It aggregates records by region and surfaces density rankings, job-title distributions, and industry concentrations for any area you choose.
-
-**How it works:**
-1. Search for a location or drop a pin on the map
-2. Set a radius in km
-3. The page queries the live database for all People and Companies within that radius
-4. Results are grouped by job title (People) or industry (Companies) with counts and bar charts
-5. Use the toggle at the top to switch between People and Companies layers
-
-**Metrics shown:**
-- Total record count within the selected radius
-- Top job titles / industries by volume
-- Density score (records per km²)
-- Visual breakdown bar charts per category`,
   },
   {
     id: "categories",

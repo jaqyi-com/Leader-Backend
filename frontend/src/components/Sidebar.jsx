@@ -9,7 +9,7 @@ import {
   Users2, Building2, BookOpen,
   ShieldCheck,
   ChevronDown, LogOut, Sun, Moon,
-  Mail, Phone, MapPin, Globe, Grid3x3,
+  Mail, Phone, Grid3x3,
 } from "lucide-react";
 
 const LEAD_GEN_LINKS = [
@@ -17,8 +17,6 @@ const LEAD_GEN_LINKS = [
   { to: "/app/people",            label: "People",            icon: Users2,    sub: false },
   { to: "/app/email",             label: "Emails",            icon: Mail,      sub: false },
   { to: "/app/number",            label: "Numbers",           icon: Phone,     sub: false },
-  { to: "/app/locationiq",        label: "Location IQ",       icon: MapPin,    sub: false },
-  { to: "/app/location-analysis", label: "Location Analysis", icon: Globe,     sub: false },
   { to: "/app/categories",        label: "Categories",        icon: Grid3x3,   sub: false },
 ];
 
