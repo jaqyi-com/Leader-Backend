@@ -114,16 +114,16 @@ async function performHybridSearch({
     structParams.push(`${f_state}%`);
   }
   if (isCompanies) {
-    if (f_has_email === "true")        structConditions.push(`(emails IS NOT NULL AND emails <> '')`);
-    else if (f_has_email === "false")  structConditions.push(`(emails IS NULL OR emails = '')`);
+    if (f_has_email === "true")        structConditions.push(`(emails IS NOT NULL AND emails <> '' AND emails <> '{}')`);
+    else if (f_has_email === "false")  structConditions.push(`(emails IS NULL OR emails = '' OR emails = '{}')`);
     if (f_has_phone === "true")        structConditions.push(`(phone IS NOT NULL AND phone <> '')`);
     else if (f_has_phone === "false")  structConditions.push(`(phone IS NULL OR phone = '')`);
   } else {
-    // People: emails and phones are stored as TEXT[] arrays
-    if (f_has_email === "true")        structConditions.push(`(emails IS NOT NULL AND array_length(emails, 1) > 0)`);
-    else if (f_has_email === "false")  structConditions.push(`(emails IS NULL OR array_length(emails, 1) IS NULL)`);
-    if (f_has_phone === "true")        structConditions.push(`(phones IS NOT NULL AND array_length(phones, 1) > 0)`);
-    else if (f_has_phone === "false")  structConditions.push(`(phones IS NULL OR array_length(phones, 1) IS NULL)`);
+    // People: emails and phones are text columns storing PostgreSQL array literals e.g. {a@b.com,c@d.com}
+    if (f_has_email === "true")        structConditions.push(`(emails IS NOT NULL AND emails <> '' AND emails <> '{}')`);
+    else if (f_has_email === "false")  structConditions.push(`(emails IS NULL OR emails = '' OR emails = '{}')`);
+    if (f_has_phone === "true")        structConditions.push(`(phones IS NOT NULL AND phones <> '' AND phones <> '{}')`);
+    else if (f_has_phone === "false")  structConditions.push(`(phones IS NULL OR phones = '' OR phones = '{}')`);
   }
 
   // ── 3. Always add keyword ILIKE search for the core search term ──
@@ -131,11 +131,13 @@ async function performHybridSearch({
   if (search && search.trim()) {
     const kw = `%${search.trim()}%`;
     if (isCompanies) {
-      structConditions.push(`(business_name ILIKE $${idx} OR industry::text ILIKE $${idx})`);
+      structConditions.push(`(business_name ILIKE $${idx} OR industry ILIKE $${idx})`);
       structParams.push(kw);
       idx++;
     } else {
-      structConditions.push(`(job_title ILIKE $${idx} OR full_name ILIKE $${idx})`);
+      // For people: search job_title primarily. Also search full_name but only as secondary.
+      // Using OR with the same param index for both columns.
+      structConditions.push(`(job_title ILIKE $${idx} OR location ILIKE $${idx})`);
       structParams.push(kw);
       idx++;
     }
@@ -148,7 +150,7 @@ async function performHybridSearch({
       structConditions.push("phone IS NOT NULL AND phone <> ''");
     } else {
       structConditions.push("full_name IS NOT NULL AND full_name <> ''");
-      structConditions.push("(emails IS NOT NULL AND array_length(emails, 1) > 0)");
+      structConditions.push("job_title IS NOT NULL AND job_title <> ''");
     }
   }
 
@@ -250,7 +252,7 @@ async function runStructuredSearch({ tableName, structConditions, structParams, 
     SELECT *
     FROM ${tableName}
     ${whereStr}
-    ORDER BY created_at DESC
+    ORDER BY uuid
     LIMIT $${idx++} OFFSET $${idx++}
   `;
 
