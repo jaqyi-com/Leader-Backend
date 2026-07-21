@@ -520,9 +520,11 @@ function TokenBar({ count, max = MAX_CONTEXT }) {
   );
 }
 
-function MessageBubble({ msg, isStreaming }) {
+function MessageBubble({ msg, isStreaming, onEdit }) {
   const isUser = msg.role === "user";
   const hasDbResults = !isUser && msg.dbResults && msg.dbResults.leads && msg.dbResults.leads.length > 0;
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(msg.content || "");
 
   return (
     <motion.div
@@ -568,29 +570,77 @@ function MessageBubble({ msg, isStreaming }) {
             <DBResultsPanel dbResults={msg.dbResults} />
           )}
 
-          {/* Bubble — show only if there is text content OR still streaming */}
-          {(isStreaming || msg.content) && (
-            <div style={{
-              background: isUser
-                ? "linear-gradient(135deg,var(--accent) 0%,#f4576a 100%)"
-                : "var(--overlay-2)",
-              border: isUser ? "none" : "1px solid var(--border)",
-              borderRadius: isUser ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
-              padding: "12px 16px",
-              color: isUser ? "white" : "var(--text)",
-              fontSize: 14,
-              lineHeight: 1.65,
-              backdropFilter: "blur(8px)",
-              marginTop: hasDbResults ? 8 : 0,
-            }}>
-              {isStreaming && !msg.content ? (
-                <TypingDots />
-              ) : (
-                <div style={{ margin: 0 }} className="markdown-content">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content || ""}</ReactMarkdown>
-                </div>
-              )}
+          {/* Bubble or Edit mode */}
+          {isEditing ? (
+            <div style={{ marginTop: 4, width: "100%" }}>
+              <textarea
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                style={{
+                  width: "100%",
+                  background: "var(--overlay-1)",
+                  border: "1px solid var(--accent)",
+                  borderRadius: 12,
+                  padding: "10px 14px",
+                  color: "var(--text)",
+                  fontSize: 14,
+                  lineHeight: 1.5,
+                  fontFamily: "inherit",
+                  outline: "none",
+                  resize: "vertical",
+                  minHeight: 60,
+                }}
+              />
+              <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 6 }}>
+                <button
+                  onClick={() => setIsEditing(false)}
+                  style={{
+                    background: "none", border: "1px solid var(--border)",
+                    borderRadius: 6, padding: "4px 10px", color: "var(--text-3)",
+                    fontSize: 12, cursor: "pointer",
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditing(false);
+                    if (editText.trim() && onEdit) onEdit(editText.trim());
+                  }}
+                  style={{
+                    background: "linear-gradient(135deg,var(--accent),#f4576a)",
+                    border: "none", borderRadius: 6, padding: "4px 12px",
+                    color: "white", fontSize: 12, fontWeight: 600, cursor: "pointer",
+                  }}
+                >
+                  Save & Submit
+                </button>
+              </div>
             </div>
+          ) : (
+            (isStreaming || msg.content) && (
+              <div style={{
+                background: isUser
+                  ? "linear-gradient(135deg,var(--accent) 0%,#f4576a 100%)"
+                  : "var(--overlay-2)",
+                border: isUser ? "none" : "1px solid var(--border)",
+                borderRadius: isUser ? "18px 18px 4px 18px" : "18px 18px 18px 4px",
+                padding: "12px 16px",
+                color: isUser ? "white" : "var(--text)",
+                fontSize: 14,
+                lineHeight: 1.65,
+                backdropFilter: "blur(8px)",
+                marginTop: hasDbResults ? 8 : 0,
+              }}>
+                {isStreaming && !msg.content ? (
+                  <TypingDots />
+                ) : (
+                  <div style={{ margin: 0 }} className="markdown-content">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content || ""}</ReactMarkdown>
+                  </div>
+                )}
+              </div>
+            )
           )}
 
           {/* Source citations + In-Build DB badge + copy button (assistant messages) */}
@@ -604,9 +654,22 @@ function MessageBubble({ msg, isStreaming }) {
             </div>
           )}
 
-          {/* Copy button for user messages */}
-          {isUser && msg.content && (
-            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 3 }}>
+          {/* Action buttons for user messages: Edit + Copy */}
+          {isUser && msg.content && !isEditing && (
+            <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 4, marginTop: 3 }}>
+              <button
+                onClick={() => { setEditText(msg.content); setIsEditing(true); }}
+                title="Edit prompt"
+                style={{
+                  background: "none", border: "none", cursor: "pointer",
+                  color: "var(--text-3)", padding: "2px 4px", borderRadius: 4,
+                  transition: "color 0.2s", display: "flex", alignItems: "center", gap: 3,
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.color = "var(--text)"}
+                onMouseLeave={(e) => e.currentTarget.style.color = "var(--text-3)"}
+              >
+                <Pencil size={12} />
+              </button>
               <CopyButton text={msg.content} />
             </div>
           )}
@@ -1264,6 +1327,10 @@ export default function ChatbotPage() {
                     key={msg._id}
                     msg={msg}
                     isStreaming={msg._id === "streaming" && isStreaming}
+                    onEdit={(newText) => {
+                      if (activeConvId === null) setActiveConvId("new");
+                      handleSend(newText);
+                    }}
                   />
                 )
               ))}
