@@ -17,6 +17,9 @@ async function connectDB() {
       serverSelectionTimeoutMS: 30000,
       connectTimeoutMS:         30000,
       socketTimeoutMS:          60000,  // allow long-running chatbot streams
+      bufferTimeoutMS:          60000,  // wait up to 60s for connection on cold starts (Vercel)
+      maxPoolSize:              10,     // serverless-safe connection pool
+      minPoolSize:              1,
     });
     logger.info("✅ Connected to MongoDB Atlas");
   } catch (error) {

@@ -173,6 +173,30 @@ app.use("/api/gmail", require("./routes/gmailAuth"));
 // ------------------------------------------------------------
 // CHATBOT / RAG ROUTES (protected — auth enforced in router)
 // ------------------------------------------------------------
+// Middleware: ensure MongoDB is connected before chatbot routes run.
+// On Vercel / cold starts, the Atlas connection may not be ready yet.
+// This guard attempts a reconnect and waits up to 15s before failing.
+app.use("/api/chatbot", async (req, res, next) => {
+  const mongoose = require("mongoose");
+  if (mongoose.connection.readyState === 1) return next(); // already connected
+
+  logger.warn("[Chatbot] MongoDB not ready — attempting reconnect before request...");
+  try {
+    await connectDB();
+    // Wait up to 15s for connection to become ready
+    const deadline = Date.now() + 15000;
+    while (mongoose.connection.readyState !== 1 && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 200));
+    }
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({ error: "Database temporarily unavailable. Please try again in a moment." });
+    }
+    next();
+  } catch (err) {
+    logger.error(`[Chatbot] MongoDB reconnect failed: ${err.message}`);
+    return res.status(503).json({ error: "Database temporarily unavailable. Please try again in a moment." });
+  }
+});
 app.use("/api/chatbot", chatbotRouter);
 
 // ------------------------------------------------------------
