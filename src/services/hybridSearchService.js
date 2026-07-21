@@ -105,11 +105,18 @@ async function performHybridSearch({
   const structParams     = [];
   let idx = 1;
 
-  if (f_city) {
+  // Country-level terms that don't match any state/city column values — skip them
+  const SKIP_LOCATION = new Set([
+    'usa','us','united states','united states of america',
+    'india','in','global','worldwide','world','international',
+    'uk','united kingdom','canada','ca','australia','au',
+  ]);
+
+  if (f_city && !SKIP_LOCATION.has(f_city.toLowerCase())) {
     structConditions.push(`city ILIKE $${idx++}`);
     structParams.push(`${f_city}%`);
   }
-  if (f_state) {
+  if (f_state && !SKIP_LOCATION.has(f_state.toLowerCase())) {
     structConditions.push(`state ILIKE $${idx++}`);
     structParams.push(`${f_state}%`);
   }
