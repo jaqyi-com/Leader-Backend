@@ -1149,10 +1149,6 @@ export default function ChatbotPage() {
             </div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14, color: "var(--text)" }}>Doott AI Assistant</div>
-              <div style={{ fontSize: 11, color: "var(--accent)", display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-                RAG · Streaming · Moderated
-              </div>
             </div>
           </div>
 
@@ -1328,7 +1324,7 @@ export default function ChatbotPage() {
                 value={input}
                 onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
-                placeholder={selectedFeature ? `Describe your ${selectedFeature.name} request…` : "Ask anything, or type @ to invoke a feature…"}
+                placeholder={selectedFeature ? `Describe your ${selectedFeature.name} request…` : "Ask anything..."}
                 rows={1}
                 disabled={isStreaming}
                 style={{
@@ -1338,9 +1334,6 @@ export default function ChatbotPage() {
                 }}
               />
               <div style={{ display: "flex", gap: 6, flexShrink: 0, alignItems: "center" }}>
-                {/* ⚡ Feature Dropdown */}
-                <FeatureDropdown onSelect={(f) => { setSelectedFeature(f); inputRef.current?.focus(); }} />
-
                 {/* Send button */}
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -1364,10 +1357,6 @@ export default function ChatbotPage() {
               </div>
             </div>
           </div>
-
-          <p style={{ margin: "8px 0 0", fontSize: 11, color: "var(--text-3)", textAlign: "center" }}>
-            Type <code style={{ background: "var(--overlay-2)", padding: "0 4px", borderRadius: 3 }}>@feature</code> to invoke · Click <b>⚡ Features</b> to browse · Or just describe what you need
-          </p>
         </div>
       </div>
 
