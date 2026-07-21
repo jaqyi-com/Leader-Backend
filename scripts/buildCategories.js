@@ -5,13 +5,15 @@ const { Pool } = require("pg");
 const fs = require("fs");
 const path = require("path");
 
+// ── Neon PostgreSQL (active DB — final.people + final.companies) ──
+if (!process.env.NEON_DATABASE_URL) {
+  console.error("❌ NEON_DATABASE_URL is not set. Check your .env file.");
+  process.exit(1);
+}
+
 const pool = new Pool({
-  host:     process.env.CLOUD_SQL_HOST     || "34.9.35.25",
-  port:     parseInt(process.env.CLOUD_SQL_PORT || "5432", 10),
-  database: process.env.CLOUD_SQL_DB       || "doott_new",
-  user:     process.env.CLOUD_SQL_USER     || "postgres",
-  password: process.env.CLOUD_SQL_PASSWORD,
-  ssl:      { rejectUnauthorized: false },
+  connectionString: process.env.NEON_DATABASE_URL,
+  ssl:              { rejectUnauthorized: false },
   connectionTimeoutMillis: 15000,
 });
 
@@ -51,7 +53,7 @@ async function main() {
 
   try {
     // ── PEOPLE: full GROUP BY on all 43M rows ──────────────
-    console.log("⏳ Querying people job_titles (ALL 43M rows, no timeout)…");
+    console.log("⏳ Querying people job_titles (ALL 43M rows — full distinct scan, no timeout)…");
     console.time("people");
     const peopleRows = await runQuery(client, `
       SELECT job_title, count(*) AS count
@@ -59,7 +61,6 @@ async function main() {
       WHERE job_title IS NOT NULL AND job_title != ''
       GROUP BY job_title
       ORDER BY count DESC
-      LIMIT 2000
     `);
     console.timeEnd("people");
     console.log(`   Found ${peopleRows.length} distinct job titles`);
@@ -73,11 +74,11 @@ async function main() {
     }
     const peopleCats = Object.entries(pFreq)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 100)
+      .slice(0, 200)
       .map(([name, count]) => ({ name, count }));
 
     // ── COMPANIES: full GROUP BY on all 1.78M rows ─────────
-    console.log("⏳ Querying company industries (ALL 1.78M rows, no timeout)…");
+    console.log("⏳ Querying company industries (ALL 1.78M rows — full distinct scan, no timeout)…");
     console.time("companies");
     const companyRows = await runQuery(client, `
       SELECT industry, count(*) AS count
@@ -85,7 +86,6 @@ async function main() {
       WHERE industry IS NOT NULL AND industry != ''
       GROUP BY industry
       ORDER BY count DESC
-      LIMIT 2000
     `);
     console.timeEnd("companies");
     console.log(`   Found ${companyRows.length} distinct industries`);
@@ -99,7 +99,7 @@ async function main() {
     }
     const companyCats = Object.entries(cFreq)
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 100)
+      .slice(0, 200)
       .map(([name, count]) => ({ name, count }));
 
     // ── Write output ────────────────────────────────────────
