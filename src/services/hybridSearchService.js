@@ -133,20 +133,29 @@ async function performHybridSearch({
     else if (f_has_phone === "false")  structConditions.push(`(phones IS NULL OR phones = '' OR phones = '{}')`);
   }
 
-  // ── 3. Always add keyword ILIKE search for the core search term ──
-  // This ensures results come back even when struct filters narrow the set.
+  // ── 3. Always add keyword search for the core search term ──────
+  // Companies: ILIKE on business_name + industry
+  // People: word-boundary regex for short titles (CTO/CEO/CFO) to avoid
+  //         matching "Dire-cto-r", "Do-cto-r" etc. as false positives.
   if (search && search.trim()) {
-    const kw = `%${search.trim()}%`;
+    const term = search.trim();
     if (isCompanies) {
       structConditions.push(`(business_name ILIKE $${idx} OR industry ILIKE $${idx})`);
-      structParams.push(kw);
+      structParams.push(`%${term}%`);
       idx++;
     } else {
-      // For people: search job_title primarily. Also search full_name but only as secondary.
-      // Using OR with the same param index for both columns.
-      structConditions.push(`(job_title ILIKE $${idx} OR location ILIKE $${idx})`);
-      structParams.push(kw);
-      idx++;
+      // For short role codes (≤5 chars: CTO, CEO, CFO, COO, CMO, CIO…)
+      // use PostgreSQL word-boundary regex so "cto" doesn't match "director"
+      if (term.length <= 5) {
+        structConditions.push(`(job_title ~* $${idx})`);
+        structParams.push(`\\y${term}\\y`);
+        idx++;
+      } else {
+        // Longer terms: ILIKE is fine ("software engineer", "product manager")
+        structConditions.push(`(job_title ILIKE $${idx} OR full_name ILIKE $${idx})`);
+        structParams.push(`%${term}%`);
+        idx++;
+      }
     }
   }
 
