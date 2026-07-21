@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   MessageSquare, Plus, Trash2, Send, Database, ChevronDown,
   ChevronRight, Bot, User, Sparkles, BookOpen, X, Loader2,
-  Copy, Check, Cpu, Shield, ExternalLink, MoreHorizontal, Pencil, Pin
+  Copy, Check, Cpu, Shield, ExternalLink, MoreHorizontal, Pencil, Pin,
+  Table2, Download, LayoutList
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -192,10 +193,48 @@ function InBuildDBBadge({ dbResults }) {
   );
 }
 
-/** Full panel showing actual In-Build DB records as cards */
+/** Helpers */
+function leadsToCSV(leads, isCompanies) {
+  if (!leads || leads.length === 0) return "";
+  const headers = isCompanies
+    ? ["#","Name","Industry","City","State","Phone","Email","Website"]
+    : ["#","Name","Job Title","City","State","Phone","Email","LinkedIn"];
+  const esc = (v) => `"${String(v || "").replace(/"/g, '""')}"`;
+  const rows = leads.map((r, i) => isCompanies
+    ? [i+1, r.name, r.category, r.city, r.state, r.phone, r.email, r.website].map(esc).join(",")
+    : [i+1, r.name, r.category, r.city, r.state, r.phone, r.email, r.website].map(esc).join(",")
+  );
+  return [headers.join(","), ...rows].join("\n");
+}
+
+function downloadCSV(csv, filename) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** Full panel showing actual In-Build DB records as cards OR table */
 function DBResultsPanel({ dbResults }) {
+  const [viewMode, setViewMode] = useState("cards"); // "cards" | "table"
+  const [copied, setCopied] = useState(false);
   if (!dbResults) return null;
-  const { count, total, query, leads = [] } = dbResults;
+  const { count, total, query, leads = [], mode } = dbResults;
+  // Detect entity type from first lead
+  const isCompanies = leads.length === 0 || leads[0].category !== undefined && leads[0].name !== undefined
+    ? !leads[0]?.website?.includes("linkedin") // heuristic
+    : true;
+
+  const csvData = leadsToCSV(leads, isCompanies);
+  const filename = `doott_leads_${(query || "export").slice(0,30).replace(/\s+/g,"_")}_${Date.now()}.csv`;
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(csvData);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -203,11 +242,7 @@ function DBResultsPanel({ dbResults }) {
       style={{ marginTop: 12, marginBottom: 4, width: "100%" }}
     >
       {/* Header bar */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 8,
-        marginBottom: 10,
-      }}>
-        {/* Pulsing dot */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
         <motion.div
           animate={{ scale: [1, 1.4, 1], opacity: [1, 0.5, 1] }}
           transition={{ duration: 1.5, repeat: Infinity }}
@@ -223,102 +258,236 @@ function DBResultsPanel({ dbResults }) {
             · "{query.slice(0, 40)}{query.length > 40 ? "…" : ""}"
           </span>
         )}
-        <a href="/app/inbuild-db" style={{
-          marginLeft: "auto", display: "flex", alignItems: "center", gap: 4,
-          fontSize: 11, color: "#22c55e", textDecoration: "none", fontWeight: 600,
-          opacity: 0.8,
-        }}>
-          View all <ExternalLink size={10} />
-        </a>
-      </div>
 
-      {/* Cards */}
-      {leads.length > 0 ? (
-        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {leads.map((lead, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04 }}
+        {/* Right-side action bar */}
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 6 }}>
+          {/* View toggle */}
+          <div style={{
+            display: "flex", background: "var(--overlay-1)",
+            border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden",
+          }}>
+            <button
+              onClick={() => setViewMode("cards")}
+              title="Card view"
               style={{
-                background: "var(--overlay-1)",
-                border: "1px solid var(--border)",
-                borderLeft: "3px solid rgba(34,197,94,0.6)",
-                borderRadius: 10,
-                padding: "10px 14px",
+                display: "flex", alignItems: "center", gap: 4,
+                padding: "4px 10px", border: "none", cursor: "pointer",
+                fontSize: 11, fontWeight: 600,
+                background: viewMode === "cards" ? "rgba(34,197,94,0.2)" : "transparent",
+                color: viewMode === "cards" ? "#22c55e" : "var(--text-3)",
+                transition: "all 0.15s",
               }}
             >
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {/* Name + category */}
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
-                      {lead.name || "—"}
-                    </span>
-                    {lead.category && (
+              <LayoutList size={11} /> Cards
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              title="Table view"
+              style={{
+                display: "flex", alignItems: "center", gap: 4,
+                padding: "4px 10px", border: "none", cursor: "pointer",
+                fontSize: 11, fontWeight: 600,
+                background: viewMode === "table" ? "rgba(34,197,94,0.2)" : "transparent",
+                color: viewMode === "table" ? "#22c55e" : "var(--text-3)",
+                transition: "all 0.15s",
+              }}
+            >
+              <Table2 size={11} /> Table
+            </button>
+          </div>
+
+          {/* Copy CSV */}
+          {leads.length > 0 && (
+            <button
+              onClick={handleCopy}
+              title="Copy as CSV"
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "4px 10px", border: "1px solid var(--border)",
+                borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 600,
+                background: copied ? "rgba(34,197,94,0.15)" : "var(--overlay-1)",
+                color: copied ? "#22c55e" : "var(--text-3)",
+                transition: "all 0.15s",
+              }}
+            >
+              {copied ? <Check size={11} /> : <Copy size={11} />}
+              {copied ? "Copied!" : "Copy"}
+            </button>
+          )}
+
+          {/* Download CSV */}
+          {leads.length > 0 && (
+            <button
+              onClick={() => downloadCSV(csvData, filename)}
+              title="Download CSV"
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "4px 10px",
+                border: "1px solid rgba(34,197,94,0.4)",
+                borderRadius: 8, cursor: "pointer", fontSize: 11, fontWeight: 600,
+                background: "rgba(34,197,94,0.12)",
+                color: "#22c55e", transition: "all 0.15s",
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = "rgba(34,197,94,0.22)"}
+              onMouseLeave={(e) => e.currentTarget.style.background = "rgba(34,197,94,0.12)"}
+            >
+              <Download size={11} /> Download CSV
+            </button>
+          )}
+
+          <a href="/app/inbuild-db" style={{
+            display: "flex", alignItems: "center", gap: 4,
+            fontSize: 11, color: "#22c55e", textDecoration: "none", fontWeight: 600, opacity: 0.8,
+          }}>
+            View all <ExternalLink size={10} />
+          </a>
+        </div>
+      </div>
+
+      {/* ── TABLE VIEW ── */}
+      {viewMode === "table" && leads.length > 0 && (
+        <div style={{ overflowX: "auto", borderRadius: 10, border: "1px solid var(--border)" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <thead>
+              <tr style={{ background: "var(--overlay-2)", borderBottom: "1px solid var(--border)" }}>
+                {["#","Name","Category / Title","Location","Phone","Email","Website / LinkedIn"].map(h => (
+                  <th key={h} style={{
+                    padding: "8px 12px", textAlign: "left", fontWeight: 700,
+                    color: "var(--text-2)", whiteSpace: "nowrap", fontSize: 11,
+                  }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {leads.map((lead, i) => (
+                <tr
+                  key={i}
+                  style={{
+                    borderBottom: "1px solid var(--border)",
+                    background: i % 2 === 0 ? "transparent" : "var(--overlay-1)",
+                    transition: "background 0.1s",
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = "rgba(34,197,94,0.06)"}
+                  onMouseLeave={(e) => e.currentTarget.style.background = i % 2 === 0 ? "transparent" : "var(--overlay-1)"}
+                >
+                  <td style={{ padding: "7px 12px", color: "var(--text-3)", fontWeight: 600 }}>{i+1}</td>
+                  <td style={{ padding: "7px 12px", color: "var(--text)", fontWeight: 600, whiteSpace: "nowrap", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {lead.name || "—"}
+                  </td>
+                  <td style={{ padding: "7px 12px" }}>
+                    {lead.category ? (
                       <span style={{
                         fontSize: 10, fontWeight: 600, color: "var(--accent)",
-                        background: "rgba(226,55,68,0.12)", border: "1px solid rgba(226,55,68,0.2)",
-                        borderRadius: 4, padding: "1px 6px",
+                        background: "rgba(226,55,68,0.12)", borderRadius: 4, padding: "2px 7px",
                       }}>{lead.category}</span>
-                    )}
-                    {lead.match && (
-                      <span style={{
-                        fontSize: 10, color: "#22c55e", fontWeight: 600,
-                        background: "rgba(34,197,94,0.1)", borderRadius: 4, padding: "1px 6px",
-                      }}>{lead.match}% match</span>
-                    )}
-                  </div>
+                    ) : "—"}
+                  </td>
+                  <td style={{ padding: "7px 12px", color: "var(--text-2)", whiteSpace: "nowrap" }}>
+                    {[lead.city, lead.state].filter(Boolean).join(", ") || "—"}
+                  </td>
+                  <td style={{ padding: "7px 12px" }}>
+                    {lead.phone ? (
+                      <a href={`tel:${lead.phone}`} style={{ color: "#60a5fa", textDecoration: "none", fontSize: 11, whiteSpace: "nowrap" }}>{lead.phone}</a>
+                    ) : <span style={{ color: "var(--text-3)" }}>—</span>}
+                  </td>
+                  <td style={{ padding: "7px 12px", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {lead.email ? (
+                      <a href={`mailto:${lead.email}`} style={{ color: "#a78bfa", textDecoration: "none", fontSize: 11 }}>{lead.email}</a>
+                    ) : <span style={{ color: "var(--text-3)" }}>—</span>}
+                  </td>
+                  <td style={{ padding: "7px 12px" }}>
+                    {lead.website && lead.website !== "—" ? (
+                      <a
+                        href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
+                        target="_blank" rel="noopener noreferrer"
+                        style={{ color: "#22c55e", textDecoration: "none", fontSize: 11, display: "flex", alignItems: "center", gap: 4 }}
+                      >
+                        Visit <ExternalLink size={9} />
+                      </a>
+                    ) : <span style={{ color: "var(--text-3)" }}>—</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
 
-                  {/* Details row */}
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", marginTop: 5 }}>
-                    {(lead.city || lead.state) && (
-                      <span style={{ fontSize: 11, color: "var(--text-3)", display: "flex", alignItems: "center", gap: 3 }}>
-                        📍 {[lead.city, lead.state].filter(Boolean).join(", ")}
-                      </span>
-                    )}
-                    {lead.phone && (
-                      <a href={`tel:${lead.phone}`} style={{ fontSize: 11, color: "#60a5fa", display: "flex", alignItems: "center", gap: 3, textDecoration: "none" }}>
-                        📞 {lead.phone}
-                      </a>
-                    )}
-                    {lead.email && (
-                      <a href={`mailto:${lead.email}`} style={{ fontSize: 11, color: "#a78bfa", display: "flex", alignItems: "center", gap: 3, textDecoration: "none" }}>
-                        ✉️ {lead.email}
-                      </a>
-                    )}
-                    {lead.address && (
-                      <span style={{ fontSize: 11, color: "var(--text-3)", display: "flex", alignItems: "center", gap: 3 }}>
-                        🏠 {lead.address}
-                      </span>
-                    )}
+      {/* ── CARD VIEW ── */}
+      {viewMode === "cards" && (
+        leads.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {leads.map((lead, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.04 }}
+                style={{
+                  background: "var(--overlay-1)",
+                  border: "1px solid var(--border)",
+                  borderLeft: "3px solid rgba(34,197,94,0.6)",
+                  borderRadius: 10,
+                  padding: "10px 14px",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)" }}>{lead.name || "—"}</span>
+                      {lead.category && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 600, color: "var(--accent)",
+                          background: "rgba(226,55,68,0.12)", border: "1px solid rgba(226,55,68,0.2)",
+                          borderRadius: 4, padding: "1px 6px",
+                        }}>{lead.category}</span>
+                      )}
+                      {lead.match && (
+                        <span style={{
+                          fontSize: 10, color: "#22c55e", fontWeight: 600,
+                          background: "rgba(34,197,94,0.1)", borderRadius: 4, padding: "1px 6px",
+                        }}>{lead.match}% match</span>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 16px", marginTop: 5 }}>
+                      {(lead.city || lead.state) && (
+                        <span style={{ fontSize: 11, color: "var(--text-3)", display: "flex", alignItems: "center", gap: 3 }}>
+                          📍 {[lead.city, lead.state].filter(Boolean).join(", ")}
+                        </span>
+                      )}
+                      {lead.phone && (
+                        <a href={`tel:${lead.phone}`} style={{ fontSize: 11, color: "#60a5fa", display: "flex", alignItems: "center", gap: 3, textDecoration: "none" }}>
+                          📞 {lead.phone}
+                        </a>
+                      )}
+                      {lead.email && (
+                        <a href={`mailto:${lead.email}`} style={{ fontSize: 11, color: "#a78bfa", display: "flex", alignItems: "center", gap: 3, textDecoration: "none" }}>
+                          ✉️ {lead.email}
+                        </a>
+                      )}
+                    </div>
                   </div>
+                  {lead.website && lead.website !== "—" && (
+                    <a
+                      href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
+                      target="_blank" rel="noopener noreferrer"
+                      style={{
+                        flexShrink: 0, fontSize: 11, color: "#22c55e",
+                        background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)",
+                        borderRadius: 6, padding: "3px 8px",
+                        textDecoration: "none", display: "flex", alignItems: "center", gap: 4,
+                      }}
+                    >
+                      Visit <ExternalLink size={9} />
+                    </a>
+                  )}
                 </div>
-
-                {/* Website button */}
-                {lead.website && lead.website !== "—" && (
-                  <a
-                    href={lead.website.startsWith("http") ? lead.website : `https://${lead.website}`}
-                    target="_blank" rel="noopener noreferrer"
-                    style={{
-                      flexShrink: 0, fontSize: 11, color: "#22c55e",
-                      background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)",
-                      borderRadius: 6, padding: "3px 8px",
-                      textDecoration: "none", display: "flex", alignItems: "center", gap: 4,
-                    }}
-                  >
-                    Visit <ExternalLink size={9} />
-                  </a>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      ) : (
-        <div style={{ fontSize: 12, color: "var(--text-3)", padding: "8px 0" }}>
-          Results are displayed below.
-        </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ fontSize: 12, color: "var(--text-3)", padding: "8px 0" }}>Results are displayed below.</div>
+        )
       )}
     </motion.div>
   );
@@ -438,6 +607,13 @@ function MessageBubble({ msg, isStreaming }) {
                 <InBuildDBBadge dbResults={msg.dbResults} />
               </div>
               {msg.content && <CopyButton text={msg.content} />}
+            </div>
+          )}
+
+          {/* Copy button for user messages */}
+          {isUser && msg.content && (
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 3 }}>
+              <CopyButton text={msg.content} />
             </div>
           )}
         </div>
