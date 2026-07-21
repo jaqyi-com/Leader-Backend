@@ -217,7 +217,7 @@ function downloadCSV(csv, filename) {
 
 /** Full panel showing actual In-Build DB records as cards OR table */
 function DBResultsPanel({ dbResults }) {
-  const [viewMode, setViewMode] = useState("cards"); // "cards" | "table"
+  const [viewMode, setViewMode] = useState("table"); // "cards" | "table"
   const [copied, setCopied] = useState(false);
   if (!dbResults) return null;
   const { count, total, query, leads = [], mode } = dbResults;
@@ -335,12 +335,6 @@ function DBResultsPanel({ dbResults }) {
             </button>
           )}
 
-          <a href="/app/inbuild-db" style={{
-            display: "flex", alignItems: "center", gap: 4,
-            fontSize: 11, color: "#22c55e", textDecoration: "none", fontWeight: 600, opacity: 0.8,
-          }}>
-            View all <ExternalLink size={10} />
-          </a>
         </div>
       </div>
 
