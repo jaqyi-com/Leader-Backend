@@ -23,12 +23,12 @@ const STRUCT_QUERY_TIMEOUT_MS  = 30000;  // 30s — structured search (btree)
 const COUNT_QUERY_TIMEOUT_MS   = 8000;   //  8s — count (fails safely → DB_TOTALS)
 
 // ── HNSW index availability ───────────────────────────────────────
-// idx_companies_hnsw  ✅ VALID — vector search enabled for companies
-// idx_people_hnsw     ❌ INVALID (Neon timeout during build) — use structured
-// Flip PEOPLE to true once: SELECT indisvalid FROM pg_index WHERE indexrelid='final.idx_people_hnsw'::regclass;
+// idx_companies_hnsw   ✅ VALID
+// idx_people_hnsw_0…f  ✅ ALL 16 SHARDS VALID (built 2026-07-21, ~4h)
+// Both vector searches are now enabled.
 const HNSW_READY = {
   companies: true,
-  people:    false,   // ❌ idx_people_hnsw still invalid — building via Neon Console
+  people:    true,   // ✅ All 16 shards built and valid
 };
 
 // ── DB total row estimates ────────────────────────────────────────
@@ -119,23 +119,25 @@ async function performHybridSearch({
     if (f_has_phone === "true")        structConditions.push(`(phone IS NOT NULL AND phone <> '')`);
     else if (f_has_phone === "false")  structConditions.push(`(phone IS NULL OR phone = '')`);
   } else {
-    if (f_has_email === "true")        structConditions.push(`(emails IS NOT NULL AND emails <> '')`);
-    else if (f_has_email === "false")  structConditions.push(`(emails IS NULL OR emails = '')`);
-    if (f_has_phone === "true")        structConditions.push(`(phones IS NOT NULL AND phones <> '')`);
-    else if (f_has_phone === "false")  structConditions.push(`(phones IS NULL OR phones = '')`);
+    // People: emails and phones are stored as TEXT[] arrays
+    if (f_has_email === "true")        structConditions.push(`(emails IS NOT NULL AND array_length(emails, 1) > 0)`);
+    else if (f_has_email === "false")  structConditions.push(`(emails IS NULL OR array_length(emails, 1) IS NULL)`);
+    if (f_has_phone === "true")        structConditions.push(`(phones IS NOT NULL AND array_length(phones, 1) > 0)`);
+    else if (f_has_phone === "false")  structConditions.push(`(phones IS NULL OR array_length(phones, 1) IS NULL)`);
   }
 
-  // ── 3. Add text keyword fallback if search term but no filters ─
-  const hasStructFilters = structConditions.length > 0;
-  if (search && search.trim() && !hasStructFilters && !embedding) {
-    // Pure text keyword fallback (no vector, no filters)
+  // ── 3. Always add keyword ILIKE search for the core search term ──
+  // This ensures results come back even when struct filters narrow the set.
+  if (search && search.trim()) {
+    const kw = `%${search.trim()}%`;
     if (isCompanies) {
-      structConditions.push(`business_name ILIKE $${idx++}`);
-      structParams.push(`%${search.trim()}%`);
+      structConditions.push(`(business_name ILIKE $${idx} OR industry::text ILIKE $${idx})`);
+      structParams.push(kw);
+      idx++;
     } else {
-      structConditions.push(`(full_name ILIKE $${idx++} OR job_title ILIKE $${idx++})`);
-      const term = `%${search.trim()}%`;
-      structParams.push(term, term);
+      structConditions.push(`(job_title ILIKE $${idx} OR full_name ILIKE $${idx})`);
+      structParams.push(kw);
+      idx++;
     }
   }
 
@@ -146,21 +148,16 @@ async function performHybridSearch({
       structConditions.push("phone IS NOT NULL AND phone <> ''");
     } else {
       structConditions.push("full_name IS NOT NULL AND full_name <> ''");
-      structConditions.push("(emails IS NOT NULL AND emails <> '')");
+      structConditions.push("(emails IS NOT NULL AND array_length(emails, 1) > 0)");
     }
   }
 
   // ── 5. Choose search strategy ────────────────────────────────
-  // Vector ANN is used when:
-  //   a) HNSW_READY is true for this entity type
-  //   b) An embedding was generated
-  //   c) There are no structured filters (OR it's the companies table which is small enough to filter + vector search)
   const hasStructuredFilters = structConditions.length > 0;
   const entityKey = isCompanies ? "companies" : "people";
-  const canUseVector = embedding && (!hasStructuredFilters || isCompanies) && HNSW_READY[entityKey];
+  const canUseVector = embedding && HNSW_READY[entityKey];
 
   if (canUseVector) {
-    // ── HNSW vector ANN (with optional fast structured filters) ──
     try {
       const result = await runVectorSearch({
         tableName, embedding, structConditions, structParams,
@@ -170,16 +167,6 @@ async function performHybridSearch({
     } catch (err) {
       logger.warn(`[HybridSearch] Vector search failed (${err.message}), falling back to structured`);
       // Fall through to structured search below
-    }
-  } else if (embedding && hasStructuredFilters) {
-    // ── Structured + keyword ILIKE boost ──────────────────────
-    const keywordTerm = `%${search.trim()}%`;
-    if (isCompanies) {
-      structConditions.push(`(business_name ILIKE $${idx++} OR industry::text ILIKE $${idx - 1})`);
-      structParams.push(keywordTerm);
-    } else {
-      structConditions.push(`(full_name ILIKE $${idx++} OR job_title ILIKE $${idx - 1})`);
-      structParams.push(keywordTerm);
     }
   }
 
