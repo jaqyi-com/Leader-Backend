@@ -46,21 +46,21 @@ export default function ProtectedRoute({ children }) {
           <svg
             width="100" height="100"
             viewBox="0 0 100 100"
-            style={{ position: "absolute", top: 0, left: 0, animation: "ring-spin 1.6s linear infinite" }}
+            style={{ position: "absolute", top: 0, left: 0, animation: "ring-spin 0.8s linear infinite" }}
           >
             <circle
               cx="50" cy="50" r="46"
               fill="none"
-              stroke="rgba(226,55,68,0.15)"
-              strokeWidth="3"
+              stroke="rgba(226,55,68,0.25)"
+              strokeWidth="4"
             />
             <circle
               cx="50" cy="50" r="46"
               fill="none"
               stroke="url(#ringGrad)"
-              strokeWidth="3.5"
+              strokeWidth="5"
               strokeLinecap="round"
-              strokeDasharray="72 217"
+              strokeDasharray="110 179"
               strokeDashoffset="0"
             />
             <defs>
@@ -74,7 +74,6 @@ export default function ProtectedRoute({ children }) {
           <div style={{
             width: 80, height: 80, borderRadius: "50%",
             overflow: "hidden",
-            animation: "logo-float 3s ease-in-out infinite",
           }}>
             <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
@@ -97,10 +96,6 @@ export default function ProtectedRoute({ children }) {
           @keyframes ring-spin {
             from { transform: rotate(0deg); }
             to   { transform: rotate(360deg); }
-          }
-          @keyframes logo-float {
-            0%, 100% { transform: translateY(0px); }
-            50%       { transform: translateY(-6px); }
           }
           @keyframes dot-flash {
             0%   { opacity: 0.2; }
