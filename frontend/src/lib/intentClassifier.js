@@ -6,33 +6,6 @@
 
 export const FEATURE_REGISTRY = [
   {
-    id: "auto_scraper",
-    name: "Auto Scraper",
-    description: "Find companies by industry & location automatically",
-    icon: "🔍",
-    emoji: "🔍",
-    route: "/app/auto-scraper",
-    mention: "autoscraper",
-    aliases: ["scraper", "autoscraper"],
-    category: "Lead Gen",
-    keywords: [
-      "scrape", "scraping", "find companies", "company data", "business data",
-      "businesses in", "companies in", "find businesses", "discover companies",
-      "automobile companies", "fintech companies", "saas companies",
-      "get company list", "company list", "lead list", "b2b data",
-      "industry data", "local companies", "startup data",
-    ],
-    phrases: [
-      /find\s+\w[\w\s]*\s*(companies|businesses|firms)/i,
-      /\w[\w\s]*\s+companies?\s+in\s+\w+/i,
-      /scrape\s+(companies|businesses|websites|data)/i,
-      /(get|find|fetch)\s+(data|list|leads?)\s+(of|about|on|from)\s+(companies|businesses)/i,
-      /(automobile|automotive|fintech|saas|healthcare|retail|restaurant)\s+(company|companies|business|businesses|data)/i,
-      /i\s+want\s+\w[\w\s]*\s+(company|companies|business)\s+(data|details|info)/i,
-    ],
-    params: ["industryKeywords", "location"],
-  },
-  {
     id: "linkedin",
     name: "LinkedIn Finder",
     description: "Find decision-makers on LinkedIn",
