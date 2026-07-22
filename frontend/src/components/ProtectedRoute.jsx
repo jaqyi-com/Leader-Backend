@@ -1,7 +1,6 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import doottLogo from "../assets/doott-logo.png";
-import SweepLoader from "./SweepLoader";
 
 /**
  * Wraps a route and redirects to /login if the user is not authenticated.
@@ -41,14 +40,45 @@ export default function ProtectedRoute({ children }) {
           filter: "blur(60px)", pointerEvents: "none",
         }} />
 
-        {/* Animated logo — circle */}
-        <div style={{
-            width: 90, height: 90, borderRadius: "50%",
+        {/* Animated logo — circle with spinning ring around it */}
+        <div style={{ position: "relative", width: 100, height: 100, display: "flex", alignItems: "center", justifyContent: "center" }}>
+          {/* Spinning SVG ring */}
+          <svg
+            width="100" height="100"
+            viewBox="0 0 100 100"
+            style={{ position: "absolute", top: 0, left: 0, animation: "ring-spin 1.6s linear infinite" }}
+          >
+            <circle
+              cx="50" cy="50" r="46"
+              fill="none"
+              stroke="rgba(226,55,68,0.15)"
+              strokeWidth="3"
+            />
+            <circle
+              cx="50" cy="50" r="46"
+              fill="none"
+              stroke="url(#ringGrad)"
+              strokeWidth="3.5"
+              strokeLinecap="round"
+              strokeDasharray="72 217"
+              strokeDashoffset="0"
+            />
+            <defs>
+              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#E23744" />
+                <stop offset="100%" stopColor="#ff8a96" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+          </svg>
+          {/* Logo */}
+          <div style={{
+            width: 80, height: 80, borderRadius: "50%",
             overflow: "hidden",
             animation: "logo-float 3s ease-in-out infinite",
           }}>
             <img src={doottLogo} alt="Doott" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
           </div>
+        </div>
 
         {/* Brand name */}
         <div style={{ textAlign: "center" }}>
@@ -63,10 +93,11 @@ export default function ProtectedRoute({ children }) {
           </div>
         </div>
 
-        {/* Progress bar */}
-        <SweepLoader height={3} style={{ width: 200 }} />
-
         <style>{`
+          @keyframes ring-spin {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+          }
           @keyframes logo-float {
             0%, 100% { transform: translateY(0px); }
             50%       { transform: translateY(-6px); }
