@@ -384,8 +384,14 @@ function DBResultsPanel({ dbResults }) {
                       <a href={`tel:${lead.phone}`} style={{ color: "#60a5fa", textDecoration: "none", fontSize: 11, whiteSpace: "nowrap" }}>{lead.phone}</a>
                     ) : <span style={{ color: "var(--text-3)" }}>—</span>}
                   </td>
-                  <td style={{ padding: "7px 12px", maxWidth: 200, overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {lead.email ? (
+                  <td style={{ padding: "7px 12px", maxWidth: 260, wordBreak: "break-all" }}>
+                    {lead.emails && lead.emails.length > 0 ? (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        {lead.emails.map((em, ei) => (
+                          <a key={ei} href={`mailto:${em}`} style={{ color: "#a78bfa", textDecoration: "none", fontSize: 11 }}>{em}</a>
+                        ))}
+                      </div>
+                    ) : lead.email ? (
                       <a href={`mailto:${lead.email}`} style={{ color: "#a78bfa", textDecoration: "none", fontSize: 11 }}>{lead.email}</a>
                     ) : <span style={{ color: "var(--text-3)" }}>—</span>}
                   </td>

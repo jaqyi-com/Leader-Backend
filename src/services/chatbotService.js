@@ -499,6 +499,14 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
       }
       if (dbResult) {
         logger.info(`[Chat] ${dbResult.mode || "hybrid"} search: found ${dbResult.leads.length} leads (total in DB: ${dbResult.total?.toLocaleString()})`);
+
+        // Helper: parse PostgreSQL text array literal "{a,b,c}" → ["a","b","c"]
+        const parsePgArray = (val) => {
+          if (!val || val === '' || val === '{}') return [];
+          if (Array.isArray(val)) return val;
+          return val.replace(/^\{|\}$/g, '').split(',').map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+        };
+
         sendEvent({
           type:   "db_results",
           count:  dbResult.leads.length,
@@ -514,7 +522,8 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
                 state:    r.state          || "",
                 phone:    r.phone          || "",
                 website:  r.website        || "",
-                email:    Array.isArray(r.emails) ? r.emails.join(", ") : (r.emails || ""),
+                email:    parsePgArray(r.emails).join(", "),
+                emails:   parsePgArray(r.emails),
                 match:    r.similarity_score != null ? Math.round(r.similarity_score * 100) : null,
               };
             } else {
@@ -523,9 +532,11 @@ async function streamChat({ orgId, userId, conversationId, userMessage, orgName,
                 category: r.job_title      || "",
                 city:     r.city           || "",
                 state:    r.state          || "",
-                phone:    Array.isArray(r.phones) ? r.phones.join(", ") : (r.phones || ""),
+                phone:    parsePgArray(r.phones).join(", "),
+                phones:   parsePgArray(r.phones),
                 website:  r.linked_url     || "",
-                email:    Array.isArray(r.emails) ? r.emails.join(", ") : (r.emails || ""),
+                email:    parsePgArray(r.emails).join(", "),
+                emails:   parsePgArray(r.emails),
                 match:    r.similarity_score != null ? Math.round(r.similarity_score * 100) : null,
               };
             }
