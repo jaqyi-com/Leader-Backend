@@ -288,26 +288,50 @@ export default function PublicData2Page() {
                       </td>
                     );
 
-                    if (c.key === "email") return (
-                      <td key={c.key} className="px-3 py-2.5">
-                        {val
-                          ? <a href={`mailto:${val}`} className="flex items-center gap-1 text-[11px] text-blue-400 hover:underline max-w-[190px] truncate" title={val}>
-                              <Mail size={9} className="flex-shrink-0" />{val}
-                            </a>
-                          : <span className="text-[var(--text-3)]">—</span>}
-                      </td>
-                    );
+                    if (c.key === "email") {
+                      const parsePgArray = (v) => {
+                        if (!v || v === '{}') return [];
+                        if (Array.isArray(v)) return v.filter(Boolean);
+                        return v.replace(/^\{|\}$/g, '').split(',').map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+                      };
+                      const emails = parsePgArray(val);
+                      return (
+                        <td key={c.key} className="px-3 py-2.5">
+                          {emails.length > 0
+                            ? <div className="flex flex-col gap-0.5">
+                                {emails.map((em, i) => (
+                                  <a key={i} href={`mailto:${em}`} className="flex items-center gap-1 text-[11px] text-blue-400 hover:underline" title={em}>
+                                    <Mail size={9} className="flex-shrink-0" />{em}
+                                  </a>
+                                ))}
+                              </div>
+                            : <span className="text-[var(--text-3)]">—</span>}
+                        </td>
+                      );
+                    }
 
-                    if (c.key === "phone") return (
-                      <td key={c.key} className="px-3 py-2.5">
-                        {val
-                          ? <p className="flex items-center gap-1 text-[var(--text-2)] text-[11px]">
-                              <Phone size={9} className="text-green-400 flex-shrink-0" />
-                              <span className="truncate max-w-[130px]" title={val}>{val}</span>
-                            </p>
-                          : <span className="text-[var(--text-3)]">—</span>}
-                      </td>
-                    );
+                    if (c.key === "phone") {
+                      const parsePgArray = (v) => {
+                        if (!v || v === '{}') return [];
+                        if (Array.isArray(v)) return v.filter(Boolean);
+                        return v.replace(/^\{|\}$/g, '').split(',').map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+                      };
+                      const phones = parsePgArray(val);
+                      return (
+                        <td key={c.key} className="px-3 py-2.5">
+                          {phones.length > 0
+                            ? <div className="flex flex-col gap-0.5">
+                                {phones.map((ph, i) => (
+                                  <p key={i} className="flex items-center gap-1 text-[var(--text-2)] text-[11px]">
+                                    <Phone size={9} className="text-green-400 flex-shrink-0" />
+                                    <span title={ph}>{ph}</span>
+                                  </p>
+                                ))}
+                              </div>
+                            : <span className="text-[var(--text-3)]">—</span>}
+                        </td>
+                      );
+                    }
 
                     if (c.key === "company") return (
                       <td key={c.key} className="px-3 py-2.5">

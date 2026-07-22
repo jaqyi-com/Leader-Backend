@@ -144,20 +144,43 @@ export default function CompaniesPage() {
     if (!val) return <span className="text-[var(--text-3)]">—</span>;
     const key = col.key.toLowerCase();
 
-    if (key.includes("email")) return (
-      <a href={`mailto:${val}`}
-        className="flex items-center gap-1 text-[11px] text-blue-400 hover:underline max-w-[200px] truncate"
-        title={val}>
-        <Mail size={9} className="flex-shrink-0" />{val}
-      </a>
-    );
+    // Parse PostgreSQL text array literal "{a,b,c}" → ["a","b","c"]
+    const parsePgArray = (v) => {
+      if (!v || v === '{}') return [];
+      if (Array.isArray(v)) return v.filter(Boolean);
+      return v.replace(/^\{|\}$/g, '').split(',').map(s => s.trim().replace(/^"|"$/g, '')).filter(Boolean);
+    };
 
-    if (key.includes("phone") || key === "mobile" || key === "contact_number") return (
-      <p className="flex items-center gap-1 text-[var(--text-2)] text-[11px]">
-        <Phone size={9} className="text-green-400 flex-shrink-0" />
-        <span className="truncate max-w-[140px]" title={val}>{val}</span>
-      </p>
-    );
+    if (key.includes("email")) {
+      const emails = parsePgArray(val);
+      if (emails.length === 0) return <span className="text-[var(--text-3)]">—</span>;
+      return (
+        <div className="flex flex-col gap-0.5">
+          {emails.map((em, i) => (
+            <a key={i} href={`mailto:${em}`}
+              className="flex items-center gap-1 text-[11px] text-blue-400 hover:underline"
+              title={em}>
+              <Mail size={9} className="flex-shrink-0" />{em}
+            </a>
+          ))}
+        </div>
+      );
+    }
+
+    if (key.includes("phone") || key === "mobile" || key === "contact_number") {
+      const phones = parsePgArray(val);
+      if (phones.length === 0) return <span className="text-[var(--text-3)]">—</span>;
+      return (
+        <div className="flex flex-col gap-0.5">
+          {phones.map((ph, i) => (
+            <p key={i} className="flex items-center gap-1 text-[var(--text-2)] text-[11px]">
+              <Phone size={9} className="text-green-400 flex-shrink-0" />
+              <span title={ph}>{ph}</span>
+            </p>
+          ))}
+        </div>
+      );
+    }
 
     if (key.includes("website") || key === "url" || key === "web" || key === "domain") return (
       <a href={val.startsWith("http") ? val : `https://${val}`} target="_blank" rel="noreferrer"
