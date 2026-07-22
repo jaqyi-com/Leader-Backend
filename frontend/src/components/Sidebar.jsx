@@ -6,9 +6,19 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronLeft, ChevronRight,
   Settings, MessageSquare,
+  Users2, Building2, BookOpen,
   ShieldCheck,
   ChevronDown, LogOut, Sun, Moon,
+  Mail, Phone, Grid3x3,
 } from "lucide-react";
+
+const LEAD_GEN_LINKS = [
+  { to: "/app/companies",         label: "Companies",         icon: Building2, sub: false },
+  { to: "/app/people",            label: "People",            icon: Users2,    sub: false },
+  { to: "/app/email",             label: "Emails",            icon: Mail,      sub: false },
+  { to: "/app/number",            label: "Numbers",           icon: Phone,     sub: false },
+  { to: "/app/categories",        label: "Categories",        icon: Grid3x3,   sub: false },
+];
 
 
 /* ── Nav item ─────────────────────────────────────────────── */
@@ -345,6 +355,30 @@ export default function Sidebar({ collapsed, onToggle }) {
       </div>
 
 
+
+      <nav className="flex-1 px-2 pt-2 pb-4 flex flex-col gap-0.5 overflow-y-auto no-scrollbar">
+        {LEAD_GEN_LINKS.map(({ to, label, icon, sub }) => (
+          sub ? (
+            <div key={to} className={collapsed ? "" : "pl-3"} style={{ opacity: 0.85 }}>
+              <NavItem to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
+            </div>
+          ) : (
+            <NavItem key={to} to={to} label={label} icon={icon} collapsed={collapsed} end={false} />
+          )
+        ))}
+      </nav>
+
+      {/* ── Footer ────────────────────────────────────────────── */}
+      <div
+        className="px-2 py-3 flex flex-col gap-1"
+        style={{ borderTop: "1px solid var(--border)" }}
+      >
+        <NavItem to="/app/docs" label="How It Works" icon={BookOpen} collapsed={collapsed} end={false} />
+        {isAdmin && (
+          <NavItem to="/app/admin" label="Admin Analytics" icon={ShieldCheck} collapsed={collapsed} end={false} />
+        )}
+        <NavItem to="/app/settings" label="Settings" icon={Settings} collapsed={collapsed} end={false} />
+      </div>
 
       {/* ── Collapse toggle — positioned at vertical center ────── */}
       <button
