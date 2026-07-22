@@ -9,6 +9,70 @@ import { fcGetDatabase, fcGetStats, fcGetColumns, fcRefresh } from "../api";
 import toast from "react-hot-toast";
 import QueryBuilder, { qbFiltersToParams } from "../components/QueryBuilder";
 
+// ── Parse PostgreSQL text array literal "{a,b,c}" → ["a","b","c"] ──
+const parsePgArray = (v) => {
+  if (!v || v === "{}") return [];
+  if (Array.isArray(v)) return v.filter(Boolean);
+  return v.replace(/^\{|\}$/g, "").split(",").map(s => s.trim().replace(/^"|"$/g, "")).filter(Boolean);
+};
+
+// ── Click-to-expand cell: shows first value + "+N" badge → popover on click ──
+function MultiValueCell({ values, hrefFn, Icon, color }) {
+  const [open, setOpen] = useState(false);
+  if (!values || values.length === 0) return <span style={{ color: "var(--text-3)" }}>—</span>;
+  return (
+    <div style={{ position: "relative", display: "inline-flex", alignItems: "center", gap: 4 }}>
+      <a
+        href={hrefFn(values[0])}
+        style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color, textDecoration: "none", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+        title={values[0]}
+        onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
+        onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
+      >
+        <Icon size={9} style={{ flexShrink: 0 }} />
+        {values[0]}
+      </a>
+      {values.length > 1 && (
+        <button
+          onClick={e => { e.stopPropagation(); setOpen(o => !o); }}
+          title={`Show all ${values.length}`}
+          style={{
+            background: "rgba(99,102,241,0.15)", border: "1px solid rgba(99,102,241,0.35)",
+            borderRadius: 4, padding: "1px 6px", fontSize: 10, cursor: "pointer",
+            color: "#818cf8", fontWeight: 700, lineHeight: 1.5, flexShrink: 0,
+          }}
+        >+{values.length - 1}</button>
+      )}
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+          <div style={{
+            position: "absolute", top: "110%", left: 0, zIndex: 50,
+            background: "var(--surface)", border: "1px solid var(--border)",
+            borderRadius: 10, padding: "10px 14px",
+            minWidth: 250, maxWidth: 340,
+            boxShadow: "0 8px 32px rgba(0,0,0,0.5)",
+            display: "flex", flexDirection: "column", gap: 7,
+          }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-3)", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              All {values.length}
+            </div>
+            {values.map((v, i) => (
+              <a key={i} href={hrefFn(v)}
+                style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color, textDecoration: "none", wordBreak: "break-all" }}
+                onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
+                onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
+              >
+                <Icon size={11} style={{ flexShrink: 0 }} />{v}
+              </a>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function CompaniesPage() {
   const [searchParams] = useSearchParams();
   const [records, setRecords] = useState([]);
@@ -153,33 +217,12 @@ export default function CompaniesPage() {
 
     if (key.includes("email")) {
       const emails = parsePgArray(val);
-      if (emails.length === 0) return <span className="text-[var(--text-3)]">—</span>;
-      return (
-        <div className="flex flex-col gap-0.5">
-          {emails.map((em, i) => (
-            <a key={i} href={`mailto:${em}`}
-              className="flex items-center gap-1 text-[11px] text-blue-400 hover:underline"
-              title={em}>
-              <Mail size={9} className="flex-shrink-0" />{em}
-            </a>
-          ))}
-        </div>
-      );
+      return <MultiValueCell values={emails} hrefFn={em => `mailto:${em}`} Icon={Mail} color="#60a5fa" />;
     }
 
     if (key.includes("phone") || key === "mobile" || key === "contact_number") {
       const phones = parsePgArray(val);
-      if (phones.length === 0) return <span className="text-[var(--text-3)]">—</span>;
-      return (
-        <div className="flex flex-col gap-0.5">
-          {phones.map((ph, i) => (
-            <p key={i} className="flex items-center gap-1 text-[var(--text-2)] text-[11px]">
-              <Phone size={9} className="text-green-400 flex-shrink-0" />
-              <span title={ph}>{ph}</span>
-            </p>
-          ))}
-        </div>
-      );
+      return <MultiValueCell values={phones} hrefFn={ph => `tel:${ph}`} Icon={Phone} color="#34d399" />;
     }
 
     if (key.includes("website") || key === "url" || key === "web" || key === "domain") return (
