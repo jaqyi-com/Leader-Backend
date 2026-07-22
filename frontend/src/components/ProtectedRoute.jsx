@@ -46,7 +46,7 @@ export default function ProtectedRoute({ children }) {
           <svg
             width="100" height="100"
             viewBox="0 0 100 100"
-            style={{ position: "absolute", top: 0, left: 0, animation: "ring-spin 0.8s linear infinite" }}
+            style={{ position: "absolute", top: 0, left: 0, animation: "ring-spin 1.5s linear infinite" }}
           >
             <circle
               cx="50" cy="50" r="46"
@@ -87,24 +87,31 @@ export default function ProtectedRoute({ children }) {
           }}>
             Doott
           </div>
-          <div style={{ fontSize: 13, color: "var(--text-3)", fontWeight: 500 }}>
-            Initializing workspace<span className="dot-1">.</span><span className="dot-2">.</span><span className="dot-3">.</span>
+          <div style={{ fontSize: 15, color: "var(--text-2)", fontWeight: 600 }}>
+            Initializing workspace<span className="dot-1" style={{ fontSize: 18, fontWeight: 800 }}>.</span><span className="dot-2" style={{ fontSize: 18, fontWeight: 800 }}>.</span><span className="dot-3" style={{ fontSize: 18, fontWeight: 800 }}>.</span>
           </div>
         </div>
 
         <style>{`
           @keyframes ring-spin {
-            from { transform: rotate(0deg); }
-            to   { transform: rotate(360deg); }
+            0%   { transform: rotate(0deg); }
+            12%  { transform: rotate(80deg); }
+            25%  { transform: rotate(120deg); }
+            37%  { transform: rotate(200deg); }
+            50%  { transform: rotate(240deg); }
+            62%  { transform: rotate(310deg); }
+            75%  { transform: rotate(345deg); }
+            87%  { transform: rotate(355deg); }
+            100% { transform: rotate(360deg); }
           }
           @keyframes dot-flash {
-            0%   { opacity: 0.2; }
+            0%   { opacity: 0.3; }
             20%  { opacity: 1; }
-            100% { opacity: 0.2; }
+            100% { opacity: 0.3; }
           }
-          .dot-1 { animation: dot-flash 1.4s infinite; }
-          .dot-2 { animation: dot-flash 1.4s infinite 0.2s; }
-          .dot-3 { animation: dot-flash 1.4s infinite 0.4s; }
+          .dot-1 { animation: dot-flash 1.2s infinite; }
+          .dot-2 { animation: dot-flash 1.2s infinite 0.2s; }
+          .dot-3 { animation: dot-flash 1.2s infinite 0.4s; }
         `}</style>
       </div>
     );
