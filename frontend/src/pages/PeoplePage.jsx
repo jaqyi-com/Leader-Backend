@@ -93,7 +93,8 @@ export default function PeoplePage() {
     if (initialJob) {
       return [{ col: "job_title", op: "contains", val: initialJob }];
     }
-    return [];
+    // Default: only show people with a full name
+    return [{ col: "full_name", op: "not_empty", val: "" }];
   });
 
   // ── Column discovery ────
