@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, Zap, User, Building2, ArrowRight, AlertCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
