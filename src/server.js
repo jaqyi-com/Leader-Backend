@@ -92,6 +92,7 @@ const ALLOWED_ORIGINS = [
   "http://localhost:5173",
   "http://localhost:3000",
   "https://leader-backend-oty3.vercel.app", // Explicitly allow current production frontend
+  "https://doott.jaqyi.com",               // Production frontend domain
   cleanFrontendUrl,
   cleanCorsOrigin,
 ].filter(Boolean);
