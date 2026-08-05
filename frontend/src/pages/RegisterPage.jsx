@@ -1,20 +1,19 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, Zap, User, Building2, ArrowRight, AlertCircle, CheckCircle } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Zap, User, Building2, ArrowRight, AlertCircle } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
 export default function RegisterPage() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ name: "", email: "", password: "", orgName: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
 
   useEffect(() => {
     if (isAuthenticated) navigate("/app/chatbot", { replace: true });
@@ -60,7 +59,9 @@ export default function RegisterPage() {
         return;
       }
 
-      setSuccess(true);
+      // Auto-login: backend returns a token directly, no email verification needed
+      login({ token: data.token, user: data.user, org: data.org });
+      navigate("/app/chatbot", { replace: true });
     } catch {
       setError("Network error. Please try again.");
     } finally {
@@ -72,69 +73,6 @@ export default function RegisterPage() {
     window.location.href = `${API}/auth/google`;
   }
 
-  if (success) {
-    return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background: "var(--bg)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: 24,
-        }}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          style={{
-            maxWidth: 420,
-            width: "100%",
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              width: 72,
-              height: 72,
-              borderRadius: "50%",
-              background: "rgba(16,185,129,0.1)",
-              border: "2px solid var(--emerald)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 24px",
-            }}
-          >
-            <CheckCircle size={32} color="var(--emerald)" />
-          </div>
-          <h2 style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", marginBottom: 10 }}>
-            Check your inbox!
-          </h2>
-          <p style={{ color: "var(--text-2)", fontSize: 14, lineHeight: 1.6, marginBottom: 28 }}>
-            We've sent a verification email to <strong style={{ color: "var(--text)" }}>{form.email}</strong>.{" "}
-            Click the link inside to activate your account.
-          </p>
-          <Link
-            to="/login"
-            style={{
-              display: "inline-block",
-              padding: "11px 28px",
-              background: "var(--surface-2)",
-              border: "1px solid var(--border)",
-              borderRadius: 12,
-              color: "var(--text-2)",
-              textDecoration: "none",
-              fontSize: 14,
-              fontWeight: 500,
-            }}
-          >
-            Back to Login
-          </Link>
-        </motion.div>
-      </div>
-    );
-  }
 
   return (
     <div

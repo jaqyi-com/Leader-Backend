@@ -60,17 +60,12 @@ async function registerWithEmail({ name, email, password, orgName }) {
   // Build org slug from org name
   const slug = await generateUniqueSlug(orgName || name + "'s Org");
 
-  // Create user (passwordHash will be bcrypt'd via pre-save hook)
-  const verifyToken = crypto.randomBytes(32).toString("hex");
-  const verifyExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h
-
+  // Create user — mark as verified immediately (no email verification required)
   const user = new User({
     name,
     email: email.toLowerCase(),
     passwordHash: password,
-    isEmailVerified: false,
-    emailVerifyToken: verifyToken,
-    emailVerifyTokenExpires: verifyExpires,
+    isEmailVerified: true,
   });
   await user.save();
 
@@ -94,10 +89,10 @@ async function registerWithEmail({ name, email, password, orgName }) {
   user.defaultOrgId = org._id;
   await user.save();
 
-  // Send verification email
-  await sendVerificationEmail(user, verifyToken);
+  // Auto-login: return a token so the user is signed in immediately
+  const token = generateToken(user, org._id, "admin");
 
-  return { user: user.toPublicProfile(), org };
+  return { token, user: user.toPublicProfile(), org };
 }
 
 // ── Email / Password Login ───────────────────────────────────────────────────
@@ -109,12 +104,6 @@ async function loginWithEmail({ email, password }) {
     throw err;
   }
 
-  if (!user.isEmailVerified) {
-    const err = new Error("Please verify your email before logging in.");
-    err.statusCode = 403;
-    err.code = "EMAIL_NOT_VERIFIED";
-    throw err;
-  }
 
   const isMatch = await user.comparePassword(password);
   if (!isMatch) {
