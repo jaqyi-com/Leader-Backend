@@ -1,65 +1,38 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapPin, ArrowRight, Search, Layers, RefreshCw } from "lucide-react";
-import { ibGetCities, indiaGetCities } from "../api";
+import { MapPin, ArrowRight, Search, Layers, RefreshCw, Users2, Building2 } from "lucide-react";
+import { fcGetCities, fpGetCities } from "../api";
 
-// ── US States ─────────────────────────────────────────────────────────────
-const US_STATES = [
-  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
-  "KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
-  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT",
-  "VA","WA","WV","WI","WY","DC",
-];
-const STATE_FULL = {
-  AL:"Alabama",AK:"Alaska",AZ:"Arizona",AR:"Arkansas",CA:"California",CO:"Colorado",
-  CT:"Connecticut",DE:"Delaware",FL:"Florida",GA:"Georgia",HI:"Hawaii",ID:"Idaho",
-  IL:"Illinois",IN:"Indiana",IA:"Iowa",KS:"Kansas",KY:"Kentucky",LA:"Louisiana",
-  ME:"Maine",MD:"Maryland",MA:"Massachusetts",MI:"Michigan",MN:"Minnesota",
-  MS:"Mississippi",MO:"Missouri",MT:"Montana",NE:"Nebraska",NV:"Nevada",
-  NH:"New Hampshire",NJ:"New Jersey",NM:"New Mexico",NY:"New York",NC:"North Carolina",
-  ND:"North Dakota",OH:"Ohio",OK:"Oklahoma",OR:"Oregon",PA:"Pennsylvania",
-  RI:"Rhode Island",SC:"South Carolina",SD:"South Dakota",TN:"Tennessee",TX:"Texas",
-  UT:"Utah",VT:"Vermont",VA:"Virginia",WA:"Washington",WV:"West Virginia",
-  WI:"Wisconsin",WY:"Wyoming",DC:"Washington DC",
-};
-const STATE_ABBR = Object.fromEntries(
-  Object.entries(STATE_FULL).map(([k, v]) => [v.toLowerCase(), k])
-);
-
-// ── Country tabs ──────────────────────────────────────────────────────────
+// ── Tabs — same structure as CategoryExplorerPage ────────────────────────
 const TABS = [
-  { key: "usa",   label: "USA",   flag: "🇺🇸" },
-  { key: "india", label: "India", flag: "🇮🇳" },
+  { key: "company", label: "Companies", icon: Building2, fn: fcGetCities, dest: "/app/companies" },
+  { key: "people",  label: "People",    icon: Users2,    fn: fpGetCities,  dest: "/app/people"    },
 ];
 
-// ── City grid panel (one per country tab) ────────────────────────────────
-function CityPanel({ country }) {
+// ── City Grid Panel (remounted fresh on tab switch) ──────────────────────
+function CityPanel({ mode }) {
   const navigate = useNavigate();
+  const tab = TABS.find(t => t.key === mode);
 
-  const [cities,      setCities]      = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState("");
-  const [searchQ,     setSearchQ]     = useState("");
-  const [regionFilter, setRegionFilter] = useState("");
-  // All unique states/regions present in this dataset (computed from data)
-  const [regionOptions, setRegionOptions] = useState([]);
+  const [cities,       setCities]       = useState([]);
+  const [loading,      setLoading]      = useState(true);
+  const [error,        setError]        = useState("");
+  const [searchQ,      setSearchQ]      = useState("");
+  const [stateFilter,  setStateFilter]  = useState("");
+  // Build state list dynamically from data
+  const [stateOptions, setStateOptions] = useState([]);
 
-  // ── Load ─────────────────────────────────────────────────
   const load = async () => {
     setLoading(true);
     setError("");
     try {
-      const fn = country === "usa" ? ibGetCities : indiaGetCities;
-      const { data } = await fn();
+      const { data } = await tab.fn();
       const list = data.cities || [];
       setCities(list);
-
-      if (country === "india") {
-        // Build unique region list dynamically from returned data
-        const regions = [...new Set(list.map(c => c.state).filter(Boolean))].sort();
-        setRegionOptions(regions);
-      }
+      // Build sorted unique state options
+      const states = [...new Set(list.map(c => c.state).filter(Boolean))].sort();
+      setStateOptions(states);
     } catch (e) {
       setError(e.response?.data?.error || e.message || "Failed to load cities");
     } finally {
@@ -72,37 +45,19 @@ function CityPanel({ country }) {
   // ── Filter ───────────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = cities;
-
-    if (regionFilter) {
-      if (country === "usa") {
-        const abbr = regionFilter.toUpperCase();
-        const full = (STATE_FULL[abbr] || "").toLowerCase();
-        list = list.filter(c => {
-          const s = (c.state || "").toLowerCase();
-          return s === abbr.toLowerCase() || s === full || (STATE_ABBR[s] || "").toUpperCase() === abbr;
-        });
-      } else {
-        // India: exact state name match
-        list = list.filter(c => (c.state || "").toLowerCase() === regionFilter.toLowerCase());
-      }
+    if (stateFilter) {
+      list = list.filter(c => (c.state || "").toLowerCase() === stateFilter.toLowerCase());
     }
-
     if (searchQ.trim()) {
       const q = searchQ.trim().toLowerCase();
       list = list.filter(c => c.name.toLowerCase().includes(q));
     }
     return list;
-  }, [cities, regionFilter, searchQ, country]);
+  }, [cities, stateFilter, searchQ]);
 
   const handleClick = (city) => {
-    if (country === "usa") {
-      navigate(`/app/inbuild-db?city_file=${encodeURIComponent(city.city_file || city.name)}`);
-    } else {
-      navigate(`/app/india-data?search=${encodeURIComponent(city.name)}`);
-    }
+    navigate(`${tab.dest}?f_city=${encodeURIComponent(city.name)}`);
   };
-
-  const regionLabel = country === "usa" ? "State" : "State / Region";
 
   return (
     <div className="flex flex-col gap-5">
@@ -114,29 +69,26 @@ function CityPanel({ country }) {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
           <input
             className="input pl-9 w-full text-sm"
-            placeholder={`Search ${country === "usa" ? "city" : "city / location"}…`}
+            placeholder="Search city…"
             value={searchQ}
             onChange={e => setSearchQ(e.target.value)}
           />
         </div>
 
-        {/* State / Region filter */}
-        <select
-          className="input text-sm"
-          value={regionFilter}
-          onChange={e => setRegionFilter(e.target.value)}
-          style={{ minWidth: 170 }}
-        >
-          <option value="">All {regionLabel}s</option>
-          {country === "usa"
-            ? US_STATES.map(s => (
-                <option key={s} value={s}>{s} — {STATE_FULL[s]}</option>
-              ))
-            : regionOptions.map(r => (
-                <option key={r} value={r}>{r}</option>
-              ))
-          }
-        </select>
+        {/* State filter */}
+        {stateOptions.length > 0 && (
+          <select
+            className="input text-sm"
+            value={stateFilter}
+            onChange={e => setStateFilter(e.target.value)}
+            style={{ minWidth: 160 }}
+          >
+            <option value="">All States</option>
+            {stateOptions.map(s => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        )}
 
         {/* Refresh */}
         <button onClick={load} disabled={loading} className="btn-ghost text-xs gap-1.5">
@@ -144,9 +96,9 @@ function CityPanel({ country }) {
           {loading ? "Loading…" : "Refresh"}
         </button>
 
-        {(searchQ || regionFilter) && (
+        {(searchQ || stateFilter) && (
           <button
-            onClick={() => { setSearchQ(""); setRegionFilter(""); }}
+            onClick={() => { setSearchQ(""); setStateFilter(""); }}
             className="text-[11px] text-[var(--text-3)] hover:text-[var(--rose)] underline"
           >
             Clear filters
@@ -193,12 +145,12 @@ function CityPanel({ country }) {
               <p className="text-sm">
                 {cities.length === 0
                   ? "No city data available."
-                  : `No cities match "${searchQ || regionFilter}"`}
+                  : `No cities match "${searchQ || stateFilter}"`}
               </p>
             </motion.div>
           ) : (
             <motion.div
-              key="grid"
+              key={`grid-${mode}`}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
@@ -231,7 +183,7 @@ function CityPanel({ country }) {
                   <p className="text-xs font-semibold text-[var(--text)] leading-snug line-clamp-2 mb-1 mt-1">
                     {city.name}
                   </p>
-                  {/* State / region */}
+                  {/* State badge */}
                   {city.state && (
                     <p className="text-[9px] font-medium text-[var(--accent)] uppercase tracking-wide mb-0.5">
                       {city.state}
@@ -239,7 +191,7 @@ function CityPanel({ country }) {
                   )}
                   {/* Count */}
                   <p className="text-[10px] text-[var(--text-3)]">
-                    {city.count.toLocaleString()} businesses
+                    {city.count.toLocaleString()} {mode === "company" ? "companies" : "people"}
                   </p>
                   {/* Arrow on hover */}
                   <div
@@ -259,7 +211,7 @@ function CityPanel({ country }) {
       {!loading && filtered.length > 0 && (
         <p className="text-center text-[11px] text-[var(--text-3)] pb-2 flex items-center justify-center gap-1">
           <MapPin size={10} />
-          {filtered.length.toLocaleString()} cities · click any card to open filtered database
+          {filtered.length.toLocaleString()} cities · click any card to open filtered {mode === "company" ? "Companies" : "People"}
         </p>
       )}
     </div>
@@ -268,9 +220,7 @@ function CityPanel({ country }) {
 
 // ── Main CityExplorerPage ─────────────────────────────────────────────────
 export default function CityExplorerPage() {
-  const [country, setCountry] = useState("usa");
-
-  const activeTab = TABS.find(t => t.key === country);
+  const [mode, setMode] = useState("company");
 
   return (
     <div className="flex flex-col gap-5 h-full">
@@ -282,47 +232,52 @@ export default function CityExplorerPage() {
           City Explorer
         </h2>
         <p className="text-sm text-[var(--text-3)] mt-0.5">
-          Browse {activeTab?.label} businesses by city / region
+          Browse {mode === "company" ? "companies" : "people"} by city from your full database
+          <span className="ml-2 text-[10px] opacity-50">
+            (from {mode === "company" ? "companies" : "people"} database)
+          </span>
         </p>
       </div>
 
-      {/* ── Toggle — USA / India (same spring-pill pattern as Email & Number pages) */}
+      {/* ── Toggle — Companies / People (exact same spring-pill as Email & Number pages) */}
       <div className="flex justify-center">
         <div
           className="relative flex items-center rounded-full p-1"
           style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
         >
-          {/* Sliding pill */}
+          {/* Spring sliding pill */}
           <motion.div
             layout
             transition={{ type: "spring", stiffness: 400, damping: 35 }}
             className="absolute top-1 bottom-1 rounded-full"
             style={{
               background: "var(--accent)",
-              left:  country === "usa" ? "4px" : "calc(50% + 2px)",
+              left:  mode === "company" ? "4px" : "calc(50% + 2px)",
               width: "calc(50% - 6px)",
               zIndex: 0,
             }}
           />
-          {TABS.map(tab => (
-            <button
-              key={tab.key}
-              onClick={() => setCountry(tab.key)}
-              className="relative z-10 flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
-              style={{
-                color: country === tab.key ? "#fff" : "var(--text-3)",
-                minWidth: 130,
-              }}
-            >
-              <span>{tab.flag}</span>
-              {tab.label}
-            </button>
-          ))}
+          <button
+            onClick={() => setMode("company")}
+            className="relative z-10 flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
+            style={{ color: mode === "company" ? "#fff" : "var(--text-3)", minWidth: 130 }}
+          >
+            <Building2 size={14} />
+            Companies
+          </button>
+          <button
+            onClick={() => setMode("people")}
+            className="relative z-10 flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
+            style={{ color: mode === "people" ? "#fff" : "var(--text-3)", minWidth: 130 }}
+          >
+            <Users2 size={14} />
+            People
+          </button>
         </div>
       </div>
 
-      {/* ── City Panel (key forces fresh mount + fetch on tab switch) */}
-      <CityPanel key={country} country={country} />
+      {/* City Panel — key forces fresh mount + fetch on tab switch */}
+      <CityPanel key={mode} mode={mode} />
     </div>
   );
 }

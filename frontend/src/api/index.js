@@ -258,6 +258,7 @@ export const fpGetStats      = ()             => lgApi.get("/api/final-people/st
 export const fpGetColumns    = ()             => lgApi.get("/api/final-people/columns");
 export const fpRefresh       = ()             => lgApi.post("/api/final-people/refresh");
 export const fpGetCategories = ()             => lgApi.get("/api/final-people/categories");
+export const fpGetCities     = ()             => lgApi.get("/api/final-people/cities");
 
 // ============================================================
 // FINAL COMPANIES DATABASE (final_companies)
@@ -267,6 +268,7 @@ export const fcGetStats      = ()             => lgApi.get("/api/final-companies
 export const fcGetColumns    = ()             => lgApi.get("/api/final-companies/columns");
 export const fcRefresh       = ()             => lgApi.post("/api/final-companies/refresh");
 export const fcGetCategories = ()             => lgApi.get("/api/final-companies/categories");
+export const fcGetCities     = ()             => lgApi.get("/api/final-companies/cities");
 
 // ============================================================
 // FINAL PEOPLE — EMAIL (final.people WHERE email IS NOT NULL)

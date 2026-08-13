@@ -89,12 +89,14 @@ export default function PeoplePage() {
   
   // Dynamic QueryBuilder Filters
   const [filters, setFilters] = useState(() => {
-    const initialJob = searchParams.get("f_job_title") || "";
-    if (initialJob) {
-      return [{ col: "job_title", op: "contains", val: initialJob }];
-    }
-    // Default: only show people with a full name
-    return [{ col: "full_name", op: "not_empty", val: "" }];
+    const initialJob  = searchParams.get("f_job_title") || "";
+    const initialCity = searchParams.get("f_city")      || "";
+    const init = [];
+    if (initialJob)  init.push({ col: "job_title", op: "contains", val: initialJob });
+    if (initialCity) init.push({ col: "city",      op: "contains", val: initialCity });
+    // Default: only show people with a full name (only when no URL params provided)
+    if (init.length === 0) init.push({ col: "full_name", op: "not_empty", val: "" });
+    return init;
   });
 
   // ── Column discovery ────

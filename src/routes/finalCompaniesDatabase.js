@@ -453,4 +453,55 @@ router.get("/", async (req, res) => {
   }
 });
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET /cities  — distinct cities with business counts (City Explorer)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const CITIES_CACHE_KEY = "cache:final-companies-cities";
+const CITIES_CACHE_TTL = 60 * 60 * 6; // 6 hours
+
+router.get("/cities", async (req, res) => {
+  try {
+    const cached = await cacheGet(CITIES_CACHE_KEY);
+    if (cached) return res.json({ ...cached, _cache: "hit" });
+
+    const { selectCols } = await getSchema();
+    const hasCity  = selectCols.includes("city");
+    const hasState = selectCols.includes("state");
+
+    if (!hasCity) {
+      return res.json({ cities: [], total: 0, source: "cloud_sql", note: "No city column in final.companies" });
+    }
+
+    const selectPart = hasState
+      ? `"city", "state", COUNT(*) AS count`
+      : `"city", NULL AS state, COUNT(*) AS count`;
+    const groupPart  = hasState ? `"city", "state"` : `"city"`;
+
+    const sql = `
+      SELECT ${selectPart}
+      FROM ${FULL_TABLE}
+      WHERE "city" IS NOT NULL AND "city" != ''
+      GROUP BY ${groupPart}
+      ORDER BY count DESC
+      LIMIT 500
+    `;
+
+    const result = await pgQuery(sql);
+    const cities  = result.rows.map(r => ({
+      city_file: (r.city || "").trim(),
+      name:      (r.city || "").trim(),
+      state:     (r.state || "").trim(),
+      count:     parseInt(r.count, 10),
+    })).filter(c => c.name.length > 0);
+
+    const payload = { cities, total: cities.length, source: "cloud_sql" };
+    await cacheSet(CITIES_CACHE_KEY, payload, CITIES_CACHE_TTL);
+    res.json(payload);
+  } catch (err) {
+    logger.error(`[GET /cities] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
+

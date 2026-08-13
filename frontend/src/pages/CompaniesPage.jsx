@@ -90,10 +90,11 @@ export default function CompaniesPage() {
   // Dynamic QueryBuilder Filters
   const [filters, setFilters] = useState(() => {
     const initialIndustry = searchParams.get("f_industry") || "";
-    if (initialIndustry) {
-      return [{ col: "industry", op: "contains", val: initialIndustry }];
-    }
-    return [];
+    const initialCity     = searchParams.get("f_city")     || "";
+    const init = [];
+    if (initialIndustry) init.push({ col: "industry", op: "contains", val: initialIndustry });
+    if (initialCity)     init.push({ col: "city",     op: "contains", val: initialCity });
+    return init;
   });
 
   // ── Column discovery ────
