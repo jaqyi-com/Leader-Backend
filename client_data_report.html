@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>B2B Intelligence Database Portfolio Report — Leader Data</title>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html{scroll-behavior:smooth}
+    body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;background:#f4f7fa;color:#1e293b;line-height:1.6}
+
+    header{background:linear-gradient(135deg,#0b192c 0%,#1e3a8a 60%,#0f172a 100%);color:#fff;padding:50px 60px 40px;position:relative;overflow:hidden}
+    header::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 80% 20%,rgba(59,130,246,0.15),transparent 40%)}
+    .header-inner{max-width:1120px;margin:0 auto;position:relative;z-index:2}
+    .header-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:30px;padding:5px 16px;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:18px;color:#93c5fd}
+    header h1{font-size:2.8rem;font-weight:800;letter-spacing:-0.5px;margin-bottom:10px}
+    header h1 span{color:#60a5fa}
+    header p.sub{font-size:1.15rem;color:#cbd5e1;max-width:720px;margin-bottom:28px}
+    .header-meta{display:flex;gap:28px;flex-wrap:wrap;font-size:13.5px;color:#94a3b8;border-top:1px solid rgba(255,255,255,0.1);padding-top:20px}
+    .header-meta span{display:flex;align-items:center;gap:6px}
+
+    .confidential-bar{background:#fffbebf0;border-bottom:1px solid #fef3c7;padding:12px 60px;font-size:13px;color:#b45309;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:600}
+
+    nav{background:#ffffff;border-bottom:1px solid #e2e8f0;padding:0 60px;position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,0.04)}
+    nav ul{max-width:1120px;margin:0 auto;list-style:none;display:flex;gap:4px;overflow-x:auto}
+    nav ul li a{display:block;padding:16px 20px;text-decoration:none;color:#475569;font-size:14px;font-weight:600;border-bottom:3px solid transparent;transition:all 0.2s;white-space:nowrap}
+    nav ul li a:hover,nav ul li a.active{color:#1e3a8a;border-bottom-color:#2563eb}
+
+    main{max-width:1120px;margin:0 auto;padding:44px 20px 80px}
+    section{background:#ffffff;border-radius:18px;box-shadow:0 4px 20px rgba(0,0,0,0.04);border:1px solid #cbd5e140;padding:40px 44px;margin-bottom:36px}
+    section h2{font-size:1.6rem;font-weight:800;color:#0f172a;margin-bottom:24px;padding-bottom:14px;border-bottom:2px solid #f1f5f9;display:flex;align-items:center;gap:10px}
+    section h3{font-size:1.15rem;font-weight:700;color:#334155;margin:32px 0 18px}
+    section p{color:#475569;line-height:1.8;margin-bottom:16px;font-size:14.5px}
+
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:18px;margin-bottom:32px}
+    .kpi{border-radius:14px;padding:24px 22px;color:#ffffff;position:relative;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.08)}
+    .kpi.blue{background:linear-gradient(135deg,#1e40af,#3b82f6)}
+    .kpi.indigo{background:linear-gradient(135deg,#3730a3,#6366f1)}
+    .kpi.emerald{background:linear-gradient(135deg,#065f46,#10b981)}
+    .kpi.amber{background:linear-gradient(135deg,#92400e,#f59e0b)}
+    .kpi.purple{background:linear-gradient(135deg,#6b21a8,#a855f7)}
+    .kpi.teal{background:linear-gradient(135deg,#115e59,#14b8a6)}
+    .kpi-val{font-size:2.3rem;font-weight:800;line-height:1.1;margin-bottom:6px;letter-spacing:-0.5px}
+    .kpi-label{font-size:13.5px;font-weight:600;opacity:0.9}
+    .kpi-sub{font-size:11.5px;opacity:0.8;margin-top:4px}
+
+    .quality-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px}
+    .q-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:22px;text-align:center}
+    .q-card .icon{font-size:2rem;margin-bottom:8px}
+    .q-card .pct{font-size:2.2rem;font-weight:800;color:#1e3a8a}
+    .q-card .count{font-size:13px;color:#64748b;font-weight:600;margin:4px 0}
+    .q-card .label{font-size:14px;font-weight:700;color:#334155}
+
+    .table-wrap{overflow-x:auto;border-radius:12px;border:1px solid #e2e8f0;background:#ffffff}
+    table{width:100%;border-collapse:collapse;font-size:14px}
+    thead tr{background:#0f172a;color:#f8fafc}
+    thead th{padding:14px 18px;text-align:left;font-weight:700;letter-spacing:0.3px}
+    tbody tr.even{background:#f8fafc}
+    tbody tr.odd{background:#ffffff}
+    tbody tr:hover{background:#eff6ff}
+    td{padding:12px 18px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+    td.rank{color:#94a3b8;font-size:12.5px;font-weight:700;width:40px}
+    td.name{font-weight:600;color:#1e293b;max-width:320px}
+    td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:#334155}
+
+    .bar-wrap{display:flex;align-items:center;gap:10px;min-width:140px}
+    .bar{height:9px;border-radius:6px;min-width:3px;background:linear-gradient(90deg,#2563eb,#60a5fa)}
+    .bar.bar-blue{background:linear-gradient(90deg,#1d4ed8,#38bdf8)}
+    .bar.bar-purple{background:linear-gradient(90deg,#7c3aed,#c084fc)}
+    .bar.bar-teal{background:linear-gradient(90deg,#0d9488,#2dd4bf)}
+    .bar-pct{font-size:11.5px;color:#64748b;font-weight:600;white-space:nowrap}
+
+    .feature-box{background:linear-gradient(135deg,#f0f9ff 0%,#f0fdf4 100%);border:1px solid #bae6fd;border-radius:14px;padding:28px 32px;margin-bottom:32px}
+    .feature-box h4{color:#0369a1;font-size:1.1rem;font-weight:700;margin-bottom:12px}
+    .feature-box ul{padding-left:20px;color:#334155}
+    .feature-box li{margin-bottom:8px;line-height:1.6}
+
+    footer{background:#0f172a;color:#94a3b8;text-align:center;padding:40px 20px;font-size:13.5px;border-top:1px solid #1e293b}
+    footer strong{color:#f8fafc}
+
+    @media print{nav,.confidential-bar{display:none}section{box-shadow:none;border-color:#ddd}body{background:#fff}}
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="header-badge">📊 Verified Data Asset Report</div>
+    <h1>Leader <span>B2B Data</span> Portfolio</h1>
+    <p class="sub">Comprehensive Category &amp; Country Data Breakdown Prepared for Client Acquisition &amp; Licensing</p>
+    <div class="header-meta">
+      <span>📅 Prepared On: August 11, 2026</span>
+      <span>🏢 Companies: 1,781,218 Records</span>
+      <span>👥 Decision-Maker Contacts: 43,932,592 Records</span>
+      <span>⚡ Live Database: Neon PostgreSQL</span>
+    </div>
+  </div>
+</header>
+
+<div class="confidential-bar">
+  🔒 <strong>CONFIDENTIAL CLIENT DOCUMENT</strong> — Authorized for prospective buyer review &amp; commercial data evaluation only.
+</div>
+
+<nav>
+  <ul>
+    <li><a href="#summary">📈 Summary</a></li>
+    <li><a href="#quality">✅ Data Quality</a></li>
+    <li><a href="#categories">🏷️ Categories</a></li>
+    <li><a href="#geography">🌍 Country &amp; Region</a></li>
+    <li><a href="#titles">👔 Decision Makers</a></li>
+    <li><a href="#delivery">📦 Delivery &amp; Formats</a></li>
+  </ul>
+</nav>
+
+<main>
+
+  <section id="summary">
+    <h2>📈 Executive Summary</h2>
+    <div class="feature-box">
+      <h4>💼 Premium B2B Lead &amp; Business Intelligence Asset</h4>
+      <ul>
+        <li><strong>Multi-Channel Coverage:</strong> Over <strong>1,781,218 verified companies</strong> and <strong>43,932,592 executive contacts</strong> across key global growth markets.</li>
+        <li><strong>Category-Rich Segmentation:</strong> Segmented into <strong>60+ industry categories</strong> (Business Services, Retail, Real Estate, Manufacturing, Healthcare, Financial Services, Tech, etc.).</li>
+        <li><strong>Geographic Reach:</strong> Extensive coverage in top economic hubs across the <strong>United States</strong> (California, Texas, New York, Florida, Illinois, Ohio, PA) and <strong>India</strong> (Maharashtra, Delhi, Karnataka, Tamil Nadu, AP).</li>
+        <li><strong>Direct Contact Details:</strong> Enriched with direct email addresses, phone numbers, corporate websites, addresses, and LinkedIn profiles for high-converting sales outreach.</li>
+      </ul>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi blue">
+        <div class="kpi-val">1,781,218</div>
+        <div class="kpi-label">Company Records</div>
+        <div class="kpi-sub">Verified Business Profiles</div>
+      </div>
+      <div class="kpi purple">
+        <div class="kpi-val">43,932,592</div>
+        <div class="kpi-label">Contact Profiles</div>
+        <div class="kpi-sub">Executives &amp; Key People</div>
+      </div>
+      <div class="kpi emerald">
+        <div class="kpi-val">1,641,351</div>
+        <div class="kpi-label">Phone Numbers</div>
+        <div class="kpi-sub">92.1% Direct Phone Coverage</div>
+      </div>
+      <div class="kpi indigo">
+        <div class="kpi-val">1,163,948</div>
+        <div class="kpi-label">Email Addresses</div>
+        <div class="kpi-sub">65.3% Verified Emails</div>
+      </div>
+      <div class="kpi amber">
+        <div class="kpi-val">35+</div>
+        <div class="kpi-label">Industry Verticals</div>
+        <div class="kpi-sub">Major Business Sectors</div>
+      </div>
+      <div class="kpi teal">
+        <div class="kpi-val">1,094,462</div>
+        <div class="kpi-label">Company Websites</div>
+        <div class="kpi-sub">61.4% Web Presence</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="quality">
+    <h2>✅ Data Completeness &amp; Quality Metrics</h2>
+    <p>Database health indicators calculated across live records in our PostgreSQL cluster:</p>
+
+    <div class="quality-grid">
+      <div class="q-card">
+        <div class="icon">📞</div>
+        <div class="pct">92.1%</div>
+        <div class="count">1,641,351 Records</div>
+        <div class="label">Phone Coverage</div>
+      </div>
+      <div class="q-card">
+        <div class="icon">📧</div>
+        <div class="pct">65.3%</div>
+        <div class="count">1,163,948 Records</div>
+        <div class="label">Email Coverage</div>
+      </div>
+      <div class="q-card">
+        <div class="icon">🌐</div>
+        <div class="pct">61.4%</div>
+        <div class="count">1,094,462 Records</div>
+        <div class="label">Website Coverage</div>
+      </div>
+      <div class="q-card">
+        <div class="icon">👔</div>
+        <div class="pct">43.9M+</div>
+        <div class="count">Decision Maker Leads</div>
+        <div class="label">Executive Contacts</div>
+      </div>
+    </div>
+  </section>
+
+  <section id="categories">
+    <h2>🏷️ Category-Wise Breakdown (Top Industries)</h2>
+    <p>Top business categories by volume of verified companies:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Industry / Category Vertical</th>
+            <th style="text-align:right">Total Companies</th>
+            <th>Distribution Bar</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+    <tr class="even">
+      <td class="rank">1</td>
+      <td class="name">Business &amp; Professional Services</td>
+      <td class="num">682,161</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:100%"></div>
+          <span class="bar-pct">38.3%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">2</td>
+      <td class="name">Business Services</td>
+      <td class="num">240,017</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:54%"></div>
+          <span class="bar-pct">13.5%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">3</td>
+      <td class="name">Real Estate &amp; Construction</td>
+      <td class="num">77,878</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:17.6%"></div>
+          <span class="bar-pct">4.4%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">4</td>
+      <td class="name">Retail</td>
+      <td class="num">72,796</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:16.4%"></div>
+          <span class="bar-pct">4.1%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">5</td>
+      <td class="name">Manufacturing</td>
+      <td class="num">71,724</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:16%"></div>
+          <span class="bar-pct">4.0%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">6</td>
+      <td class="name">Financial Services</td>
+      <td class="num">48,716</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:10.8%"></div>
+          <span class="bar-pct">2.7%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">7</td>
+      <td class="name">Other</td>
+      <td class="num">39,933</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:8.8%"></div>
+          <span class="bar-pct">2.2%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">8</td>
+      <td class="name">Consumer Services</td>
+      <td class="num">39,538</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:8.8%"></div>
+          <span class="bar-pct">2.2%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">9</td>
+      <td class="name">Healthcare</td>
+      <td class="num">37,036</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:8.4%"></div>
+          <span class="bar-pct">2.1%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">10</td>
+      <td class="name">Computers &amp; Electronics</td>
+      <td class="num">30,982</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:6.8%"></div>
+          <span class="bar-pct">1.7%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">11</td>
+      <td class="name">Education</td>
+      <td class="num">26,777</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:6%"></div>
+          <span class="bar-pct">1.5%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">12</td>
+      <td class="name">Non-Profit</td>
+      <td class="num">26,165</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:6%"></div>
+          <span class="bar-pct">1.5%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">13</td>
+      <td class="name">Media &amp; Entertainment</td>
+      <td class="num">22,317</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:5.2%"></div>
+          <span class="bar-pct">1.3%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">14</td>
+      <td class="name">Software &amp; Internet</td>
+      <td class="num">21,895</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:4.8%"></div>
+          <span class="bar-pct">1.2%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">15</td>
+      <td class="name">Travel, Recreation, and Leisure</td>
+      <td class="num">21,475</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:4.8%"></div>
+          <span class="bar-pct">1.2%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">16</td>
+      <td class="name">Marketing And Advertising</td>
+      <td class="num">16,461</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:3.6%"></div>
+          <span class="bar-pct">0.9%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">17</td>
+      <td class="name">Restaurants</td>
+      <td class="num">16,442</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:3.6%"></div>
+          <span class="bar-pct">0.9%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">18</td>
+      <td class="name">Transportation &amp; Storage</td>
+      <td class="num">13,270</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:2.8%"></div>
+          <span class="bar-pct">0.7%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">19</td>
+      <td class="name">Agriculture &amp; Mining</td>
+      <td class="num">13,005</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:2.8%"></div>
+          <span class="bar-pct">0.7%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">20</td>
+      <td class="name">Government</td>
+      <td class="num">11,204</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:2.4%"></div>
+          <span class="bar-pct">0.6%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">21</td>
+      <td class="name">Telecommunications</td>
+      <td class="num">10,155</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:2.4%"></div>
+          <span class="bar-pct">0.6%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">22</td>
+      <td class="name">Real Estate</td>
+      <td class="num">9,665</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:2%"></div>
+          <span class="bar-pct">0.5%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">23</td>
+      <td class="name">Energy &amp; Utilities</td>
+      <td class="num">9,377</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:2%"></div>
+          <span class="bar-pct">0.5%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">24</td>
+      <td class="name">Law Practice</td>
+      <td class="num">9,089</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:2%"></div>
+          <span class="bar-pct">0.5%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">25</td>
+      <td class="name">Health, Wellness And Fitness</td>
+      <td class="num">8,496</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:2%"></div>
+          <span class="bar-pct">0.5%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">26</td>
+      <td class="name">Wholesale &amp; Distribution</td>
+      <td class="num">8,264</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:2%"></div>
+          <span class="bar-pct">0.5%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">27</td>
+      <td class="name">Construction</td>
+      <td class="num">7,960</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:1.6%"></div>
+          <span class="bar-pct">0.4%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">28</td>
+      <td class="name">Information Technology And Services</td>
+      <td class="num">5,771</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:1.2%"></div>
+          <span class="bar-pct">0.3%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">29</td>
+      <td class="name">Hospital &amp; Health Care</td>
+      <td class="num">5,275</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:1.2%"></div>
+          <span class="bar-pct">0.3%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">30</td>
+      <td class="name">Medical Practice</td>
+      <td class="num">4,661</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:1.2%"></div>
+          <span class="bar-pct">0.3%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">31</td>
+      <td class="name">Staffing And Recruiting</td>
+      <td class="num">4,637</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:1.2%"></div>
+          <span class="bar-pct">0.3%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">32</td>
+      <td class="name">Computer Software</td>
+      <td class="num">4,184</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:0.8%"></div>
+          <span class="bar-pct">0.2%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">33</td>
+      <td class="name">Insurance</td>
+      <td class="num">3,578</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:0.8%"></div>
+          <span class="bar-pct">0.2%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">34</td>
+      <td class="name">Internet</td>
+      <td class="num">3,387</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:0.8%"></div>
+          <span class="bar-pct">0.2%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">35</td>
+      <td class="name">Writing And Editing</td>
+      <td class="num">3,295</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar" style="width:0.8%"></div>
+          <span class="bar-pct">0.2%</span>
+        </div>
+      </td>
+    </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="geography">
+    <h2>🌍 Geographic Breakdown (Country &amp; State Wise)</h2>
+    <p>Regional distribution of businesses and professional contacts across top states and territories:</p>
+
+    <h3>🏢 Company Distribution by Top Regions</h3>
+    <div class="table-wrap" style="margin-bottom:28px">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>State / Territory</th>
+            <th style="text-align:right">Company Count</th>
+            <th>Share of DB</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+    <tr class="even">
+      <td class="rank">1</td>
+      <td class="name">CA</td>
+      <td class="num">243,315</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:68.5%"></div>
+          <span class="bar-pct">13.7%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">2</td>
+      <td class="name">Other Regions</td>
+      <td class="num">182,126</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:51%"></div>
+          <span class="bar-pct">10.2%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">3</td>
+      <td class="name">TX</td>
+      <td class="num">160,048</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:45%"></div>
+          <span class="bar-pct">9.0%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">4</td>
+      <td class="name">FL</td>
+      <td class="num">100,303</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:28%"></div>
+          <span class="bar-pct">5.6%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">5</td>
+      <td class="name">NY</td>
+      <td class="num">81,979</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:23%"></div>
+          <span class="bar-pct">4.6%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">6</td>
+      <td class="name">IL</td>
+      <td class="num">72,508</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:20.5%"></div>
+          <span class="bar-pct">4.1%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">7</td>
+      <td class="name">OH</td>
+      <td class="num">67,774</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:19%"></div>
+          <span class="bar-pct">3.8%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">8</td>
+      <td class="name">PA</td>
+      <td class="num">53,092</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:15%"></div>
+          <span class="bar-pct">3.0%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">9</td>
+      <td class="name">AZ</td>
+      <td class="num">51,407</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:14.5%"></div>
+          <span class="bar-pct">2.9%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">10</td>
+      <td class="name">MA</td>
+      <td class="num">46,297</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:13%"></div>
+          <span class="bar-pct">2.6%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">11</td>
+      <td class="name">NC</td>
+      <td class="num">45,334</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:12.5%"></div>
+          <span class="bar-pct">2.5%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">12</td>
+      <td class="name">CO</td>
+      <td class="num">43,284</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:12%"></div>
+          <span class="bar-pct">2.4%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">13</td>
+      <td class="name">MI</td>
+      <td class="num">42,045</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:12%"></div>
+          <span class="bar-pct">2.4%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">14</td>
+      <td class="name">GA</td>
+      <td class="num">38,066</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:10.5%"></div>
+          <span class="bar-pct">2.1%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">15</td>
+      <td class="name">NJ</td>
+      <td class="num">37,984</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:10.5%"></div>
+          <span class="bar-pct">2.1%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">16</td>
+      <td class="name">WA</td>
+      <td class="num">35,757</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:10%"></div>
+          <span class="bar-pct">2.0%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">17</td>
+      <td class="name">VA</td>
+      <td class="num">35,176</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:10%"></div>
+          <span class="bar-pct">2.0%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">18</td>
+      <td class="name">IN</td>
+      <td class="num">31,833</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:9%"></div>
+          <span class="bar-pct">1.8%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">19</td>
+      <td class="name">TN</td>
+      <td class="num">30,583</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:8.5%"></div>
+          <span class="bar-pct">1.7%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">20</td>
+      <td class="name">MN</td>
+      <td class="num">30,219</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:8.5%"></div>
+          <span class="bar-pct">1.7%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">21</td>
+      <td class="name">WI</td>
+      <td class="num">27,707</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:8%"></div>
+          <span class="bar-pct">1.6%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">22</td>
+      <td class="name">MD</td>
+      <td class="num">26,633</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:7.5%"></div>
+          <span class="bar-pct">1.5%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">23</td>
+      <td class="name">MO</td>
+      <td class="num">23,945</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:6.5%"></div>
+          <span class="bar-pct">1.3%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">24</td>
+      <td class="name">CT</td>
+      <td class="num">20,612</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:6%"></div>
+          <span class="bar-pct">1.2%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">25</td>
+      <td class="name">OR</td>
+      <td class="num">18,728</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:5.5%"></div>
+          <span class="bar-pct">1.1%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">26</td>
+      <td class="name">KY</td>
+      <td class="num">17,639</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:5%"></div>
+          <span class="bar-pct">1.0%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">27</td>
+      <td class="name">OK</td>
+      <td class="num">17,203</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:5%"></div>
+          <span class="bar-pct">1.0%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">28</td>
+      <td class="name">AL</td>
+      <td class="num">15,534</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:4.5%"></div>
+          <span class="bar-pct">0.9%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">29</td>
+      <td class="name">NV</td>
+      <td class="num">14,235</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:4%"></div>
+          <span class="bar-pct">0.8%</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">30</td>
+      <td class="name">NE</td>
+      <td class="num">13,937</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-blue" style="width:4%"></div>
+          <span class="bar-pct">0.8%</span>
+        </div>
+      </td>
+    </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>👥 Executive Contact Distribution by Key Regions (US &amp; India)</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>State / Region</th>
+            <th style="text-align:right">Contact Count</th>
+            <th>Volume Bar</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+    <tr class="even">
+      <td class="rank">1</td>
+      <td class="name">Maharashtra</td>
+      <td class="num">1,472,668</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:88.36008%"></div>
+          <span class="bar-pct">1,472,668 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">2</td>
+      <td class="name">CA</td>
+      <td class="num">1,301,619</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:78.09714%"></div>
+          <span class="bar-pct">1,301,619 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">3</td>
+      <td class="name">Delhi</td>
+      <td class="num">782,070</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:46.9242%"></div>
+          <span class="bar-pct">782,070 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">4</td>
+      <td class="name">NY</td>
+      <td class="num">681,880</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:40.9128%"></div>
+          <span class="bar-pct">681,880 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">5</td>
+      <td class="name">TX</td>
+      <td class="num">606,089</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:36.365339999999996%"></div>
+          <span class="bar-pct">606,089 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">6</td>
+      <td class="name">Karnataka</td>
+      <td class="num">556,444</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:33.38664%"></div>
+          <span class="bar-pct">556,444 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">7</td>
+      <td class="name">Andhra Pradesh</td>
+      <td class="num">487,825</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:29.269499999999997%"></div>
+          <span class="bar-pct">487,825 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">8</td>
+      <td class="name">TamilNadu</td>
+      <td class="num">469,583</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:28.17498%"></div>
+          <span class="bar-pct">469,583 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">9</td>
+      <td class="name">IL</td>
+      <td class="num">437,270</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:26.2362%"></div>
+          <span class="bar-pct">437,270 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">10</td>
+      <td class="name">FL</td>
+      <td class="num">417,372</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:25.04232%"></div>
+          <span class="bar-pct">417,372 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">11</td>
+      <td class="name">Gujarat</td>
+      <td class="num">386,339</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:23.180339999999998%"></div>
+          <span class="bar-pct">386,339 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">12</td>
+      <td class="name">PA</td>
+      <td class="num">330,854</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:19.85124%"></div>
+          <span class="bar-pct">330,854 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">13</td>
+      <td class="name">NJ</td>
+      <td class="num">319,935</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:19.1961%"></div>
+          <span class="bar-pct">319,935 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">14</td>
+      <td class="name">MA</td>
+      <td class="num">317,082</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:19.024919999999998%"></div>
+          <span class="bar-pct">317,082 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">15</td>
+      <td class="name">OH</td>
+      <td class="num">311,133</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:18.66798%"></div>
+          <span class="bar-pct">311,133 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">16</td>
+      <td class="name">MAH</td>
+      <td class="num">285,055</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:17.1033%"></div>
+          <span class="bar-pct">285,055 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">17</td>
+      <td class="name">KARNATAKA</td>
+      <td class="num">284,259</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:17.05554%"></div>
+          <span class="bar-pct">284,259 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">18</td>
+      <td class="name">GA</td>
+      <td class="num">249,381</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:14.962860000000001%"></div>
+          <span class="bar-pct">249,381 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">19</td>
+      <td class="name">VA</td>
+      <td class="num">227,893</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:13.67358%"></div>
+          <span class="bar-pct">227,893 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">20</td>
+      <td class="name">West Bengal</td>
+      <td class="num">223,871</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:13.432260000000001%"></div>
+          <span class="bar-pct">223,871 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">21</td>
+      <td class="name">MI</td>
+      <td class="num">222,387</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:13.34322%"></div>
+          <span class="bar-pct">222,387 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">22</td>
+      <td class="name">Tamil Nadu</td>
+      <td class="num">218,957</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:13.13742%"></div>
+          <span class="bar-pct">218,957 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">23</td>
+      <td class="name">MAHARASHTRA</td>
+      <td class="num">213,429</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:12.80574%"></div>
+          <span class="bar-pct">213,429 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">24</td>
+      <td class="name">MUMBAI</td>
+      <td class="num">212,568</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:12.75408%"></div>
+          <span class="bar-pct">212,568 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">25</td>
+      <td class="name">MN</td>
+      <td class="num">211,074</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-teal" style="width:12.66444%"></div>
+          <span class="bar-pct">211,074 contacts</span>
+        </div>
+      </td>
+    </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="titles">
+    <h2>👔 Decision-Maker Breakdown by Job Title</h2>
+    <p>Top C-Level, Senior Management, and Business Owner profiles available for B2B targeting:</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Job Title / Executive Level</th>
+            <th style="text-align:right">Total Contacts</th>
+            <th>Volume Visual</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+    <tr class="even">
+      <td class="rank">1</td>
+      <td class="name">Owner</td>
+      <td class="num">916,245</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:73.2996%"></div>
+          <span class="bar-pct">916,245 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">2</td>
+      <td class="name">President</td>
+      <td class="num">783,863</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:62.70904%"></div>
+          <span class="bar-pct">783,863 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">3</td>
+      <td class="name">Manager</td>
+      <td class="num">244,611</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:19.56888%"></div>
+          <span class="bar-pct">244,611 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">4</td>
+      <td class="name">Chief Executive Officer</td>
+      <td class="num">235,490</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:18.8392%"></div>
+          <span class="bar-pct">235,490 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">5</td>
+      <td class="name">Vice President</td>
+      <td class="num">185,561</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:14.84488%"></div>
+          <span class="bar-pct">185,561 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">6</td>
+      <td class="name">Marketing Manager</td>
+      <td class="num">166,934</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:13.35472%"></div>
+          <span class="bar-pct">166,934 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">7</td>
+      <td class="name">Chief Operating Officer</td>
+      <td class="num">123,903</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:9.91224%"></div>
+          <span class="bar-pct">123,903 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">8</td>
+      <td class="name">Operations Manager</td>
+      <td class="num">90,437</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:7.23496%"></div>
+          <span class="bar-pct">90,437 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">9</td>
+      <td class="name">Marketing Director</td>
+      <td class="num">76,872</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:6.14976%"></div>
+          <span class="bar-pct">76,872 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">10</td>
+      <td class="name">Marketing Executive</td>
+      <td class="num">73,909</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:5.91272%"></div>
+          <span class="bar-pct">73,909 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">11</td>
+      <td class="name">General Manager</td>
+      <td class="num">67,987</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:5.438960000000001%"></div>
+          <span class="bar-pct">67,987 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">12</td>
+      <td class="name">Director</td>
+      <td class="num">67,492</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:5.39936%"></div>
+          <span class="bar-pct">67,492 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">13</td>
+      <td class="name">Director of Marketing</td>
+      <td class="num">64,060</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:5.1248000000000005%"></div>
+          <span class="bar-pct">64,060 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">14</td>
+      <td class="name">Principal</td>
+      <td class="num">62,552</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:5.00416%"></div>
+          <span class="bar-pct">62,552 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">15</td>
+      <td class="name">Engineer</td>
+      <td class="num">57,128</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:4.57024%"></div>
+          <span class="bar-pct">57,128 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">16</td>
+      <td class="name">Vice President Marketing</td>
+      <td class="num">51,389</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:4.11112%"></div>
+          <span class="bar-pct">51,389 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">17</td>
+      <td class="name">Partner</td>
+      <td class="num">44,776</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:3.5820800000000004%"></div>
+          <span class="bar-pct">44,776 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">18</td>
+      <td class="name">Executive Director</td>
+      <td class="num">34,948</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:2.79584%"></div>
+          <span class="bar-pct">34,948 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">19</td>
+      <td class="name">Director of Operations</td>
+      <td class="num">34,940</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:2.7952%"></div>
+          <span class="bar-pct">34,940 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">20</td>
+      <td class="name">Chief Financial Officer</td>
+      <td class="num">33,637</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:2.69096%"></div>
+          <span class="bar-pct">33,637 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">21</td>
+      <td class="name">Human Resources Executive</td>
+      <td class="num">33,422</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:2.67376%"></div>
+          <span class="bar-pct">33,422 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">22</td>
+      <td class="name">Marketing Coordinator</td>
+      <td class="num">30,888</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:2.47104%"></div>
+          <span class="bar-pct">30,888 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">23</td>
+      <td class="name">Vice President Operations</td>
+      <td class="num">29,463</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:2.35704%"></div>
+          <span class="bar-pct">29,463 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="odd">
+      <td class="rank">24</td>
+      <td class="name">Vice President of Marketing</td>
+      <td class="num">25,784</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:2.06272%"></div>
+          <span class="bar-pct">25,784 contacts</span>
+        </div>
+      </td>
+    </tr>
+    <tr class="even">
+      <td class="rank">25</td>
+      <td class="name">Manager of Human Resources</td>
+      <td class="num">25,490</td>
+      <td>
+        <div class="bar-wrap">
+          <div class="bar bar-purple" style="width:2.0392%"></div>
+          <span class="bar-pct">25,490 contacts</span>
+        </div>
+      </td>
+    </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="delivery">
+    <h2>📦 Commercial Licensing &amp; Data Delivery</h2>
+    <div class="feature-box">
+      <h4>⚡ Instant Delivery &amp; Flexible Export Options</h4>
+      <ul>
+        <li><strong>Full Database Export:</strong> Standard SQL Dump (PostgreSQL / MySQL) or Parquet format for data warehouse ingestion.</li>
+        <li><strong>Structured Spreadsheet Delivery:</strong> Segmented CSV / XLSX files divided by specific industry categories, countries, or job titles.</li>
+        <li><strong>REST API Access:</strong> Real-time HTTP API endpoints with full text search, pagination, and instant JSON response filtering.</li>
+        <li><strong>Custom Subsets:</strong> Ability to purchase targeted slices (e.g. "Software CEOs in California" or "Manufacturing Owners in Texas").</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p><strong>Leader Data Platform</strong> — Enterprise Lead &amp; Data Solutions</p>
+  <p style="margin-top:8px">Report Generated on August 11, 2026 &nbsp;|&nbsp; All Rights Reserved</p>
+</footer>
+
+</body>
+</html>

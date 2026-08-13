@@ -180,46 +180,7 @@ export default function RegisterPage() {
             )}
           </AnimatePresence>
 
-          {/* Google Button */}
-          <motion.button
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            onClick={handleGoogleLogin}
-            style={{
-              width: "100%",
-              padding: "11px 16px",
-              borderRadius: 12,
-              border: "1px solid var(--border)",
-              background: "var(--surface-2)",
-              color: "var(--text)",
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
-              marginBottom: 20,
-              transition: "border-color 0.2s",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hover)")}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
-          >
-            <svg width="18" height="18" viewBox="0 0 18 18">
-              <path fill="#4285F4" d="M17.64 9.2a10 10 0 0 0-.16-1.76H9v3.33h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92a8.78 8.78 0 0 0 2.68-6.55z"/>
-              <path fill="#34A853" d="M9 18a8.59 8.59 0 0 0 5.96-2.18l-2.92-2.26A5.43 5.43 0 0 1 9 14.57a5.37 5.37 0 0 1-5.05-3.71H.96v2.33A9 9 0 0 0 9 18z"/>
-              <path fill="#FBBC05" d="M3.95 10.86A5.41 5.41 0 0 1 3.67 9c0-.65.11-1.28.28-1.86V4.81H.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.04l2.99-2.18z"/>
-              <path fill="#EA4335" d="M9 3.58a4.86 4.86 0 0 1 3.44 1.35l2.58-2.58A8.64 8.64 0 0 0 9 0 9 9 0 0 0 .96 4.81l2.99 2.33A5.37 5.37 0 0 1 9 3.58z"/>
-            </svg>
-            Continue with Google
-          </motion.button>
 
-          {/* Divider */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
-            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-            <span style={{ color: "var(--text-3)", fontSize: 12 }}>or with email</span>
-            <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
-          </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
