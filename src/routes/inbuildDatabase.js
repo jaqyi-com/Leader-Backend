@@ -877,6 +877,94 @@ router.get("/map", async (req, res) => {
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET /cities  — all unique cities with business counts (for City Explorer)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+router.get("/cities", async (req, res) => {
+  const CITIES_CACHE_KEY = "cache:inbuild-cities";
+  const CITIES_CACHE_TTL = 60 * 60 * 6; // 6 hours
+
+  try {
+    // Serve from cache if available
+    const cached = await cacheGet(CITIES_CACHE_KEY);
+    if (cached) return res.json({ ...cached, _cache: "hit" });
+
+    const schema = await getSchema();
+    const { actualCols } = schema;
+    const colName     = schema.fieldToCol.name     || "business_name";
+    const colCityFile = schema.fieldToCol.city_file || "_city_file";
+    const hasCity     = actualCols.includes("city");
+    const hasState    = actualCols.includes("state");
+
+    const HEADER_FILTER = `"${colName}" IS DISTINCT FROM 'business_name'`;
+
+    // city_file expression (formatted display name — e.g. "Austin_TX" → "Austin TX")
+    const cityFileExpr = `"${colCityFile}"`;
+
+    // Human-readable city name expression
+    const cityNameExpr = hasCity
+      ? `"city"`
+      : `REPLACE(CASE
+          WHEN "${colCityFile}" ILIKE '%_North_Carolina'  THEN REGEXP_REPLACE(REGEXP_REPLACE("${colCityFile}", '^.*_in_', ''), '_North_Carolina$',  '')
+          WHEN "${colCityFile}" ILIKE '%_South_Carolina'  THEN REGEXP_REPLACE(REGEXP_REPLACE("${colCityFile}", '^.*_in_', ''), '_South_Carolina$',  '')
+          WHEN "${colCityFile}" ILIKE '%_North_Dakota'    THEN REGEXP_REPLACE(REGEXP_REPLACE("${colCityFile}", '^.*_in_', ''), '_North_Dakota$',    '')
+          WHEN "${colCityFile}" ILIKE '%_South_Dakota'    THEN REGEXP_REPLACE(REGEXP_REPLACE("${colCityFile}", '^.*_in_', ''), '_South_Dakota$',    '')
+          WHEN "${colCityFile}" ILIKE '%_New_York'        THEN REGEXP_REPLACE(REGEXP_REPLACE("${colCityFile}", '^.*_in_', ''), '_New_York$',        '')
+          WHEN "${colCityFile}" ILIKE '%_New_Jersey'      THEN REGEXP_REPLACE(REGEXP_REPLACE("${colCityFile}", '^.*_in_', ''), '_New_Jersey$',      '')
+          WHEN "${colCityFile}" ILIKE '%_New_Mexico'      THEN REGEXP_REPLACE(REGEXP_REPLACE("${colCityFile}", '^.*_in_', ''), '_New_Mexico$',      '')
+          WHEN "${colCityFile}" ILIKE '%_New_Hampshire'   THEN REGEXP_REPLACE(REGEXP_REPLACE("${colCityFile}", '^.*_in_', ''), '_New_Hampshire$',   '')
+          WHEN "${colCityFile}" ILIKE '%_Rhode_Island'    THEN REGEXP_REPLACE(REGEXP_REPLACE("${colCityFile}", '^.*_in_', ''), '_Rhode_Island$',    '')
+          WHEN "${colCityFile}" ILIKE '%_West_Virginia'   THEN REGEXP_REPLACE(REGEXP_REPLACE("${colCityFile}", '^.*_in_', ''), '_West_Virginia$',   '')
+          ELSE REGEXP_REPLACE(REGEXP_REPLACE("${colCityFile}", '^.*_in_', ''), '_[^_]+$', '')
+        END, '_', ' ')`;
+
+    const stateExpr = hasState
+      ? `"state"`
+      : `CASE
+          WHEN "${colCityFile}" ILIKE '%_North_Carolina'  THEN 'North Carolina'
+          WHEN "${colCityFile}" ILIKE '%_South_Carolina'  THEN 'South Carolina'
+          WHEN "${colCityFile}" ILIKE '%_North_Dakota'    THEN 'North Dakota'
+          WHEN "${colCityFile}" ILIKE '%_South_Dakota'    THEN 'South Dakota'
+          WHEN "${colCityFile}" ILIKE '%_New_York'        THEN 'New York'
+          WHEN "${colCityFile}" ILIKE '%_New_Jersey'      THEN 'New Jersey'
+          WHEN "${colCityFile}" ILIKE '%_New_Mexico'      THEN 'New Mexico'
+          WHEN "${colCityFile}" ILIKE '%_New_Hampshire'   THEN 'New Hampshire'
+          WHEN "${colCityFile}" ILIKE '%_Rhode_Island'    THEN 'Rhode Island'
+          WHEN "${colCityFile}" ILIKE '%_West_Virginia'   THEN 'West Virginia'
+          ELSE INITCAP(REGEXP_REPLACE(REGEXP_REPLACE("${colCityFile}", '^.*_in_', ''), '^.*_', ''))
+        END`;
+
+    const sql = `
+      SELECT
+        ${cityFileExpr}   AS city_file,
+        (${cityNameExpr}) AS city_name,
+        (${stateExpr})    AS state,
+        COUNT(*)          AS count
+      FROM ${FULL_TABLE}
+      WHERE ${HEADER_FILTER}
+        AND "${colCityFile}" IS NOT NULL AND "${colCityFile}" != ''
+      GROUP BY 1, 2, 3
+      ORDER BY count DESC
+      LIMIT 500
+    `;
+
+    const result = await pgQuery(sql);
+    const cities = result.rows.map(r => ({
+      city_file:  r.city_file  || "",
+      name:       (r.city_name || r.city_file || "").trim(),
+      state:      (r.state     || "").trim(),
+      count:      parseInt(r.count, 10),
+    })).filter(c => c.name && c.name.length > 0);
+
+    const payload = { cities, total: cities.length, source: "cloud_sql" };
+    await cacheSet(CITIES_CACHE_KEY, payload, CITIES_CACHE_TTL);
+    res.json(payload);
+  } catch (err) {
+    logger.error(`[GET /cities] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GET /market-intel  — full market intelligence for a category
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/market-intel", async (req, res) => {

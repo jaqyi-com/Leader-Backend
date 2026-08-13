@@ -50,6 +50,7 @@ import EmailPage                from "./pages/EmailPage";
 import NumberPage               from "./pages/NumberPage";
 import CompaniesPage            from "./pages/CompaniesPage";
 import CategoryExplorerPage     from "./pages/CategoryExplorerPage";
+import CityExplorerPage         from "./pages/CityExplorerPage";
 // CRM
 import CrmPipelinePage    from "./pages/crm/CrmPipelinePage";
 import CrmDashboardPage   from "./pages/crm/CrmDashboardPage";
@@ -128,6 +129,7 @@ export default function App() {
             <Route path="email"               element={<EmailPage />} />
             <Route path="number"              element={<NumberPage />} />
             <Route path="categories"          element={<CategoryExplorerPage />} />
+            <Route path="cities"              element={<CityExplorerPage />} />
             <Route path="companies"           element={<CompaniesPage />} />
             <Route path="lg/linkedin"       element={<LinkedInFinderPage />} />
             <Route path="lg/email"          element={<EmailFinderPage />} />

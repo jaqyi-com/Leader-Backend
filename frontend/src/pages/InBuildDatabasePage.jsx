@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   Database, Search, Filter, Download, RefreshCw, Loader2,
   Phone, Globe, MapPin, Sparkles, X, ChevronDown, ChevronUp,
@@ -101,6 +101,24 @@ export default function InBuildDatabasePage() {
   const [campName,      setCampName]      = useState("");
   const [launching,     setLaunching]     = useState(false);
   const embedPollRef = useRef(null);
+  const [searchParams] = useSearchParams();
+
+  // ── Initialise filters from URL query params (e.g. from City/Category Explorer) ──
+  const [filtersInitialized, setFiltersInitialized] = useState(false);
+  useEffect(() => {
+    const city_file = searchParams.get("city_file");
+    const category  = searchParams.get("category");
+    const search    = searchParams.get("search");
+    if (city_file || category || search) {
+      setFilters(p => ({
+        ...p,
+        ...(city_file ? { city_file } : {}),
+        ...(category  ? { category  } : {}),
+        ...(search    ? { search    } : {}),
+      }));
+    }
+    setFiltersInitialized(true);
+  }, []); // eslint-disable-line
 
   const setF = (k, v) => { setFilters(p => ({ ...p, [k]: v })); setPage(1); };
 
