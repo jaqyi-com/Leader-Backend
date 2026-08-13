@@ -248,6 +248,7 @@ export const indiaGetDatabase = (params = {}) => lgApi.get("/api/india-data", { 
 export const indiaGetStats    = ()             => lgApi.get("/api/india-data/stats");
 export const indiaGetColumns  = ()             => lgApi.get("/api/india-data/columns");
 export const indiaRefresh     = ()             => lgApi.post("/api/india-data/refresh");
+export const indiaGetCities   = ()             => lgApi.get("/api/india-data/cities");
 
 // ============================================================
 // FINAL PEOPLE DATABASE (final_people)

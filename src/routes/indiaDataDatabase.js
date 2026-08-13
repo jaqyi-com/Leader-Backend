@@ -246,4 +246,63 @@ router.get("/", async (req, res) => {
   }
 });
 
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// GET /cities  — distinct city / location values with counts (India City Explorer)
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const INDIA_CITIES_CACHE_KEY = "cache:india-data-cities";
+const INDIA_CITIES_CACHE_TTL = 60 * 60 * 6; // 6 hours
+
+router.get("/cities", async (req, res) => {
+  try {
+    const cached = await cacheGet(INDIA_CITIES_CACHE_KEY);
+    if (cached) return res.json({ ...cached, _cache: "hit" });
+
+    const { selectCols } = await getSchema();
+
+    // Prefer: city > location > state > district — whichever exists in the actual schema
+    const CITY_COL_PRIORITY = ["city", "location", "state", "district", "city_name", "place"];
+    const cityCol = CITY_COL_PRIORITY.find(c => selectCols.includes(c));
+
+    const STATE_COL_PRIORITY = ["state", "province", "region"];
+    const stateCol = STATE_COL_PRIORITY.find(c => selectCols.includes(c) && c !== cityCol);
+
+    if (!cityCol) {
+      return res.json({ cities: [], total: 0, source: "cloud_sql", note: "No city column found in india_data" });
+    }
+
+    const selectParts = stateCol
+      ? `"${cityCol}" AS city_name, "${stateCol}" AS state_name, COUNT(*) AS count`
+      : `"${cityCol}" AS city_name, NULL AS state_name, COUNT(*) AS count`;
+
+    const groupParts = stateCol
+      ? `"${cityCol}", "${stateCol}"`
+      : `"${cityCol}"`;
+
+    const sql = `
+      SELECT ${selectParts}
+      FROM ${FULL_TABLE}
+      WHERE "${cityCol}" IS NOT NULL AND "${cityCol}" != ''
+      GROUP BY ${groupParts}
+      ORDER BY count DESC
+      LIMIT 500
+    `;
+
+    const result = await pgQuery(sql, [], 30000);
+    const cities = result.rows.map(r => ({
+      city_file: (r.city_name || "").trim(),
+      name:      (r.city_name || "").trim(),
+      state:     (r.state_name || "").trim(),
+      count:     parseInt(r.count, 10),
+    })).filter(c => c.name.length > 0);
+
+    const payload = { cities, total: cities.length, source: "cloud_sql", cityCol, stateCol: stateCol || null };
+    await cacheSet(INDIA_CITIES_CACHE_KEY, payload, INDIA_CITIES_CACHE_TTL);
+    res.json(payload);
+  } catch (err) {
+    logger.error(`[GET /cities] ${err.message}`);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
+
