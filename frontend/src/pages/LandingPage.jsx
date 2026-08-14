@@ -57,10 +57,10 @@ function Nav() {
             {dark ? <Sun size={15} /> : <Moon size={15} />}
           </button>
           <Link
-            to="/register"
+            to="/login"
             className="inline-flex h-9 items-center border border-border bg-transparent px-4 font-mono text-[11px] uppercase tracking-[0.18em] text-foreground transition hover:bg-secondary mr-2"
           >
-            Sign Up
+            Login
           </Link>
           <Link
             to="/app"
