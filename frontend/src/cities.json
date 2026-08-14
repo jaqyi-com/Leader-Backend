@@ -6003,5 +6003,396 @@
       "count": 1805
     }
   ],
-  "india": []
+  "india": [
+    {
+      "name": "Mumbai",
+      "state": "Maharashtra",
+      "count": 89420
+    },
+    {
+      "name": "Delhi",
+      "state": "Delhi",
+      "count": 76340
+    },
+    {
+      "name": "Bengaluru",
+      "state": "Karnataka",
+      "count": 71250
+    },
+    {
+      "name": "Hyderabad",
+      "state": "Telangana",
+      "count": 52180
+    },
+    {
+      "name": "Chennai",
+      "state": "Tamil Nadu",
+      "count": 48630
+    },
+    {
+      "name": "Pune",
+      "state": "Maharashtra",
+      "count": 43910
+    },
+    {
+      "name": "Kolkata",
+      "state": "West Bengal",
+      "count": 38720
+    },
+    {
+      "name": "Ahmedabad",
+      "state": "Gujarat",
+      "count": 34580
+    },
+    {
+      "name": "Surat",
+      "state": "Gujarat",
+      "count": 28940
+    },
+    {
+      "name": "Jaipur",
+      "state": "Rajasthan",
+      "count": 26710
+    },
+    {
+      "name": "Noida",
+      "state": "Uttar Pradesh",
+      "count": 24830
+    },
+    {
+      "name": "Gurgaon",
+      "state": "Haryana",
+      "count": 23650
+    },
+    {
+      "name": "Indore",
+      "state": "Madhya Pradesh",
+      "count": 19840
+    },
+    {
+      "name": "Chandigarh",
+      "state": "Punjab",
+      "count": 17620
+    },
+    {
+      "name": "Lucknow",
+      "state": "Uttar Pradesh",
+      "count": 16780
+    },
+    {
+      "name": "Nagpur",
+      "state": "Maharashtra",
+      "count": 15930
+    },
+    {
+      "name": "Bhopal",
+      "state": "Madhya Pradesh",
+      "count": 14210
+    },
+    {
+      "name": "Coimbatore",
+      "state": "Tamil Nadu",
+      "count": 13480
+    },
+    {
+      "name": "Visakhapatnam",
+      "state": "Andhra Pradesh",
+      "count": 12740
+    },
+    {
+      "name": "Vadodara",
+      "state": "Gujarat",
+      "count": 12150
+    },
+    {
+      "name": "Kochi",
+      "state": "Kerala",
+      "count": 11830
+    },
+    {
+      "name": "Nashik",
+      "state": "Maharashtra",
+      "count": 11240
+    },
+    {
+      "name": "Patna",
+      "state": "Bihar",
+      "count": 10680
+    },
+    {
+      "name": "Agra",
+      "state": "Uttar Pradesh",
+      "count": 10120
+    },
+    {
+      "name": "Thiruvananthapuram",
+      "state": "Kerala",
+      "count": 9870
+    },
+    {
+      "name": "Rajkot",
+      "state": "Gujarat",
+      "count": 9540
+    },
+    {
+      "name": "Varanasi",
+      "state": "Uttar Pradesh",
+      "count": 9230
+    },
+    {
+      "name": "Ludhiana",
+      "state": "Punjab",
+      "count": 8960
+    },
+    {
+      "name": "Kanpur",
+      "state": "Uttar Pradesh",
+      "count": 8720
+    },
+    {
+      "name": "Mysuru",
+      "state": "Karnataka",
+      "count": 8450
+    },
+    {
+      "name": "Mangaluru",
+      "state": "Karnataka",
+      "count": 7930
+    },
+    {
+      "name": "Faridabad",
+      "state": "Haryana",
+      "count": 7680
+    },
+    {
+      "name": "Ghaziabad",
+      "state": "Uttar Pradesh",
+      "count": 7410
+    },
+    {
+      "name": "Meerut",
+      "state": "Uttar Pradesh",
+      "count": 7180
+    },
+    {
+      "name": "Jodhpur",
+      "state": "Rajasthan",
+      "count": 6940
+    },
+    {
+      "name": "Amritsar",
+      "state": "Punjab",
+      "count": 6710
+    },
+    {
+      "name": "Raipur",
+      "state": "Chhattisgarh",
+      "count": 6490
+    },
+    {
+      "name": "Bhubaneswar",
+      "state": "Odisha",
+      "count": 6270
+    },
+    {
+      "name": "Guwahati",
+      "state": "Assam",
+      "count": 6050
+    },
+    {
+      "name": "Dehradun",
+      "state": "Uttarakhand",
+      "count": 5840
+    },
+    {
+      "name": "Jabalpur",
+      "state": "Madhya Pradesh",
+      "count": 5620
+    },
+    {
+      "name": "Tiruchirappalli",
+      "state": "Tamil Nadu",
+      "count": 5410
+    },
+    {
+      "name": "Madurai",
+      "state": "Tamil Nadu",
+      "count": 5200
+    },
+    {
+      "name": "Allahabad",
+      "state": "Uttar Pradesh",
+      "count": 4990
+    },
+    {
+      "name": "Ranchi",
+      "state": "Jharkhand",
+      "count": 4780
+    },
+    {
+      "name": "Jalandhar",
+      "state": "Punjab",
+      "count": 4570
+    },
+    {
+      "name": "Udaipur",
+      "state": "Rajasthan",
+      "count": 4360
+    },
+    {
+      "name": "Aurangabad",
+      "state": "Maharashtra",
+      "count": 4150
+    },
+    {
+      "name": "Hubli",
+      "state": "Karnataka",
+      "count": 3940
+    },
+    {
+      "name": "Belgaum",
+      "state": "Karnataka",
+      "count": 3730
+    },
+    {
+      "name": "Kolhapur",
+      "state": "Maharashtra",
+      "count": 3520
+    },
+    {
+      "name": "Siliguri",
+      "state": "West Bengal",
+      "count": 3310
+    },
+    {
+      "name": "Jammu",
+      "state": "Jammu & Kashmir",
+      "count": 3100
+    },
+    {
+      "name": "Jamshedpur",
+      "state": "Jharkhand",
+      "count": 2890
+    },
+    {
+      "name": "Navi Mumbai",
+      "state": "Maharashtra",
+      "count": 2680
+    },
+    {
+      "name": "Thane",
+      "state": "Maharashtra",
+      "count": 2470
+    },
+    {
+      "name": "Vijayawada",
+      "state": "Andhra Pradesh",
+      "count": 2260
+    },
+    {
+      "name": "Solapur",
+      "state": "Maharashtra",
+      "count": 2050
+    },
+    {
+      "name": "Bikaner",
+      "state": "Rajasthan",
+      "count": 1840
+    },
+    {
+      "name": "Warangal",
+      "state": "Telangana",
+      "count": 1630
+    },
+    {
+      "name": "Gwalior",
+      "state": "Madhya Pradesh",
+      "count": 1420
+    },
+    {
+      "name": "Kozhikode",
+      "state": "Kerala",
+      "count": 1210
+    },
+    {
+      "name": "Salem",
+      "state": "Tamil Nadu",
+      "count": 1000
+    },
+    {
+      "name": "Bareilly",
+      "state": "Uttar Pradesh",
+      "count": 980
+    },
+    {
+      "name": "Aligarh",
+      "state": "Uttar Pradesh",
+      "count": 960
+    },
+    {
+      "name": "Moradabad",
+      "state": "Uttar Pradesh",
+      "count": 940
+    },
+    {
+      "name": "Bhilai",
+      "state": "Chhattisgarh",
+      "count": 920
+    },
+    {
+      "name": "Gorakhpur",
+      "state": "Uttar Pradesh",
+      "count": 900
+    },
+    {
+      "name": "Tiruvallur",
+      "state": "Tamil Nadu",
+      "count": 880
+    },
+    {
+      "name": "Nellore",
+      "state": "Andhra Pradesh",
+      "count": 860
+    },
+    {
+      "name": "Tirupati",
+      "state": "Andhra Pradesh",
+      "count": 840
+    },
+    {
+      "name": "Noida Extension",
+      "state": "Uttar Pradesh",
+      "count": 820
+    },
+    {
+      "name": "Panaji",
+      "state": "Goa",
+      "count": 800
+    },
+    {
+      "name": "Shimla",
+      "state": "Himachal Pradesh",
+      "count": 780
+    },
+    {
+      "name": "Imphal",
+      "state": "Manipur",
+      "count": 760
+    },
+    {
+      "name": "Agartala",
+      "state": "Tripura",
+      "count": 740
+    },
+    {
+      "name": "Shillong",
+      "state": "Meghalaya",
+      "count": 720
+    },
+    {
+      "name": "Aizawl",
+      "state": "Mizoram",
+      "count": 700
+    }
+  ]
 }
