@@ -2,25 +2,39 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapPin, ArrowRight, Search, Layers, RefreshCw, Users2, Building2 } from "lucide-react";
-import { fcGetCities, fpGetCities } from "../api";
+import { fcGetCities, fpGetCities, indiaGetCities } from "../api";
 
-// ── Tabs — same structure as CategoryExplorerPage ────────────────────────
-const TABS = [
-  { key: "company", label: "Companies", icon: Building2, fn: fcGetCities, dest: "/app/companies" },
-  { key: "people",  label: "People",    icon: Users2,    fn: fpGetCities,  dest: "/app/people"    },
+// ── Country config ────────────────────────────────────────────────────────
+const COUNTRIES = [
+  { key: "usa",   label: "USA",   flag: "🇺🇸" },
+  { key: "india", label: "India", flag: "🇮🇳" },
 ];
 
-// ── City Grid Panel (remounted fresh on tab switch) ──────────────────────
-function CityPanel({ mode }) {
+// ── USA Tabs ──────────────────────────────────────────────────────────────
+const USA_TABS = [
+  { key: "company", label: "Companies", icon: Building2, fn: fcGetCities, dest: "/app/companies" },
+  { key: "people",  label: "People",    icon: Users2,    fn: fpGetCities, dest: "/app/people"    },
+];
+
+// ── India Tab ─────────────────────────────────────────────────────────────
+const INDIA_TAB = {
+  key: "india", label: "India Companies", icon: Building2, fn: indiaGetCities, dest: "/app/india-data",
+};
+
+// ── City Grid Panel ───────────────────────────────────────────────────────
+function CityPanel({ mode, country }) {
   const navigate = useNavigate();
-  const tab = TABS.find(t => t.key === mode);
+
+  // Determine which tab config to use
+  const tab = country === "india"
+    ? INDIA_TAB
+    : USA_TABS.find(t => t.key === mode);
 
   const [cities,       setCities]       = useState([]);
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState("");
   const [searchQ,      setSearchQ]      = useState("");
   const [stateFilter,  setStateFilter]  = useState("");
-  // Build state list dynamically from data
   const [stateOptions, setStateOptions] = useState([]);
 
   const load = async () => {
@@ -30,7 +44,6 @@ function CityPanel({ mode }) {
       const { data } = await tab.fn();
       const list = data.cities || [];
       setCities(list);
-      // Build sorted unique state options
       const states = [...new Set(list.map(c => c.state).filter(Boolean))].sort();
       setStateOptions(states);
     } catch (e) {
@@ -42,7 +55,7 @@ function CityPanel({ mode }) {
 
   useEffect(() => { load(); }, []); // eslint-disable-line
 
-  // ── Filter ───────────────────────────────────────────────
+  // ── Filter ──────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
     let list = cities;
     if (stateFilter) {
@@ -58,6 +71,9 @@ function CityPanel({ mode }) {
   const handleClick = (city) => {
     navigate(`${tab.dest}?f_city=${encodeURIComponent(city.name)}`);
   };
+
+  const accentColor = country === "india" ? "var(--accent)" : "var(--accent)";
+  const entityLabel = country === "india" ? "companies" : (mode === "company" ? "companies" : "people");
 
   return (
     <div className="flex flex-col gap-5">
@@ -83,7 +99,7 @@ function CityPanel({ mode }) {
             onChange={e => setStateFilter(e.target.value)}
             style={{ minWidth: 160 }}
           >
-            <option value="">All States</option>
+            <option value="">{country === "india" ? "All States" : "All States"}</option>
             {stateOptions.map(s => (
               <option key={s} value={s}>{s}</option>
             ))}
@@ -150,7 +166,7 @@ function CityPanel({ mode }) {
             </motion.div>
           ) : (
             <motion.div
-              key={`grid-${mode}`}
+              key={`grid-${mode}-${country}`}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
@@ -172,12 +188,16 @@ function CityPanel({ mode }) {
                   {/* Accent top strip */}
                   <div
                     className="absolute top-0 left-0 right-0 h-[3px] rounded-t-2xl"
-                    style={{ background: "var(--accent)" }}
+                    style={{ background: accentColor }}
                   />
+                  {/* Country flag badge */}
+                  <span className="absolute top-2 right-2 text-[11px] opacity-50 select-none">
+                    {country === "india" ? "🇮🇳" : "🇺🇸"}
+                  </span>
                   {/* Hover glow */}
                   <div
                     className="absolute inset-0 opacity-0 group-hover:opacity-[0.05] transition-opacity duration-300 rounded-2xl"
-                    style={{ background: "var(--accent)" }}
+                    style={{ background: accentColor }}
                   />
                   {/* City name */}
                   <p className="text-xs font-semibold text-[var(--text)] leading-snug line-clamp-2 mb-1 mt-1">
@@ -191,12 +211,12 @@ function CityPanel({ mode }) {
                   )}
                   {/* Count */}
                   <p className="text-[10px] text-[var(--text-3)]">
-                    {city.count.toLocaleString()} {mode === "company" ? "companies" : "people"}
+                    {city.count.toLocaleString()} {entityLabel}
                   </p>
                   {/* Arrow on hover */}
                   <div
                     className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-full p-1"
-                    style={{ background: "var(--accent)" }}
+                    style={{ background: accentColor }}
                   >
                     <ArrowRight size={10} color="white" />
                   </div>
@@ -211,7 +231,7 @@ function CityPanel({ mode }) {
       {!loading && filtered.length > 0 && (
         <p className="text-center text-[11px] text-[var(--text-3)] pb-2 flex items-center justify-center gap-1">
           <MapPin size={10} />
-          {filtered.length.toLocaleString()} cities · click any card to open filtered {mode === "company" ? "Companies" : "People"}
+          {filtered.length.toLocaleString()} cities · click any card to open filtered {entityLabel}
         </p>
       )}
     </div>
@@ -220,7 +240,13 @@ function CityPanel({ mode }) {
 
 // ── Main CityExplorerPage ─────────────────────────────────────────────────
 export default function CityExplorerPage() {
-  const [mode, setMode] = useState("company");
+  const [country, setCountry] = useState("usa"); // "usa" | "india"
+  const [mode,    setMode]    = useState("company"); // "company" | "people" — only relevant for USA
+
+  const isIndia = country === "india";
+
+  // Unique key forces CityPanel to remount fresh when country or mode changes
+  const panelKey = isIndia ? "india" : mode;
 
   return (
     <div className="flex flex-col gap-5 h-full">
@@ -232,17 +258,17 @@ export default function CityExplorerPage() {
           City Explorer
         </h2>
         <p className="text-sm text-[var(--text-3)] mt-0.5">
-          Browse {mode === "company" ? "companies" : "people"} by city from your full database
+          Browse {isIndia ? "companies" : (mode === "company" ? "companies" : "people")} by city from your full database
           <span className="ml-2 text-[10px] opacity-50">
-            (from {mode === "company" ? "companies" : "people"} database)
+            (from {isIndia ? "India" : (mode === "company" ? "companies" : "people")} database)
           </span>
         </p>
       </div>
 
-      {/* ── Toggle — Companies / People (exact same spring-pill as Email & Number pages) */}
+      {/* ── Country Toggle — USA / India ───────────────────────────────────── */}
       <div className="flex justify-center">
         <div
-          className="relative flex items-center rounded-full p-1"
+          className="relative flex items-center rounded-full p-1 gap-0"
           style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
         >
           {/* Spring sliding pill */}
@@ -252,32 +278,72 @@ export default function CityExplorerPage() {
             className="absolute top-1 bottom-1 rounded-full"
             style={{
               background: "var(--accent)",
-              left:  mode === "company" ? "4px" : "calc(50% + 2px)",
+              left:  country === "usa" ? "4px" : "calc(50% + 2px)",
               width: "calc(50% - 6px)",
               zIndex: 0,
             }}
           />
-          <button
-            onClick={() => setMode("company")}
-            className="relative z-10 flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
-            style={{ color: mode === "company" ? "#fff" : "var(--text-3)", minWidth: 130 }}
-          >
-            <Building2 size={14} />
-            Companies
-          </button>
-          <button
-            onClick={() => setMode("people")}
-            className="relative z-10 flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
-            style={{ color: mode === "people" ? "#fff" : "var(--text-3)", minWidth: 130 }}
-          >
-            <Users2 size={14} />
-            People
-          </button>
+          {COUNTRIES.map(c => (
+            <button
+              key={c.key}
+              onClick={() => setCountry(c.key)}
+              className="relative z-10 flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold transition-colors"
+              style={{ color: country === c.key ? "#fff" : "var(--text-3)", minWidth: 130 }}
+            >
+              <span className="text-base leading-none">{c.flag}</span>
+              {c.label}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* City Panel — key forces fresh mount + fetch on tab switch */}
-      <CityPanel key={mode} mode={mode} />
+      {/* ── Companies / People toggle — only shown for USA ─────────────────── */}
+      <AnimatePresence>
+        {!isIndia && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginBottom: -16 }}
+            animate={{ opacity: 1, height: "auto", marginBottom: 0 }}
+            exit={{ opacity: 0, height: 0, marginBottom: -16 }}
+            transition={{ duration: 0.25 }}
+            className="flex justify-center overflow-hidden"
+          >
+            <div
+              className="relative flex items-center rounded-full p-1"
+              style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
+            >
+              {/* Spring sliding pill */}
+              <motion.div
+                layout
+                transition={{ type: "spring", stiffness: 400, damping: 35 }}
+                className="absolute top-1 bottom-1 rounded-full"
+                style={{
+                  background: "var(--surface-3, #333)",
+                  left:  mode === "company" ? "4px" : "calc(50% + 2px)",
+                  width: "calc(50% - 6px)",
+                  zIndex: 0,
+                }}
+              />
+              {USA_TABS.map(t => {
+                const Icon = t.icon;
+                return (
+                  <button
+                    key={t.key}
+                    onClick={() => setMode(t.key)}
+                    className="relative z-10 flex items-center justify-center gap-2 px-6 py-2 rounded-full text-xs font-semibold transition-colors"
+                    style={{ color: mode === t.key ? "var(--text)" : "var(--text-3)", minWidth: 120 }}
+                  >
+                    <Icon size={13} />
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* City Panel — key forces fresh mount + fetch on any switch */}
+      <CityPanel key={panelKey} mode={mode} country={country} />
     </div>
   );
 }

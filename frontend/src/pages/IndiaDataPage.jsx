@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Database, Search, Filter, Download, RefreshCw,
@@ -9,6 +10,11 @@ import { indiaGetDatabase, indiaGetStats, indiaGetColumns, indiaRefresh } from "
 import toast from "react-hot-toast";
 
 export default function IndiaDataPage() {
+  const [searchParams] = useSearchParams();
+
+  // Pre-fill search from City Explorer navigation (?f_city=Mumbai)
+  const initialSearch = searchParams.get("f_city") || searchParams.get("search") || "";
+
   const [records,    setRecords]    = useState([]);
   const [total,      setTotal]      = useState(0);
   const [stats,      setStats]      = useState(null);
@@ -20,7 +26,7 @@ export default function IndiaDataPage() {
   const [limit,      setLimit]      = useState(50);
   const [sortBy,     setSortBy]     = useState("");
   const [sortDir,    setSortDir]    = useState("asc");
-  const [search,     setSearch]     = useState("");
+  const [search,     setSearch]     = useState(initialSearch);
 
   // ── Column discovery ────────────────────────────────────
   const loadColumns = useCallback(async () => {
