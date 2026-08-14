@@ -379,16 +379,7 @@ export default function LoginPage() {
           </form>
         </div>
 
-        {/* Footer */}
-        <p style={{ textAlign: "center", color: "var(--text-3)", fontSize: 13, marginTop: 20 }}>
-          Don't have an account?{" "}
-          <Link
-            to="/register"
-            style={{ color: "var(--accent-2)", textDecoration: "none", fontWeight: 500 }}
-          >
-            Create one free
-          </Link>
-        </p>
+
       </motion.div>
 
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>

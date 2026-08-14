@@ -5,7 +5,7 @@ import Layout from "./components/Layout";
 
 // Auth pages
 import LoginPage from "./pages/LoginPage";
-import RegisterPage from "./pages/RegisterPage";
+import RegisterGate from "./components/RegisterGate"; // password-protected internal signup
 import AuthCallbackPage from "./pages/AuthCallbackPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -76,7 +76,7 @@ export default function App() {
           {/* ── Public routes ─────────────────────────────────── */}
           <Route path="/"                element={<LandingPage />} />
           <Route path="/login"           element={<LoginPage />} />
-          <Route path="/register"        element={<RegisterPage />} />
+          <Route path="/register"        element={<RegisterGate />} />
           <Route path="/auth/callback"   element={<AuthCallbackPage />} />
           <Route path="/verify-email"    element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
