@@ -287,7 +287,7 @@ router.get("/cities", async (req, res) => {
       LIMIT 500
     `;
 
-    const result = await pgQuery(sql, [], 30000);
+    const result = await pgQuery(sql, [], 120000);
     const cities = result.rows.map(r => ({
       city_file: (r.city_name || "").trim(),
       name:      (r.city_name || "").trim(),
