@@ -124,10 +124,10 @@ function Hero() {
             className="mt-10 flex flex-wrap items-center gap-4"
           >
             <Link
-              to="/register"
+              to="/login"
               className="inline-flex h-12 items-center px-6 border border-primary bg-primary font-mono text-[11px] uppercase tracking-[0.2em] text-primary-foreground transition hover:opacity-90"
             >
-              Access Database Free →
+              Access Database →
             </Link>
             <a
               href="#database"
@@ -503,12 +503,6 @@ function FinalCTA() {
         </p>
         <div className="flex flex-wrap gap-4 justify-center">
           <Link
-            to="/register"
-            className="inline-flex h-12 items-center px-10 border border-background bg-background font-mono text-[11px] uppercase tracking-[0.2em] text-foreground transition hover:bg-transparent hover:text-background"
-          >
-            Create Free Account →
-          </Link>
-          <Link
             to="/login"
             className="inline-flex h-12 items-center px-10 border border-background/40 bg-transparent font-mono text-[11px] uppercase tracking-[0.2em] text-background/70 transition hover:border-background hover:text-background"
           >
@@ -531,7 +525,7 @@ function Footer() {
         </div>
         <div className="flex items-center gap-6 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           <Link to="/login" className="hover:text-foreground transition">Sign In</Link>
-          <Link to="/register" className="hover:text-foreground transition">Register</Link>
+
           <Link to="/app/docs" className="hover:text-foreground transition">Docs</Link>
         </div>
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
