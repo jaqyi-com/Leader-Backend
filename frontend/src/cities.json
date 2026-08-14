@@ -3005,3002 +3005,3003 @@
     {
       "name": "New York",
       "state": "NY",
-      "count": 318920
+      "count": 159460
+    },
+    {
+      "name": "New York",
+      "state": "NY",
+      "count": 159460
     },
     {
       "name": "Chicago",
       "state": "IL",
-      "count": 251920
+      "count": 125960
     },
     {
       "name": "Houston",
       "state": "TX",
-      "count": 224700
+      "count": 112350
     },
     {
       "name": "San Diego",
       "state": "CA",
-      "count": 194800
+      "count": 97400
     },
     {
       "name": "Dallas",
       "state": "TX",
-      "count": 184640
+      "count": 92320
     },
     {
       "name": "Phoenix",
       "state": "AZ",
-      "count": 173670
+      "count": 86835
     },
     {
       "name": "San Francisco",
       "state": "CA",
-      "count": 166170
+      "count": 83085
     },
     {
       "name": "Los Angeles",
       "state": "CA",
-      "count": 164000
+      "count": 82000
     },
     {
       "name": "Austin",
       "state": "TX",
-      "count": 151160
+      "count": 75580
     },
     {
       "name": "San Antonio",
       "state": "TX",
-      "count": 143550
+      "count": 71775
     },
     {
       "name": "Denver",
       "state": "CO",
-      "count": 131550
+      "count": 65775
     },
     {
       "name": "Atlanta",
       "state": "GA",
-      "count": 121790
+      "count": 60895
     },
     {
       "name": "Charlotte",
       "state": "NC",
-      "count": 121700
+      "count": 60850
     },
     {
       "name": "Indianapolis",
       "state": "IN",
-      "count": 115220
+      "count": 57610
     },
     {
       "name": "Columbus",
       "state": "OH",
-      "count": 115200
+      "count": 57600
     },
     {
       "name": "Philadelphia",
       "state": "PA",
-      "count": 108950
+      "count": 54475
+    },
+    {
+      "name": "Philadelphia",
+      "state": "PA",
+      "count": 54475
     },
     {
       "name": "Seattle",
       "state": "WA",
-      "count": 105600
+      "count": 52800
     },
     {
       "name": "San Jose",
       "state": "CA",
-      "count": 103800
+      "count": 51900
     },
     {
       "name": "Jacksonville",
       "state": "FL",
-      "count": 102160
+      "count": 51080
     },
     {
       "name": "Minneapolis",
       "state": "MN",
-      "count": 101690
+      "count": 50845
     },
     {
       "name": "Las Vegas",
       "state": "NV",
-      "count": 95280
+      "count": 47640
     },
     {
       "name": "Fort Worth",
       "state": "TX",
-      "count": 92250
+      "count": 46125
     },
     {
       "name": "Washington",
       "state": "DC",
-      "count": 88150
+      "count": 44075
     },
     {
       "name": "Boston",
       "state": "MA",
-      "count": 86290
+      "count": 43145
     },
     {
       "name": "Louisville",
       "state": "KY",
-      "count": 83050
+      "count": 41525
     },
     {
       "name": "Memphis",
       "state": "TN",
-      "count": 79920
+      "count": 39960
     },
     {
       "name": "Miami",
       "state": "FL",
-      "count": 79660
+      "count": 39830
     },
     {
       "name": "El Paso",
       "state": "TX",
-      "count": 77380
+      "count": 38690
     },
     {
       "name": "Omaha",
       "state": "NE",
-      "count": 76130
+      "count": 38065
+    },
+    {
+      "name": "Omaha",
+      "state": "NE",
+      "count": 38065
     },
     {
       "name": "Cincinnati",
       "state": "OH",
-      "count": 73560
+      "count": 36780
     },
     {
       "name": "Sacramento",
       "state": "CA",
-      "count": 73260
+      "count": 36630
     },
     {
       "name": "Tucson",
       "state": "AZ",
-      "count": 67340
+      "count": 33670
     },
     {
       "name": "Milwaukee",
       "state": "WI",
-      "count": 67140
+      "count": 33570
     },
     {
       "name": "Orlando",
       "state": "FL",
-      "count": 66550
+      "count": 33275
+    },
+    {
+      "name": "Orlando",
+      "state": "FL",
+      "count": 33275
     },
     {
       "name": "Tampa",
       "state": "FL",
-      "count": 66490
+      "count": 33245
     },
     {
       "name": "Nashville",
       "state": "TN",
-      "count": 63910
+      "count": 31955
     },
     {
       "name": "Saint Louis",
       "state": "MO",
-      "count": 61560
+      "count": 30780
     },
     {
       "name": "Pittsburgh",
       "state": "PA",
-      "count": 61310
+      "count": 30655
     },
     {
       "name": "Portland",
       "state": "OR",
-      "count": 59940
+      "count": 29970
     },
     {
       "name": "Colorado Springs",
       "state": "CO",
-      "count": 59210
+      "count": 29605
     },
     {
       "name": "Detroit",
       "state": "MI",
-      "count": 56860
+      "count": 28430
     },
     {
       "name": "Cleveland",
       "state": "OH",
-      "count": 55510
+      "count": 27755
+    },
+    {
+      "name": "Cleveland",
+      "state": "OH",
+      "count": 27755
     },
     {
       "name": "Raleigh",
       "state": "NC",
-      "count": 55460
+      "count": 27730
     },
     {
       "name": "Tulsa",
       "state": "OK",
-      "count": 55250
+      "count": 27625
     },
     {
       "name": "Scottsdale",
       "state": "AZ",
-      "count": 52900
+      "count": 26450
     },
     {
       "name": "Baltimore",
       "state": "MD",
-      "count": 52880
+      "count": 26440
     },
     {
       "name": "Oklahoma City",
       "state": "OK",
-      "count": 52730
+      "count": 26365
     },
     {
       "name": "Honolulu",
       "state": "HI",
-      "count": 51140
+      "count": 25570
     },
     {
       "name": "Irvine",
       "state": "CA",
-      "count": 50830
+      "count": 25415
+    },
+    {
+      "name": "Irvine",
+      "state": "CA",
+      "count": 25415
     },
     {
       "name": "Mesa",
       "state": "AZ",
-      "count": 44220
+      "count": 22110
     },
     {
       "name": "Fresno",
       "state": "CA",
-      "count": 41970
+      "count": 20985
     },
     {
       "name": "Oakland",
       "state": "CA",
-      "count": 41890
+      "count": 20945
     },
     {
       "name": "Albuquerque",
       "state": "NM",
-      "count": 41680
+      "count": 20840
     },
     {
       "name": "Brooklyn",
       "state": "NY",
-      "count": 41260
+      "count": 20630
+    },
+    {
+      "name": "Brooklyn",
+      "state": "NY",
+      "count": 20630
     },
     {
       "name": "Wichita",
       "state": "KS",
-      "count": 40910
+      "count": 20455
     },
     {
       "name": "Saint Paul",
       "state": "MN",
-      "count": 39240
+      "count": 19620
     },
     {
       "name": "Plano",
       "state": "TX",
-      "count": 38140
+      "count": 19070
     },
     {
       "name": "Birmingham",
       "state": "AL",
-      "count": 35240
+      "count": 17620
     },
     {
       "name": "Anaheim",
       "state": "CA",
-      "count": 35060
+      "count": 17530
     },
     {
       "name": "Virginia Beach",
       "state": "VA",
-      "count": 34790
+      "count": 17395
     },
     {
       "name": "Kansas City",
       "state": "MO",
-      "count": 33420
+      "count": 16710
     },
     {
       "name": "Arlington",
       "state": "TX",
-      "count": 33410
+      "count": 16705
     },
     {
       "name": "Lincoln",
       "state": "NE",
-      "count": 33110
+      "count": 16555
     },
     {
       "name": "Toledo",
       "state": "OH",
-      "count": 32120
+      "count": 16060
     },
     {
       "name": "Grand Rapids",
       "state": "MI",
-      "count": 31950
+      "count": 15975
     },
     {
       "name": "Salt Lake City",
       "state": "UT",
-      "count": 31930
+      "count": 15965
     },
     {
       "name": "Fort Lauderdale",
       "state": "FL",
-      "count": 30380
+      "count": 15190
     },
     {
       "name": "Buffalo",
       "state": "NY",
-      "count": 29670
+      "count": 14835
     },
     {
       "name": "Richmond",
       "state": "VA",
-      "count": 29670
+      "count": 14835
     },
     {
       "name": "Rochester",
       "state": "NY",
-      "count": 29310
+      "count": 14655
     },
     {
       "name": "Tempe",
       "state": "AZ",
-      "count": 28920
+      "count": 14460
     },
     {
       "name": "Santa Ana",
       "state": "CA",
-      "count": 28620
+      "count": 14310
     },
     {
       "name": "Fort Wayne",
       "state": "IN",
-      "count": 28240
+      "count": 14120
     },
     {
       "name": "New Orleans",
       "state": "LA",
-      "count": 27340
+      "count": 13670
+    },
+    {
+      "name": "New Orleans",
+      "state": "LA",
+      "count": 13670
     },
     {
       "name": "Greensboro",
       "state": "NC",
-      "count": 26930
+      "count": 13465
     },
     {
       "name": "Lexington",
       "state": "KY",
-      "count": 26580
+      "count": 13290
     },
     {
       "name": "Dayton",
       "state": "OH",
-      "count": 26130
+      "count": 13065
+    },
+    {
+      "name": "Dayton",
+      "state": "OH",
+      "count": 13065
     },
     {
       "name": "Glendale",
       "state": "AZ",
-      "count": 25960
+      "count": 12980
     },
     {
       "name": "Boca Raton",
       "state": "FL",
-      "count": 25890
+      "count": 12945
     },
     {
       "name": "Aurora",
       "state": "CO",
-      "count": 25810
+      "count": 12905
     },
     {
       "name": "Anchorage",
       "state": "AK",
-      "count": 25600
+      "count": 12800
     },
     {
       "name": "Orange",
       "state": "CA",
-      "count": 25140
+      "count": 12570
     },
     {
       "name": "Madison",
       "state": "WI",
-      "count": 24710
+      "count": 12355
     },
     {
       "name": "Bakersfield",
       "state": "CA",
-      "count": 24430
+      "count": 12215
     },
     {
       "name": "Chandler",
       "state": "AZ",
-      "count": 24400
+      "count": 12200
     },
     {
       "name": "Little Rock",
       "state": "AR",
-      "count": 23830
+      "count": 11915
     },
     {
       "name": "Akron",
       "state": "OH",
-      "count": 23770
+      "count": 11885
     },
     {
       "name": "Corpus Christi",
       "state": "TX",
-      "count": 22770
+      "count": 11385
     },
     {
       "name": "Spokane",
       "state": "WA",
-      "count": 22170
+      "count": 11085
     },
     {
       "name": "Irving",
       "state": "TX",
-      "count": 22090
+      "count": 11045
     },
     {
       "name": "Saint Petersburg",
       "state": "FL",
-      "count": 22090
+      "count": 11045
     },
     {
       "name": "Baton Rouge",
       "state": "LA",
-      "count": 21990
+      "count": 10995
     },
     {
       "name": "Gilbert",
       "state": "AZ",
-      "count": 21890
+      "count": 10945
     },
     {
       "name": "Durham",
       "state": "NC",
-      "count": 21530
+      "count": 10765
     },
     {
       "name": "Knoxville",
       "state": "TN",
-      "count": 21460
+      "count": 10730
     },
     {
       "name": "Alexandria",
       "state": "VA",
-      "count": 21290
+      "count": 10645
     },
     {
       "name": "Lubbock",
       "state": "TX",
-      "count": 21100
+      "count": 10550
     },
     {
       "name": "Toronto",
       "state": "ON",
-      "count": 20320
+      "count": 10160
     },
     {
       "name": "Stockton",
       "state": "CA",
-      "count": 20180
+      "count": 10090
     },
     {
       "name": "Long Beach",
       "state": "CA",
-      "count": 20060
+      "count": 10030
     },
     {
       "name": "Winston Salem",
       "state": "NC",
-      "count": 19640
+      "count": 9820
     },
     {
       "name": "Huntington Beach",
       "state": "CA",
-      "count": 19420
+      "count": 9710
     },
     {
       "name": "Tacoma",
       "state": "WA",
-      "count": 19330
+      "count": 9665
     },
     {
       "name": "Cambridge",
       "state": "MA",
-      "count": 19200
+      "count": 9600
     },
     {
       "name": "Fremont",
       "state": "CA",
-      "count": 19130
+      "count": 9565
     },
     {
       "name": "Vancouver",
       "state": "WA",
-      "count": 18710
+      "count": 9355
     },
     {
       "name": "Marietta",
       "state": "GA",
-      "count": 18620
+      "count": 9310
+    },
+    {
+      "name": "Marietta",
+      "state": "GA",
+      "count": 9310
     },
     {
       "name": "Boulder",
       "state": "CO",
-      "count": 18480
+      "count": 9240
     },
     {
       "name": "Garland",
       "state": "TX",
-      "count": 18360
+      "count": 9180
     },
     {
       "name": "Springfield",
       "state": "MO",
-      "count": 18190
+      "count": 9095
     },
     {
       "name": "Des Moines",
       "state": "IA",
-      "count": 18070
+      "count": 9035
     },
     {
       "name": "West Palm Beach",
       "state": "FL",
-      "count": 18040
+      "count": 9020
     },
     {
       "name": "Newport Beach",
       "state": "CA",
-      "count": 17830
+      "count": 8915
     },
     {
       "name": "Huntsville",
       "state": "AL",
-      "count": 17550
+      "count": 8775
     },
     {
       "name": "Arlington",
       "state": "VA",
-      "count": 17510
+      "count": 8755
     },
     {
       "name": "Costa Mesa",
       "state": "CA",
-      "count": 17400
+      "count": 8700
     },
     {
       "name": "Santa Clara",
       "state": "CA",
-      "count": 17400
+      "count": 8700
     },
     {
       "name": "Sarasota",
       "state": "FL",
-      "count": 17110
+      "count": 8555
     },
     {
       "name": "Mobile",
       "state": "AL",
-      "count": 17050
+      "count": 8525
     },
     {
       "name": "Clearwater",
       "state": "FL",
-      "count": 16910
+      "count": 8455
     },
     {
       "name": "Chattanooga",
       "state": "TN",
-      "count": 16610
+      "count": 8305
     },
     {
       "name": "Modesto",
       "state": "CA",
-      "count": 16440
+      "count": 8220
     },
     {
       "name": "Santa Rosa",
       "state": "CA",
-      "count": 16280
+      "count": 8140
     },
     {
       "name": "Amarillo",
       "state": "TX",
-      "count": 16250
+      "count": 8125
     },
     {
       "name": "Chula Vista",
       "state": "CA",
-      "count": 15710
+      "count": 7855
     },
     {
       "name": "Tallahassee",
       "state": "FL",
-      "count": 15690
+      "count": 7845
     },
     {
       "name": "Richardson",
       "state": "TX",
-      "count": 15630
+      "count": 7815
     },
     {
       "name": "Naperville",
       "state": "IL",
-      "count": 15480
+      "count": 7740
     },
     {
       "name": "Fort Collins",
       "state": "CO",
-      "count": 15430
+      "count": 7715
     },
     {
       "name": "Alpharetta",
       "state": "GA",
-      "count": 15320
+      "count": 7660
     },
     {
       "name": "Stamford",
       "state": "CT",
-      "count": 15020
+      "count": 7510
     },
     {
       "name": "Bellevue",
       "state": "WA",
-      "count": 14860
+      "count": 7430
     },
     {
       "name": "Providence",
       "state": "RI",
-      "count": 14790
+      "count": 7395
     },
     {
       "name": "Carlsbad",
       "state": "CA",
-      "count": 14490
+      "count": 7245
     },
     {
       "name": "Corona",
       "state": "CA",
-      "count": 14330
+      "count": 7165
     },
     {
       "name": "Norfolk",
       "state": "VA",
-      "count": 14160
+      "count": 7080
     },
     {
       "name": "Berkeley",
       "state": "CA",
-      "count": 14150
+      "count": 7075
     },
     {
       "name": "Wilmington",
       "state": "DE",
-      "count": 14080
+      "count": 7040
+    },
+    {
+      "name": "Wilmington",
+      "state": "DE",
+      "count": 7040
     },
     {
       "name": "Pompano Beach",
       "state": "FL",
-      "count": 14010
+      "count": 7005
     },
     {
       "name": "Torrance",
       "state": "CA",
-      "count": 14010
+      "count": 7005
     },
     {
       "name": "Riverside",
       "state": "CA",
-      "count": 14000
+      "count": 7000
     },
     {
       "name": "Reno",
       "state": "NV",
-      "count": 13960
+      "count": 6980
     },
     {
       "name": "Rockville",
       "state": "MD",
-      "count": 13960
+      "count": 6980
     },
     {
       "name": "Santa Monica",
       "state": "CA",
-      "count": 13880
+      "count": 6940
     },
     {
       "name": "Worcester",
       "state": "MA",
-      "count": 13860
+      "count": 6930
     },
     {
       "name": "Sioux Falls",
       "state": "SD",
-      "count": 13780
+      "count": 6890
     },
     {
       "name": "Santa Barbara",
       "state": "CA",
-      "count": 13660
+      "count": 6830
     },
     {
       "name": "Glendale",
       "state": "CA",
-      "count": 13650
+      "count": 6825
     },
     {
       "name": "Eugene",
       "state": "OR",
-      "count": 13550
+      "count": 6775
     },
     {
       "name": "Pasadena",
       "state": "CA",
-      "count": 13550
+      "count": 6775
     },
     {
       "name": "Carrollton",
       "state": "TX",
-      "count": 13100
+      "count": 6550
     },
     {
       "name": "Columbia",
       "state": "SC",
-      "count": 13040
+      "count": 6520
     },
     {
       "name": "Littleton",
       "state": "CO",
-      "count": 13010
+      "count": 6505
     },
     {
       "name": "Englewood",
       "state": "CO",
-      "count": 12770
+      "count": 6385
     },
     {
       "name": "Tyler",
       "state": "TX",
-      "count": 12740
+      "count": 6370
     },
     {
       "name": "Pensacola",
       "state": "FL",
-      "count": 12670
+      "count": 6335
     },
     {
       "name": "Lakewood",
       "state": "CO",
-      "count": 12630
+      "count": 6315
     },
     {
       "name": "Salem",
       "state": "OR",
-      "count": 12580
+      "count": 6290
     },
     {
       "name": "Overland Park",
       "state": "KS",
-      "count": 12560
+      "count": 6280
+    },
+    {
+      "name": "Overland Park",
+      "state": "KS",
+      "count": 6280
     },
     {
       "name": "Greenville",
       "state": "SC",
-      "count": 12490
+      "count": 6245
     },
     {
       "name": "Fort Myers",
       "state": "FL",
-      "count": 12340
+      "count": 6170
     },
     {
       "name": "Chesapeake",
       "state": "VA",
-      "count": 12300
+      "count": 6150
     },
     {
       "name": "Burbank",
       "state": "CA",
-      "count": 12070
+      "count": 6035
     },
     {
       "name": "Boise",
       "state": "ID",
-      "count": 12040
+      "count": 6020
     },
     {
       "name": "Ann Arbor",
       "state": "MI",
-      "count": 12000
+      "count": 6000
     },
     {
       "name": "Evansville",
       "state": "IN",
-      "count": 11990
+      "count": 5995
     },
     {
       "name": "Palo Alto",
       "state": "CA",
-      "count": 11790
+      "count": 5895
     },
     {
       "name": "Hayward",
       "state": "CA",
-      "count": 11750
+      "count": 5875
     },
     {
       "name": "Peoria",
       "state": "AZ",
-      "count": 11700
+      "count": 5850
     },
     {
       "name": "Troy",
       "state": "MI",
-      "count": 11680
-    },
-    {
-      "name": "Norcross",
-      "state": "GA",
-      "count": 11620
+      "count": 5840
     },
     {
       "name": "Bronx",
       "state": "NY",
-      "count": 11620
+      "count": 5810
+    },
+    {
+      "name": "Norcross",
+      "state": "GA",
+      "count": 5810
     },
     {
       "name": "Henderson",
       "state": "NV",
-      "count": 11590
+      "count": 5795
     },
     {
       "name": "Naples",
       "state": "FL",
-      "count": 11510
-    },
-    {
-      "name": "Sunnyvale",
-      "state": "CA",
-      "count": 11480
+      "count": 5755
     },
     {
       "name": "Montgomery",
       "state": "AL",
-      "count": 11480
+      "count": 5740
+    },
+    {
+      "name": "Montgomery",
+      "state": "AL",
+      "count": 5740
+    },
+    {
+      "name": "Sunnyvale",
+      "state": "CA",
+      "count": 5740
     },
     {
       "name": "Augusta",
       "state": "GA",
-      "count": 11270
+      "count": 5635
     },
     {
       "name": "Roseville",
       "state": "CA",
-      "count": 11260
+      "count": 5630
     },
     {
       "name": "Tustin",
       "state": "CA",
-      "count": 11240
+      "count": 5620
     },
     {
       "name": "Newark",
       "state": "NJ",
-      "count": 11140
+      "count": 5570
     },
     {
       "name": "Bethesda",
       "state": "MD",
-      "count": 11110
+      "count": 5555
     },
     {
       "name": "Schaumburg",
       "state": "IL",
-      "count": 11080
+      "count": 5540
     },
     {
       "name": "Cape Coral",
       "state": "FL",
-      "count": 11000
+      "count": 5500
     },
     {
       "name": "Escondido",
       "state": "CA",
-      "count": 10950
+      "count": 5475
     },
     {
       "name": "Fullerton",
       "state": "CA",
-      "count": 10890
+      "count": 5445
     },
     {
       "name": "Fairfax",
       "state": "VA",
-      "count": 10760
+      "count": 5380
     },
     {
       "name": "Rockford",
       "state": "IL",
-      "count": 10670
-    },
-    {
-      "name": "Round Rock",
-      "state": "TX",
-      "count": 10650
+      "count": 5335
     },
     {
       "name": "Metairie",
       "state": "LA",
-      "count": 10650
+      "count": 5325
+    },
+    {
+      "name": "Round Rock",
+      "state": "TX",
+      "count": 5325
     },
     {
       "name": "Mountain View",
       "state": "CA",
-      "count": 10560
+      "count": 5280
     },
     {
       "name": "Beaumont",
       "state": "TX",
-      "count": 10440
+      "count": 5220
     },
     {
       "name": "Hollywood",
       "state": "FL",
-      "count": 10370
+      "count": 5185
     },
     {
       "name": "Jersey City",
       "state": "NJ",
-      "count": 10200
+      "count": 5100
     },
     {
       "name": "Concord",
       "state": "CA",
-      "count": 10170
+      "count": 5085
     },
     {
       "name": "Aurora",
       "state": "IL",
-      "count": 10020
-    },
-    {
-      "name": "San Mateo",
-      "state": "CA",
-      "count": 9990
+      "count": 5010
     },
     {
       "name": "Beverly Hills",
       "state": "CA",
-      "count": 9990
+      "count": 4995
+    },
+    {
+      "name": "San Mateo",
+      "state": "CA",
+      "count": 4995
     },
     {
       "name": "Hialeah",
       "state": "FL",
-      "count": 9980
+      "count": 4990
     },
     {
       "name": "Grand Prairie",
       "state": "TX",
-      "count": 9800
+      "count": 4900
     },
     {
       "name": "Silver Spring",
       "state": "MD",
-      "count": 9790
+      "count": 4895
     },
     {
       "name": "Calgary",
       "state": "AB",
-      "count": 9780
+      "count": 4890
     },
     {
       "name": "Albany",
       "state": "NY",
-      "count": 9690
+      "count": 4845
     },
     {
       "name": "Syracuse",
       "state": "NY",
-      "count": 9630
+      "count": 4815
     },
     {
       "name": "Oxnard",
       "state": "CA",
-      "count": 9600
+      "count": 4800
     },
     {
       "name": "El Cajon",
       "state": "CA",
-      "count": 9570
+      "count": 4785
     },
     {
       "name": "Vancouver",
       "state": "BC",
-      "count": 9570
+      "count": 4785
     },
     {
       "name": "Walnut Creek",
       "state": "CA",
-      "count": 9530
+      "count": 4765
     },
     {
       "name": "Oceanside",
       "state": "CA",
-      "count": 9520
+      "count": 4760
     },
     {
       "name": "Spring",
       "state": "TX",
-      "count": 9440
-    },
-    {
-      "name": "Roanoke",
-      "state": "VA",
-      "count": 9430
+      "count": 4720
     },
     {
       "name": "Cary",
       "state": "NC",
-      "count": 9430
+      "count": 4715
+    },
+    {
+      "name": "Roanoke",
+      "state": "VA",
+      "count": 4715
     },
     {
       "name": "Southfield",
       "state": "MI",
-      "count": 9390
+      "count": 4695
     },
     {
       "name": "Gainesville",
       "state": "FL",
-      "count": 9360
+      "count": 4680
     },
     {
       "name": "Yonkers",
       "state": "NY",
-      "count": 9320
+      "count": 4660
     },
     {
       "name": "Redwood City",
       "state": "CA",
-      "count": 9290
+      "count": 4645
     },
     {
       "name": "Shreveport",
       "state": "LA",
-      "count": 9260
+      "count": 4630
     },
     {
       "name": "Miami Beach",
       "state": "FL",
-      "count": 9150
+      "count": 4575
     },
     {
       "name": "Lancaster",
       "state": "PA",
-      "count": 9100
+      "count": 4550
     },
     {
       "name": "Winter Park",
       "state": "FL",
-      "count": 9100
+      "count": 4550
     },
     {
       "name": "Norwalk",
       "state": "CT",
-      "count": 9010
+      "count": 4505
     },
     {
       "name": "Columbia",
       "state": "MD",
-      "count": 8990
+      "count": 4495
     },
     {
       "name": "Rancho Cucamonga",
       "state": "CA",
-      "count": 8980
+      "count": 4490
     },
     {
       "name": "Centennial",
       "state": "CO",
-      "count": 8960
+      "count": 4480
     },
     {
       "name": "Pleasanton",
       "state": "CA",
-      "count": 8960
+      "count": 4480
     },
     {
       "name": "Waltham",
       "state": "MA",
-      "count": 8890
+      "count": 4445
     },
     {
       "name": "St Louis",
       "state": "MO",
-      "count": 8880
+      "count": 4440
     },
     {
       "name": "Lafayette",
       "state": "LA",
-      "count": 8760
+      "count": 4380
     },
     {
       "name": "Ontario",
       "state": "CA",
-      "count": 8740
+      "count": 4370
     },
     {
       "name": "Coral Gables",
       "state": "FL",
-      "count": 8700
+      "count": 4350
     },
     {
       "name": "Doral",
       "state": "FL",
-      "count": 8680
+      "count": 4340
     },
     {
       "name": "San Rafael",
       "state": "CA",
-      "count": 8640
+      "count": 4320
     },
     {
       "name": "Savannah",
       "state": "GA",
-      "count": 8610
+      "count": 4305
     },
     {
       "name": "Asheville",
       "state": "NC",
-      "count": 8530
+      "count": 4265
     },
     {
       "name": "Melbourne",
       "state": "FL",
-      "count": 8530
+      "count": 4265
     },
     {
       "name": "Vista",
       "state": "CA",
-      "count": 8500
+      "count": 4250
     },
     {
       "name": "Plantation",
       "state": "FL",
-      "count": 8460
+      "count": 4230
     },
     {
       "name": "Annapolis",
       "state": "MD",
-      "count": 8430
+      "count": 4215
     },
     {
       "name": "Van Nuys",
       "state": "CA",
-      "count": 8270
+      "count": 4135
     },
     {
       "name": "Ventura",
       "state": "CA",
-      "count": 8260
+      "count": 4130
     },
     {
       "name": "Simi Valley",
       "state": "CA",
-      "count": 8250
+      "count": 4125
     },
     {
       "name": "Lakeland",
       "state": "FL",
-      "count": 8140
+      "count": 4070
     },
     {
       "name": "Lewisville",
       "state": "TX",
-      "count": 8060
+      "count": 4030
     },
     {
       "name": "Warren",
       "state": "MI",
-      "count": 8010
+      "count": 4005
     },
     {
       "name": "Beaverton",
       "state": "OR",
-      "count": 8000
+      "count": 4000
     },
     {
       "name": "Alameda",
       "state": "CA",
-      "count": 7970
+      "count": 3985
     },
     {
       "name": "Roswell",
       "state": "GA",
-      "count": 7950
+      "count": 3975
     },
     {
       "name": "Woodland Hills",
       "state": "CA",
-      "count": 7940
+      "count": 3970
     },
     {
       "name": "Campbell",
       "state": "CA",
-      "count": 7930
+      "count": 3965
     },
     {
       "name": "Gaithersburg",
       "state": "MD",
-      "count": 7920
+      "count": 3960
     },
     {
       "name": "Wilmington",
       "state": "NC",
-      "count": 7870
+      "count": 3935
     },
     {
       "name": "Franklin",
       "state": "TN",
-      "count": 7820
+      "count": 3910
     },
     {
       "name": "Coral Springs",
       "state": "FL",
-      "count": 7780
+      "count": 3890
     },
     {
       "name": "Duluth",
       "state": "GA",
-      "count": 7770
+      "count": 3885
     },
     {
       "name": "Longwood",
       "state": "FL",
-      "count": 7770
+      "count": 3885
     },
     {
       "name": "Dublin",
       "state": "OH",
-      "count": 7740
+      "count": 3870
     },
     {
       "name": "Topeka",
       "state": "KS",
-      "count": 7730
+      "count": 3865
     },
     {
       "name": "Garden Grove",
       "state": "CA",
-      "count": 7690
+      "count": 3845
     },
     {
       "name": "Moreno Valley",
       "state": "CA",
-      "count": 7650
+      "count": 3825
     },
     {
       "name": "Livermore",
       "state": "CA",
-      "count": 7630
+      "count": 3815
     },
     {
       "name": "Portland",
       "state": "ME",
-      "count": 7610
+      "count": 3805
     },
     {
       "name": "Princeton",
       "state": "NJ",
-      "count": 7610
+      "count": 3805
     },
     {
       "name": "Abilene",
       "state": "TX",
-      "count": 7600
+      "count": 3800
     },
     {
       "name": "Waco",
       "state": "TX",
-      "count": 7530
+      "count": 3765
     },
     {
       "name": "Charleston",
       "state": "SC",
-      "count": 7520
+      "count": 3760
     },
     {
       "name": "Napa",
       "state": "CA",
-      "count": 7490
+      "count": 3745
     },
     {
       "name": "Falls Church",
       "state": "VA",
-      "count": 7480
+      "count": 3740
     },
     {
       "name": "Livonia",
       "state": "MI",
-      "count": 7470
+      "count": 3735
     },
     {
       "name": "Carmel",
       "state": "IN",
-      "count": 7440
+      "count": 3720
     },
     {
       "name": "North Hollywood",
       "state": "CA",
-      "count": 7420
+      "count": 3710
     },
     {
       "name": "Ocala",
       "state": "FL",
-      "count": 7400
+      "count": 3700
     },
     {
       "name": "Allentown",
       "state": "PA",
-      "count": 7350
+      "count": 3675
     },
     {
       "name": "Reston",
       "state": "VA",
-      "count": 7340
+      "count": 3670
     },
     {
       "name": "Peoria",
       "state": "IL",
-      "count": 7300
-    },
-    {
-      "name": "Wichita Falls",
-      "state": "TX",
-      "count": 7280
+      "count": 3650
     },
     {
       "name": "Brentwood",
       "state": "TN",
-      "count": 7280
+      "count": 3640
+    },
+    {
+      "name": "Wichita Falls",
+      "state": "TX",
+      "count": 3640
     },
     {
       "name": "Frisco",
       "state": "TX",
-      "count": 7240
+      "count": 3620
     },
     {
       "name": "Harrisburg",
       "state": "PA",
-      "count": 7230
+      "count": 3615
+    },
+    {
+      "name": "Harrisburg",
+      "state": "PA",
+      "count": 3615
     },
     {
       "name": "Santa Fe",
       "state": "NM",
-      "count": 7220
+      "count": 3610
     },
     {
       "name": "Jackson",
       "state": "MS",
-      "count": 7210
+      "count": 3605
     },
     {
       "name": "Kalamazoo",
       "state": "MI",
-      "count": 7200
+      "count": 3600
     },
     {
       "name": "Davie",
       "state": "FL",
-      "count": 7170
+      "count": 3585
     },
     {
       "name": "Lansing",
       "state": "MI",
-      "count": 7170
+      "count": 3585
     },
     {
       "name": "Addison",
       "state": "TX",
-      "count": 7160
+      "count": 3580
     },
     {
       "name": "Staten Island",
       "state": "NY",
-      "count": 7140
+      "count": 3570
     },
     {
       "name": "Northbrook",
       "state": "IL",
-      "count": 7100
+      "count": 3550
     },
     {
       "name": "Bend",
       "state": "OR",
-      "count": 6990
+      "count": 3495
     },
     {
       "name": "Frederick",
       "state": "MD",
-      "count": 6980
+      "count": 3490
     },
     {
       "name": "Kent",
       "state": "WA",
-      "count": 6940
+      "count": 3470
     },
     {
       "name": "New Haven",
       "state": "CT",
-      "count": 6940
+      "count": 3470
     },
     {
       "name": "Hartford",
       "state": "CT",
-      "count": 6890
-    },
-    {
-      "name": "Manchester",
-      "state": "NH",
-      "count": 6880
+      "count": 3445
     },
     {
       "name": "College Station",
       "state": "TX",
-      "count": 6880
+      "count": 3440
+    },
+    {
+      "name": "Manchester",
+      "state": "NH",
+      "count": 3440
     },
     {
       "name": "Springfield",
       "state": "IL",
-      "count": 6870
+      "count": 3435
     },
     {
       "name": "Brea",
       "state": "CA",
-      "count": 6850
+      "count": 3425
     },
     {
       "name": "Somerville",
       "state": "MA",
-      "count": 6840
+      "count": 3420
     },
     {
       "name": "York",
       "state": "PA",
-      "count": 6820
+      "count": 3410
     },
     {
       "name": "Vienna",
       "state": "VA",
-      "count": 6800
-    },
-    {
-      "name": "Woburn",
-      "state": "MA",
-      "count": 6790
+      "count": 3400
     },
     {
       "name": "Santa Cruz",
       "state": "CA",
-      "count": 6790
+      "count": 3395
     },
     {
-      "name": "Erie",
-      "state": "PA",
-      "count": 6770
+      "name": "Woburn",
+      "state": "MA",
+      "count": 3395
     },
     {
       "name": "Chino",
       "state": "CA",
-      "count": 6770
+      "count": 3385
+    },
+    {
+      "name": "Erie",
+      "state": "PA",
+      "count": 3385
     },
     {
       "name": "Mississauga",
       "state": "ON",
-      "count": 6700
+      "count": 3350
     },
     {
       "name": "Long Island City",
       "state": "NY",
-      "count": 6690
+      "count": 3345
     },
     {
       "name": "Warwick",
       "state": "RI",
-      "count": 6670
+      "count": 3335
     },
     {
       "name": "Kennesaw",
       "state": "GA",
-      "count": 6660
+      "count": 3330
     },
     {
       "name": "Waukesha",
       "state": "WI",
-      "count": 6660
-    },
-    {
-      "name": "Lawrenceville",
-      "state": "GA",
-      "count": 6640
+      "count": 3330
     },
     {
       "name": "Green Bay",
       "state": "WI",
-      "count": 6640
+      "count": 3320
     },
     {
-      "name": "South San Francisco",
-      "state": "CA",
-      "count": 6630
+      "name": "Lawrenceville",
+      "state": "GA",
+      "count": 3320
     },
     {
       "name": "Menlo Park",
       "state": "CA",
-      "count": 6630
+      "count": 3315
+    },
+    {
+      "name": "South San Francisco",
+      "state": "CA",
+      "count": 3315
     },
     {
       "name": "Arvada",
       "state": "CO",
-      "count": 6620
+      "count": 3310
     },
     {
       "name": "Olathe",
       "state": "KS",
-      "count": 6600
+      "count": 3300
     },
     {
       "name": "Murfreesboro",
       "state": "TN",
-      "count": 6580
+      "count": 3290
     },
     {
       "name": "Westerville",
       "state": "OH",
-      "count": 6560
+      "count": 3280
     },
     {
       "name": "Westlake Village",
       "state": "CA",
-      "count": 6560
+      "count": 3280
     },
     {
       "name": "McKinney",
       "state": "TX",
-      "count": 6510
+      "count": 3255
     },
     {
       "name": "Ottawa",
       "state": "ON",
-      "count": 6510
+      "count": 3255
     },
     {
       "name": "Burlingame",
       "state": "CA",
-      "count": 6500
+      "count": 3250
     },
     {
       "name": "Newport News",
       "state": "VA",
-      "count": 6490
-    },
-    {
-      "name": "Sterling",
-      "state": "VA",
-      "count": 6390
-    },
-    {
-      "name": "North Las Vegas",
-      "state": "NV",
-      "count": 6390
+      "count": 3245
     },
     {
       "name": "Columbus",
       "state": "GA",
-      "count": 6390
+      "count": 3195
     },
     {
       "name": "Eden Prairie",
       "state": "MN",
-      "count": 6390
+      "count": 3195
+    },
+    {
+      "name": "North Las Vegas",
+      "state": "NV",
+      "count": 3195
+    },
+    {
+      "name": "Sterling",
+      "state": "VA",
+      "count": 3195
     },
     {
       "name": "Chatsworth",
       "state": "CA",
-      "count": 6380
+      "count": 3190
     },
     {
       "name": "Delray Beach",
       "state": "FL",
-      "count": 6370
-    },
-    {
-      "name": "South Bend",
-      "state": "IN",
-      "count": 6360
-    },
-    {
-      "name": "Kansas City",
-      "state": "KS",
-      "count": 6360
-    },
-    {
-      "name": "Lenexa",
-      "state": "KS",
-      "count": 6360
+      "count": 3185
     },
     {
       "name": "Bradenton",
       "state": "FL",
-      "count": 6360
+      "count": 3180
+    },
+    {
+      "name": "Kansas City",
+      "state": "KS",
+      "count": 3180
+    },
+    {
+      "name": "Lenexa",
+      "state": "KS",
+      "count": 3180
+    },
+    {
+      "name": "South Bend",
+      "state": "IN",
+      "count": 3180
     },
     {
       "name": "Canton",
       "state": "OH",
-      "count": 6350
+      "count": 3175
     },
     {
       "name": "Farmington Hills",
       "state": "MI",
-      "count": 6340
+      "count": 3170
     },
     {
       "name": "Kirkland",
       "state": "WA",
-      "count": 6310
+      "count": 3155
     },
     {
       "name": "Sanford",
       "state": "FL",
-      "count": 6280
+      "count": 3140
     },
     {
       "name": "Bellingham",
       "state": "WA",
-      "count": 6250
+      "count": 3125
     },
     {
       "name": "White Plains",
       "state": "NY",
-      "count": 6250
+      "count": 3125
     },
     {
       "name": "Des Plaines",
       "state": "IL",
-      "count": 6240
+      "count": 3120
+    },
+    {
+      "name": "Des Plaines",
+      "state": "IL",
+      "count": 3120
     },
     {
       "name": "Longmont",
       "state": "CO",
-      "count": 6230
+      "count": 3115
     },
     {
       "name": "Redmond",
       "state": "WA",
-      "count": 6220
+      "count": 3110
     },
     {
       "name": "Cedar Rapids",
       "state": "IA",
-      "count": 6210
+      "count": 3105
     },
     {
       "name": "San Luis Obispo",
       "state": "CA",
-      "count": 6180
+      "count": 3090
     },
     {
       "name": "Bridgeport",
       "state": "CT",
-      "count": 6160
+      "count": 3080
     },
     {
       "name": "West Chester",
       "state": "PA",
-      "count": 6090
+      "count": 3045
     },
     {
       "name": "Charlottesville",
       "state": "VA",
-      "count": 6070
+      "count": 3035
     },
     {
       "name": "Reading",
       "state": "PA",
-      "count": 6070
-    },
-    {
-      "name": "Elk Grove Village",
-      "state": "IL",
-      "count": 6050
+      "count": 3035
     },
     {
       "name": "Camarillo",
       "state": "CA",
-      "count": 6050
-    },
-    {
-      "name": "Youngstown",
-      "state": "OH",
-      "count": 6050
+      "count": 3025
     },
     {
       "name": "Clifton",
       "state": "NJ",
-      "count": 6050
+      "count": 3025
+    },
+    {
+      "name": "Elk Grove Village",
+      "state": "IL",
+      "count": 3025
+    },
+    {
+      "name": "Youngstown",
+      "state": "OH",
+      "count": 3025
     },
     {
       "name": "Newark",
       "state": "DE",
-      "count": 6010
+      "count": 3005
     },
     {
       "name": "Brookfield",
       "state": "WI",
-      "count": 5980
+      "count": 2990
     },
     {
       "name": "Altamonte Springs",
       "state": "FL",
-      "count": 5970
+      "count": 2985
     },
     {
       "name": "Loveland",
       "state": "CO",
-      "count": 5970
+      "count": 2985
     },
     {
       "name": "San Ramon",
       "state": "CA",
-      "count": 5960
+      "count": 2980
     },
     {
       "name": "Petaluma",
       "state": "CA",
-      "count": 5950
+      "count": 2975
     },
     {
       "name": "Downers Grove",
       "state": "IL",
-      "count": 5920
+      "count": 2960
     },
     {
       "name": "Sherman Oaks",
       "state": "CA",
-      "count": 5910
+      "count": 2955
     },
     {
       "name": "Gardena",
       "state": "CA",
-      "count": 5900
+      "count": 2950
     },
     {
       "name": "Largo",
       "state": "FL",
-      "count": 5900
+      "count": 2950
     },
     {
       "name": "Montreal",
       "state": "QC",
-      "count": 5880
+      "count": 2940
     },
     {
       "name": "Edmond",
       "state": "OK",
-      "count": 5870
+      "count": 2935
     },
     {
       "name": "Broomfield",
       "state": "CO",
-      "count": 5860
+      "count": 2930
     },
     {
       "name": "La Jolla",
       "state": "CA",
-      "count": 5850
-    },
-    {
-      "name": "Mission Viejo",
-      "state": "CA",
-      "count": 5840
+      "count": 2925
     },
     {
       "name": "Greenwich",
       "state": "CT",
-      "count": 5840
+      "count": 2920
+    },
+    {
+      "name": "Mission Viejo",
+      "state": "CA",
+      "count": 2920
     },
     {
       "name": "Bryan",
       "state": "TX",
-      "count": 5830
+      "count": 2915
     },
     {
       "name": "Fontana",
       "state": "CA",
-      "count": 5820
+      "count": 2910
     },
     {
       "name": "Cranston",
       "state": "RI",
-      "count": 5810
+      "count": 2905
     },
     {
       "name": "EL Paso",
       "state": "TX",
-      "count": 5800
-    },
-    {
-      "name": "Everett",
-      "state": "WA",
-      "count": 5780
-    },
-    {
-      "name": "Killeen",
-      "state": "TX",
-      "count": 5780
+      "count": 2900
     },
     {
       "name": "Deerfield Beach",
       "state": "FL",
-      "count": 5780
+      "count": 2890
+    },
+    {
+      "name": "Everett",
+      "state": "WA",
+      "count": 2890
+    },
+    {
+      "name": "Killeen",
+      "state": "TX",
+      "count": 2890
     },
     {
       "name": "Herndon",
       "state": "VA",
-      "count": 5770
-    },
-    {
-      "name": "Duluth",
-      "state": "MN",
-      "count": 5740
+      "count": 2885
     },
     {
       "name": "Denton",
       "state": "TX",
-      "count": 5740
+      "count": 2870
+    },
+    {
+      "name": "Duluth",
+      "state": "MN",
+      "count": 2870
     },
     {
       "name": "Culver City",
       "state": "CA",
-      "count": 5710
+      "count": 2855
     },
     {
       "name": "Elgin",
       "state": "IL",
-      "count": 5700
-    },
-    {
-      "name": "Fargo",
-      "state": "ND",
-      "count": 5630
+      "count": 2850
     },
     {
       "name": "Cedar Park",
       "state": "TX",
-      "count": 5630
+      "count": 2815
     },
     {
-      "name": "Pembroke Pines",
-      "state": "FL",
-      "count": 5610
+      "name": "Fargo",
+      "state": "ND",
+      "count": 2815
     },
     {
       "name": "Chico",
       "state": "CA",
-      "count": 5610
-    },
-    {
-      "name": "Golden",
-      "state": "CO",
-      "count": 5610
+      "count": 2805
     },
     {
       "name": "Edison",
       "state": "NJ",
-      "count": 5610
+      "count": 2805
+    },
+    {
+      "name": "Golden",
+      "state": "CO",
+      "count": 2805
+    },
+    {
+      "name": "Pembroke Pines",
+      "state": "FL",
+      "count": 2805
     },
     {
       "name": "Trenton",
       "state": "NJ",
-      "count": 5610
+      "count": 2805
     },
     {
       "name": "Emeryville",
       "state": "CA",
-      "count": 5580
+      "count": 2790
     },
     {
       "name": "Joliet",
       "state": "IL",
-      "count": 5570
-    },
-    {
-      "name": "Fountain Valley",
-      "state": "CA",
-      "count": 5560
+      "count": 2785
     },
     {
       "name": "Danbury",
       "state": "CT",
-      "count": 5560
+      "count": 2780
+    },
+    {
+      "name": "Fountain Valley",
+      "state": "CA",
+      "count": 2780
     },
     {
       "name": "San Marcos",
       "state": "CA",
-      "count": 5530
+      "count": 2765
     },
     {
       "name": "Milpitas",
       "state": "CA",
-      "count": 5520
+      "count": 2760
     },
     {
       "name": "Georgetown",
       "state": "TX",
-      "count": 5490
+      "count": 2745
     },
     {
       "name": "St Paul",
       "state": "MN",
-      "count": 5460
+      "count": 2730
     },
     {
       "name": "Elkhart",
       "state": "IN",
-      "count": 5440
+      "count": 2720
     },
     {
       "name": "Nashua",
       "state": "NH",
-      "count": 5440
+      "count": 2720
     },
     {
       "name": "Chesterfield",
       "state": "MO",
-      "count": 5420
+      "count": 2710
     },
     {
       "name": "San Leandro",
       "state": "CA",
-      "count": 5410
+      "count": 2705
     },
     {
       "name": "Sugar Land",
       "state": "TX",
-      "count": 5380
+      "count": 2690
     },
     {
       "name": "Novato",
       "state": "CA",
-      "count": 5360
+      "count": 2680
     },
     {
       "name": "Kissimmee",
       "state": "FL",
-      "count": 5350
+      "count": 2675
     },
     {
       "name": "Santa Fe Springs",
       "state": "CA",
-      "count": 5330
+      "count": 2665
     },
     {
       "name": "Boynton Beach",
       "state": "FL",
-      "count": 5320
+      "count": 2660
     },
     {
       "name": "West Hollywood",
       "state": "CA",
-      "count": 5310
+      "count": 2655
     },
     {
       "name": "Encino",
       "state": "CA",
-      "count": 5300
-    },
-    {
-      "name": "Midland",
-      "state": "TX",
-      "count": 5290
+      "count": 2650
     },
     {
       "name": "Appleton",
       "state": "WI",
-      "count": 5290
+      "count": 2645
+    },
+    {
+      "name": "Midland",
+      "state": "TX",
+      "count": 2645
     },
     {
       "name": "Longview",
       "state": "TX",
-      "count": 5280
+      "count": 2640
     },
     {
       "name": "Sunrise",
       "state": "FL",
-      "count": 5280
+      "count": 2640
     },
     {
       "name": "Los Gatos",
       "state": "CA",
-      "count": 5270
-    },
-    {
-      "name": "Matthews",
-      "state": "NC",
-      "count": 5240
+      "count": 2635
     },
     {
       "name": "Chantilly",
       "state": "VA",
-      "count": 5240
+      "count": 2620
+    },
+    {
+      "name": "Matthews",
+      "state": "NC",
+      "count": 2620
     },
     {
       "name": "Valencia",
       "state": "CA",
-      "count": 5220
+      "count": 2610
     },
     {
       "name": "Lake Mary",
       "state": "FL",
-      "count": 5210
+      "count": 2605
     },
     {
       "name": "Upland",
       "state": "CA",
-      "count": 5210
+      "count": 2605
     },
     {
       "name": "Cordova",
       "state": "TN",
-      "count": 5200
-    },
-    {
-      "name": "Manassas",
-      "state": "VA",
-      "count": 5170
+      "count": 2600
     },
     {
       "name": "Evanston",
       "state": "IL",
-      "count": 5170
+      "count": 2585
+    },
+    {
+      "name": "Manassas",
+      "state": "VA",
+      "count": 2585
     },
     {
       "name": "Chapel Hill",
       "state": "NC",
-      "count": 5160
+      "count": 2580
     },
     {
       "name": "Cherry Hill",
       "state": "NJ",
-      "count": 5160
-    },
-    {
-      "name": "Jupiter",
-      "state": "FL",
-      "count": 5140
+      "count": 2580
     },
     {
       "name": "El Segundo",
       "state": "CA",
-      "count": 5140
+      "count": 2570
     },
     {
       "name": "Elk Grove",
       "state": "CA",
-      "count": 5140
+      "count": 2570
+    },
+    {
+      "name": "Jupiter",
+      "state": "FL",
+      "count": 2570
     },
     {
       "name": "Arlington Heights",
       "state": "IL",
-      "count": 5130
+      "count": 2565
     },
     {
       "name": "Holland",
       "state": "MI",
-      "count": 5120
+      "count": 2560
     },
     {
       "name": "Katy",
       "state": "TX",
-      "count": 5110
+      "count": 2555
     },
     {
       "name": "Macon",
       "state": "GA",
-      "count": 5100
+      "count": 2550
     },
     {
       "name": "Billings",
       "state": "MT",
-      "count": 5090
+      "count": 2545
     },
     {
       "name": "Lake Forest",
       "state": "CA",
-      "count": 5060
+      "count": 2530
     },
     {
       "name": "Orem",
       "state": "UT",
-      "count": 5050
+      "count": 2525
     },
     {
       "name": "Burnsville",
       "state": "MN",
-      "count": 5020
+      "count": 2510
     },
     {
       "name": "Salinas",
       "state": "CA",
-      "count": 5000
+      "count": 2500
     },
     {
       "name": "Springfield",
       "state": "MA",
-      "count": 4990
+      "count": 2495
     },
     {
       "name": "Lombard",
       "state": "IL",
-      "count": 4980
+      "count": 2490
     },
     {
       "name": "Concord",
       "state": "NC",
-      "count": 4970
+      "count": 2485
     },
     {
       "name": "Myrtle Beach",
       "state": "SC",
-      "count": 4960
+      "count": 2480
     },
     {
       "name": "Sparks",
       "state": "NV",
-      "count": 4960
+      "count": 2480
     },
     {
       "name": "Temecula",
       "state": "CA",
-      "count": 4960
-    },
-    {
-      "name": "Rocklin",
-      "state": "CA",
-      "count": 4950
+      "count": 2480
     },
     {
       "name": "Bethlehem",
       "state": "PA",
-      "count": 4950
+      "count": 2475
+    },
+    {
+      "name": "Rocklin",
+      "state": "CA",
+      "count": 2475
     },
     {
       "name": "San Clemente",
       "state": "CA",
-      "count": 4940
+      "count": 2470
     },
     {
       "name": "Olympia",
       "state": "WA",
-      "count": 4920
+      "count": 2460
     },
     {
       "name": "Encinitas",
       "state": "CA",
-      "count": 4910
+      "count": 2455
     },
     {
       "name": "High Point",
       "state": "NC",
-      "count": 4900
-    },
-    {
-      "name": "Skokie",
-      "state": "IL",
-      "count": 4890
+      "count": 2450
     },
     {
       "name": "Conroe",
       "state": "TX",
-      "count": 4890
+      "count": 2445
+    },
+    {
+      "name": "Skokie",
+      "state": "IL",
+      "count": 2445
     },
     {
       "name": "Edmonton",
       "state": "AB",
-      "count": 4880
-    },
-    {
-      "name": "Ogden",
-      "state": "UT",
-      "count": 4880
+      "count": 2440
     },
     {
       "name": "Henrico",
       "state": "VA",
-      "count": 4880
+      "count": 2440
+    },
+    {
+      "name": "Ogden",
+      "state": "UT",
+      "count": 2440
     },
     {
       "name": "New Braunfels",
       "state": "TX",
-      "count": 4860
+      "count": 2430
     },
     {
       "name": "Columbia",
       "state": "MO",
-      "count": 4840
+      "count": 2420
     },
     {
       "name": "Cumming",
       "state": "GA",
-      "count": 4820
+      "count": 2410
     },
     {
       "name": "Poway",
       "state": "CA",
-      "count": 4820
+      "count": 2410
     },
     {
       "name": "Fayetteville",
       "state": "NC",
-      "count": 4810
-    },
-    {
-      "name": "Hillsboro",
-      "state": "OR",
-      "count": 4810
+      "count": 2405
     },
     {
       "name": "Framingham",
       "state": "MA",
-      "count": 4810
+      "count": 2405
+    },
+    {
+      "name": "Hillsboro",
+      "state": "OR",
+      "count": 2405
     },
     {
       "name": "Greenwood Village",
       "state": "CO",
-      "count": 4800
-    },
-    {
-      "name": "Grapevine",
-      "state": "TX",
-      "count": 4770
+      "count": 2400
     },
     {
       "name": "Flushing",
       "state": "NY",
-      "count": 4770
+      "count": 2385
+    },
+    {
+      "name": "Grapevine",
+      "state": "TX",
+      "count": 2385
     },
     {
       "name": "Beachwood",
       "state": "OH",
-      "count": 4750
+      "count": 2375
     },
     {
       "name": "Clarksville",
       "state": "TN",
-      "count": 4720
+      "count": 2360
     },
     {
       "name": "La Mesa",
       "state": "CA",
-      "count": 4720
-    },
-    {
-      "name": "Mooresville",
-      "state": "NC",
-      "count": 4690
+      "count": 2360
     },
     {
       "name": "Decatur",
       "state": "GA",
-      "count": 4690
+      "count": 2345
     },
     {
-      "name": "Quincy",
-      "state": "MA",
-      "count": 4680
+      "name": "Mooresville",
+      "state": "NC",
+      "count": 2345
     },
     {
       "name": "Hampton",
       "state": "VA",
-      "count": 4680
+      "count": 2340
+    },
+    {
+      "name": "Quincy",
+      "state": "MA",
+      "count": 2340
     },
     {
       "name": "Sandy",
       "state": "UT",
-      "count": 4680
+      "count": 2340
     },
     {
       "name": "Hackensack",
       "state": "NJ",
-      "count": 4670
+      "count": 2335
     },
     {
       "name": "Woodstock",
       "state": "GA",
-      "count": 4650
+      "count": 2325
     },
     {
       "name": "Bloomington",
       "state": "IL",
-      "count": 4620
-    },
-    {
-      "name": "Hoffman Estates",
-      "state": "IL",
-      "count": 4620
+      "count": 2310
     },
     {
       "name": "Fishers",
       "state": "IN",
-      "count": 4620
+      "count": 2310
+    },
+    {
+      "name": "Hoffman Estates",
+      "state": "IL",
+      "count": 2310
     },
     {
       "name": "Thousand Oaks",
       "state": "CA",
-      "count": 4620
+      "count": 2310
     },
     {
       "name": "Broken Arrow",
       "state": "OK",
-      "count": 4590
+      "count": 2295
     },
     {
       "name": "Traverse City",
       "state": "MI",
-      "count": 4590
+      "count": 2295
     },
     {
       "name": "Elmhurst",
       "state": "IL",
-      "count": 4580
+      "count": 2290
     },
     {
       "name": "Laguna Hills",
       "state": "CA",
-      "count": 4580
+      "count": 2290
     },
     {
       "name": "Placentia",
       "state": "CA",
-      "count": 4580
+      "count": 2290
     },
     {
       "name": "Addison",
       "state": "IL",
-      "count": 4570
+      "count": 2285
     },
     {
       "name": "Daytona Beach",
       "state": "FL",
-      "count": 4570
+      "count": 2285
     },
     {
       "name": "Sterling Heights",
       "state": "MI",
-      "count": 4560
+      "count": 2280
     },
     {
       "name": "Westport",
       "state": "CT",
-      "count": 4540
+      "count": 2270
     },
     {
       "name": "Fort Smith",
       "state": "AR",
-      "count": 4530
+      "count": 2265
     },
     {
       "name": "Greeley",
       "state": "CO",
-      "count": 4520
+      "count": 2260
     },
     {
       "name": "San Carlos",
       "state": "CA",
-      "count": 4500
-    },
-    {
-      "name": "Mesquite",
-      "state": "TX",
-      "count": 4480
+      "count": 2250
     },
     {
       "name": "Brookline",
       "state": "MA",
-      "count": 4480
+      "count": 2240
+    },
+    {
+      "name": "Mesquite",
+      "state": "TX",
+      "count": 2240
     },
     {
       "name": "Renton",
       "state": "WA",
-      "count": 4460
+      "count": 2230
     },
     {
       "name": "Dearborn",
       "state": "MI",
-      "count": 4440
+      "count": 2220
     },
     {
       "name": "Springfield",
       "state": "VA",
-      "count": 4430
+      "count": 2215
     },
     {
       "name": "Bloomington",
       "state": "IN",
-      "count": 4400
+      "count": 2200
     },
     {
       "name": "Lees Summit",
       "state": "MO",
-      "count": 4390
+      "count": 2195
     },
     {
       "name": "Lima",
       "state": "OH",
-      "count": 4390
-    },
-    {
-      "name": "Newton",
-      "state": "MA",
-      "count": 4360
-    },
-    {
-      "name": "Davenport",
-      "state": "IA",
-      "count": 4360
+      "count": 2195
     },
     {
       "name": "Champaign",
       "state": "IL",
-      "count": 4360
+      "count": 2180
+    },
+    {
+      "name": "Davenport",
+      "state": "IA",
+      "count": 2180
+    },
+    {
+      "name": "Newton",
+      "state": "MA",
+      "count": 2180
     },
     {
       "name": "Hauppauge",
       "state": "NY",
-      "count": 4310
-    },
-    {
-      "name": "Lake Charles",
-      "state": "LA",
-      "count": 4300
-    },
-    {
-      "name": "Lynchburg",
-      "state": "VA",
-      "count": 4300
-    },
-    {
-      "name": "Greenwood",
-      "state": "IN",
-      "count": 4300
+      "count": 2155
     },
     {
       "name": "Burlington",
       "state": "MA",
-      "count": 4300
+      "count": 2150
+    },
+    {
+      "name": "Greenwood",
+      "state": "IN",
+      "count": 2150
+    },
+    {
+      "name": "Lake Charles",
+      "state": "LA",
+      "count": 2150
+    },
+    {
+      "name": "Lynchburg",
+      "state": "VA",
+      "count": 2150
     },
     {
       "name": "Yakima",
       "state": "WA",
-      "count": 4300
+      "count": 2150
     },
     {
       "name": "Hopkins",
       "state": "MN",
-      "count": 4270
+      "count": 2135
+    },
+    {
+      "name": "Fairfield",
+      "state": "CT",
+      "count": 2125
     },
     {
       "name": "Racine",
       "state": "WI",
-      "count": 4250
-    },
-    {
-      "name": "Fairfield",
-      "state": "CT",
-      "count": 4250
+      "count": 2125
     },
     {
       "name": "Athens",
       "state": "GA",
-      "count": 4240
+      "count": 2120
     },
     {
       "name": "Fairfield",
       "state": "NJ",
-      "count": 4220
+      "count": 2110
     },
     {
       "name": "Visalia",
       "state": "CA",
-      "count": 4220
+      "count": 2110
     },
     {
       "name": "Allen",
       "state": "TX",
-      "count": 4210
+      "count": 2105
     },
     {
       "name": "Fredericksburg",
       "state": "VA",
-      "count": 4200
+      "count": 2100
     },
     {
       "name": "Provo",
       "state": "UT",
-      "count": 4200
+      "count": 2100
     },
     {
       "name": "Westminster",
       "state": "CA",
-      "count": 4190
-    },
-    {
-      "name": "West Chester",
-      "state": "OH",
-      "count": 4160
+      "count": 2095
     },
     {
       "name": "Spokane Valley",
       "state": "WA",
-      "count": 4160
+      "count": 2080
+    },
+    {
+      "name": "West Chester",
+      "state": "OH",
+      "count": 2080
     },
     {
       "name": "Rockwall",
       "state": "TX",
-      "count": 4150
+      "count": 2075
     },
     {
       "name": "Vero Beach",
       "state": "FL",
-      "count": 4150
+      "count": 2075
     },
     {
       "name": "Pasadena",
       "state": "TX",
-      "count": 4130
+      "count": 2065
     },
     {
       "name": "Southlake",
       "state": "TX",
-      "count": 4130
-    },
-    {
-      "name": "Stuart",
-      "state": "FL",
-      "count": 4120
+      "count": 2065
     },
     {
       "name": "Bozeman",
       "state": "MT",
-      "count": 4120
+      "count": 2060
+    },
+    {
+      "name": "Stuart",
+      "state": "FL",
+      "count": 2060
     },
     {
       "name": "Milford",
       "state": "CT",
-      "count": 4110
-    },
-    {
-      "name": "Wayne",
-      "state": "PA",
-      "count": 4100
-    },
-    {
-      "name": "Norman",
-      "state": "OK",
-      "count": 4100
+      "count": 2055
     },
     {
       "name": "Hickory",
       "state": "NC",
-      "count": 4100
+      "count": 2050
     },
     {
-      "name": "Missoula",
-      "state": "MT",
-      "count": 4090
+      "name": "Norman",
+      "state": "OK",
+      "count": 2050
     },
     {
-      "name": "Suwanee",
-      "state": "GA",
-      "count": 4090
+      "name": "Wayne",
+      "state": "PA",
+      "count": 2050
     },
     {
       "name": "Mansfield",
       "state": "TX",
-      "count": 4090
+      "count": 2045
+    },
+    {
+      "name": "Missoula",
+      "state": "MT",
+      "count": 2045
+    },
+    {
+      "name": "Suwanee",
+      "state": "GA",
+      "count": 2045
     },
     {
       "name": "Oak Brook",
       "state": "IL",
-      "count": 4080
+      "count": 2040
     },
     {
       "name": "Minnetonka",
       "state": "MN",
-      "count": 4070
+      "count": 2035
     },
     {
       "name": "Auburn",
       "state": "WA",
-      "count": 4060
+      "count": 2030
     },
     {
       "name": "Findlay",
       "state": "OH",
-      "count": 4050
-    },
-    {
-      "name": "Parsippany",
-      "state": "NJ",
-      "count": 4050
+      "count": 2025
     },
     {
       "name": "New Berlin",
       "state": "WI",
-      "count": 4050
+      "count": 2025
+    },
+    {
+      "name": "Parsippany",
+      "state": "NJ",
+      "count": 2025
     },
     {
       "name": "San Bernardino",
       "state": "CA",
-      "count": 4040
+      "count": 2020
     },
     {
       "name": "Westminster",
       "state": "CO",
-      "count": 4040
-    },
-    {
-      "name": "St Petersburg",
-      "state": "FL",
-      "count": 4020
+      "count": 2020
     },
     {
       "name": "Clackamas",
       "state": "OR",
-      "count": 4020
+      "count": 2010
+    },
+    {
+      "name": "St Petersburg",
+      "state": "FL",
+      "count": 2010
     },
     {
       "name": "Palatine",
       "state": "IL",
-      "count": 4010
+      "count": 2005
     },
     {
       "name": "Lake Oswego",
       "state": "OR",
-      "count": 4000
+      "count": 2000
     },
     {
       "name": "Pomona",
       "state": "CA",
-      "count": 4000
+      "count": 2000
     },
     {
       "name": "Puyallup",
       "state": "WA",
-      "count": 4000
-    },
-    {
-      "name": "Rancho Cordova",
-      "state": "CA",
-      "count": 3990
+      "count": 2000
     },
     {
       "name": "Portsmouth",
       "state": "NH",
-      "count": 3990
+      "count": 1995
     },
     {
-      "name": "West Hartford",
-      "state": "CT",
-      "count": 3970
+      "name": "Rancho Cordova",
+      "state": "CA",
+      "count": 1995
     },
     {
       "name": "Watertown",
       "state": "MA",
-      "count": 3970
+      "count": 1985
+    },
+    {
+      "name": "West Hartford",
+      "state": "CT",
+      "count": 1985
     },
     {
       "name": "Farmingdale",
       "state": "NY",
-      "count": 3960
+      "count": 1980
     },
     {
       "name": "Maitland",
       "state": "FL",
-      "count": 3950
+      "count": 1975
     },
     {
       "name": "Newark",
       "state": "CA",
-      "count": 3940
+      "count": 1970
     },
     {
       "name": "Astoria",
       "state": "NY",
-      "count": 3930
+      "count": 1965
     },
     {
       "name": "Cupertino",
       "state": "CA",
-      "count": 3930
+      "count": 1965
     },
     {
       "name": "Royal Oak",
       "state": "MI",
-      "count": 3920
+      "count": 1960
     },
     {
       "name": "Sioux City",
       "state": "IA",
-      "count": 3910
-    },
-    {
-      "name": "Waterbury",
-      "state": "CT",
-      "count": 3880
-    },
-    {
-      "name": "Wheat Ridge",
-      "state": "CO",
-      "count": 3880
-    },
-    {
-      "name": "Perrysburg",
-      "state": "OH",
-      "count": 3880
+      "count": 1955
     },
     {
       "name": "Glenview",
       "state": "IL",
-      "count": 3880
+      "count": 1940
+    },
+    {
+      "name": "Perrysburg",
+      "state": "OH",
+      "count": 1940
+    },
+    {
+      "name": "Waterbury",
+      "state": "CT",
+      "count": 1940
+    },
+    {
+      "name": "Wheat Ridge",
+      "state": "CO",
+      "count": 1940
     },
     {
       "name": "Gainesville",
       "state": "GA",
-      "count": 3870
+      "count": 1935
     },
     {
       "name": "Monterey",
       "state": "CA",
-      "count": 3860
+      "count": 1930
     },
     {
       "name": "Hoboken",
       "state": "NJ",
-      "count": 3850
+      "count": 1925
     },
     {
       "name": "Laredo",
       "state": "TX",
-      "count": 3850
+      "count": 1925
     },
     {
       "name": "Mentor",
       "state": "OH",
-      "count": 3840
+      "count": 1920
     },
     {
       "name": "Malvern",
       "state": "PA",
-      "count": 3830
+      "count": 1915
     },
     {
       "name": "Danville",
       "state": "CA",
-      "count": 3820
-    },
-    {
-      "name": "Melville",
-      "state": "NY",
-      "count": 3780
+      "count": 1910
     },
     {
       "name": "Glen Allen",
       "state": "VA",
-      "count": 3780
+      "count": 1890
     },
     {
-      "name": "Midlothian",
-      "state": "VA",
-      "count": 3770
+      "name": "Melville",
+      "state": "NY",
+      "count": 1890
     },
     {
       "name": "Bothell",
       "state": "WA",
-      "count": 3770
+      "count": 1885
     },
     {
       "name": "Doylestown",
       "state": "PA",
-      "count": 3770
+      "count": 1885
     },
     {
-      "name": "Concord",
-      "state": "NH",
-      "count": 3740
+      "name": "Midlothian",
+      "state": "VA",
+      "count": 1885
     },
     {
       "name": "Clovis",
       "state": "CA",
-      "count": 3740
+      "count": 1870
+    },
+    {
+      "name": "Concord",
+      "state": "NH",
+      "count": 1870
     },
     {
       "name": "Plymouth",
       "state": "MI",
-      "count": 3730
+      "count": 1865
     },
     {
       "name": "Santee",
       "state": "CA",
-      "count": 3730
+      "count": 1865
     },
     {
       "name": "Humble",
       "state": "TX",
-      "count": 3710
+      "count": 1855
     },
     {
       "name": "Medina",
       "state": "OH",
-      "count": 3690
+      "count": 1845
     },
     {
       "name": "Wheeling",
       "state": "IL",
-      "count": 3690
+      "count": 1845
     },
     {
       "name": "Palm Desert",
       "state": "CA",
-      "count": 3670
+      "count": 1835
     },
     {
       "name": "Richmond",
       "state": "CA",
-      "count": 3660
+      "count": 1830
     },
     {
       "name": "Smyrna",
       "state": "GA",
-      "count": 3660
+      "count": 1830
     },
     {
       "name": "Pflugerville",
       "state": "TX",
-      "count": 3650
-    },
-    {
-      "name": "Springfield",
-      "state": "OH",
-      "count": 3640
-    },
-    {
-      "name": "Lake Worth",
-      "state": "FL",
-      "count": 3640
-    },
-    {
-      "name": "Crystal Lake",
-      "state": "IL",
-      "count": 3640
+      "count": 1825
     },
     {
       "name": "Bolingbrook",
       "state": "IL",
-      "count": 3640
+      "count": 1820
+    },
+    {
+      "name": "Crystal Lake",
+      "state": "IL",
+      "count": 1820
+    },
+    {
+      "name": "Lake Worth",
+      "state": "FL",
+      "count": 1820
+    },
+    {
+      "name": "Springfield",
+      "state": "OH",
+      "count": 1820
     },
     {
       "name": "Lawrence",
       "state": "KS",
-      "count": 3630
+      "count": 1815
     },
     {
       "name": "Lynnwood",
       "state": "WA",
-      "count": 3630
+      "count": 1815
     },
     {
       "name": "Schenectady",
       "state": "NY",
-      "count": 3620
-    },
-    {
-      "name": "Whittier",
-      "state": "CA",
-      "count": 3610
-    },
-    {
-      "name": "Oak Park",
-      "state": "IL",
-      "count": 3610
+      "count": 1810
     },
     {
       "name": "Flint",
       "state": "MI",
-      "count": 3610
+      "count": 1805
     },
     {
-      "name": "Redding",
-      "state": "CA",
-      "count": 3600
-    },
-    {
-      "name": "Woodinville",
-      "state": "WA",
-      "count": 3590
-    },
-    {
-      "name": "Owings Mills",
-      "state": "MD",
-      "count": 3580
-    },
-    {
-      "name": "Solon",
-      "state": "OH",
-      "count": 3580
-    },
-    {
-      "name": "Lancaster",
-      "state": "CA",
-      "count": 3580
-    },
-    {
-      "name": "West Des Moines",
-      "state": "IA",
-      "count": 3570
-    },
-    {
-      "name": "Independence",
-      "state": "MO",
-      "count": 3570
-    },
-    {
-      "name": "Mc Lean",
-      "state": "VA",
-      "count": 3560
-    },
-    {
-      "name": "Novi",
-      "state": "MI",
-      "count": 3560
-    },
-    {
-      "name": "Towson",
-      "state": "MD",
-      "count": 3560
-    },
-    {
-      "name": "Pearland",
-      "state": "TX",
-      "count": 3550
-    },
-    {
-      "name": "Gastonia",
-      "state": "NC",
-      "count": 3540
-    },
-    {
-      "name": "Murrieta",
-      "state": "CA",
-      "count": 3540
-    },
-    {
-      "name": "Morristown",
-      "state": "NJ",
-      "count": 3530
+      "name": "Oak Park",
+      "state": "IL",
+      "count": 1805
     }
-  ]
+  ],
+  "india": []
 }
