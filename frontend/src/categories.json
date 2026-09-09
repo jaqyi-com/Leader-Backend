@@ -26,15 +26,19 @@
     },
     {
       "name": "Vice President Marketing",
-      "count": 161535
+      "count": 174317
+    },
+    {
+      "name": "Director Marketing",
+      "count": 138534
     },
     {
       "name": "Operating Officer",
       "count": 130585
     },
     {
-      "name": "Director Marketing",
-      "count": 113366
+      "name": "Vice President Operations",
+      "count": 106857
     },
     {
       "name": "Director",
@@ -49,8 +53,8 @@
       "count": 99796
     },
     {
-      "name": "Vice President Operations",
-      "count": 99796
+      "name": "Director Operations",
+      "count": 84426
     },
     {
       "name": "Marketing Director",
@@ -59,10 +63,6 @@
     {
       "name": "Engineer",
       "count": 83847
-    },
-    {
-      "name": "Director Operations",
-      "count": 77596
     },
     {
       "name": "Marketing Executive",
@@ -77,16 +77,16 @@
       "count": 64929
     },
     {
+      "name": "Director Sales Marketing",
+      "count": 51753
+    },
+    {
       "name": "President Executive Officer",
       "count": 47903
     },
     {
       "name": "Partner",
       "count": 46659
-    },
-    {
-      "name": "Director Sales Marketing",
-      "count": 40159
     },
     {
       "name": "Executive Vice President",
@@ -133,8 +133,8 @@
       "count": 27543
     },
     {
-      "name": "Director-marketing",
-      "count": 25168
+      "name": "Manager Marketing",
+      "count": 24805
     },
     {
       "name": "Managing Director",
@@ -143,10 +143,6 @@
     {
       "name": "Facilities Manager",
       "count": 22358
-    },
-    {
-      "name": "Manager Marketing",
-      "count": 21527
     },
     {
       "name": "Operations Executive",
@@ -249,10 +245,6 @@
       "count": 13104
     },
     {
-      "name": "Vice President-marketing",
-      "count": 12782
-    },
-    {
       "name": "Vice President Human",
       "count": 12695
     },
@@ -269,11 +261,7 @@
       "count": 11746
     },
     {
-      "name": "Director-sales Marketing",
-      "count": 11594
-    },
-    {
-      "name": "Vice President-sales Marketing",
+      "name": "Vice President Sales Marketing",
       "count": 11471
     },
     {
@@ -415,14 +403,6 @@
     {
       "name": "Supply Chain Manager",
       "count": 7074
-    },
-    {
-      "name": "Vice President-operations",
-      "count": 7061
-    },
-    {
-      "name": "Director-operations",
-      "count": 6830
     },
     {
       "name": "Safety Director",
@@ -777,10 +757,6 @@
       "count": 3282
     },
     {
-      "name": "Manager-marketing",
-      "count": 3278
-    },
-    {
       "name": "Clinical Research",
       "count": 3274
     },
@@ -1059,7 +1035,7 @@
       "count": 1736
     },
     {
-      "name": "Exporters- Garments",
+      "name": "Exporters - Garments",
       "count": 1734
     },
     {
@@ -1231,7 +1207,7 @@
       "count": 1035
     },
     {
-      "name": "Caterers- Wedding Events",
+      "name": "Caterers - Wedding Events",
       "count": 1024
     },
     {
@@ -1315,7 +1291,7 @@
       "count": 682
     },
     {
-      "name": "Doctors- General Medicine",
+      "name": "Doctors - General Medicine",
       "count": 677
     },
     {
@@ -1343,7 +1319,7 @@
       "count": 607
     },
     {
-      "name": "Caterers- Event",
+      "name": "Caterers - Event",
       "count": 600
     },
     {
@@ -1415,11 +1391,11 @@
       "count": 441
     },
     {
-      "name": "Schools- Academic- Elementary Secondary",
+      "name": "Schools - Academic- Elementary Secondary",
       "count": 432
     },
     {
-      "name": "Accountants- Chartered",
+      "name": "Accountants - Chartered",
       "count": 432
     },
     {
@@ -1475,7 +1451,7 @@
       "count": 372
     },
     {
-      "name": "Jewellers- Retail",
+      "name": "Jewellers - Retail",
       "count": 353
     },
     {
@@ -1495,7 +1471,7 @@
       "count": 337
     },
     {
-      "name": "Caterers- Wedding",
+      "name": "Caterers - Wedding",
       "count": 335
     },
     {
@@ -1599,7 +1575,7 @@
       "count": 257
     },
     {
-      "name": "Garments Readymade- Retail",
+      "name": "Garments Readymade - Retail",
       "count": 254
     }
   ]

@@ -170,20 +170,33 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
           values.push(val);
         } else {
           const rawVal = String(val).trim();
-          const words = rawVal.split(/\s+/).filter(w => w.length > 0);
+          const words = rawVal.split(/[\s\-_\/]+/).filter(w => w.length > 0);
           if (words.length <= 1) {
             conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
             values.push(`%${rawVal}%`);
           } else {
-            // Match exact phrase OR all constituent tokens
+            // Match exact phrase, normalized spaced phrase, OR all constituent tokens
             const phraseIdx = idx++;
             values.push(`%${rawVal}%`);
+            
+            const spacedVal = words.join(" ");
+            let spacedIdx = null;
+            if (spacedVal.toLowerCase() !== rawVal.toLowerCase()) {
+              spacedIdx = idx++;
+              values.push(`%${spacedVal}%`);
+            }
+            
             const wordConds = words.map(w => {
               const wIdx = idx++;
               values.push(`%${w}%`);
               return `${doubleQuotedCol} ILIKE $${wIdx}`;
             });
-            conditions.push(`(${doubleQuotedCol} ILIKE $${phraseIdx} OR (${wordConds.join(" AND ")}))`);
+            
+            if (spacedIdx !== null) {
+              conditions.push(`(${doubleQuotedCol} ILIKE $${phraseIdx} OR ${doubleQuotedCol} ILIKE $${spacedIdx} OR (${wordConds.join(" AND ")}))`);
+            } else {
+              conditions.push(`(${doubleQuotedCol} ILIKE $${phraseIdx} OR (${wordConds.join(" AND ")}))`);
+            }
           }
         }
       }
@@ -412,33 +425,47 @@ router.get("/", async (req, res) => {
       LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
     `;
 
-    let total;
+    const dataPromise = pgQuery(dataSQL, [...values, limitNum, offset], 30000);
+
+    let countPromise;
     if (!userHasFilters) {
-      // Unfiltered (or using default filter): use cached count or fast estimate
-      const cachedCount = await cacheGet(COUNT_CACHE_KEY);
-      if (cachedCount !== null && cachedCount !== undefined) {
-        total = cachedCount;
-      } else {
-        // Fast estimate for large tables to avoid timeout
+      countPromise = (async () => {
+        const cachedCount = await cacheGet(COUNT_CACHE_KEY);
+        if (cachedCount !== null && cachedCount !== undefined) return cachedCount;
         const countRes = await pgQuery(
           `SELECT reltuples::bigint AS cnt FROM pg_class WHERE oid = $1::regclass`,
           [FULL_TABLE],
           5000
         );
-        total = parseInt(countRes.rows[0]?.cnt || "0", 10);
-        await cacheSet(COUNT_CACHE_KEY, total, COUNT_TTL);
-      }
+        const cnt = parseInt(countRes.rows[0]?.cnt || "0", 10);
+        await cacheSet(COUNT_CACHE_KEY, cnt, COUNT_TTL);
+        return cnt;
+      })();
     } else {
-      // Filtered: capped count to avoid full-scan timeout
-      const countRes = await pgQuery(
-        `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 100001) subq`,
-        values, 30000
-      );
-      total = parseInt(countRes.rows[0].cnt, 10);
+      countPromise = (async () => {
+        try {
+          const countRes = await pgQuery(
+            `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 100001) subq`,
+            values,
+            8000
+          );
+          return parseInt(countRes.rows[0]?.cnt || "0", 10);
+        } catch (err) {
+          logger.warn(`Count query timed out or failed (${err.message}), falling back to estimate`);
+          return null;
+        }
+      })();
     }
 
-    const dataRes = await pgQuery(dataSQL, [...values, limitNum, offset], 60000);
+    const [dataRes, countResult] = await Promise.all([dataPromise, countPromise]);
     const records = dataRes.rows.map(row => normalizeRow(schema, row));
+
+    let total;
+    if (countResult !== null && countResult !== undefined) {
+      total = countResult;
+    } else {
+      total = records.length >= limitNum ? (pageNum * limitNum) + 5000 : ((pageNum - 1) * limitNum) + records.length;
+    }
 
     res.json({
       records,

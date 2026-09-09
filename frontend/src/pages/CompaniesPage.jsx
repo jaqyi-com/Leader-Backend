@@ -148,7 +148,7 @@ export default function CompaniesPage() {
       setRecords(recordsData);
       setTotal(data.total || 0);
     } catch {
-      toast.error("Failed to load Companies data");
+      toast.error("Failed to load Companies data", { id: "companies-load-error" });
     } finally {
       setLoading(false);
     }
@@ -165,10 +165,19 @@ export default function CompaniesPage() {
     const industryParam = searchParams.get("f_industry");
     const cityParam = searchParams.get("f_city");
     if (industryParam !== null || cityParam !== null) {
-      const newFilters = [];
-      if (industryParam) newFilters.push({ col: "industry", op: "contains", val: industryParam });
-      if (cityParam) newFilters.push({ col: "city", op: "contains", val: cityParam });
-      setFilters(newFilters);
+      setFilters(prev => {
+        const currentInd = prev.find(f => f.col === "industry")?.val || "";
+        const currentCity = prev.find(f => f.col === "city")?.val || "";
+        const targetInd = industryParam || "";
+        const targetCity = cityParam || "";
+        if (currentInd === targetInd && currentCity === targetCity && prev.length === (targetInd ? 1 : 0) + (targetCity ? 1 : 0)) {
+          return prev;
+        }
+        const newFilters = [];
+        if (targetInd) newFilters.push({ col: "industry", op: "contains", val: targetInd });
+        if (targetCity) newFilters.push({ col: "city", op: "contains", val: targetCity });
+        return newFilters;
+      });
       setPage(1);
     }
   }, [searchParams]);

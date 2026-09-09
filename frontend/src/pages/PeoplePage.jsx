@@ -152,7 +152,7 @@ export default function PeoplePage() {
       setRecords(recordsData);
       setTotal(data.total || 0);
     } catch {
-      toast.error("Failed to load People data");
+      toast.error("Failed to load People data", { id: "people-load-error" });
     } finally {
       setLoading(false);
     }
@@ -169,10 +169,19 @@ export default function PeoplePage() {
     const jobParam = searchParams.get("f_job_title");
     const cityParam = searchParams.get("f_city");
     if (jobParam !== null || cityParam !== null) {
-      const newFilters = [];
-      if (jobParam) newFilters.push({ col: "job_title", op: "contains", val: jobParam });
-      if (cityParam) newFilters.push({ col: "city", op: "contains", val: cityParam });
-      setFilters(newFilters);
+      setFilters(prev => {
+        const currentJob = prev.find(f => f.col === "job_title")?.val || "";
+        const currentCity = prev.find(f => f.col === "city")?.val || "";
+        const targetJob = jobParam || "";
+        const targetCity = cityParam || "";
+        if (currentJob === targetJob && currentCity === targetCity && prev.length === (targetJob ? 1 : 0) + (targetCity ? 1 : 0)) {
+          return prev;
+        }
+        const newFilters = [];
+        if (targetJob) newFilters.push({ col: "job_title", op: "contains", val: targetJob });
+        if (targetCity) newFilters.push({ col: "city", op: "contains", val: targetCity });
+        return newFilters;
+      });
       setPage(1);
     }
   }, [searchParams]);
