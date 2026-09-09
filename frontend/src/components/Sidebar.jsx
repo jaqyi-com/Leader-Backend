@@ -489,18 +489,6 @@ export default function Sidebar({ collapsed, onToggle }) {
           <NavItem to="/app/docs" label="How It Works" icon={BookMarked} collapsed={collapsed} end={false} />
         )}
 
-        {/* Admin Command Center — visible to admin (hidden in simulation mode) */}
-        {isAdmin && !simulationMode && (
-          <NavItem
-            to="/app/admin"
-            label="Command Center"
-            icon={ShieldCheck}
-            collapsed={collapsed}
-            badge="ADMIN"
-            end={false}
-          />
-        )}
-
         {isFeatureEnabled("settings") && (
           <NavItem to="/app/settings" label="Settings" icon={Settings} collapsed={collapsed} end={false} />
         )}
