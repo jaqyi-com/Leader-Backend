@@ -28,7 +28,12 @@ import {
 const API_BASE     = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 const ADMIN_EMAILS = [
   "akshat.v@jaqyi.com",
-  "akshatv00001@gmail.com"
+  "akshat@jaqyi.com",
+  "akshatverma@jaqyi.com",
+  "jaqyi@jaqyi.com",
+  "akshatv00001@gmail.com",
+  "akshat.vv@jaqyi.com",
+  "akshaverma14@gmail.com"
 ];
 
 
