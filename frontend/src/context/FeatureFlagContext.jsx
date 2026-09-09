@@ -4,13 +4,7 @@ import { useAuth } from "./AuthContext";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 const ADMIN_EMAILS = [
-  "akshat.v@jaqyi.com",
-  "akshat@jaqyi.com",
-  "akshatverma@jaqyi.com",
-  "jaqyi@jaqyi.com",
-  "akshatv00001@gmail.com",
-  "akshat.vv@jaqyi.com",
-  "akshaverma14@gmail.com"
+  "akshat.v@jaqyi.com"
 ];
 
 const FeatureFlagContext = createContext(null);
@@ -69,6 +63,9 @@ export function FeatureFlagProvider({ children }) {
    */
   const isFeatureEnabled = useCallback((key) => {
     if (!key) return true;
+    if (key === "admin") {
+      return isAdmin && !simulationMode;
+    }
     const feat = features[key];
     if (!feat) return true; // Default fallback to enabled if not found
 

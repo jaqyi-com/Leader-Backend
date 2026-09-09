@@ -53,13 +53,7 @@ router.get("/all", async (req, res) => {
   try {
     const getAdminEmails = () => {
       const builtinAdmins = [
-        "akshat.v@jaqyi.com",
-        "akshat@jaqyi.com",
-        "akshatverma@jaqyi.com",
-        "jaqyi@jaqyi.com",
-        "akshatv00001@gmail.com",
-        "akshat.vv@jaqyi.com",
-        "akshaverma14@gmail.com"
+        "akshat.v@jaqyi.com"
       ];
       const envVal = process.env.ADMIN_EMAIL || "";
       const envList = envVal.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
