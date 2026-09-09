@@ -15,22 +15,31 @@ if not NEON_DSN:
     raise RuntimeError("NEON_DATABASE_URL env var is not set. Check your .env file.")
 
 def connect_db():
-    return psycopg2.connect(dsn=NEON_DSN)
+    return psycopg2.connect(
+        dsn=NEON_DSN,
+        connect_timeout=10,
+        keepalives=1,
+        keepalives_idle=30,
+        keepalives_interval=10,
+        keepalives_count=5
+    )
 
 def get_connection_and_cursor():
     while True:
         try:
             conn = connect_db()
             conn.autocommit = True
-            return conn, conn.cursor()
+            cursor = conn.cursor()
+            cursor.execute("SET enable_seqscan = off;")
+            return conn, cursor
         except Exception as e:
-            print(f"⚠️ Database connection failed: {e}. Retrying in 5 seconds...")
+            print(f"⚠️ Database connection failed: {e}. Retrying in 5 seconds...", flush=True)
             time.sleep(5)
 
 def main():
     print("Initializing sentence-transformers with Xenova/all-MiniLM-L6-v2...")
     from sentence_transformers import SentenceTransformer
-    model = SentenceTransformer('all-MiniLM-L6-v2')
+    model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
 
     conn, cursor = get_connection_and_cursor()
     batch_size = 500
@@ -40,11 +49,12 @@ def main():
 
     # 2. PROCESS PEOPLE
     print("⏳ Starting People Embeddings...", flush=True)
-    people_batch_size = 1000  # ⚠️ Thermal balance: 1000 batch + 1s sleep. Sleep is the real protection, not small batch.
+    people_batch_size = 1000  # ⚡ Optimal throughput balance for Neon serverless WAL flushing
     total_processed = 0
     batch_count = 0
     while True:
         try:
+            t0 = time.time()
             cursor.execute("""
                 SELECT uuid, full_name, job_title, location, city, state
                 FROM final.people
@@ -52,27 +62,24 @@ def main():
                 LIMIT %s
             """, (people_batch_size,))
             rows = cursor.fetchall()
+            t_fetch = time.time() - t0
+
             if not rows:
-                print("✅ All people processed.")
+                print("🎉 No more un-embedded records found for people!", flush=True)
                 break
 
-            uuids = []
-            texts = []
-            for r in rows:
-                uuid, full_name, job_title, location, city, state = r
-                name_str = full_name if full_name else ""
-                title_str = job_title if job_title else ""
-                loc_str = location if location else ""
-                city_str = city if city else ""
-                state_str = state if state else ""
-                doc = f"Person: {name_str}. Job Title: {title_str}. Location: {loc_str}, {city_str}, {state_str}."
-                uuids.append(uuid)
-                texts.append(doc)
+            uuids = [r[0] for r in rows]
+            texts = [
+                f"Name: {r[1] or ''} | Title: {r[2] or ''} | Location: {r[3] or r[4] or r[5] or ''}".strip()
+                for r in rows
+            ]
 
-            # Generate embeddings
+            t1 = time.time()
             embeddings = model.encode(texts, show_progress_bar=False)
+            t_encode = time.time() - t1
 
             # Bulk update
+            t2 = time.time()
             update_data = [(embeddings[i].tolist(), uuids[i]) for i in range(len(uuids))]
             execute_values(cursor, """
                 UPDATE final.people AS p
@@ -80,17 +87,18 @@ def main():
                 FROM (VALUES %s) AS v(embedding, uuid)
                 WHERE p.uuid = v.uuid::uuid
             """, update_data)
+            t_update = time.time() - t2
 
             total_processed += len(rows)
             batch_count += 1
-            print(f"   Batch #{batch_count}: Indexed {len(rows)} people (total so far: {total_processed:,})...", flush=True)
+            print(f"   Batch #{batch_count}: {len(rows)} people | Fetch: {t_fetch:.2f}s | Encode: {t_encode:.2f}s | Update: {t_update:.2f}s (Total: {total_processed:,})", flush=True)
 
             # ⚠️ THERMAL SAFETY: 1s sleep between batches prevents CPU from pegging at 100%
             # and shutting down the MacBook. DO NOT remove this sleep.
             time.sleep(1.0)
 
         except (psycopg2.OperationalError, psycopg2.InterfaceError) as err:
-            print(f"⚠️ Connection lost during people batch ({err}). Reconnecting...")
+            print(f"⚠️ Connection lost during people batch ({err}). Reconnecting...", flush=True)
             try:
                 cursor.close()
                 conn.close()
@@ -99,7 +107,7 @@ def main():
             conn, cursor = get_connection_and_cursor()
             time.sleep(2)
         except Exception as e:
-            print(f"❌ Unexpected error: {e}. Retrying batch in 5 seconds...")
+            print(f"❌ Unexpected error: {e}. Retrying batch in 5 seconds...", flush=True)
             time.sleep(5)
 
     cursor.close()

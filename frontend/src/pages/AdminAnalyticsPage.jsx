@@ -17,15 +17,17 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
+import AdminFeatureManager from "../components/admin/AdminFeatureManager";
 import {
   Eye, TrendingUp, Activity, Users, RefreshCw, AlertCircle,
   Lock, ShieldCheck, Monitor, Smartphone, Tablet, Globe,
-  Chrome, Share2, ExternalLink, ArrowRight,
+  Chrome, Share2, ExternalLink, ArrowRight, Sliders,
   Building2, Mail, Target, Briefcase, UserCog, Calculator, Package, MapPin,
 } from "lucide-react";
 
 const API_BASE    = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 const ADMIN_EMAIL = "akshatv00001@gmail.com";
+
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -728,7 +730,7 @@ function AccessDenied() {
 export default function AdminAnalyticsPage() {
   const { user, token } = useAuth();
   const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL;
-  const [tab, setTab] = useState("traffic");
+  const [tab, setTab] = useState("features"); // Default to features control
 
   if (!isAdmin) return <AccessDenied />;
 
@@ -741,21 +743,26 @@ export default function AdminAnalyticsPage() {
         <div className="flex items-center gap-3">
           <Activity size={16} style={{ color: "#818cf8" }} />
           <div>
-            <h1 className="text-[15px] font-bold" style={{ color: "#fff" }}>Analytics Dashboard</h1>
+            <h1 className="text-[15px] font-bold" style={{ color: "#fff" }}>Doott Command Center</h1>
             <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.32)" }}>
-              Doott — Website traffic &amp; application metrics
+              Feature toggles, platform telemetry &amp; live traffic
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {[{ id:"traffic", label:"Traffic" }, { id:"platform", label:"Platform" }].map(t => (
+          {[
+            { id: "features", label: "Feature Controls", icon: Sliders },
+            { id: "traffic", label: "Traffic", icon: Activity },
+            { id: "platform", label: "Platform", icon: BarChart3 }
+          ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              className="px-4 py-1.5 rounded-lg text-xs font-medium transition-all"
+              className="px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer"
               style={{
-                background: tab === t.id ? "#6366f1" : "rgba(255,255,255,0.05)",
+                background: tab === t.id ? "var(--accent)" : "rgba(255,255,255,0.05)",
                 color:      tab === t.id ? "#fff"    : "rgba(255,255,255,0.4)",
-                border:     `1px solid ${tab === t.id ? "#6366f1" : "rgba(255,255,255,0.08)"}`,
+                border:     `1px solid ${tab === t.id ? "var(--accent)" : "rgba(255,255,255,0.08)"}`,
               }}>
+              {t.icon && <t.icon size={13} />}
               {t.label}
             </button>
           ))}
@@ -772,13 +779,19 @@ export default function AdminAnalyticsPage() {
         <AnimatePresence mode="wait">
           <motion.div key={tab} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.12 }}>
-            {tab === "traffic"
-              ? <TrafficTab  token={token} />
-              : <PlatformTab token={token} />
-            }
+            {tab === "features" ? (
+              <div className="p-6">
+                <AdminFeatureManager />
+              </div>
+            ) : tab === "traffic" ? (
+              <TrafficTab token={token} />
+            ) : (
+              <PlatformTab token={token} />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
     </div>
   );
 }
+

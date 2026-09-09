@@ -139,6 +139,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/social/posts/approve",  // email-based approval links
   "/api/social/posts/reject",   // email-based rejection links
   "/api/track",                 // page-view tracker (no auth needed)
+  "/api/features",              // active feature flags map (publicly readable)
 ];
 
 app.use((req, res, next) => {
@@ -169,6 +170,8 @@ app.use("/api/accounting", require("./routes/accounting"));
 app.use("/api/inventory", require("./routes/inventory"));
 app.use("/api/payroll", require("./routes/payroll"));
 app.use("/api/gmail", require("./routes/gmailAuth"));
+app.use("/api", require("./routes/featureFlags"));
+
 
 
 // ------------------------------------------------------------

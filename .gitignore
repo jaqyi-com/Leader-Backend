@@ -19,3 +19,8 @@ frontend/dist/
 ai-assistant-backend/
 .vercel
 .env*
+
+# Data files & generated media
+final_data/
+doott-promo-video/
+*.csv

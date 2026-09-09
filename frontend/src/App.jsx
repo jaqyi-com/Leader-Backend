@@ -1,7 +1,9 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { FeatureFlagProvider } from "./context/FeatureFlagContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
+import FeatureGate from "./components/FeatureGate";
 
 // Auth pages
 import LoginPage from "./pages/LoginPage";
@@ -71,90 +73,92 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <FeatureFlagProvider>
           <PageTracker />
-        <Routes>
-          {/* ── Public routes ─────────────────────────────────── */}
-          <Route path="/"                element={<LandingPage />} />
-          <Route path="/login"           element={<LoginPage />} />
-          <Route path="/register"        element={<RegisterGate />} />
-          <Route path="/auth/callback"   element={<AuthCallbackPage />} />
-          <Route path="/verify-email"    element={<VerifyEmailPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password"  element={<ResetPasswordPage />} />
+          <Routes>
+            {/* ── Public routes ─────────────────────────────────── */}
+            <Route path="/"                element={<LandingPage />} />
+            <Route path="/login"           element={<LoginPage />} />
+            <Route path="/register"        element={<RegisterGate />} />
+            <Route path="/auth/callback"   element={<AuthCallbackPage />} />
+            <Route path="/verify-email"    element={<VerifyEmailPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password"  element={<ResetPasswordPage />} />
 
-          {/* ── Protected app routes ───────────────────────────── */}
-          <Route
-            path="/app"
-            element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<Navigate to="/app/chatbot" replace />} />
+            {/* ── Protected app routes ───────────────────────────── */}
+            <Route
+              path="/app"
+              element={
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Navigate to="/app/chatbot" replace />} />
 
-            <Route path="pipeline"         element={<PipelinePage />} />
-            <Route path="icp"              element={<IcpPage />} />
-            <Route path="scheduler"        element={<SchedulerPage />} />
-            <Route path="sheets"           element={<SheetsPage />} />
-            <Route path="leads"            element={<LeadsPage />} />
-            <Route path="settings"         element={<SettingsPage />} />
-            {/* Crawler */}
-            <Route path="crawler"       element={<CrawlerPage />} />
-            <Route path="places"        element={<PlacesPage />} />
-            <Route path="websites"      element={<WebsitesPage />} />
-            <Route path="auto-scraper"  element={<AutoScraperPage />} />
-            {/* Autonomous SDR */}
-            <Route path="autonomousagents"      element={<AutonomousAgentsPage />} />
-            <Route path="autonomousagents/:id"  element={<AutonomousAgentDetailPage />} />
-            {/* Social Media */}
-            <Route path="social" element={<SocialMediaPage />} />
-            {/* Smart Outreach */}
-            <Route path="outreach" element={<SmartOutreachPage />} />
-            {/* Documentation */}
-            <Route path="docs"           element={<DocumentationPage />} />
-            {/* AI ChatBot */}
-            <Route path="chatbot" element={<ChatbotPage />} />
-            <Route path="chatbot/data" element={<ChatbotDataPage />} />
-            {/* Lead Generator */}
-            <Route path="lg/database"       element={<LeadDatabasePage />} />
-            <Route path="inbuild-db"         element={<InBuildDatabasePage />} />
-            <Route path="public-data"         element={<PublicDataPage />} />
-            <Route path="public-data2"        element={<PublicData2Page />} />
-            <Route path="india-data"          element={<IndiaDataPage />} />
-            <Route path="db-intelligence"     element={<DatabaseIntelligencePage />} />
-            <Route path="people"              element={<PeoplePage />} />
-            <Route path="people-email"        element={<PeopleEmailPage />} />
-            <Route path="people-number"       element={<PeopleNumberPage />} />
-            <Route path="email"               element={<EmailPage />} />
-            <Route path="number"              element={<NumberPage />} />
-            <Route path="categories"          element={<CategoryExplorerPage />} />
-            <Route path="cities"              element={<CityExplorerPage />} />
-            <Route path="companies"           element={<CompaniesPage />} />
-            <Route path="lg/linkedin"       element={<LinkedInFinderPage />} />
-            <Route path="lg/email"          element={<EmailFinderPage />} />
-            <Route path="lg/companies"      element={<CompanyIntelPage />} />
-            <Route path="lg/research"       element={<AIResearchAgentPage />} />
-            <Route path="lg/auto-lead-gen"  element={<AutoLeadGenPage />} />
-            {/* CRM */}
-            <Route path="crm/pipeline"      element={<CrmPipelinePage />} />
-            <Route path="crm/dashboard"     element={<CrmDashboardPage />} />
-            <Route path="crm/deals/:id"     element={<DealDetailPage />} />
-            <Route path="crm/activities"    element={<CrmActivitiesPage />} />
-            <Route path="crm/quotations"    element={<CrmQuotationsPage />} />
-            <Route path="crm/invoices"      element={<CrmInvoicesPage />} />
-            {/* ERP */}
-            <Route path="accounting"        element={<AccountingPage />} />
-            <Route path="inventory"         element={<InventoryPage />} />
-            <Route path="payroll"           element={<PayrollPage />} />
-            {/* Admin */}
-            <Route path="admin"             element={<AdminAnalyticsPage />} />
+              <Route path="pipeline"         element={<FeatureGate featureKey="pipeline"><PipelinePage /></FeatureGate>} />
+              <Route path="icp"              element={<FeatureGate featureKey="icp"><IcpPage /></FeatureGate>} />
+              <Route path="scheduler"        element={<FeatureGate featureKey="scheduler"><SchedulerPage /></FeatureGate>} />
+              <Route path="sheets"           element={<FeatureGate featureKey="sheets"><SheetsPage /></FeatureGate>} />
+              <Route path="leads"            element={<FeatureGate featureKey="leads"><LeadsPage /></FeatureGate>} />
+              <Route path="settings"         element={<FeatureGate featureKey="settings"><SettingsPage /></FeatureGate>} />
+              {/* Crawler */}
+              <Route path="crawler"          element={<FeatureGate featureKey="crawler"><CrawlerPage /></FeatureGate>} />
+              <Route path="places"           element={<FeatureGate featureKey="places_scraper"><PlacesPage /></FeatureGate>} />
+              <Route path="websites"         element={<FeatureGate featureKey="websites_crawler"><WebsitesPage /></FeatureGate>} />
+              <Route path="auto-scraper"     element={<FeatureGate featureKey="auto_scraper"><AutoScraperPage /></FeatureGate>} />
+              {/* Autonomous SDR */}
+              <Route path="autonomousagents"      element={<FeatureGate featureKey="autonomous_agents"><AutonomousAgentsPage /></FeatureGate>} />
+              <Route path="autonomousagents/:id"  element={<FeatureGate featureKey="autonomous_agents"><AutonomousAgentDetailPage /></FeatureGate>} />
+              {/* Social Media */}
+              <Route path="social"           element={<FeatureGate featureKey="social_media"><SocialMediaPage /></FeatureGate>} />
+              {/* Smart Outreach */}
+              <Route path="outreach"         element={<FeatureGate featureKey="smart_outreach"><SmartOutreachPage /></FeatureGate>} />
+              {/* Documentation */}
+              <Route path="docs"             element={<FeatureGate featureKey="docs"><DocumentationPage /></FeatureGate>} />
+              {/* AI ChatBot */}
+              <Route path="chatbot"          element={<FeatureGate featureKey="chatbot"><ChatbotPage /></FeatureGate>} />
+              <Route path="chatbot/data"     element={<FeatureGate featureKey="chatbot_data"><ChatbotDataPage /></FeatureGate>} />
+              {/* Lead Generator */}
+              <Route path="lg/database"      element={<FeatureGate featureKey="inbuild_db"><LeadDatabasePage /></FeatureGate>} />
+              <Route path="inbuild-db"        element={<FeatureGate featureKey="inbuild_db"><InBuildDatabasePage /></FeatureGate>} />
+              <Route path="public-data"       element={<FeatureGate featureKey="public_data"><PublicDataPage /></FeatureGate>} />
+              <Route path="public-data2"      element={<FeatureGate featureKey="public_data"><PublicData2Page /></FeatureGate>} />
+              <Route path="india-data"        element={<FeatureGate featureKey="india_data"><IndiaDataPage /></FeatureGate>} />
+              <Route path="db-intelligence"   element={<FeatureGate featureKey="db_intelligence"><DatabaseIntelligencePage /></FeatureGate>} />
+              <Route path="people"            element={<FeatureGate featureKey="people"><PeoplePage /></FeatureGate>} />
+              <Route path="people-email"      element={<FeatureGate featureKey="people"><PeopleEmailPage /></FeatureGate>} />
+              <Route path="people-number"     element={<FeatureGate featureKey="people"><PeopleNumberPage /></FeatureGate>} />
+              <Route path="email"             element={<FeatureGate featureKey="emails"><EmailPage /></FeatureGate>} />
+              <Route path="number"            element={<FeatureGate featureKey="numbers"><NumberPage /></FeatureGate>} />
+              <Route path="categories"        element={<FeatureGate featureKey="categories"><CategoryExplorerPage /></FeatureGate>} />
+              <Route path="cities"            element={<FeatureGate featureKey="cities"><CityExplorerPage /></FeatureGate>} />
+              <Route path="companies"         element={<FeatureGate featureKey="companies"><CompaniesPage /></FeatureGate>} />
+              <Route path="lg/linkedin"      element={<FeatureGate featureKey="lg_linkedin"><LinkedInFinderPage /></FeatureGate>} />
+              <Route path="lg/email"         element={<FeatureGate featureKey="lg_email"><EmailFinderPage /></FeatureGate>} />
+              <Route path="lg/companies"     element={<FeatureGate featureKey="lg_companies"><CompanyIntelPage /></FeatureGate>} />
+              <Route path="lg/research"      element={<FeatureGate featureKey="lg_research"><AIResearchAgentPage /></FeatureGate>} />
+              <Route path="lg/auto-lead-gen" element={<FeatureGate featureKey="lg_auto_lead_gen"><AutoLeadGenPage /></FeatureGate>} />
+              {/* CRM */}
+              <Route path="crm/pipeline"     element={<FeatureGate featureKey="crm_pipeline"><CrmPipelinePage /></FeatureGate>} />
+              <Route path="crm/dashboard"    element={<FeatureGate featureKey="crm_dashboard"><CrmDashboardPage /></FeatureGate>} />
+              <Route path="crm/deals/:id"    element={<FeatureGate featureKey="crm_pipeline"><DealDetailPage /></FeatureGate>} />
+              <Route path="crm/activities"   element={<FeatureGate featureKey="crm_activities"><CrmActivitiesPage /></FeatureGate>} />
+              <Route path="crm/quotations"   element={<FeatureGate featureKey="crm_quotations"><CrmQuotationsPage /></FeatureGate>} />
+              <Route path="crm/invoices"     element={<FeatureGate featureKey="crm_invoices"><CrmInvoicesPage /></FeatureGate>} />
+              {/* ERP */}
+              <Route path="accounting"       element={<FeatureGate featureKey="accounting"><AccountingPage /></FeatureGate>} />
+              <Route path="inventory"        element={<FeatureGate featureKey="inventory"><InventoryPage /></FeatureGate>} />
+              <Route path="payroll"          element={<FeatureGate featureKey="payroll"><PayrollPage /></FeatureGate>} />
+              {/* Admin */}
+              <Route path="admin"            element={<FeatureGate featureKey="admin"><AdminAnalyticsPage /></FeatureGate>} />
 
-          </Route>
+            </Route>
 
-          {/* ── 404 catch-all → redirect to login ─────────────── */}
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
+            {/* ── 404 catch-all → redirect to login ─────────────── */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </FeatureFlagProvider>
       </AuthProvider>
     </ThemeProvider>
   );

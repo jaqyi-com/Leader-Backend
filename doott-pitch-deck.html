@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Doott — Investor Pitch Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reset.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.min.css">
+
+  <style>
+    :root {
+      --purple: #7F77DD;
+      --teal: #1D9E75;
+      --black: #0A0A0A;
+      --white: #FFFFFF;
+      --light: #F4F3FF;
+      --gray: #888888;
+    }
+
+    * { font-family: 'Inter', sans-serif !important; box-sizing: border-box; }
+
+    .reveal { background: var(--black); }
+    .reveal .slides section { height: 100%; display: flex; flex-direction: column; justify-content: center; }
+
+    /* ── Slide 1: Title ── */
+    .slide-title { background: #000; text-align: center; padding: 60px; }
+    .slide-title .logo { font-size: 96px; font-weight: 900; color: white; letter-spacing: -4px; line-height: 1; margin-bottom: 8px; }
+    .slide-title .logo span { color: var(--teal); }
+    .slide-title .tagline { font-size: 28px; color: #aaa; margin: 24px 0 60px; }
+    .slide-title .tagline strong { color: var(--teal); }
+    .slide-title .divider { height: 1px; background: #333; width: 80%; margin: 0 auto 40px; }
+    .slide-title .meta { font-size: 20px; color: #666; }
+    .slide-title .meta strong { color: white; }
+
+    /* ── Common ── */
+    .slide-white { background: white; color: #0A0A0A; padding: 60px 80px; }
+    .slide-dark  { background: #0A0A0A; color: white; padding: 60px 80px; }
+
+    .slide-headline { font-size: 52px; font-weight: 900; margin: 0 0 40px; line-height: 1.1; }
+    .purple { color: var(--purple); }
+    .teal   { color: var(--teal); }
+
+    /* ── Problem Slide ── */
+    .problem-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; margin-top: 20px; }
+    .problem-card { border: 2px solid #f0f0f0; border-radius: 16px; padding: 36px 28px; text-align: left; }
+    .problem-card .icon { font-size: 40px; margin-bottom: 16px; }
+    .problem-card .title { font-size: 20px; font-weight: 800; color: var(--purple); margin-bottom: 10px; }
+    .problem-card .body { font-size: 16px; color: #555; line-height: 1.6; }
+    .problem-stat { font-size: 42px; font-weight: 900; color: var(--purple); margin-bottom: 6px; }
+
+    /* ── Market Slide ── */
+    .market-rings { display: flex; justify-content: center; align-items: center; margin: 20px 0; }
+    .ring-outer { background: #ede9fe; border-radius: 50%; width: 380px; height: 380px; display: flex; align-items: center; justify-content: center; }
+    .ring-mid   { background: #c4b5fd; border-radius: 50%; width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; }
+    .ring-inner { background: var(--teal); border-radius: 50%; width: 160px; height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .ring-inner .val { font-size: 22px; font-weight: 900; color: white; }
+    .ring-inner .lab { font-size: 12px; color: rgba(255,255,255,0.8); }
+    .market-labels { margin-left: 60px; display: flex; flex-direction: column; gap: 24px; }
+    .market-label { display: flex; align-items: center; gap: 14px; }
+    .market-dot { width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; }
+    .market-label .text .val { font-size: 22px; font-weight: 800; }
+    .market-label .text .desc { font-size: 14px; color: #777; }
+
+    /* ── Solution Slide ── */
+    .solution-boxes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-top: 30px; }
+    .sol-box { border-radius: 16px; padding: 32px 24px; text-align: center; }
+    .sol-box.purple-box { background: var(--light); border: 2px solid var(--purple); }
+    .sol-box.teal-box   { background: #e6f9f2;     border: 2px solid var(--teal); }
+    .sol-box.gray-box   { background: #f7f7f7;     border: 2px solid #ddd; }
+    .sol-box .sol-icon  { font-size: 40px; margin-bottom: 14px; }
+    .sol-box .sol-title { font-size: 18px; font-weight: 800; margin-bottom: 10px; }
+    .sol-box .sol-body  { font-size: 14px; color: #555; line-height: 1.6; }
+
+    /* ── Product Demo Slide ── */
+    .demo-steps { display: flex; flex-direction: column; gap: 22px; margin-top: 20px; }
+    .demo-step  { display: flex; align-items: flex-start; gap: 24px; }
+    .step-num   { background: var(--purple); color: white; width: 44px; height: 44px; border-radius: 50%; font-size: 20px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 4px; }
+    .step-content .step-title { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
+    .step-content .step-body  { font-size: 16px; color: #555; }
+    .search-bar { display: flex; align-items: center; border: 2px solid #E0E0E0; border-radius: 40px; padding: 14px 24px; margin-top: 8px; font-size: 16px; color: #333; background: white; width: 90%; }
+    .search-bar .icon { margin-right: 12px; color: #aaa; }
+    .result-row { display: flex; justify-content: space-between; padding: 14px 20px; border-radius: 10px; font-size: 15px; margin-top: 6px; background: #f8f8f8; }
+    .result-row .name { font-weight: 700; }
+    .result-row .title-col { color: #555; }
+    .result-row .co { color: var(--teal); font-weight: 700; }
+    .export-btn { background: var(--purple); color: white; border: none; padding: 14px 32px; border-radius: 10px; font-weight: 800; font-size: 16px; margin-top: 12px; cursor: pointer; }
+
+    /* ── Traction Slide ── */
+    .metric-boxes { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 28px; margin-bottom: 40px; }
+    .metric-box { background: #f0fff8; border: 2px solid var(--teal); border-radius: 16px; padding: 32px; text-align: center; }
+    .metric-box .metric-val { font-size: 42px; font-weight: 900; color: var(--teal); }
+    .metric-box .metric-lab { font-size: 15px; color: #555; margin-top: 6px; }
+    .why-now-list { list-style: none; padding: 0; margin: 0; }
+    .why-now-list li { font-size: 17px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 12px; }
+    .why-now-list li:last-child { border: none; }
+
+    /* ── Pricing Slide ── */
+    .pricing-cards { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; margin-top: 20px; }
+    .pricing-card { border-radius: 16px; padding: 36px 24px; text-align: center; border: 2px solid #e0e0e0; }
+    .pricing-card.featured { border-color: var(--teal); background: #e6f9f2; }
+    .pricing-card .plan-name { font-size: 18px; font-weight: 800; color: #555; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
+    .pricing-card .plan-price { font-size: 48px; font-weight: 900; color: #0A0A0A; margin-bottom: 4px; }
+    .pricing-card .plan-period { font-size: 14px; color: #aaa; margin-bottom: 24px; }
+    .pricing-card .plan-feature { font-size: 15px; color: #555; margin: 8px 0; }
+    .pricing-card .plan-feature strong { color: #0A0A0A; }
+    .featured-badge { background: var(--teal); color: white; font-size: 11px; font-weight: 800; padding: 4px 12px; border-radius: 20px; display: inline-block; margin-bottom: 8px; letter-spacing: 1px; }
+
+    /* ── Ask Slide ── */
+    .ask-amount { font-size: 80px; font-weight: 900; color: var(--teal); line-height: 1; margin-bottom: 10px; }
+    .ask-label  { font-size: 20px; color: #aaa; margin-bottom: 40px; }
+    .fund-bars  { display: flex; flex-direction: column; gap: 20px; }
+    .fund-row   { display: flex; align-items: center; gap: 16px; }
+    .fund-bar-wrap { flex: 1; background: #f0f0f0; border-radius: 8px; height: 14px; overflow: hidden; }
+    .fund-bar { height: 100%; border-radius: 8px; }
+    .fund-pct { font-size: 18px; font-weight: 800; width: 50px; text-align: right; }
+    .fund-desc { font-size: 15px; color: #555; width: 260px; }
+
+    /* ── Closing Slide ── */
+    .slide-closing { background: #000; text-align: center; padding: 60px; }
+
+    /* Fullscreen nav hint */
+    .reveal .controls { color: var(--teal) !important; }
+    .reveal .progress  { background: var(--purple) !important; height: 4px; }
+    .slide-num { position: absolute; bottom: 20px; right: 30px; font-size: 13px; color: #555; }
+  </style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+  <!-- SLIDE 1: TITLE -->
+  <section>
+    <div class="slide-title" style="height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+      <div class="logo">do<span>●</span>tt</div>
+      <div class="tagline">Your CRM has ghosts. <strong>We have receipts.</strong></div>
+      <div class="divider"></div>
+      <div class="meta"><strong>Akshat Verma</strong>, Founder &nbsp;·&nbsp; Pre-Seed Round &nbsp;·&nbsp; <strong style="color:var(--teal);">$500,000</strong></div>
+    </div>
+    <div class="slide-num">1 / 9</div>
+  </section>
+
+  <!-- SLIDE 2: PROBLEM -->
+  <section>
+    <div class="slide-white" style="height:100%;display:flex;flex-direction:column;justify-content:center;">
+      <div class="slide-headline">The <span class="purple">Problem</span></div>
+      <div class="problem-grid">
+        <div class="problem-card">
+          <div class="icon">👻</div>
+          <div class="problem-stat">40%</div>
+          <div class="title">Ghost Data</div>
+          <div class="body">Wrong emails, old job titles, disconnected numbers. SDRs spend hours verifying data that's already dead.</div>
+        </div>
+        <div class="problem-card">
+          <div class="icon">🔒</div>
+          <div class="problem-stat">10K</div>
+          <div class="title">Row Limit Ransom</div>
+          <div class="body">Apollo & ZoomInfo cap your exports at 10,000/year. Hit the limit? Pay up or stop selling.</div>
+        </div>
+        <div class="problem-card">
+          <div class="icon">💸</div>
+          <div class="problem-stat">$15K</div>
+          <div class="title">Enterprise Pricing</div>
+          <div class="body">ZoomInfo starts at $15,000/year. Apollo at $12,000/year. Tools built for Fortune 500, not startups.</div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-num">2 / 9</div>
+  </section>
+
+  <!-- SLIDE 3: MARKET -->
+  <section>
+    <div class="slide-white" style="height:100%;display:flex;flex-direction:column;justify-content:center;">
+      <div class="slide-headline">The <span class="teal">Market</span></div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:60px;">
+        <div class="market-rings">
+          <div class="ring-outer">
+            <div class="ring-mid">
+              <div class="ring-inner">
+                <div class="val">$15M</div>
+                <div class="lab">Our Goal</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="market-labels">
+          <div class="market-label">
+            <div class="market-dot" style="background:#ede9fe;border:2px solid #c4b5fd;"></div>
+            <div class="text"><div class="val">$4.2B <span style="font-size:14px;color:#888;font-weight:400;">TAM</span></div><div class="desc">Global B2B Data Market · 12% CAGR</div></div>
+          </div>
+          <div class="market-label">
+            <div class="market-dot" style="background:#c4b5fd;"></div>
+            <div class="text"><div class="val">$1.1B <span style="font-size:14px;color:#888;font-weight:400;">SAM</span></div><div class="desc">US SMBs & Startups (5–500 employees)</div></div>
+          </div>
+          <div class="market-label">
+            <div class="market-dot" style="background:var(--teal);"></div>
+            <div class="text"><div class="val" style="color:var(--teal);">$15M <span style="font-size:14px;color:#888;font-weight:400;">SOM</span></div><div class="desc">0.1% of SAM · 25,000 customers</div></div>
+          </div>
+          <div class="market-label" style="margin-top:10px;">
+            <div class="market-dot" style="background:#0A0A0A;"></div>
+            <div class="text"><div class="val">3.2M</div><div class="desc">target companies in the USA alone</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-num">3 / 9</div>
+  </section>
+
+  <!-- SLIDE 4: SOLUTION -->
+  <section>
+    <div class="slide-white" style="height:100%;display:flex;flex-direction:column;justify-content:center;">
+      <div class="slide-headline">The <span class="teal">Solution</span></div>
+      <div style="text-align:center;margin-bottom:24px;">
+        <span style="font-size:20px;font-weight:700;">43M+ Verified B2B Contacts &nbsp;·&nbsp; Real Emails &nbsp;·&nbsp; Direct Dials</span>
+      </div>
+      <div class="solution-boxes">
+        <div class="sol-box purple-box">
+          <div class="sol-icon">♾️</div>
+          <div class="sol-title" style="color:var(--purple);">Zero Row Limits</div>
+          <div class="sol-body">Find 10,000 leads. Export all 10,000. One click. No credits. No upgrade pop-up.</div>
+        </div>
+        <div class="sol-box teal-box">
+          <div class="sol-icon">✅</div>
+          <div class="sol-title" style="color:var(--teal);">Apollo-Grade Data</div>
+          <div class="sol-body">Continuously scrubbed, verified, and refreshed contacts. Same quality. 1/5th the price.</div>
+        </div>
+        <div class="sol-box gray-box">
+          <div class="sol-icon">⚡</div>
+          <div class="sol-title">Built for Speed</div>
+          <div class="sol-body">Search by title, industry, geography, size. Instant results. Push to Outreach or Salesloft in seconds.</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:30px;font-size:26px;font-weight:900;">
+        <span style="color:var(--purple);">Apollo-grade data.</span> &nbsp;<span style="color:var(--teal);">Startup-grade price.</span>
+      </div>
+    </div>
+    <div class="slide-num">4 / 9</div>
+  </section>
+
+  <!-- SLIDE 5: PRODUCT DEMO -->
+  <section>
+    <div class="slide-white" style="height:100%;display:flex;flex-direction:column;justify-content:center;">
+      <div class="slide-headline">How It <span class="purple">Works</span></div>
+      <div class="demo-steps">
+        <div class="demo-step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <div class="step-title">Search your ideal customer</div>
+            <div class="search-bar"><span class="icon">🔍</span> VP Sales, USA, 50–200 employees</div>
+          </div>
+        </div>
+        <div class="demo-step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <div class="step-title">Instant verified results</div>
+            <div class="result-row"><span class="name">Maya R.</span><span class="title-col">VP Sales</span><span class="co">Acme Robotics</span><span>✉️ 📞</span></div>
+            <div class="result-row"><span class="name">James T.</span><span class="title-col">Head of Sales</span><span class="co">GlobalTech</span><span>✉️ 📞</span></div>
+          </div>
+        </div>
+        <div class="demo-step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <div class="step-title">One-click export — no limits</div>
+            <button class="export-btn">⬇ Export CSV &nbsp;·&nbsp; No row limits.</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-num">5 / 9</div>
+  </section>
+
+  <!-- SLIDE 6: TRACTION -->
+  <section>
+    <div class="slide-white" style="height:100%;display:flex;flex-direction:column;justify-content:center;">
+      <div class="slide-headline">Why <span class="teal">Now</span></div>
+      <div class="metric-boxes">
+        <div class="metric-box">
+          <div class="metric-val">$___</div>
+          <div class="metric-lab">Monthly Recurring Revenue</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-val">___</div>
+          <div class="metric-lab">Active Paying Customers</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-val">___%</div>
+          <div class="metric-lab">Month-over-Month Growth</div>
+        </div>
+      </div>
+      <ul class="why-now-list">
+        <li>🔥 <strong>Apollo raised prices 30%</strong> in 2024 — their customers are screaming for alternatives</li>
+        <li>🔥 <strong>ZoomInfo</strong> under scrutiny for data accuracy and aggressive contract lock-in</li>
+        <li>🔥 The market is <strong>actively searching</strong> for an affordable, high-quality challenger</li>
+        <li>✅ Doott is <strong>live and acquiring customers today</strong></li>
+      </ul>
+    </div>
+    <div class="slide-num">6 / 9</div>
+  </section>
+
+  <!-- SLIDE 7: PRICING -->
+  <section>
+    <div class="slide-white" style="height:100%;display:flex;flex-direction:column;justify-content:center;">
+      <div class="slide-headline">Business <span class="purple">Model</span></div>
+      <div class="pricing-cards">
+        <div class="pricing-card">
+          <div class="plan-name">Starter</div>
+          <div class="plan-price">$49</div>
+          <div class="plan-period">/ month</div>
+          <div class="plan-feature">Unlimited Search</div>
+          <div class="plan-feature"><strong>5,000</strong> exports/month</div>
+          <div class="plan-feature">CSV + Email verified</div>
+        </div>
+        <div class="pricing-card featured">
+          <div class="featured-badge">MOST POPULAR</div>
+          <div class="plan-name">Growth</div>
+          <div class="plan-price" style="color:var(--teal);">$149</div>
+          <div class="plan-period">/ month</div>
+          <div class="plan-feature">Unlimited Search</div>
+          <div class="plan-feature"><strong>25,000</strong> exports/month</div>
+          <div class="plan-feature">CSV + Direct Dials</div>
+        </div>
+        <div class="pricing-card">
+          <div class="plan-name">Scale</div>
+          <div class="plan-price" style="color:var(--purple);">$299</div>
+          <div class="plan-period">/ month</div>
+          <div class="plan-feature">Unlimited Search</div>
+          <div class="plan-feature"><strong>♾ Truly Unlimited</strong> exports</div>
+          <div class="plan-feature">API + CRM integrations</div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:24px;font-size:16px;color:#888;">
+        No annual lock-in &nbsp;·&nbsp; No credits &nbsp;·&nbsp; No surprises &nbsp;·&nbsp; 3.2M target companies in the USA
+      </div>
+    </div>
+    <div class="slide-num">7 / 9</div>
+  </section>
+
+  <!-- SLIDE 8: THE ASK -->
+  <section>
+    <div class="slide-dark" style="height:100%;display:flex;flex-direction:column;justify-content:center;">
+      <div class="slide-headline" style="color:white;">We Are <span class="teal">Raising</span></div>
+      <div class="ask-amount">$500,000</div>
+      <div class="ask-label">Pre-Seed Round</div>
+      <div class="fund-bars">
+        <div class="fund-row">
+          <div class="fund-pct" style="color:var(--purple);">40%</div>
+          <div class="fund-bar-wrap"><div class="fund-bar" style="width:40%;background:var(--purple);"></div></div>
+          <div class="fund-desc" style="color:#aaa;">Engineering — 100M contacts + integrations</div>
+        </div>
+        <div class="fund-row">
+          <div class="fund-pct" style="color:var(--teal);">35%</div>
+          <div class="fund-bar-wrap"><div class="fund-bar" style="width:35%;background:var(--teal);"></div></div>
+          <div class="fund-desc" style="color:#aaa;">Sales & Marketing — first SDRs + campaigns</div>
+        </div>
+        <div class="fund-row">
+          <div class="fund-pct" style="color:#888;">25%</div>
+          <div class="fund-bar-wrap"><div class="fund-bar" style="width:25%;background:#555;"></div></div>
+          <div class="fund-desc" style="color:#aaa;">Operations — infrastructure + compliance</div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-num" style="color:#555;">8 / 9</div>
+  </section>
+
+  <!-- SLIDE 9: CLOSING -->
+  <section>
+    <div class="slide-closing" style="height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+      <div class="logo" style="font-size:96px;font-weight:900;color:white;letter-spacing:-4px;margin-bottom:8px;">do<span style="color:var(--teal);">●</span>tt</div>
+      <div style="font-size:24px;color:#aaa;margin:24px 0 40px;">Your CRM has ghosts. <strong style="color:var(--teal);">We have receipts.</strong></div>
+      <div style="height:1px;background:#333;width:60%;margin-bottom:40px;"></div>
+      <div style="font-size:18px;color:#666;line-height:2;">
+        <strong style="color:white;">Akshat Verma</strong><br>
+        <span style="color:var(--teal);">doott.jaqyi.com</span><br>
+        your@email.com
+      </div>
+    </div>
+    <div class="slide-num" style="color:#555;">9 / 9</div>
+  </section>
+
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.3.1/reveal.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    transition: 'fade',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'fade',
+    controls: true,
+    progress: true,
+    center: false,
+    width: 1280,
+    height: 720,
+  });
+</script>
+</body>
+</html>
