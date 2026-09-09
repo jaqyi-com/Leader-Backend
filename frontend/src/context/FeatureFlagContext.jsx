@@ -25,8 +25,7 @@ export function FeatureFlagProvider({ children }) {
   const [simulationMode, setSimulationMode] = useState(false); // Admin preview as regular user
 
   const userEmail = user?.email?.toLowerCase().trim() || "";
-  // Admin access granted to all
-  const isAdmin = true;
+  const isAdmin = Boolean(userEmail && ADMIN_EMAILS.includes(userEmail));
 
   const fetchFeatures = useCallback(async () => {
     try {
