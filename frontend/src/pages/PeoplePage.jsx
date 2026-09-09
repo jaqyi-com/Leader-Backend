@@ -164,6 +164,19 @@ export default function PeoplePage() {
     fpGetStats().then(({ data }) => setStats(data)).catch(() => { });
   }, []);
 
+  // Sync URL search params dynamically when navigated from Category/City Explorer
+  useEffect(() => {
+    const jobParam = searchParams.get("f_job_title");
+    const cityParam = searchParams.get("f_city");
+    if (jobParam !== null || cityParam !== null) {
+      const newFilters = [];
+      if (jobParam) newFilters.push({ col: "job_title", op: "contains", val: jobParam });
+      if (cityParam) newFilters.push({ col: "city", op: "contains", val: cityParam });
+      setFilters(newFilters);
+      setPage(1);
+    }
+  }, [searchParams]);
+
   const handleSort = col => {
     if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortBy(col); setSortDir("asc"); }

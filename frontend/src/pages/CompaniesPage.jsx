@@ -160,6 +160,19 @@ export default function CompaniesPage() {
     fcGetStats().then(({ data }) => setStats(data)).catch(() => { });
   }, []);
 
+  // Sync URL search params dynamically when navigated from Category/City Explorer
+  useEffect(() => {
+    const industryParam = searchParams.get("f_industry");
+    const cityParam = searchParams.get("f_city");
+    if (industryParam !== null || cityParam !== null) {
+      const newFilters = [];
+      if (industryParam) newFilters.push({ col: "industry", op: "contains", val: industryParam });
+      if (cityParam) newFilters.push({ col: "city", op: "contains", val: cityParam });
+      setFilters(newFilters);
+      setPage(1);
+    }
+  }, [searchParams]);
+
   const handleSort = col => {
     if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortBy(col); setSortDir("asc"); }

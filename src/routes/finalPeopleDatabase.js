@@ -169,8 +169,22 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
           conditions.push(`${doubleQuotedCol} = $${idx++}`);
           values.push(val);
         } else {
-          conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
-          values.push(`%${val}%`);
+          const rawVal = String(val).trim();
+          const words = rawVal.split(/\s+/).filter(w => w.length > 0);
+          if (words.length <= 1) {
+            conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
+            values.push(`%${rawVal}%`);
+          } else {
+            // Match exact phrase OR all constituent tokens
+            const phraseIdx = idx++;
+            values.push(`%${rawVal}%`);
+            const wordConds = words.map(w => {
+              const wIdx = idx++;
+              values.push(`%${w}%`);
+              return `${doubleQuotedCol} ILIKE $${wIdx}`;
+            });
+            conditions.push(`(${doubleQuotedCol} ILIKE $${phraseIdx} OR (${wordConds.join(" AND ")}))`);
+          }
         }
       }
     }
