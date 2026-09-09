@@ -91,13 +91,19 @@ router.get("/features", async (req, res) => {
   }
 });
 
+const getAdminEmails = () => {
+  const envVal = process.env.ADMIN_EMAIL || "akshat.v@jaqyi.com,akshatv00001@gmail.com";
+  return envVal.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+};
+
 // ─── Admin Guard Middleware ───
 function adminGuard(req, res, next) {
   const callerEmail = (req.user?.email || "").toLowerCase().trim();
   if (!callerEmail) {
     return res.status(401).json({ error: "Authentication required." });
   }
-  if (!ADMIN_EMAIL || callerEmail !== ADMIN_EMAIL) {
+  const adminEmails = getAdminEmails();
+  if (adminEmails.length === 0 || !adminEmails.includes(callerEmail)) {
     return res.status(403).json({ error: "Access denied. Feature management is restricted to application administrator." });
   }
   next();

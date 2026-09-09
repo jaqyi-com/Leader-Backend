@@ -3,7 +3,10 @@ import axios from "axios";
 import { useAuth } from "./AuthContext";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
-const ADMIN_EMAIL = "akshatv00001@gmail.com";
+const ADMIN_EMAILS = [
+  "akshat.v@jaqyi.com",
+  "akshatv00001@gmail.com"
+];
 
 const FeatureFlagContext = createContext(null);
 
@@ -16,7 +19,8 @@ export function FeatureFlagProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [simulationMode, setSimulationMode] = useState(false); // Admin preview as regular user
 
-  const isAdmin = user?.email?.toLowerCase().trim() === ADMIN_EMAIL.toLowerCase().trim();
+  const userEmail = user?.email?.toLowerCase().trim() || "";
+  const isAdmin = Boolean(userEmail && ADMIN_EMAILS.includes(userEmail));
 
   const fetchFeatures = useCallback(async () => {
     try {

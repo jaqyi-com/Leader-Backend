@@ -25,8 +25,11 @@ import {
   Building2, Mail, Target, Briefcase, UserCog, Calculator, Package, MapPin,
 } from "lucide-react";
 
-const API_BASE    = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
-const ADMIN_EMAIL = "akshatv00001@gmail.com";
+const API_BASE     = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+const ADMIN_EMAILS = [
+  "akshat.v@jaqyi.com",
+  "akshatv00001@gmail.com"
+];
 
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -729,7 +732,8 @@ function AccessDenied() {
 // ─────────────────────────────────────────────────────────────────────────────
 export default function AdminAnalyticsPage() {
   const { user, token } = useAuth();
-  const isAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL;
+  const userEmail = user?.email?.toLowerCase().trim() || "";
+  const isAdmin = Boolean(userEmail && ADMIN_EMAILS.includes(userEmail));
   const [tab, setTab] = useState("features"); // Default to features control
 
   if (!isAdmin) return <AccessDenied />;

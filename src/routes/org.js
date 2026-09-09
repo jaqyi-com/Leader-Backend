@@ -51,9 +51,13 @@ router.get("/mine", async (req, res) => {
 // GET /api/org/all
 router.get("/all", async (req, res) => {
   try {
-    const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+    const getAdminEmails = () => {
+      const envVal = process.env.ADMIN_EMAIL || "akshat.v@jaqyi.com,akshatv00001@gmail.com";
+      return envVal.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+    };
     const callerEmail = (req.user?.email || "").toLowerCase().trim();
-    if (!ADMIN_EMAIL || callerEmail !== ADMIN_EMAIL) {
+    const adminEmails = getAdminEmails();
+    if (adminEmails.length === 0 || !adminEmails.includes(callerEmail)) {
       return res.status(403).json({ error: "Access denied. Owner only." });
     }
 

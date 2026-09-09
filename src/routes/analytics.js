@@ -13,18 +13,22 @@ const db     = require("../db/mongoose");
 
 // ─── Owner guard ─────────────────────────────────────────────────────────────
 // Must come before every handler on this router.
-const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+const getAdminEmails = () => {
+  const envVal = process.env.ADMIN_EMAIL || "akshat.v@jaqyi.com,akshatv00001@gmail.com";
+  return envVal.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+};
 
 router.use((req, res, next) => {
   const callerEmail = (req.user?.email || "").toLowerCase().trim();
   if (!callerEmail) {
     return res.status(401).json({ error: "Authentication required." });
   }
-  if (!ADMIN_EMAIL) {
+  const adminEmails = getAdminEmails();
+  if (adminEmails.length === 0) {
     // ADMIN_EMAIL not set in .env — deny all for safety
     return res.status(503).json({ error: "Analytics admin email not configured on server." });
   }
-  if (callerEmail !== ADMIN_EMAIL) {
+  if (!adminEmails.includes(callerEmail)) {
     return res.status(403).json({ error: "Access denied. This section is restricted to the application owner." });
   }
   next();
