@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Fragment } from "react";
+import { useState, useEffect, useCallback, Fragment, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Building2, Search, Filter, Download, RefreshCw,
@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { fcGetDatabase, fcGetStats, fcGetColumns, fcRefresh } from "../api";
 import toast from "react-hot-toast";
-import QueryBuilder, { qbFiltersToParams } from "../components/QueryBuilder";
+import QueryBuilder, { qbFiltersToParams, paramsToQbFilters } from "../components/QueryBuilder";
 
 // ── Parse PostgreSQL text array literal "{a,b,c}" → ["a","b","c"] ──
 const parsePgArray = (v) => {
@@ -74,7 +74,8 @@ function MultiValueCell({ values, hrefFn, Icon, color }) {
 }
 
 export default function CompaniesPage() {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const lastUrlSearchRef = useRef(searchParams.toString());
   const [records, setRecords] = useState([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState(null);
@@ -87,14 +88,9 @@ export default function CompaniesPage() {
   const [sortDir, setSortDir] = useState("asc");
   const [search, setSearch] = useState("");
   
-  // Dynamic QueryBuilder Filters
+  // Dynamic QueryBuilder Filters (initialized from URL params)
   const [filters, setFilters] = useState(() => {
-    const initialIndustry = searchParams.get("f_industry") || "";
-    const initialCity     = searchParams.get("f_city")     || "";
-    const init = [];
-    if (initialIndustry) init.push({ col: "industry", op: "contains", val: initialIndustry });
-    if (initialCity)     init.push({ col: "city",     op: "contains", val: initialCity });
-    return init;
+    return paramsToQbFilters(searchParams);
   });
 
   // ── Column discovery ────
@@ -160,27 +156,26 @@ export default function CompaniesPage() {
     fcGetStats().then(({ data }) => setStats(data)).catch(() => { });
   }, []);
 
-  // Sync URL search params dynamically when navigated from Category/City Explorer
+  // Sync URL search params when navigated from Category/City Explorer or external navigation
   useEffect(() => {
-    const industryParam = searchParams.get("f_industry");
-    const cityParam = searchParams.get("f_city");
-    if (industryParam !== null || cityParam !== null) {
-      setFilters(prev => {
-        const currentInd = prev.find(f => f.col === "industry")?.val || "";
-        const currentCity = prev.find(f => f.col === "city")?.val || "";
-        const targetInd = industryParam || "";
-        const targetCity = cityParam || "";
-        if (currentInd === targetInd && currentCity === targetCity && prev.length === (targetInd ? 1 : 0) + (targetCity ? 1 : 0)) {
-          return prev;
-        }
-        const newFilters = [];
-        if (targetInd) newFilters.push({ col: "industry", op: "contains", val: targetInd });
-        if (targetCity) newFilters.push({ col: "city", op: "contains", val: targetCity });
-        return newFilters;
-      });
+    const currentSearch = searchParams.toString();
+    if (currentSearch !== lastUrlSearchRef.current) {
+      lastUrlSearchRef.current = currentSearch;
+      const parsedFilters = paramsToQbFilters(searchParams);
+      setFilters(parsedFilters);
       setPage(1);
     }
   }, [searchParams]);
+
+  // Handle QueryBuilder filter edits (updates state and URL)
+  const handleFiltersChange = useCallback((newFilters) => {
+    setFilters(newFilters);
+    setPage(1);
+    const params = qbFiltersToParams(newFilters);
+    const newSearchStr = new URLSearchParams(params).toString();
+    lastUrlSearchRef.current = newSearchStr;
+    setSearchParams(params, { replace: true });
+  }, [setSearchParams]);
 
   const handleSort = col => {
     if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -204,7 +199,7 @@ export default function CompaniesPage() {
 
   const clearAll = () => {
     setSearch("");
-    setFilters([]);
+    handleFiltersChange([]);
     setPage(1);
   };
 
@@ -370,7 +365,7 @@ export default function CompaniesPage() {
       <QueryBuilder
         columns={cols}
         filters={filters}
-        onChange={f => { setFilters(f); setPage(1); }}
+        onChange={handleFiltersChange}
       />
 
       {/* Table */}

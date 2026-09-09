@@ -252,3 +252,43 @@ export function qbFiltersToParams(filters) {
   }
   return params;
 }
+
+// ── Convert URL search params → QB filters ───────────────────
+export function paramsToQbFilters(searchParams) {
+  const filters = [];
+  if (!searchParams) return filters;
+  
+  const entries = typeof searchParams.entries === "function" 
+    ? Array.from(searchParams.entries())
+    : Object.entries(searchParams);
+
+  for (const [key, rawVal] of entries) {
+    if (!key.startsWith("f_")) continue;
+    const val = String(rawVal || "").trim();
+
+    if (key.endsWith("_nonempty")) {
+      const col = key.substring(2, key.length - 9);
+      filters.push({ col, op: "not_empty", val: "" });
+    } else if (key.endsWith("_empty")) {
+      const col = key.substring(2, key.length - 6);
+      filters.push({ col, op: "empty", val: "" });
+    } else if (key.endsWith("_eq")) {
+      const col = key.substring(2, key.length - 3);
+      filters.push({ col, op: "equals", val });
+    } else if (key.endsWith("_sw")) {
+      const col = key.substring(2, key.length - 3);
+      filters.push({ col, op: "starts_with", val });
+    } else if (key.endsWith("_ew")) {
+      const col = key.substring(2, key.length - 3);
+      filters.push({ col, op: "ends_with", val });
+    } else {
+      const col = key.substring(2);
+      if (val === "true" || val === "false") {
+        filters.push({ col, op: val, val: "" });
+      } else {
+        filters.push({ col, op: "contains", val });
+      }
+    }
+  }
+  return filters;
+}
