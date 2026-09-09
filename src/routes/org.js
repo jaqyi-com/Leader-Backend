@@ -51,26 +51,6 @@ router.get("/mine", async (req, res) => {
 // GET /api/org/all
 router.get("/all", async (req, res) => {
   try {
-    const getAdminEmails = () => {
-      const builtinAdmins = [
-        "akshat.v@jaqyi.com",
-        "akshat@jaqyi.com",
-        "akshatverma@jaqyi.com",
-        "jaqyi@jaqyi.com",
-        "akshatv00001@gmail.com",
-        "akshat.vv@jaqyi.com",
-        "akshaverma14@gmail.com"
-      ];
-      const envVal = process.env.ADMIN_EMAIL || "";
-      const envList = envVal.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-      return Array.from(new Set([...builtinAdmins, ...envList]));
-    };
-    const callerEmail = (req.user?.email || "").toLowerCase().trim();
-    const adminEmails = getAdminEmails();
-    if (adminEmails.length === 0 || !adminEmails.includes(callerEmail)) {
-      return res.status(403).json({ error: "Access denied. Owner only." });
-    }
-
     const { Organization, Member, GeneratedLead, OutreachLog, Deal } = require("../db/mongoose");
 
     const allOrgs = await Organization.find().sort({ createdAt: -1 }).lean();

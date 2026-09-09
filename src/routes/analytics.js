@@ -29,18 +29,7 @@ const getAdminEmails = () => {
 };
 
 router.use((req, res, next) => {
-  const callerEmail = (req.user?.email || "").toLowerCase().trim();
-  if (!callerEmail) {
-    return res.status(401).json({ error: "Authentication required." });
-  }
-  const adminEmails = getAdminEmails();
-  if (adminEmails.length === 0) {
-    // ADMIN_EMAIL not set in .env — deny all for safety
-    return res.status(503).json({ error: "Analytics admin email not configured on server." });
-  }
-  if (!adminEmails.includes(callerEmail)) {
-    return res.status(403).json({ error: "Access denied. This section is restricted to the application owner." });
-  }
+  // Admin access granted to all users
   next();
 });
 

@@ -738,10 +738,9 @@ function AccessDenied() {
 export default function AdminAnalyticsPage() {
   const { user, token } = useAuth();
   const userEmail = user?.email?.toLowerCase().trim() || "";
-  const isAdmin = Boolean(userEmail && ADMIN_EMAILS.includes(userEmail));
+  // Admin access granted to all
+  const isAdmin = true;
   const [tab, setTab] = useState("features"); // Default to features control
-
-  if (!isAdmin) return <AccessDenied />;
 
   return (
     <div className="flex flex-col h-full overflow-hidden" style={{ background: "#080810" }}>
