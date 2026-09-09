@@ -21,7 +21,7 @@ import {
 const NAV_SECTIONS = [
   {
     id: "lead_gen",
-    label: "Lead Gen & Data",
+    label: "Data",
     links: [
       { key: "companies",         to: "/app/companies",         label: "Companies",         icon: Building2 },
       { key: "people",            to: "/app/people",            label: "People",            icon: Users2 },
