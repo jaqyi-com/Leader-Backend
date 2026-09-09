@@ -22,7 +22,7 @@ import {
   Eye, TrendingUp, Activity, Users, RefreshCw, AlertCircle,
   Lock, ShieldCheck, Monitor, Smartphone, Tablet, Globe,
   Chrome, Share2, ExternalLink, ArrowRight, Sliders,
-  Building2, Mail, Target, Briefcase, UserCog, Calculator, Package, MapPin,
+  Building2, Mail, Target, Briefcase, UserCog, Calculator, Package, MapPin, BarChart3,
 } from "lucide-react";
 
 const API_BASE     = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
