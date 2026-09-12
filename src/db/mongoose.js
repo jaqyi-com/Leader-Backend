@@ -2,11 +2,14 @@ const mongoose = require("mongoose");
 const dns = require("dns");
 const logger = require("../utils/logger").forAgent("Database");
 
-// Fix for ECONNREFUSED on some networks where local DNS fails SRV lookups (e.g. Atlas)
-try {
-  dns.setServers(["8.8.8.8", "8.8.4.4"]);
-} catch (e) {
-  logger.warn("Could not set custom DNS servers, continuing with system defaults");
+// Fix for ECONNREFUSED on some local networks where DNS fails SRV lookups (e.g. Atlas)
+// Do NOT override DNS on Vercel or AWS Lambda as it breaks VPC internal resolvers
+if (!process.env.VERCEL) {
+  try {
+    dns.setServers(["8.8.8.8", "8.8.4.4"]);
+  } catch (e) {
+    logger.warn("Could not set custom DNS servers, continuing with system defaults");
+  }
 }
 
 // --- CONNECTION ---

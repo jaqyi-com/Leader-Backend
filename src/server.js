@@ -79,16 +79,18 @@ function registerCronJob(phase, cronExpr, schedules, pipelineRef) {
   logger.info(`[Scheduler] Registered cron for '${phase}': ${cronExpr}`);
 }
 
-// Register weekly disposable email domains sync (Every Sunday at 03:00 UTC)
-cron.schedule("0 3 * * 0", async () => {
-  try {
-    logger.info("[Scheduler] 🔄 Running weekly disposable email domains sync from upstream...");
-    const { syncDisposableDomainsFromGitHub } = require("./services/emailVerification");
-    await syncDisposableDomainsFromGitHub();
-  } catch (err) {
-    logger.error(`[Scheduler] Weekly disposable domains sync failed: ${err.message}`);
-  }
-});
+// Register weekly disposable email domains sync (Every Sunday at 03:00 UTC) - Only in long-running environments
+if (!process.env.VERCEL) {
+  cron.schedule("0 3 * * 0", async () => {
+    try {
+      logger.info("[Scheduler] 🔄 Running weekly disposable email domains sync from upstream...");
+      const { syncDisposableDomainsFromGitHub } = require("./services/emailVerification");
+      await syncDisposableDomainsFromGitHub();
+    } catch (err) {
+      logger.error(`[Scheduler] Weekly disposable domains sync failed: ${err.message}`);
+    }
+  });
+}
 
 const app = express();
 const PORT = process.env.PORT || 3000;
