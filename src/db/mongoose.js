@@ -15,21 +15,26 @@ if (!process.env.VERCEL) {
 // --- CONNECTION ---
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
+  if (!process.env.MONGO_URI) {
+    logger.warn("MONGO_URI not configured, skipping MongoDB connection.");
+    return;
+  }
   try {
     await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 30000,
-      connectTimeoutMS:         30000,
-      socketTimeoutMS:          60000,  // allow long-running chatbot streams
-      bufferTimeoutMS:          60000,  // wait up to 60s for connection on cold starts (Vercel)
-      maxPoolSize:              10,     // serverless-safe connection pool
-      minPoolSize:              1,
+      serverSelectionTimeoutMS: 5000,
+      connectTimeoutMS:         5000,
+      socketTimeoutMS:          30000,
+      maxPoolSize:              10,
+      minPoolSize:              0,
     });
     logger.info("✅ Connected to MongoDB Atlas");
   } catch (error) {
     logger.error(`❌ MongoDB Connection Error: ${error.message}`);
     logger.warn("⚠️  Server will continue running without MongoDB. DB-dependent endpoints will return errors.");
-    // Retry in 30s instead of killing the process
-    setTimeout(connectDB, 30000);
+    if (!process.env.VERCEL) {
+      const retryTimer = setTimeout(connectDB, 30000);
+      if (retryTimer.unref) retryTimer.unref();
+    }
   }
 }
 

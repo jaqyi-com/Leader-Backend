@@ -143,13 +143,17 @@ async function flushDbBuffer() {
   } finally {
     isFlushingDb = false;
     if (dbWriteBuffer.length > 0) {
-      setTimeout(flushDbBuffer, 50);
+      const t = setTimeout(flushDbBuffer, 50);
+      if (t && t.unref) t.unref();
     }
   }
 }
 
 // Auto flush every 500ms
-setInterval(flushDbBuffer, 500).unref();
+if (typeof setInterval === "function") {
+  const flushTimer = setInterval(flushDbBuffer, 500);
+  if (flushTimer && flushTimer.unref) flushTimer.unref();
+}
 
 /**
  * Persists verification verdict to PostgreSQL (via bulk buffer) and Redis.
