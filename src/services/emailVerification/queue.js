@@ -1,7 +1,38 @@
-"use strict";
+// Native CommonJS concurrency limiter (replaces ESM p-limit)
+function pLimit(concurrency) {
+  const queue = [];
+  let active = 0;
 
-const pLimitRaw = require("p-limit");
-const pLimit = typeof pLimitRaw === "function" ? pLimitRaw : (pLimitRaw.default || pLimitRaw);
+  const next = () => {
+    active--;
+    if (queue.length > 0) {
+      queue.shift()();
+    }
+  };
+
+  const run = async (fn, resolve, reject, args) => {
+    active++;
+    try {
+      resolve(await fn(...args));
+    } catch (err) {
+      reject(err);
+    } finally {
+      next();
+    }
+  };
+
+  const enqueue = (fn, resolve, reject, args) => {
+    queue.push(run.bind(null, fn, resolve, reject, args));
+    if (active < concurrency && queue.length > 0) {
+      queue.shift()();
+    }
+  };
+
+  return (fn, ...args) => new Promise((resolve, reject) => {
+    enqueue(fn, resolve, reject, args);
+  });
+}
+
 const { v4: uuidv4 } = require("uuid");
 const { verifyEmail } = require("./pipeline");
 
