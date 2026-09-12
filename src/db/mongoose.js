@@ -13,29 +13,38 @@ if (!process.env.VERCEL) {
 }
 
 // --- CONNECTION ---
+let isConnecting = null;
+
 async function connectDB() {
-  if (mongoose.connection.readyState >= 1) return;
+  if (mongoose.connection.readyState === 1) return mongoose.connection;
+  if (isConnecting) return isConnecting;
+
   if (!process.env.MONGO_URI) {
     logger.warn("MONGO_URI not configured, skipping MongoDB connection.");
     return;
   }
-  try {
-    await mongoose.connect(process.env.MONGO_URI, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS:         5000,
-      socketTimeoutMS:          30000,
-      maxPoolSize:              10,
-      minPoolSize:              0,
-    });
+
+  isConnecting = mongoose.connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 8000,
+    connectTimeoutMS:         8000,
+    socketTimeoutMS:          30000,
+    maxPoolSize:              10,
+    minPoolSize:              0,
+  }).then(m => {
+    isConnecting = null;
     logger.info("✅ Connected to MongoDB Atlas");
-  } catch (error) {
+    return m.connection;
+  }).catch(error => {
+    isConnecting = null;
     logger.error(`❌ MongoDB Connection Error: ${error.message}`);
     logger.warn("⚠️  Server will continue running without MongoDB. DB-dependent endpoints will return errors.");
     if (!process.env.VERCEL) {
       const retryTimer = setTimeout(connectDB, 30000);
       if (retryTimer.unref) retryTimer.unref();
     }
-  }
+  });
+
+  return isConnecting;
 }
 
 // --- SCHEMAS ---

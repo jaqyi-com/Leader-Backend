@@ -3,7 +3,19 @@ const passport = require("passport");
 const authService = require("../services/authService");
 const { auth } = require("../middleware/auth");
 
+const { connectDB } = require("../db/mongoose");
+
 const router = express.Router();
+
+// Ensure MongoDB is connected before auth routes run on serverless cold starts
+router.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next();
+  }
+});
 
 // ── Register with Email ──────────────────────────────────────────────────────
 // POST /api/auth/register
