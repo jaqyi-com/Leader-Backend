@@ -48,10 +48,10 @@ function getPool() {
     connectionString:        NEON_POOLER_DSN,
 
     // ── Pool tuning ──────────────────────────────────────────
-    max:                     5,      // Neon pooler handles many connections well
+    max:                     10,     // Neon pooler handles many connections well
     min:                     0,      // don't hold connections between invocations
-    idleTimeoutMillis:       10000,  // release idle connections quickly
-    connectionTimeoutMillis: 10000,  // SSL handshake on cold start needs time
+    idleTimeoutMillis:       15000,  // release idle connections quickly
+    connectionTimeoutMillis: 20000,  // SSL handshake on cold start needs time
 
     // ── TCP keep-alive prevents Neon from closing idle sockets ──
     keepAlive:               true,

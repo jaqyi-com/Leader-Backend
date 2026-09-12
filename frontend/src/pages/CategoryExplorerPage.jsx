@@ -3,9 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, ArrowRight, Search, Grid3x3, Layers,
-  Users2, Building2, Briefcase, Zap, X, Filter
+  Users2, Building2, Briefcase, Zap, X, Filter, Globe2
 } from "lucide-react";
 import CATEGORIES_DATA from "../categories.json";
+
+// ── Country config ─────────────────────────────────────────────────────────
+const COUNTRIES = [
+  { key: "india", label: "India", flag: "🇮🇳", subtitle: "1.36M+ Ingested B2B Companies & Founders" },
+  { key: "usa",   label: "USA & Global", flag: "🇺🇸", subtitle: "45M+ Global Enterprises & Professionals" },
+];
 
 // ── Role and Industry Groupings for Quick Filters ──
 const PEOPLE_ROLE_GROUPS = [
@@ -14,39 +20,57 @@ const PEOPLE_ROLE_GROUPS = [
   { key: "sales", label: "Sales & Growth", keywords: ["sales", "account", "business development", "growth", "revenue", "bdr", "sdr"] },
   { key: "marketing", label: "Marketing & Brand", keywords: ["marketing", "brand", "creative", "content", "digital", "advertising", "media"] },
   { key: "tech", label: "Engineering & IT", keywords: ["engineer", "developer", "software", "technology", "data", "devops", "architect", "tech", "product"] },
-  { key: "finance", label: "Finance & Legal", keywords: ["finance", "financial", "cfo", "controller", "attorney", "counsel", "legal", "accounting"] },
+  { key: "hr", label: "HR & Talent", keywords: ["human resource", "hr", "talent", "recruiter", "recruitment", "staffing"] },
+  { key: "finance", label: "Finance & Legal", keywords: ["finance", "financial", "cfo", "controller", "attorney", "counsel", "legal", "accounting", "chartered"] },
   { key: "healthcare", label: "Healthcare & Medical", keywords: ["medical", "physician", "doctor", "health", "clinic", "surgeon", "dentist"] },
-  { key: "realestate", label: "Real Estate & Ops", keywords: ["real estate", "property", "broker", "operations", "project", "general manager", "supply"] },
+  { key: "operations", label: "Operations & Management", keywords: ["operations", "general manager", "project", "supply", "logistics"] },
 ];
 
 const COMPANY_INDUSTRY_GROUPS = [
   { key: "all", label: "All Industries" },
-  { key: "tech", label: "Tech & Software", keywords: ["software", "internet", "computers", "electronics", "technology", "telecom", "it"] },
-  { key: "healthcare", label: "Healthcare & Medical", keywords: ["health", "medical", "hospital", "wellness", "pharma", "care"] },
+  { key: "tech", label: "Tech & Software", keywords: ["software", "internet", "computers", "electronics", "technology", "telecom", "it", "saas", "cloud"] },
+  { key: "retail", label: "Retail & Garments", keywords: ["retail", "consumer", "garment", "clothing", "apparel", "boutique", "textile", "fashion", "e-commerce"] },
+  { key: "hospitality", label: "Hotels, Cafes & Dining", keywords: ["hotel", "resort", "lodging", "hospitality", "restaurant", "cafe", "coffee", "bakery", "dining", "food"] },
+  { key: "healthcare", label: "Healthcare & Medical", keywords: ["health", "medical", "hospital", "wellness", "pharma", "pharmaceutical", "care", "clinic"] },
+  { key: "manufacturing", label: "Manufacturing & Industrial", keywords: ["manufacturing", "industrial", "machinery", "automotive", "production", "materials", "chemical"] },
+  { key: "finance", label: "Financial Services", keywords: ["financial", "finance", "banking", "insurance", "investment", "capital", "accounting"] },
   { key: "realestate", label: "Real Estate & Construction", keywords: ["real estate", "construction", "architecture", "building", "property"] },
-  { key: "manufacturing", label: "Manufacturing & Industrial", keywords: ["manufacturing", "industrial", "machinery", "automotive", "production", "materials"] },
-  { key: "finance", label: "Financial Services", keywords: ["financial", "finance", "banking", "insurance", "investment", "capital"] },
-  { key: "retail", label: "Retail & Consumer", keywords: ["retail", "consumer", "apparel", "food", "restaurants", "goods", "e-commerce"] },
-  { key: "services", label: "Business Services & Consulting", keywords: ["services", "consulting", "marketing", "advertising", "legal", "law", "accounting"] },
-  { key: "education", label: "Education & Non-Profit", keywords: ["education", "non-profit", "school", "university", "academic", "training"] },
+  { key: "services", label: "Business Services & Consulting", keywords: ["services", "consulting", "marketing", "advertising", "legal", "law"] },
+  { key: "education", label: "Education & Non-Profit", keywords: ["education", "non-profit", "school", "university", "academic", "training", "college"] },
 ];
 
-const QUICK_TAGS_PEOPLE = ["CEO", "Founder", "President", "VP Sales", "Software Engineer", "Marketing Director", "Real Estate Agent", "Physician"];
-const QUICK_TAGS_COMPANY = ["Software & Internet", "Healthcare", "Real Estate & Construction", "Manufacturing", "Financial Services", "Retail", "Business Services", "Marketing And Advertising"];
+const QUICK_TAGS = {
+  india: {
+    people: ["Founder", "Managing Director", "CEO", "HR Manager", "Software Engineer", "Sales Manager", "Chartered Accountant", "Advocate"],
+    company: ["Garments & Apparel", "Software", "Manufacturing", "Hotels", "Healthcare", "Education", "Restaurants", "Financial Services"]
+  },
+  usa: {
+    people: ["CEO", "Founder", "President", "VP Sales", "Software Engineer", "Marketing Director", "Real Estate Agent", "Physician"],
+    company: ["Software & Internet", "Healthcare", "Restaurants", "Hotels", "Manufacturing", "Financial Services", "Retail", "Real Estate"]
+  }
+};
 
 export default function CategoryExplorerPage() {
   const navigate = useNavigate();
-  const [mode, setMode] = useState("people"); // "people" or "company"
+  const [country, setCountry] = useState("india");
+  const [mode, setMode] = useState("company"); // "people" or "company"
   const [searchQ, setSearchQ] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("all");
 
-  const groups = mode === "people" ? PEOPLE_ROLE_GROUPS : COMPANY_INDUSTRY_GROUPS;
-  const quickTags = mode === "people" ? QUICK_TAGS_PEOPLE : QUICK_TAGS_COMPANY;
+  const isIndia = country === "india";
+  const activeCountryObj = COUNTRIES.find(c => c.key === country) || COUNTRIES[0];
 
-  // Pick base category list
+  const groups = mode === "people" ? PEOPLE_ROLE_GROUPS : COMPANY_INDUSTRY_GROUPS;
+  const quickTags = (QUICK_TAGS[country] && QUICK_TAGS[country][mode]) || QUICK_TAGS.usa[mode];
+
+  // Pick base category list for country + mode
   const baseCategories = useMemo(() => {
+    const countryData = CATEGORIES_DATA[country] || CATEGORIES_DATA;
+    if (countryData && countryData[mode]) {
+      return countryData[mode];
+    }
     return mode === "people" ? (CATEGORIES_DATA.people || []) : (CATEGORIES_DATA.company || []);
-  }, [mode]);
+  }, [country, mode]);
 
   // Filtered by group pill and search query
   const filtered = useMemo(() => {
@@ -74,11 +98,18 @@ export default function CategoryExplorerPage() {
 
   const handleClick = (cat) => {
     const enc = encodeURIComponent(cat.name);
+    const locParam = country === "india" ? "&f_location=India" : "&f_location=USA";
     if (mode === "people") {
-      navigate(`/app/people?f_job_title=${enc}`);
+      navigate(`/app/people?f_job_title=${enc}${locParam}`);
     } else {
-      navigate(`/app/companies?f_industry=${enc}`);
+      navigate(`/app/companies?f_industry=${enc}${locParam}`);
     }
+  };
+
+  const handleCountryChange = (newCountry) => {
+    setCountry(newCountry);
+    setSelectedGroup("all");
+    setSearchQ("");
   };
 
   const handleModeChange = (newMode) => {
@@ -107,7 +138,7 @@ export default function CategoryExplorerPage() {
             Category &amp; Industry Explorer
           </h2>
           <p className="text-sm text-[var(--text-3)] mt-1">
-            Search and segment <span className="font-semibold text-[var(--text-2)]">{mode === "people" ? "45M+ Professionals" : "1.5M+ Companies"}</span> by verified job titles and B2B industry verticals.
+            Search and segment <span className="font-semibold text-[var(--text-2)]">{activeCountryObj.label}</span> {mode === "people" ? "verified professionals & roles" : "businesses & industry verticals"}.
           </p>
         </div>
 
@@ -134,35 +165,58 @@ export default function CategoryExplorerPage() {
           boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
         }}
       >
+        {/* Country & Mode Toggles */}
         <div className="flex items-center justify-between flex-wrap gap-3">
-          {/* Toggle — People / Companies */}
-          <div
-            className="relative flex items-center rounded-xl p-1 bg-[var(--surface)] border border-[var(--border)]"
-          >
-            <button
-              onClick={() => handleModeChange("people")}
-              className="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer"
-              style={{
-                background: mode === "people" ? "var(--accent)" : "transparent",
-                color: mode === "people" ? "#fff" : "var(--text-3)",
-                boxShadow: mode === "people" ? "0 2px 10px var(--accent-glow)" : "none",
-              }}
+          
+          <div className="flex items-center flex-wrap gap-3">
+            {/* Country Tabs: India / USA */}
+            <div className="flex items-center rounded-xl p-1 bg-[var(--surface)] border border-[var(--border)]">
+              {COUNTRIES.map(c => (
+                <button
+                  key={c.key}
+                  onClick={() => handleCountryChange(c.key)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                  style={{
+                    background: country === c.key ? "var(--accent)" : "transparent",
+                    color: country === c.key ? "#fff" : "var(--text-3)",
+                    boxShadow: country === c.key ? "0 2px 10px var(--accent-glow)" : "none",
+                  }}
+                >
+                  <span className="text-sm">{c.flag}</span>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Mode Toggle — People / Companies */}
+            <div
+              className="relative flex items-center rounded-xl p-1 bg-[var(--surface)] border border-[var(--border)]"
             >
-              <Users2 size={15} />
-              People Job Roles
-            </button>
-            <button
-              onClick={() => handleModeChange("company")}
-              className="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer"
-              style={{
-                background: mode === "company" ? "var(--accent)" : "transparent",
-                color: mode === "company" ? "#fff" : "var(--text-3)",
-                boxShadow: mode === "company" ? "0 2px 10px var(--accent-glow)" : "none",
-              }}
-            >
-              <Building2 size={15} />
-              Company Industries
-            </button>
+              <button
+                onClick={() => handleModeChange("company")}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                style={{
+                  background: mode === "company" ? "var(--accent)" : "transparent",
+                  color: mode === "company" ? "#fff" : "var(--text-3)",
+                  boxShadow: mode === "company" ? "0 2px 10px var(--accent-glow)" : "none",
+                }}
+              >
+                <Building2 size={15} />
+                Industries &amp; Businesses
+              </button>
+              <button
+                onClick={() => handleModeChange("people")}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                style={{
+                  background: mode === "people" ? "var(--accent)" : "transparent",
+                  color: mode === "people" ? "#fff" : "var(--text-3)",
+                  boxShadow: mode === "people" ? "0 2px 10px var(--accent-glow)" : "none",
+                }}
+              >
+                <Users2 size={15} />
+                Job Roles &amp; Titles
+              </button>
+            </div>
           </div>
 
           {/* Search Input */}
@@ -170,14 +224,14 @@ export default function CategoryExplorerPage() {
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
             <input
               className="input pl-10 pr-9 w-full text-sm font-medium rounded-xl"
-              placeholder={`Search ${mode === "people" ? "job titles (e.g. CEO, Engineer, VP)..." : "industries (e.g. Healthcare, Software, Retail)..."}`}
+              placeholder={`Search ${country === "india" ? "India" : "USA"} ${mode === "people" ? "job titles (e.g. Founder, CEO, Manager)..." : "industries (e.g. Garments, Hotel, Tech)..."}`}
               value={searchQ}
               onChange={e => setSearchQ(e.target.value)}
             />
             {searchQ && (
               <button
                 onClick={() => setSearchQ("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] hover:text-[var(--text)]"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-3)] hover:text-[var(--text)] cursor-pointer"
               >
                 <X size={14} />
               </button>
@@ -209,7 +263,7 @@ export default function CategoryExplorerPage() {
 
         {/* ── Quick Search Chips ───────────────────────────── */}
         <div className="flex items-center gap-1.5 flex-wrap text-xs text-[var(--text-3)]">
-          <span className="text-[11px] opacity-75 mr-1">Trending:</span>
+          <span className="text-[11px] opacity-75 mr-1">Trending in {activeCountryObj.label}:</span>
           {quickTags.map(tag => (
             <button
               key={tag}
@@ -235,18 +289,18 @@ export default function CategoryExplorerPage() {
             <Layers size={44} className="opacity-30 text-[var(--accent)]" />
             <h3 className="text-base font-bold text-[var(--text)]">No categories found</h3>
             <p className="text-xs max-w-sm text-center">
-              No {mode === "people" ? "job titles" : "industries"} match your query "{searchQ}".
+              No {country === "india" ? "India" : "USA"} {mode === "people" ? "job titles" : "industries"} match your query "{searchQ}".
             </p>
             <button
               onClick={() => { setSearchQ(""); setSelectedGroup("all"); }}
-              className="mt-2 px-4 py-1.5 rounded-xl text-xs font-semibold text-white bg-[var(--accent)] hover:opacity-90 transition-opacity"
+              className="mt-2 px-4 py-1.5 rounded-xl text-xs font-semibold text-white bg-[var(--accent)] hover:opacity-90 transition-opacity cursor-pointer"
             >
               Clear Filters
             </button>
           </motion.div>
         ) : (
           <motion.div
-            key={`grid-${mode}-${selectedGroup}`}
+            key={`grid-${country}-${mode}-${selectedGroup}`}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
@@ -255,13 +309,13 @@ export default function CategoryExplorerPage() {
           >
             {filtered.map((cat, i) => (
               <motion.button
-                key={cat.name}
+                key={`${country}-${cat.name}`}
                 onClick={() => handleClick(cat)}
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: Math.min(i * 0.01, 0.3), duration: 0.2 }}
+                transition={{ delay: Math.min(i * 0.008, 0.25), duration: 0.2 }}
                 className="relative rounded-2xl p-4 text-left overflow-hidden group cursor-pointer flex flex-col justify-between"
                 style={{
                   background: "var(--surface)",
@@ -292,7 +346,7 @@ export default function CategoryExplorerPage() {
                 {/* Bottom Stats & Arrow */}
                 <div className="flex items-center justify-between mt-3 pt-2 border-t border-[var(--border)]">
                   <span className="text-[10px] font-semibold text-[var(--text-3)] flex items-center gap-1">
-                    {cat.count ? cat.count.toLocaleString() : "10,000+"} {mode === "people" ? "leads" : "orgs"}
+                    {cat.count ? cat.count.toLocaleString() : "1,000+"} {mode === "people" ? "leads" : "orgs"}
                   </span>
 
                   <div

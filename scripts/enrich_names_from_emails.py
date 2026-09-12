@@ -92,7 +92,6 @@ def main():
                 FROM final.people
                 WHERE (full_name IS NULL OR full_name = '')
                   AND (emails IS NOT NULL AND emails != '' AND emails != '{}')
-                ORDER BY uuid ASC
                 LIMIT %s;
             """, (batch_size,))
             rows = cursor.fetchall()

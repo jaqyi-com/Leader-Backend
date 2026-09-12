@@ -24,3 +24,6 @@ ai-assistant-backend/
 final_data/
 doott-promo-video/
 *.csv
+__pycache__/
+*.pyc
+

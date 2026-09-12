@@ -79,6 +79,17 @@ function registerCronJob(phase, cronExpr, schedules, pipelineRef) {
   logger.info(`[Scheduler] Registered cron for '${phase}': ${cronExpr}`);
 }
 
+// Register weekly disposable email domains sync (Every Sunday at 03:00 UTC)
+cron.schedule("0 3 * * 0", async () => {
+  try {
+    logger.info("[Scheduler] 🔄 Running weekly disposable email domains sync from upstream...");
+    const { syncDisposableDomainsFromGitHub } = require("./services/emailVerification");
+    await syncDisposableDomainsFromGitHub();
+  } catch (err) {
+    logger.error(`[Scheduler] Weekly disposable domains sync failed: ${err.message}`);
+  }
+});
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -811,6 +822,7 @@ const finalPeopleRouter        = require("./routes/finalPeopleDatabase");
 const finalPeopleEmailRouter   = require("./routes/finalPeopleEmail");
 const finalPeopleNumberRouter  = require("./routes/finalPeopleNumber");
 const finalCompaniesRouter     = require("./routes/finalCompaniesDatabase");
+const emailVerificationRouter  = require("./routes/emailVerification");
 app.use("/api/crawler",              crawlerRouter);
 app.use("/api/crawler/auto-scraper", autoScraperRouter);
 app.use("/api/lead-generator/auto-gen", autoLeadGenRouter);
@@ -823,6 +835,7 @@ app.use("/api/final-people",         finalPeopleRouter);
 app.use("/api/final-people-email",   finalPeopleEmailRouter);
 app.use("/api/final-people-number",  finalPeopleNumberRouter);
 app.use("/api/final-companies",      finalCompaniesRouter);
+app.use("/api/verify-email",         emailVerificationRouter);
 app.use("/api/search/hybrid",        require("./routes/hybridSearch"));
 
 
