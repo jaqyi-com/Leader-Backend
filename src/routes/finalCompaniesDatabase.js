@@ -245,7 +245,15 @@ function buildWhere(queryParams, embedding, _schema) {
   conditions.push(...dynamicConditions);
   idx = nextIdx;
 
-  const hasFilters = dynamicConditions.length > 0;
+  // Handle explicit country filter (e.g. from Category Explorer)
+  const countryParam = (queryParams.f_country || queryParams.country || "").toLowerCase();
+  if (countryParam === "india") {
+    conditions.push(`("geo_source" != 'us_zip' OR "pincode" ~ '^[1-9][0-9]{5}$' OR "city" IN ('Mumbai', 'Bengaluru', 'Delhi', 'New Delhi', 'Hyderabad', 'Pune', 'Chennai', 'Kolkata', 'Ahmedabad', 'Surat', 'Jaipur', 'Lucknow', 'Indore', 'Vadodara', 'Noida', 'Gurgaon', 'Gurugram', 'Chandigarh'))`);
+  } else if (countryParam === "usa" || countryParam === "us") {
+    conditions.push(`("geo_source" = 'us_zip')`);
+  }
+
+  const hasFilters = dynamicConditions.length > 0 || countryParam !== "";
   const userHasFilters = hasFilters || (embedding && embedding.length === 384);
 
   // Default filter: require complete records if no search/filters are specified

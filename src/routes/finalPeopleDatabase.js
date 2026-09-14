@@ -236,7 +236,15 @@ function buildWhere(queryParams, embedding, _schema) {
   conditions.push(...dynamicConditions);
   idx = nextIdx;
 
-  const hasFilters = dynamicConditions.length > 0;
+  // Handle explicit country filter (e.g. from Category Explorer)
+  const countryParam = (queryParams.f_country || queryParams.country || "").toLowerCase();
+  if (countryParam === "india") {
+    conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "pincode" ~ '^[1-9][0-9]{5}$' OR "location" ILIKE '%India%')`);
+  } else if (countryParam === "usa" || countryParam === "us") {
+    conditions.push(`("geo_source" = 'us_zip' OR "location" ILIKE '%United States%')`);
+  }
+
+  const hasFilters = dynamicConditions.length > 0 || countryParam !== "";
   const userHasFilters = hasFilters || (embedding && embedding.length === 384);
 
   // NOTE: No default filter applied on unfiltered load — avoids full table scan on 43M row table.

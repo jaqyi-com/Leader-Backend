@@ -98,10 +98,11 @@ export default function CategoryExplorerPage() {
 
   const handleClick = (cat) => {
     const enc = encodeURIComponent(cat.name);
+    const countryParam = `&f_country=${country}`;
     if (mode === "people") {
-      navigate(`/app/people?f_job_title=${enc}`);
+      navigate(`/app/people?f_job_title=${enc}${countryParam}`);
     } else {
-      navigate(`/app/companies?f_industry=${enc}`);
+      navigate(`/app/companies?f_industry=${enc}${countryParam}`);
     }
   };
 
