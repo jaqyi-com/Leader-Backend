@@ -1,5 +1,85 @@
-import { useState, useRef, useEffect } from "react";
-import { X, Plus } from "lucide-react";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { X, Plus, ChevronDown } from "lucide-react";
+import CATEGORIES_DATA from "../categories.json";
+import CITIES_DATA from "../cities.json";
+
+// ── Extract curated DB values from data sources ─────────────
+const DB_VALUES_MAP = (() => {
+  // Job Titles from categories
+  const peopleTitles = [
+    ...(CATEGORIES_DATA.india?.people || []),
+    ...(CATEGORIES_DATA.usa?.people || []),
+    ...(CATEGORIES_DATA.people || [])
+  ];
+  const uniqueTitles = Array.from(
+    new Map(peopleTitles.map(item => [item.name, item.count || null])).entries()
+  ).map(([name, count]) => ({ label: name, value: name, count }));
+
+  // Industries from categories
+  const companyIndustries = [
+    ...(CATEGORIES_DATA.india?.company || []),
+    ...(CATEGORIES_DATA.usa?.company || []),
+    ...(CATEGORIES_DATA.company || [])
+  ];
+  const uniqueIndustries = Array.from(
+    new Map(companyIndustries.map(item => [item.name, item.count || null])).entries()
+  ).map(([name, count]) => ({ label: name, value: name, count }));
+
+  // Cities from cities.json
+  const citiesList = [
+    ...(CITIES_DATA.india || []),
+    ...(CITIES_DATA.companies || []),
+    ...(CITIES_DATA.people || [])
+  ];
+  const uniqueCities = Array.from(
+    new Map(citiesList.map(item => [`${item.name}${item.state ? ` (${item.state})` : ""}`, item])).entries()
+  ).map(([_, item]) => ({
+    label: item.name,
+    sub: item.state || "",
+    value: item.name,
+    count: item.count || null
+  }));
+
+  // States
+  const allStates = [
+    "Maharashtra", "Delhi", "Karnataka", "Tamil Nadu", "Gujarat", "Telangana", "Uttar Pradesh", "West Bengal", "Rajasthan", "Haryana", "Kerala", "Madhya Pradesh", "Punjab", "Andhra Pradesh", "Bihar", "Odisha", "Assam", "Jharkhand", "Chhattisgarh", "Uttarakhand", "Goa", "Himachal Pradesh", "Jammu and Kashmir", "Chandigarh",
+    "CA - California", "TX - Texas", "NY - New York", "FL - Florida", "WA - Washington", "IL - Illinois", "GA - Georgia", "NC - North Carolina", "OH - Ohio", "PA - Pennsylvania", "VA - Virginia", "MA - Massachusetts", "AZ - Arizona", "CO - Colorado", "MI - Michigan", "NJ - New Jersey", "TN - Tennessee", "MN - Minnesota", "MD - Maryland", "OR - Oregon", "WI - Wisconsin", "NV - Nevada", "UT - Utah", "SC - South Carolina", "IN - Indiana", "MO - Missouri", "AL - Alabama", "KY - Kentucky", "OK - Oklahoma", "CT - Connecticut", "IA - Iowa", "MS - Mississippi", "AR - Arkansas", "KS - Kansas", "LA - Louisiana", "NE - Nebraska", "NM - New Mexico", "ID - Idaho", "WV - West Virginia", "HI - Hawaii", "NH - New Hampshire", "ME - Maine", "MT - Montana", "RI - Rhode Island", "DE - Delaware", "SD - South Dakota", "ND - North Dakota", "AK - Alaska", "VT - Vermont", "WY - Wyoming"
+  ].map(s => {
+    const val = s.includes(" - ") ? s.split(" - ")[0] : s;
+    return { label: s, value: val };
+  });
+
+  const geoSources = [
+    { label: "US Zip Code (us_zip)", value: "us_zip" },
+    { label: "India Pincode (in_pincode)", value: "in_pincode" },
+    { label: "OpenStreetMap (osm)", value: "osm" },
+    { label: "Google Places (places)", value: "places" },
+    { label: "Web Scraped (crawled)", value: "crawled" },
+    { label: "Verified Record (verified)", value: "verified" },
+  ];
+
+  const ratings = [
+    { label: "5.0 Stars", value: "5.0" },
+    { label: "4.5+ Stars", value: "4.5" },
+    { label: "4.0+ Stars", value: "4.0" },
+    { label: "3.5+ Stars", value: "3.5" },
+    { label: "3.0+ Stars", value: "3.0" },
+  ];
+
+  return {
+    job_title: uniqueTitles,
+    title: uniqueTitles,
+    role: uniqueTitles,
+    industry: uniqueIndustries,
+    category: uniqueIndustries,
+    sector: uniqueIndustries,
+    city: uniqueCities,
+    location: uniqueCities,
+    state: allStates,
+    geo_source: geoSources,
+    rating: ratings,
+  };
+})();
 
 // ── Operator definitions ────────────────────────────────────
 const TEXT_OPS = [
@@ -132,6 +212,120 @@ function OpDropdown({ ops, value, onChange }) {
   );
 }
 
+// ── Value Selector Dropdown (Select options existing in DB) ───
+function ValueDropdown({ colKey, value, onChange, placeholder = "Select from DB..." }) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const ref = useRef(null);
+
+  const options = DB_VALUES_MAP[colKey] || null;
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (!ref.current?.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const filtered = useMemo(() => {
+    if (!options) return [];
+    if (!search.trim()) return options.slice(0, 100);
+    const q = search.toLowerCase().trim();
+    return options.filter(opt =>
+      opt.label.toLowerCase().includes(q) ||
+      (opt.sub && opt.sub.toLowerCase().includes(q)) ||
+      opt.value.toLowerCase().includes(q)
+    ).slice(0, 100);
+  }, [options, search]);
+
+  if (options && options.length > 0) {
+    const selectedItem = options.find(o => o.value.toLowerCase() === (value || "").toLowerCase());
+
+    return (
+      <div className="relative" ref={ref}>
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          className="qb-pill"
+          style={{
+            background: value ? "rgba(226,55,68,0.12)" : "var(--surface-2)",
+            borderColor: value ? "rgba(226,55,68,0.35)" : "var(--border)",
+            color: value ? "var(--text)" : "var(--text-3)",
+            fontWeight: value ? 600 : 400,
+            maxWidth: 220,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+          title={selectedItem?.label || value || placeholder}
+        >
+          <span className="truncate">
+            {selectedItem?.label || value || placeholder}
+          </span>
+          <span className="qb-chevron">▾</span>
+        </button>
+
+        {open && (
+          <div className="qb-dropdown" style={{ minWidth: 240, maxWidth: 320 }}>
+            <div className="qb-dropdown-search">
+              <input
+                autoFocus
+                placeholder={`Search ${colKey.replace(/_/g, " ")} from DB...`}
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="qb-search-input"
+              />
+            </div>
+            <div className="qb-dropdown-list" style={{ maxHeight: 220 }}>
+              {filtered.map((opt, idx) => (
+                <button
+                  key={`${opt.value}-${idx}`}
+                  type="button"
+                  className={`qb-dropdown-item ${value === opt.value ? "active" : ""}`}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+                  onClick={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                    setSearch("");
+                  }}
+                >
+                  <span className="truncate mr-2 font-medium" title={opt.label}>
+                    {opt.label}
+                    {opt.sub && <span className="text-[10px] text-[var(--text-3)] ml-1">({opt.sub})</span>}
+                  </span>
+                  {opt.count && (
+                    <span className="text-[9px] font-semibold text-[var(--accent)] bg-[var(--surface-2)] px-1.5 py-0.5 rounded flex-shrink-0">
+                      {opt.count.toLocaleString()}
+                    </span>
+                  )}
+                </button>
+              ))}
+              {filtered.length === 0 && (
+                <p className="qb-dropdown-empty">No matching values in DB</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Fallback for non-mapped fields
+  return (
+    <input
+      className="qb-value-input"
+      placeholder="Value..."
+      value={filterVal(value)}
+      onChange={e => onChange(e.target.value)}
+    />
+  );
+}
+
+function filterVal(v) {
+  return v === undefined || v === null ? "" : v;
+}
+
 // ── Single filter row ────────────────────────────────────────
 function FilterRow({ filter, index, isFirst, columns, onChange, onRemove }) {
   const col = columns.find(c => c.key === filter.col);
@@ -166,11 +360,10 @@ function FilterRow({ filter, index, isFirst, columns, onChange, onRemove }) {
 
       {/* Value */}
       {showValue && (
-        <input
-          className="qb-value-input"
-          placeholder="Value..."
+        <ValueDropdown
+          colKey={filter.col}
           value={filter.val}
-          onChange={e => onChange(index, { ...filter, val: e.target.value })}
+          onChange={val => onChange(index, { ...filter, val })}
         />
       )}
     </div>
