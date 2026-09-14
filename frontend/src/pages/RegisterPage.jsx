@@ -16,7 +16,7 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    if (isAuthenticated) navigate("/app/chatbot", { replace: true });
+    if (isAuthenticated) navigate("/app/categories", { replace: true });
   }, [isAuthenticated]);
 
   function handleChange(e) {
@@ -61,7 +61,7 @@ export default function RegisterPage() {
 
       // Auto-login: backend returns a token directly, no email verification needed
       login({ token: data.token, user: data.user, org: data.org });
-      navigate("/app/chatbot", { replace: true });
+      navigate("/app/categories", { replace: true });
     } catch {
       setError("Network error. Please try again.");
     } finally {

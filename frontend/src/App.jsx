@@ -94,7 +94,7 @@ export default function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<Navigate to="/app/chatbot" replace />} />
+              <Route index element={<Navigate to="/app/categories" replace />} />
 
               <Route path="pipeline"         element={<FeatureGate featureKey="pipeline"><PipelinePage /></FeatureGate>} />
               <Route path="icp"              element={<FeatureGate featureKey="icp"><IcpPage /></FeatureGate>} />

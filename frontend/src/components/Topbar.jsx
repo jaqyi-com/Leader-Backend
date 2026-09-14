@@ -17,6 +17,7 @@ const PAGE_META = {
   "/app/settings":        { title: "Settings",        sub: "Manage org, members and credentials" },
   "/app/docs":            { title: "How It Works",    sub: "Complete platform documentation" },
   "/app/chatbot":         { title: "Ask Doott", sub: "Your AI assistant powered by your knowledge base" },
+  "/app/categories":      { title: "Categories",      sub: "Explore industries and job roles" },
   "/app/people":          { title: "People",          sub: "Browse and filter people records" },
   "/app/companies":       { title: "Companies",       sub: "Browse and filter company records" },
   "/app/admin":           { title: "Admin Analytics", sub: "Website traffic & application metrics" },
