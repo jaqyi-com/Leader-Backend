@@ -213,7 +213,7 @@ function OpDropdown({ ops, value, onChange }) {
 }
 
 // ── Value Selector Dropdown (Select options existing in DB) ───
-function ValueDropdown({ colKey, value, onChange, placeholder = "Select from DB..." }) {
+function ValueDropdown({ colKey, value, onChange, onEnterKey, placeholder = "Select from DB..." }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const ref = useRef(null);
@@ -274,6 +274,14 @@ function ValueDropdown({ colKey, value, onChange, placeholder = "Select from DB.
                 placeholder={`Search ${colKey.replace(/_/g, " ")} from DB...`}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && filtered.length > 0) {
+                    onChange(filtered[0].value);
+                    setOpen(false);
+                    setSearch("");
+                    if (onEnterKey) onEnterKey();
+                  }
+                }}
                 className="qb-search-input"
               />
             </div>
@@ -318,6 +326,7 @@ function ValueDropdown({ colKey, value, onChange, placeholder = "Select from DB.
       placeholder="Value..."
       value={filterVal(value)}
       onChange={e => onChange(e.target.value)}
+      onKeyDown={e => { if (e.key === "Enter" && onEnterKey) onEnterKey(); }}
     />
   );
 }
@@ -327,7 +336,7 @@ function filterVal(v) {
 }
 
 // ── Single filter row ────────────────────────────────────────
-function FilterRow({ filter, index, isFirst, columns, onChange, onRemove }) {
+function FilterRow({ filter, index, isFirst, columns, onChange, onRemove, onEnterKey }) {
   const col = columns.find(c => c.key === filter.col);
   const ops = getOps(col?.type);
   const showValue = needsValue(filter.op);
@@ -364,6 +373,7 @@ function FilterRow({ filter, index, isFirst, columns, onChange, onRemove }) {
           colKey={filter.col}
           value={filter.val}
           onChange={val => onChange(index, { ...filter, val })}
+          onEnterKey={onEnterKey}
         />
       )}
     </div>
@@ -374,32 +384,47 @@ function FilterRow({ filter, index, isFirst, columns, onChange, onRemove }) {
 /**
  * columns: [{ key, label, type? }]  — type can be "bool" | "text" (default)
  * filters: [{ col, op, val }]
- * onChange(filters) — called whenever filters change
+ * onChange(filters) — called when filters are applied
+ * onApply(filters) — called when user clicks Apply Filters button
  */
-export default function QueryBuilder({ columns, filters, onChange }) {
+export default function QueryBuilder({ columns, filters, onChange, onApply }) {
+  const [draftFilters, setDraftFilters] = useState(filters || []);
+
+  useEffect(() => {
+    setDraftFilters(filters || []);
+  }, [filters]);
+
   const addFilter = () => {
     const firstCol = columns[0];
     if (!firstCol) return;
     const ops = getOps(firstCol.type);
-    onChange([...filters, { col: firstCol.key, op: ops[0].value, val: "" }]);
+    setDraftFilters(prev => [...prev, { col: firstCol.key, op: ops[0].value, val: "" }]);
   };
 
   const updateFilter = (index, updated) => {
-    const next = filters.map((f, i) => i === index ? updated : f);
-    onChange(next);
+    setDraftFilters(prev => prev.map((f, i) => i === index ? updated : f));
   };
 
   const removeFilter = (index) => {
-    onChange(filters.filter((_, i) => i !== index));
+    setDraftFilters(prev => prev.filter((_, i) => i !== index));
   };
 
-  const clearAll = () => onChange([]);
+  const handleApply = () => {
+    const callback = onApply || onChange;
+    if (callback) callback(draftFilters);
+  };
+
+  const handleClear = () => {
+    setDraftFilters([]);
+    const callback = onApply || onChange;
+    if (callback) callback([]);
+  };
 
   if (columns.length === 0) return null;
 
   return (
     <div className="qb-container">
-      {filters.map((filter, i) => (
+      {draftFilters.map((filter, i) => (
         <FilterRow
           key={i}
           filter={filter}
@@ -408,14 +433,37 @@ export default function QueryBuilder({ columns, filters, onChange }) {
           columns={columns}
           onChange={updateFilter}
           onRemove={removeFilter}
+          onEnterKey={handleApply}
         />
       ))}
       <div className="qb-actions">
         <button type="button" className="qb-add-btn" onClick={addFilter}>
           <Plus size={12} /> Add filter
         </button>
-        {filters.length > 0 && (
-          <button type="button" className="qb-clear-btn" onClick={clearAll}>
+
+        {draftFilters.length > 0 && (
+          <button
+            type="button"
+            className="qb-apply-btn"
+            onClick={handleApply}
+          >
+            Apply Filters
+            {draftFilters.length > 0 && (
+              <span style={{
+                background: "rgba(255,255,255,0.25)",
+                padding: "1px 5px",
+                borderRadius: 4,
+                fontSize: 10,
+                fontWeight: 700
+              }}>
+                {draftFilters.length}
+              </span>
+            )}
+          </button>
+        )}
+
+        {(draftFilters.length > 0 || (filters && filters.length > 0)) && (
+          <button type="button" className="qb-clear-btn" onClick={handleClear}>
             Clear filters
           </button>
         )}

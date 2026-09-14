@@ -146,6 +146,8 @@ export default function PeoplePage() {
       setRecords(recordsData);
       setTotal(data.total || 0);
     } catch {
+      setRecords([]);
+      setTotal(0);
       toast.error("Failed to load People data", { id: "people-load-error" });
     } finally {
       setLoading(false);
