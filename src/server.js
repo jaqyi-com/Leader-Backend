@@ -153,6 +153,8 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/social/posts/reject",   // email-based rejection links
   "/api/track",                 // page-view tracker (no auth needed)
   "/api/features",              // active feature flags map (publicly readable)
+  "/api-docs",                  // public API documentation page (no auth needed)
+  "/api-docs.html",             // public API documentation HTML (no auth needed)
 ];
 
 app.use((req, res, next) => {
@@ -167,6 +169,23 @@ app.use((req, res, next) => {
 
   // Everything else — require valid JWT
   return auth(req, res, next);
+});
+
+// ------------------------------------------------------------
+// PUBLIC DOCS PAGE — /api-docs (no auth, no React Router)
+// ------------------------------------------------------------
+app.get(["/api-docs", "/api-docs.html"], (req, res) => {
+  const possiblePaths = [
+    path.join(__dirname, "public", "api-docs.html"),
+    path.join(process.cwd(), "src", "public", "api-docs.html"),
+    path.join(process.cwd(), "api-docs.html"),
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return res.sendFile(p);
+    }
+  }
+  res.status(404).send("API Documentation page not found");
 });
 
 // ------------------------------------------------------------

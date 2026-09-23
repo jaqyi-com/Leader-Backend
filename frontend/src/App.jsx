@@ -69,6 +69,8 @@ import PageTracker        from "./components/PageTracker";
 
 import { ThemeProvider } from "./context/ThemeContext";
 
+import ApiDocsPage from "./pages/ApiDocsPage";
+
 export default function App() {
   return (
     <ThemeProvider>
@@ -84,6 +86,8 @@ export default function App() {
             <Route path="/verify-email"    element={<VerifyEmailPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password"  element={<ResetPasswordPage />} />
+            <Route path="/api-docs"        element={<ApiDocsPage />} />
+            <Route path="/api-docs.html"   element={<ApiDocsPage />} />
 
             {/* ── Protected app routes ───────────────────────────── */}
             <Route

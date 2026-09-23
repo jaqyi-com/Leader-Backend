@@ -1,9 +1,13 @@
 {
   "version": 2,
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/api/index.js"
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "src/public/**"
     }
+  },
+  "rewrites": [
+    { "source": "/api-docs", "destination": "/api/index.js" },
+    { "source": "/api-docs.html", "destination": "/api/index.js" },
+    { "source": "/(.*)", "destination": "/api/index.js" }
   ]
 }
