@@ -143,7 +143,46 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       }
       col = hasPhone ? "phone" : "phones";
       op = val === "true" ? "nonempty" : "empty";
+    } else if (col === "city" && val !== "") {
+      const CITY_ALIASES = {
+        "bengaluru": ["Bengaluru", "Bangalore"],
+        "bangalore": ["Bangalore", "Bengaluru"],
+        "gurugram": ["Gurugram", "Gurgaon"],
+        "gurgaon": ["Gurgaon", "Gurugram"],
+        "kolkata": ["Kolkata", "Calcutta"],
+        "calcutta": ["Calcutta", "Kolkata"],
+        "chennai": ["Chennai", "Madras"],
+        "madras": ["Madras", "Chennai"],
+        "thiruvananthapuram": ["Thiruvananthapuram", "Trivandrum"],
+        "trivandrum": ["Trivandrum", "Thiruvananthapuram"],
+        "kochi": ["Kochi", "Cochin", "Ernakulam"],
+        "cochin": ["Cochin", "Kochi", "Ernakulam"],
+        "vadodara": ["Vadodara", "Baroda"],
+        "baroda": ["Baroda", "Vadodara"],
+        "nashik": ["Nashik", "Nasik"],
+        "nasik": ["Nasik", "Nashik"],
+        "puducherry": ["Puducherry", "Pondicherry"],
+        "pondicherry": ["Pondicherry", "Puducherry"],
+        "mysuru": ["Mysuru", "Mysore"],
+        "mysore": ["Mysore", "Mysuru"],
+        "mangaluru": ["Mangaluru", "Mangalore"],
+        "mangalore": ["Mangalore", "Mangaluru"],
+        "belagavi": ["Belagavi", "Belgaum"],
+        "belgaum": ["Belgaum", "Belagavi"],
+      };
+      const valLower = val.toLowerCase().trim();
+      const aliases = CITY_ALIASES[valLower];
+      if (aliases && aliases.length > 0) {
+        const aliasConds = aliases.map(a => {
+          const aIdx = idx++;
+          values.push(`%${a}%`);
+          return `"city" ILIKE $${aIdx}`;
+        });
+        conditions.push(`(${aliasConds.join(" OR ")})`);
+        continue;
+      }
     }
+
 
     // Verify column exists in the schema to prevent SQL injection
     if (!schemaColumns.includes(col)) {

@@ -12,7 +12,11 @@
     "score": "node src/index.js --phase=score",
     "report": "node src/index.js --phase=report",
     "full-pipeline": "node src/index.js --phase=all",
-    "reset": "rm -f data/seen_*.json data/outreach_log.json data/sent_emails.json data/lead_scores.json"
+    "reset": "rm -f data/seen_*.json data/outreach_log.json data/sent_emails.json data/lead_scores.json",
+    "backup": "node scripts/backup_database.js",
+    "backup:fast": "node scripts/backup_database.js --fast",
+    "backup:auth": "node scripts/backup_database.js --schema=neon_auth",
+    "backup:resilient": "node scripts/backup_resilient.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
