@@ -1,0 +1,20 @@
+# Doott — B2B Contact Database & Lead Generation Platform
+# robots.txt
+
+User-agent: *
+
+# Allow public marketing pages
+Allow: /$
+Allow: /login
+Allow: /register
+Allow: /api-docs
+
+# Disallow app (authenticated) routes — no crawling needed
+Disallow: /app/
+Disallow: /auth/
+Disallow: /verify-email
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Sitemaps
+Sitemap: https://doott.jaqyi.com/sitemap.xml
