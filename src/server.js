@@ -155,6 +155,9 @@ const PUBLIC_PATH_PREFIXES = [
   "/api/features",              // active feature flags map (publicly readable)
   "/api-docs",                  // public API documentation page (no auth needed)
   "/api-docs.html",             // public API documentation HTML (no auth needed)
+  "/sitemap.xml",               // SEO sitemap (publicly crawlable)
+  "/robots.txt",                // SEO robots directives (publicly crawlable)
+  "/google633297afc8503e41.html", // Google Search Console ownership verification
 ];
 
 app.use((req, res, next) => {
@@ -186,6 +189,84 @@ app.get(["/api-docs", "/api-docs.html"], (req, res) => {
     }
   }
   res.status(404).send("API Documentation page not found");
+});
+
+// ------------------------------------------------------------
+// SEO FILES — sitemap.xml, robots.txt, GSC verification
+// These must be served from the backend because Vercel routes
+// all traffic through this function (/(.*) -> /api/index.js).
+// The frontend/public copies are used by local Vite dev server.
+// ------------------------------------------------------------
+app.get("/robots.txt", (req, res) => {
+  res.setHeader("Content-Type", "text/plain");
+  res.send(
+`# Doott — B2B Contact Database & Lead Generation Platform
+# robots.txt
+
+User-agent: *
+
+# Allow public marketing pages
+Allow: /$
+Allow: /login
+Allow: /register
+Allow: /api-docs
+
+# Disallow app (authenticated) routes — no crawling needed
+Disallow: /app/
+Disallow: /auth/
+Disallow: /verify-email
+Disallow: /forgot-password
+Disallow: /reset-password
+
+# Sitemaps
+Sitemap: https://doott.jaqyi.com/sitemap.xml
+`
+  );
+});
+
+app.get("/sitemap.xml", (req, res) => {
+  const today = new Date().toISOString().split("T")[0];
+  res.setHeader("Content-Type", "application/xml");
+  res.send(
+`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+          http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+
+  <!-- Landing page — highest priority, updated daily -->
+  <url>
+    <loc>https://doott.jaqyi.com/</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Auth pages -->
+  <url>
+    <loc>https://doott.jaqyi.com/login</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- API Docs -->
+  <url>
+    <loc>https://doott.jaqyi.com/api-docs</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+</urlset>
+`
+  );
+});
+
+// Google Search Console ownership verification
+app.get("/google633297afc8503e41.html", (req, res) => {
+  res.setHeader("Content-Type", "text/html");
+  res.send("google-site-verification: google633297afc8503e41.html");
 });
 
 // ------------------------------------------------------------
