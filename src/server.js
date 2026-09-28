@@ -158,6 +158,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/sitemap.xml",               // SEO sitemap (publicly crawlable)
   "/robots.txt",                // SEO robots directives (publicly crawlable)
   "/google633297afc8503e41.html", // Google Search Console ownership verification
+  "/doott-og.jpg",              // OG social share image (1200x630)
 ];
 
 app.use((req, res, next) => {
@@ -267,6 +268,21 @@ app.get("/sitemap.xml", (req, res) => {
 app.get("/google633297afc8503e41.html", (req, res) => {
   res.setHeader("Content-Type", "text/html");
   res.send("google-site-verification: google633297afc8503e41.html");
+});
+
+// OG social share image (1200x630) — must be served from backend on Vercel
+app.get("/doott-og.jpg", (req, res) => {
+  const possiblePaths = [
+    path.join(__dirname, "..", "frontend", "public", "doott-og.jpg"),
+    path.join(process.cwd(), "frontend", "public", "doott-og.jpg"),
+  ];
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      res.setHeader("Cache-Control", "public, max-age=604800"); // 1 week
+      return res.sendFile(p);
+    }
+  }
+  res.status(404).send("OG image not found");
 });
 
 // ------------------------------------------------------------
