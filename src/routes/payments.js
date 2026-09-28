@@ -1,6 +1,9 @@
 /**
  * src/routes/payments.js
  * Razorpay payment gateway — ₹179 lifetime subscription
+ *
+ * IMPORTANT: Razorpay instance is initialised lazily (inside route handlers)
+ * because process.env vars are not available at module-load time on Vercel.
  */
 const express  = require("express");
 const crypto   = require("crypto");
@@ -12,13 +15,19 @@ const logger        = require("../utils/logger");
 
 const router = express.Router();
 
-const razorpay = new Razorpay({
-  key_id:     process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
-
 const PLAN_AMOUNT_PAISE = 17900; // ₹179
 const PLAN_CURRENCY     = "INR";
+
+// Lazy getter — Razorpay instance created AFTER env vars are loaded
+function getRazorpay() {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    throw new Error("Razorpay keys are not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.");
+  }
+  return new Razorpay({
+    key_id:     process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET,
+  });
+}
 
 router.use(async (req, res, next) => {
   try { await connectDB(); next(); } catch { next(); }
@@ -37,6 +46,7 @@ router.post("/create-order", async (req, res) => {
     if (existing)
       return res.status(409).json({ error: "An account with this email already exists. Please sign in." });
 
+    const razorpay = getRazorpay();
     const order = await razorpay.orders.create({
       amount:   PLAN_AMOUNT_PAISE,
       currency: PLAN_CURRENCY,
@@ -94,7 +104,6 @@ router.post("/verify-and-register", async (req, res) => {
       email: email.toLowerCase().trim(),
       password,
       orgName: `${name.trim()}'s Workspace`,
-      skipEmailVerification: true,
     });
 
     // Mark as lifetime
