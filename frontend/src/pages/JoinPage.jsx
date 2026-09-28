@@ -4,9 +4,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, User, ArrowRight, AlertCircle, CheckCircle, Zap } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import doottLogo from "../assets/doott-logo.png";
+import { BASE } from "../api/index";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
-const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_live_ThZtzVX8tHPpj4";
+const API = BASE;  // same URL resolution as the rest of the app
+const RAZORPAY_KEY_ID = "rzp_live_ThZtzVX8tHPpj4";
 
 function loadRazorpayScript() {
   return new Promise((resolve) => {
