@@ -57,6 +57,15 @@ const userSchema = new mongoose.Schema(
       ref: "Organization",
       default: null,
     },
+    // ── Subscription / Payment ──────────────────────────────
+    plan: {
+      type: String,
+      enum: ["free", "lifetime"],
+      default: "free",
+    },
+    razorpayPaymentId: { type: String, default: null },
+    razorpayOrderId:   { type: String, default: null },
+    paidAt:            { type: Date,   default: null },
   },
   {
     timestamps: true,

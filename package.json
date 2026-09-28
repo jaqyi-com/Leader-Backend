@@ -50,6 +50,7 @@
     "passport-local": "^1.0.0",
     "pdf-parse": "^2.4.5",
     "pg": "^8.21.0",
+    "razorpay": "^2.9.8",
     "sentiment": "^5.0.2",
     "socks": "^2.8.10",
     "uuid": "^9.0.0",

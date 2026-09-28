@@ -27,6 +27,8 @@ import AutoScraperPage from "./pages/AutoScraperPage";
 import AutonomousAgentsPage from "./pages/AutonomousAgentsPage";
 import AutonomousAgentDetailPage from "./pages/AutonomousAgentDetailPage";
 import LandingPage from "./pages/LandingPage";
+import PricingPage from "./pages/PricingPage";
+import JoinPage from "./pages/JoinPage";
 import SettingsPage from "./pages/SettingsPage";
 import SocialMediaPage from "./pages/SocialMediaPage";
 import SmartOutreachPage from "./pages/SmartOutreachPage";
@@ -80,6 +82,8 @@ export default function App() {
           <Routes>
             {/* ── Public routes ─────────────────────────────────── */}
             <Route path="/"                element={<LandingPage />} />
+            <Route path="/pricing"         element={<PricingPage />} />
+            <Route path="/join"            element={<JoinPage />} />
             <Route path="/login"           element={<LoginPage />} />
             <Route path="/register"        element={<RegisterGate />} />
             <Route path="/auth/callback"   element={<AuthCallbackPage />} />

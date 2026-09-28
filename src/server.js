@@ -159,6 +159,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/robots.txt",                // SEO robots directives (publicly crawlable)
   "/google633297afc8503e41.html", // Google Search Console ownership verification
   "/doott-og.jpg",              // OG social share image (1200x630)
+  "/api/payments",              // Razorpay payment endpoints (pre-auth)
 ];
 
 app.use((req, res, next) => {
@@ -300,6 +301,7 @@ app.use("/api/inventory", require("./routes/inventory"));
 app.use("/api/payroll", require("./routes/payroll"));
 app.use("/api/gmail", require("./routes/gmailAuth"));
 app.use("/api", require("./routes/featureFlags"));
+app.use("/api/payments", require("./routes/payments"));
 
 
 

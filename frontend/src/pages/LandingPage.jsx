@@ -58,6 +58,7 @@ function Nav() {
           <a href="#database" className="transition hover:text-foreground">Database</a>
           <a href="#features" className="transition hover:text-foreground">Features</a>
           <a href="#faq" className="transition hover:text-foreground">FAQ</a>
+          <Link to="/pricing" className="transition hover:text-foreground text-primary font-semibold">Pricing</Link>
           <Link to="/app" className="transition hover:text-foreground">Dashboard</Link>
         </nav>
         <div className="flex items-center gap-3">
@@ -153,11 +154,11 @@ function Hero() {
             className="mt-10 flex flex-wrap items-center gap-4"
           >
             <Link
-              to="/login"
+              to="/pricing"
               className="inline-flex h-12 items-center px-6 border border-primary bg-primary font-mono text-[11px] uppercase tracking-[0.2em] text-primary-foreground transition hover:opacity-90"
-              aria-label="Access Doott B2B contact database — free to start"
+              aria-label="Get lifetime access to Doott B2B contact database for ₹179"
             >
-              Access Database →
+              Get Access — ₹179 →
             </Link>
             <a
               href="#database"
@@ -542,11 +543,11 @@ function FinalCTA() {
         </p>
         <div className="flex flex-wrap gap-4 justify-center">
           <Link
-            to="/login"
+            to="/pricing"
             className="inline-flex h-12 items-center px-10 border border-background/40 bg-transparent font-mono text-[11px] uppercase tracking-[0.2em] text-background/70 transition hover:border-background hover:text-background"
-            aria-label="Sign in or create a free Doott account"
+            aria-label="Get lifetime access to Doott for ₹179"
           >
-            Start Free — No Credit Card
+            Get Lifetime Access — ₹179
           </Link>
         </div>
       </div>
