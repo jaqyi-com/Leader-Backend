@@ -18,14 +18,17 @@ const router = express.Router();
 const PLAN_AMOUNT_PAISE = 17900; // ₹179
 const PLAN_CURRENCY     = "INR";
 
-// Lazy getter — Razorpay instance created AFTER env vars are loaded
+const RAZORPAY_KEY_ID     = process.env.RAZORPAY_KEY_ID     || "rzp_live_ThZtzVX8tHPpj4";
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "rAF4uYgj0UIb0Rge9xZtCNx9";
+
+// Lazy getter — Razorpay instance created AFTER env vars or fallbacks are loaded
 function getRazorpay() {
-  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+  if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
     throw new Error("Razorpay keys are not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.");
   }
   return new Razorpay({
-    key_id:     process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
+    key_id:     RAZORPAY_KEY_ID,
+    key_secret: RAZORPAY_KEY_SECRET,
   });
 }
 
@@ -60,7 +63,7 @@ router.post("/create-order", async (req, res) => {
       orderId:  order.id,
       amount:   order.amount,
       currency: order.currency,
-      keyId:    process.env.RAZORPAY_KEY_ID,
+      keyId:    RAZORPAY_KEY_ID,
       prefill:  { name, email },
     });
   } catch (err) {
@@ -81,7 +84,7 @@ router.post("/verify-and-register", async (req, res) => {
 
     // HMAC verification
     const expected = crypto
-      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .createHmac("sha256", RAZORPAY_KEY_SECRET)
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
