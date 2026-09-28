@@ -38,11 +38,11 @@
     --surface:      #111118;
     --surface-2:    #16161f;
     --surface-3:    #1d1d28;
-    --border:       rgba(255,255,255,0.07);
-    --border-hover: rgba(255,255,255,0.14);
-    --text:         #f0f0f8;
-    --text-2:       #8888a8;
-    --text-3:       #55556a;
+    --border:       rgba(255,255,255,0.09);
+    --border-hover: rgba(255,255,255,0.18);
+    --text:         #ffffff;
+    --text-2:       #cbd5e1;
+    --text-3:       #94a3b8;
     --accent:       #E23744;
     --accent-2:     #f47a88;
     --accent-glow:  rgba(226,55,68,0.3);
