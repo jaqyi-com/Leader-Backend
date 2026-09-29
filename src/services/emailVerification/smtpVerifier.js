@@ -6,7 +6,7 @@ try {
   SocksClient = require("socks").SocksClient;
 } catch (_) {}
 
-const { FREEMAIL_DOMAINS, SMTP_RESULTS } = require("./constants");
+const { FREEMAIL_DOMAINS, SECURITY_GATEWAY_PATTERNS, SMTP_RESULTS } = require("./constants");
 
 const DEFAULT_SMTP_PORT = 25;
 const DEFAULT_SMTP_TIMEOUT_MS = 8000;
@@ -15,9 +15,20 @@ const SMTP_MAIL_FROM = process.env.SMTP_MAIL_FROM || "verify@mail-verifier.org";
 
 /**
  * Checks whether outbound SMTP probes (port 25) are enabled in this environment.
+ * Default is TRUE unless explicitly set to "false".
  */
 function isSmtpProbingEnabled() {
-  return process.env.ENABLE_SMTP_PROBES === "true" || process.env.USE_SOCKS5_PROXY === "true";
+  if (process.env.ENABLE_SMTP_PROBES === "false") return false;
+  return true;
+}
+
+/**
+ * Checks if an MX host belongs to a known enterprise security gateway (DHA-shielded).
+ */
+function isSecurityGateway(mxHost) {
+  if (!mxHost) return false;
+  const cleanMx = mxHost.toLowerCase().trim();
+  return SECURITY_GATEWAY_PATTERNS.some(pattern => pattern.test(cleanMx));
 }
 
 /**
@@ -235,5 +246,6 @@ module.exports = {
   probeSmtpMailbox,
   isSmtpProbingEnabled,
   isFreemailDomain,
+  isSecurityGateway,
   DEFAULT_SMTP_PORT
 };

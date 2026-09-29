@@ -101,11 +101,30 @@ const SMTP_RESULTS = {
   UNKNOWN: "unknown"
 };
 
+/**
+ * Known security gateway MX patterns (Microsoft EOP, Mimecast, Proofpoint, Barracuda, Sophos, Cisco IronPort).
+ * These gateways use Directory Harvest Protection (DHA) and return false-positive 250 OK
+ * for ALL recipient addresses at RCPT TO stage, then silently bounce or send NDR later.
+ */
+const SECURITY_GATEWAY_PATTERNS = [
+  /protection\.outlook\.com$/i,
+  /mimecast\.com$/i,
+  /pphosted\.com$/i,
+  /proofpoint\.com$/i,
+  /barracudanetworks\.com$/i,
+  /sophos\.com$/i,
+  /iphmx\.com$/i,
+  /trendmicro\.com$/i,
+  /messagelabs\.com$/i
+];
+
 module.exports = {
   COMMON_DOMAINS,
   ROLE_PREFIXES,
   FREEMAIL_DOMAINS,
   SEED_DISPOSABLE_DOMAINS,
+  SECURITY_GATEWAY_PATTERNS,
   VERIFICATION_STATES,
   SMTP_RESULTS
 };
+
