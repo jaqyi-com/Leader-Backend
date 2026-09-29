@@ -3,7 +3,7 @@
 /**
  * scripts/verify_all_database_emails.js
  * 
- * High-Speed Bulk Email Verification Pipeline Runner
+ * High-Speed Bulk Email Verification Pipeline Runner (Unbuffered Live Console Output)
  * Runs Port 25 SMTP verification across all records in final.people and final.companies
  * Updates is_email_valid, email_status, email_score, and email_verified_at columns in real time.
  */
@@ -12,7 +12,7 @@ require("dotenv").config({ path: "/Volumes/akshat/LeadGenerator/.env" });
 const { Pool } = require("pg");
 const { verifyEmail } = require("../src/services/emailVerification/pipeline");
 
-const BATCH_SIZE = 25;
+const BATCH_SIZE = 15;
 const PARALLEL_CONCURRENCY = 5;
 const DB_URL = process.env.NEON_DATABASE_URL;
 
@@ -27,6 +27,11 @@ const pool = new Pool({
   max: 15,
   idleTimeoutMillis: 30000,
 });
+
+// Unbuffered immediate log function for live tail -f streaming
+function logImmediate(msg) {
+  process.stdout.write(msg + "\n");
+}
 
 function parseEmail(emailVal) {
   if (!emailVal) return null;
@@ -61,7 +66,7 @@ async function verifyPeopleBatch() {
       LIMIT ${BATCH_SIZE};
     `);
 
-    if (res.rows.length === 0) return 0;
+    if (res.rows.length === 0) return [];
 
     const updates = await mapConcurrent(res.rows, PARALLEL_CONCURRENCY, async (row) => {
       const targetEmail = parseEmail(row.emails);
@@ -72,14 +77,17 @@ async function verifyPeopleBatch() {
       try {
         const verif = await verifyEmail(targetEmail, { forceRefresh: false, skipSmtp: false });
         const isValid = verif.state === "deliverable";
-        return {
+        const result = {
           uuid: row.uuid,
           is_valid: isValid,
           status: verif.state,
           score: verif.score,
           email: targetEmail
         };
+        logImmediate(`[${new Date().toLocaleTimeString()}] [Person] ${targetEmail} → ${verif.state} (score=${verif.score})`);
+        return result;
       } catch (err) {
+        logImmediate(`[${new Date().toLocaleTimeString()}] [Person] ${targetEmail} → error (${err.message})`);
         return { uuid: row.uuid, is_valid: null, status: "error", score: 0.0, email: targetEmail };
       }
     });
@@ -111,7 +119,7 @@ async function verifyCompaniesBatch() {
       LIMIT ${BATCH_SIZE};
     `);
 
-    if (res.rows.length === 0) return 0;
+    if (res.rows.length === 0) return [];
 
     const updates = await mapConcurrent(res.rows, PARALLEL_CONCURRENCY, async (row) => {
       const targetEmail = parseEmail(row.emails);
@@ -122,14 +130,17 @@ async function verifyCompaniesBatch() {
       try {
         const verif = await verifyEmail(targetEmail, { forceRefresh: false, skipSmtp: false });
         const isValid = verif.state === "deliverable";
-        return {
+        const result = {
           uuid: row.uuid,
           is_valid: isValid,
           status: verif.state,
           score: verif.score,
           email: targetEmail
         };
+        logImmediate(`[${new Date().toLocaleTimeString()}] [Company] ${targetEmail} → ${verif.state} (score=${verif.score})`);
+        return result;
       } catch (err) {
+        logImmediate(`[${new Date().toLocaleTimeString()}] [Company] ${targetEmail} → error (${err.message})`);
         return { uuid: row.uuid, is_valid: null, status: "error", score: 0.0, email: targetEmail };
       }
     });
@@ -150,31 +161,31 @@ async function verifyCompaniesBatch() {
 }
 
 async function startPipelineRunner() {
-  console.log("=================================================");
-  console.log("⚡ DOOTT DATABASE EMAIL VERIFICATION PIPELINE ⚡");
-  console.log("=================================================");
-  console.log("• Database: Neon PostgreSQL");
-  console.log("• Target Tables: final.people & final.companies");
-  console.log("• Engine: Port 25 SMTP + MX + Dual Probe Catch-All");
-  console.log("• Target Columns: is_email_valid, email_status, email_score\n");
+  logImmediate("=================================================");
+  logImmediate("⚡ DOOTT DATABASE EMAIL VERIFICATION PIPELINE ⚡");
+  logImmediate("=================================================");
+  logImmediate("• Database: Neon PostgreSQL");
+  logImmediate("• Target Tables: final.people & final.companies");
+  logImmediate("• Engine: Port 25 SMTP + MX + Dual Probe Catch-All");
+  logImmediate("• Target Columns: is_email_valid, email_status, email_score\n");
 
   let totalPeopleVerified = 0;
   let totalCompaniesVerified = 0;
   let running = true;
 
   process.on("SIGINT", () => {
-    console.log("\n⏹️ Stopping pipeline gracefully...");
+    logImmediate("\n⏹️ Stopping pipeline gracefully...");
     running = false;
   });
 
   while (running) {
     const peopleUpdates = await verifyPeopleBatch().catch(err => {
-      console.error("People batch error:", err.message);
+      logImmediate(`People batch error: ${err.message}`);
       return [];
     });
 
     const companyUpdates = await verifyCompaniesBatch().catch(err => {
-      console.error("Companies batch error:", err.message);
+      logImmediate(`Companies batch error: ${err.message}`);
       return [];
     });
 
@@ -185,20 +196,15 @@ async function startPipelineRunner() {
     totalCompaniesVerified += cCount;
 
     if (pCount > 0 || cCount > 0) {
-      const now = new Date().toLocaleTimeString();
-      console.log(`[${now}] Verified batch (+${pCount + cCount}) | Total People: ${totalPeopleVerified} | Total Companies: ${totalCompaniesVerified}`);
-      if (Array.isArray(peopleUpdates) && peopleUpdates.length > 0) {
-        const sample = peopleUpdates[0];
-        console.log(`  └─ Sample Person: ${sample.email} → ${sample.status} (score=${sample.score})`);
-      }
+      logImmediate(`✅ Verified Batch (+${pCount + cCount}) | Total People: ${totalPeopleVerified} | Total Companies: ${totalCompaniesVerified}\n`);
     } else {
-      console.log(`[${new Date().toLocaleTimeString()}] All pending emails verified! Checking again in 15 seconds...`);
+      logImmediate(`[${new Date().toLocaleTimeString()}] All pending emails verified! Checking again in 15 seconds...`);
       await new Promise(r => setTimeout(r, 15000));
     }
   }
 
   await pool.end();
-  console.log("Pipeline runner stopped.");
+  logImmediate("Pipeline runner stopped.");
 }
 
 startPipelineRunner().catch(err => {
