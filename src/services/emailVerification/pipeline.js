@@ -285,27 +285,18 @@ async function verifyEmail(rawEmail, options = {}) {
   const catchAllResult = await detectCatchAll(domain, primaryMx);
   catchAll = catchAllResult.isCatchAll;
 
-  // ── Stage 7: SMTP-Level Verification ─────────────────────────────────────
+  // ── Stage 7: SMTP-Level Verification (Port 25 RCPT TO Probe for EVERY Email) ─
   let smtpResult = SMTP_RESULTS.UNKNOWN;
   let smtpCode = null;
   let smtpMessage = "";
   let smtpGated = !isSmtpProbingEnabled();
 
-  const isFreemail = isFreemailDomain(domain);
-
   if (isSmtpProbingEnabled() && !skipSmtp && primaryMx) {
-    // If major freemail domain, downweight probe or skip to avoid false positives
-    if (isFreemail) {
-      smtpResult = SMTP_RESULTS.UNKNOWN;
-      smtpMessage = "Freemail provider (Gmail/Outlook/Yahoo) downweighted; scored by domain signals";
-      smtpGated = true;
-    } else {
-      const probe = await probeSmtpMailbox(primaryMx, email, 5000);
-      smtpResult = probe.result;
-      smtpCode = probe.code;
-      smtpMessage = probe.message;
-      smtpGated = probe.smtpGated;
-    }
+    const probe = await probeSmtpMailbox(primaryMx, email, 6000);
+    smtpResult = probe.result;
+    smtpCode = probe.code;
+    smtpMessage = probe.message;
+    smtpGated = probe.smtpGated;
   }
 
   // ── Compute Final Composite Verdict ──────────────────────────────────────
