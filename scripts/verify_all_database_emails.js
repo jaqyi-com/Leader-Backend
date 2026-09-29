@@ -3,17 +3,17 @@
 /**
  * scripts/verify_all_database_emails.js
  * 
- * Bulk Background Email Verification Pipeline Runner
+ * High-Speed Bulk Email Verification Pipeline Runner
  * Runs Port 25 SMTP verification across all records in final.people and final.companies
- * Updates is_email_valid, email_status, email_score, and email_verified_at columns.
+ * Updates is_email_valid, email_status, email_score, and email_verified_at columns in real time.
  */
 
 require("dotenv").config({ path: "/Volumes/akshat/LeadGenerator/.env" });
 const { Pool } = require("pg");
 const { verifyEmail } = require("../src/services/emailVerification/pipeline");
 
-const BATCH_SIZE = 50;
-const CONCURRENCY = 10;
+const BATCH_SIZE = 25;
+const PARALLEL_CONCURRENCY = 5;
 const DB_URL = process.env.NEON_DATABASE_URL;
 
 if (!DB_URL) {
@@ -24,7 +24,7 @@ if (!DB_URL) {
 const pool = new Pool({
   connectionString: DB_URL,
   ssl: { rejectUnauthorized: false },
-  max: 20,
+  max: 15,
   idleTimeoutMillis: 30000,
 });
 
@@ -38,41 +38,51 @@ function parseEmail(emailVal) {
   return null;
 }
 
+// Helper for parallel promise concurrency
+async function mapConcurrent(items, concurrency, fn) {
+  const results = [];
+  for (let i = 0; i < items.length; i += concurrency) {
+    const chunk = items.slice(i, i + concurrency);
+    const chunkResults = await Promise.all(chunk.map(fn));
+    results.push(...chunkResults);
+  }
+  return results;
+}
+
 async function verifyPeopleBatch() {
   const client = await pool.connect();
   try {
+    await client.query("SET statement_timeout = 60000;");
     const res = await client.query(`
       SELECT uuid, emails 
       FROM final.people 
-      WHERE (email_status IS NULL OR email_status = 'pending')
+      WHERE is_email_valid IS NULL 
         AND emails IS NOT NULL AND emails <> '{}' AND emails <> ''
-      LIMIT ${BATCH_SIZE}
-      FOR UPDATE SKIP LOCKED;
+      LIMIT ${BATCH_SIZE};
     `);
 
     if (res.rows.length === 0) return 0;
 
-    const updates = [];
-    for (const row of res.rows) {
+    const updates = await mapConcurrent(res.rows, PARALLEL_CONCURRENCY, async (row) => {
       const targetEmail = parseEmail(row.emails);
       if (!targetEmail) {
-        updates.push({ uuid: row.uuid, is_valid: false, status: "invalid_syntax", score: 0.0 });
-        continue;
+        return { uuid: row.uuid, is_valid: false, status: "invalid_syntax", score: 0.0, email: row.emails };
       }
 
       try {
         const verif = await verifyEmail(targetEmail, { forceRefresh: false, skipSmtp: false });
         const isValid = verif.state === "deliverable";
-        updates.push({
+        return {
           uuid: row.uuid,
           is_valid: isValid,
           status: verif.state,
-          score: verif.score
-        });
+          score: verif.score,
+          email: targetEmail
+        };
       } catch (err) {
-        updates.push({ uuid: row.uuid, is_valid: null, status: "error", score: 0.0 });
+        return { uuid: row.uuid, is_valid: null, status: "error", score: 0.0, email: targetEmail };
       }
-    }
+    });
 
     // Bulk update batch
     for (const u of updates) {
@@ -83,7 +93,7 @@ async function verifyPeopleBatch() {
       `, [u.is_valid, u.status, u.score, u.uuid]);
     }
 
-    return res.rows.length;
+    return updates;
   } finally {
     client.release();
   }
@@ -92,38 +102,37 @@ async function verifyPeopleBatch() {
 async function verifyCompaniesBatch() {
   const client = await pool.connect();
   try {
+    await client.query("SET statement_timeout = 60000;");
     const res = await client.query(`
       SELECT uuid, emails 
       FROM final.companies 
-      WHERE (email_status IS NULL OR email_status = 'pending')
+      WHERE is_email_valid IS NULL 
         AND emails IS NOT NULL AND emails <> '{}' AND emails <> ''
-      LIMIT ${BATCH_SIZE}
-      FOR UPDATE SKIP LOCKED;
+      LIMIT ${BATCH_SIZE};
     `);
 
     if (res.rows.length === 0) return 0;
 
-    const updates = [];
-    for (const row of res.rows) {
+    const updates = await mapConcurrent(res.rows, PARALLEL_CONCURRENCY, async (row) => {
       const targetEmail = parseEmail(row.emails);
       if (!targetEmail) {
-        updates.push({ uuid: row.uuid, is_valid: false, status: "invalid_syntax", score: 0.0 });
-        continue;
+        return { uuid: row.uuid, is_valid: false, status: "invalid_syntax", score: 0.0, email: row.emails };
       }
 
       try {
         const verif = await verifyEmail(targetEmail, { forceRefresh: false, skipSmtp: false });
         const isValid = verif.state === "deliverable";
-        updates.push({
+        return {
           uuid: row.uuid,
           is_valid: isValid,
           status: verif.state,
-          score: verif.score
-        });
+          score: verif.score,
+          email: targetEmail
+        };
       } catch (err) {
-        updates.push({ uuid: row.uuid, is_valid: null, status: "error", score: 0.0 });
+        return { uuid: row.uuid, is_valid: null, status: "error", score: 0.0, email: targetEmail };
       }
-    }
+    });
 
     // Bulk update batch
     for (const u of updates) {
@@ -134,7 +143,7 @@ async function verifyCompaniesBatch() {
       `, [u.is_valid, u.status, u.score, u.uuid]);
     }
 
-    return res.rows.length;
+    return updates;
   } finally {
     client.release();
   }
@@ -146,7 +155,7 @@ async function startPipelineRunner() {
   console.log("=================================================");
   console.log("• Database: Neon PostgreSQL");
   console.log("• Target Tables: final.people & final.companies");
-  console.log("• Verification Engine: Port 25 SMTP + MX + Dual Probe Catch-All");
+  console.log("• Engine: Port 25 SMTP + MX + Dual Probe Catch-All");
   console.log("• Target Columns: is_email_valid, email_status, email_score\n");
 
   let totalPeopleVerified = 0;
@@ -159,24 +168,32 @@ async function startPipelineRunner() {
   });
 
   while (running) {
-    const peopleCount = await verifyPeopleBatch().catch(err => {
+    const peopleUpdates = await verifyPeopleBatch().catch(err => {
       console.error("People batch error:", err.message);
-      return 0;
+      return [];
     });
 
-    const companyCount = await verifyCompaniesBatch().catch(err => {
+    const companyUpdates = await verifyCompaniesBatch().catch(err => {
       console.error("Companies batch error:", err.message);
-      return 0;
+      return [];
     });
 
-    totalPeopleVerified += peopleCount;
-    totalCompaniesVerified += companyCount;
+    const pCount = Array.isArray(peopleUpdates) ? peopleUpdates.length : 0;
+    const cCount = Array.isArray(companyUpdates) ? companyUpdates.length : 0;
 
-    if (peopleCount > 0 || companyCount > 0) {
-      console.log(`[${new Date().toISOString()}] Verified batch | People: ${totalPeopleVerified} | Companies: ${totalCompaniesVerified}`);
+    totalPeopleVerified += pCount;
+    totalCompaniesVerified += cCount;
+
+    if (pCount > 0 || cCount > 0) {
+      const now = new Date().toLocaleTimeString();
+      console.log(`[${now}] Verified batch (+${pCount + cCount}) | Total People: ${totalPeopleVerified} | Total Companies: ${totalCompaniesVerified}`);
+      if (Array.isArray(peopleUpdates) && peopleUpdates.length > 0) {
+        const sample = peopleUpdates[0];
+        console.log(`  └─ Sample Person: ${sample.email} → ${sample.status} (score=${sample.score})`);
+      }
     } else {
-      console.log(`[${new Date().toISOString()}] All pending emails verified! Waiting 30s for new records...`);
-      await new Promise(r => setTimeout(r, 30000));
+      console.log(`[${new Date().toLocaleTimeString()}] All pending emails verified! Checking again in 15 seconds...`);
+      await new Promise(r => setTimeout(r, 15000));
     }
   }
 
