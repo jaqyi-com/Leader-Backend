@@ -3,7 +3,7 @@
 /**
  * scripts/monitor_verification_progress.js
  * 
- * Live Real-Time Email Verification Monitoring Command
+ * Instant Real-Time Email Verification Monitoring Command
  * Run: node scripts/monitor_verification_progress.js
  */
 
@@ -18,53 +18,51 @@ const pool = new Pool({
 async function runMonitor() {
   const client = await pool.connect();
   try {
-    const peopleStats = await client.query(`
+    // Fast count from email_verifications table
+    const cacheStats = await client.query(`
       SELECT 
-        COUNT(*) AS verified_count,
-        COUNT(*) FILTER (WHERE is_email_valid IS TRUE) AS deliverable,
-        COUNT(*) FILTER (WHERE is_email_valid IS FALSE) AS undeliverable,
-        COUNT(*) FILTER (WHERE email_status = 'risky') AS risky,
-        COUNT(*) FILTER (WHERE email_status = 'unknown') AS unknown
-      FROM final.people
-      WHERE email_status IS NOT NULL AND email_status <> 'pending';
+        COUNT(*) AS total_cached,
+        COUNT(*) FILTER (WHERE state = 'deliverable') AS deliverable,
+        COUNT(*) FILTER (WHERE state = 'undeliverable') AS undeliverable,
+        COUNT(*) FILTER (WHERE state = 'risky') AS risky,
+        COUNT(*) FILTER (WHERE state = 'unknown') AS unknown
+      FROM final.email_verifications;
     `);
 
-    const companyStats = await client.query(`
-      SELECT 
-        COUNT(*) AS verified_count,
-        COUNT(*) FILTER (WHERE is_email_valid IS TRUE) AS deliverable,
-        COUNT(*) FILTER (WHERE is_email_valid IS FALSE) AS undeliverable,
-        COUNT(*) FILTER (WHERE email_status = 'risky') AS risky,
-        COUNT(*) FILTER (WHERE email_status = 'unknown') AS unknown
-      FROM final.companies
-      WHERE email_status IS NOT NULL AND email_status <> 'pending';
+    const pEst = await client.query(`
+      SELECT reltuples::bigint AS total_people_est
+      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'final' AND c.relname = 'people';
     `);
 
-    const p = peopleStats.rows[0];
-    const c = companyStats.rows[0];
+    const cEst = await client.query(`
+      SELECT reltuples::bigint AS total_companies_est
+      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'final' AND c.relname = 'companies';
+    `);
 
-    console.clear();
+    const s = cacheStats.rows[0];
+    const pTotal = Number(pEst.rows[0]?.total_people_est || 45059532);
+    const cTotal = Number(cEst.rows[0]?.total_companies_est || 1553381);
+
     console.log("=================================================");
     console.log("📊 DOOTT REAL-TIME EMAIL VERIFICATION MONITOR");
     console.log("=================================================");
     console.log(`Timestamp: ${new Date().toLocaleString()}\n`);
 
-    console.log("👥 PEOPLE CONTACTS (final.people):");
-    console.log(`   • Total Verified:   ${Number(p.verified_count).toLocaleString()}`);
-    console.log(`   • Deliverable (✅): ${Number(p.deliverable).toLocaleString()}`);
-    console.log(`   • Undeliverable(❌):${Number(p.undeliverable).toLocaleString()}`);
-    console.log(`   • Risky (⚠️):        ${Number(p.risky).toLocaleString()}`);
-    console.log(`   • Unknown (❓):      ${Number(p.unknown).toLocaleString()}\n`);
+    console.log("📧 VERIFICATION CACHE (final.email_verifications):");
+    console.log(`   • Total Verified & Cached: ${Number(s.total_cached).toLocaleString()}`);
+    console.log(`   • Deliverable (✅):       ${Number(s.deliverable).toLocaleString()}`);
+    console.log(`   • Undeliverable(❌):      ${Number(s.undeliverable).toLocaleString()}`);
+    console.log(`   • Risky (⚠️):              ${Number(s.risky).toLocaleString()}`);
+    console.log(`   • Unknown (❓):            ${Number(s.unknown).toLocaleString()}\n`);
 
-    console.log("🏢 COMPANIES (final.companies):");
-    console.log(`   • Total Verified:   ${Number(c.verified_count).toLocaleString()}`);
-    console.log(`   • Deliverable (✅): ${Number(c.deliverable).toLocaleString()}`);
-    console.log(`   • Undeliverable(❌):${Number(c.undeliverable).toLocaleString()}`);
-    console.log(`   • Risky (⚠️):        ${Number(c.risky).toLocaleString()}`);
-    console.log(`   • Unknown (❓):      ${Number(c.unknown).toLocaleString()}\n`);
+    console.log("🗄️ DATABASE CAPACITY:");
+    console.log(`   • People Table (final.people):    ${pTotal.toLocaleString()} rows`);
+    console.log(`   • Companies Table (final.companies): ${cTotal.toLocaleString()} rows\n`);
 
     console.log("=================================================");
-    console.log("Tip: Run this command anytime to refresh statistics!");
+    console.log("Run this command anytime for sub-second verification statistics!");
   } finally {
     client.release();
     await pool.end();
