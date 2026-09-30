@@ -3,13 +3,14 @@
 /**
  * scripts/verify_all_database_emails.js
  * 
- * Production Resumable Email Verification Pipeline (Line-by-Line Step-by-Step Live Monitor)
+ * High-Throughput 50-Parallel Worker Resumable Email Verification Pipeline
  * Features:
- *   - Line-by-line step-by-step real-time terminal output
- *   - Automatic checkpoint resume (.verification_progress.json)
- *   - Keyset cursor pagination (WHERE uuid > $last_uuid) for sub-second database queries
+ *   - 50 Parallel Workers (54,000+ emails/hour throughput target)
+ *   - Resumable state file (.verification_progress.json) with UUID keyset pagination
  *   - Port 25 SMTP + MX + Dual Probe Catch-All Verification Engine
- *   - Updates is_email_valid, email_status, email_score, email_verified_at in PostgreSQL
+ *   - Fast 4s TCP Socket timeouts to prevent hanging on slow servers
+ *   - Real-time unbuffered terminal streaming
+ *   - Updates is_email_valid, email_status, email_score, and email_verified_at in PostgreSQL
  */
 
 require("dotenv").config({ path: "/Volumes/akshat/LeadGenerator/.env" });
@@ -18,8 +19,8 @@ const path = require("path");
 const { Pool } = require("pg");
 const { verifyEmail } = require("../src/services/emailVerification/pipeline");
 
-const BATCH_SIZE = 10;
-const PARALLEL_CONCURRENCY = 5;
+const BATCH_SIZE = 50;
+const PARALLEL_CONCURRENCY = 50;
 const STATE_FILE = path.join(__dirname, ".verification_progress.json");
 const DB_URL = process.env.NEON_DATABASE_URL;
 
@@ -31,7 +32,7 @@ if (!DB_URL) {
 const pool = new Pool({
   connectionString: DB_URL,
   ssl: { rejectUnauthorized: false },
-  max: 15,
+  max: 60,
   idleTimeoutMillis: 30000,
 });
 
@@ -139,7 +140,7 @@ async function verifyPeopleBatch(state) {
 
         const timeStr = new Date().toLocaleTimeString();
         const badge = getBadge(verif.state);
-        printLine(`[${timeStr}] [Person]  ${targetEmail.padEnd(36)} ➔ ${badge} (Score: ${verif.score.toFixed(2)} | ${verif.reason} | ${durationMs}ms)`);
+        printLine(`[${timeStr}] [Person]  ${targetEmail.padEnd(36)} ➔ ${badge} (${durationMs}ms)`);
 
         return {
           uuid: row.uuid,
@@ -151,12 +152,12 @@ async function verifyPeopleBatch(state) {
           reason: verif.reason
         };
       } catch (err) {
-        printLine(`[${new Date().toLocaleTimeString()}] [Person]  ${targetEmail.padEnd(36)} ➔ ❓ ERROR        (${err.message})`);
+        printLine(`[${new Date().toLocaleTimeString()}] [Person]  ${targetEmail.padEnd(36)} ➔ ❓ ERROR (${err.message})`);
         return { uuid: row.uuid, is_valid: null, status: "error", score: 0.0, email: targetEmail, durationMs: 0, reason: err.message };
       }
     });
 
-    // Update DB
+    // Bulk update batch
     for (const u of updates) {
       await client.query(`
         UPDATE final.people 
@@ -211,7 +212,7 @@ async function verifyCompaniesBatch(state) {
 
         const timeStr = new Date().toLocaleTimeString();
         const badge = getBadge(verif.state);
-        printLine(`[${timeStr}] [Company] ${targetEmail.padEnd(36)} ➔ ${badge} (Score: ${verif.score.toFixed(2)} | ${verif.reason} | ${durationMs}ms)`);
+        printLine(`[${timeStr}] [Company] ${targetEmail.padEnd(36)} ➔ ${badge} (${durationMs}ms)`);
 
         return {
           uuid: row.uuid,
@@ -223,12 +224,12 @@ async function verifyCompaniesBatch(state) {
           reason: verif.reason
         };
       } catch (err) {
-        printLine(`[${new Date().toLocaleTimeString()}] [Company] ${targetEmail.padEnd(36)} ➔ ❓ ERROR        (${err.message})`);
+        printLine(`[${new Date().toLocaleTimeString()}] [Company] ${targetEmail.padEnd(36)} ➔ ❓ ERROR (${err.message})`);
         return { uuid: row.uuid, is_valid: null, status: "error", score: 0.0, email: targetEmail, durationMs: 0, reason: err.message };
       }
     });
 
-    // Update DB
+    // Bulk update batch
     for (const u of updates) {
       await client.query(`
         UPDATE final.companies 
@@ -252,8 +253,10 @@ async function startPipelineRunner() {
   const state = loadState();
 
   printLine("===============================================================================");
-  printLine("⚡ DOOTT STEP-BY-STEP LIVE EMAIL VERIFICATION PIPELINE ⚡");
+  printLine("⚡ DOOTT HIGH-SPEED 50-WORKER RESUMABLE EMAIL VERIFICATION PIPELINE ⚡");
   printLine("===============================================================================");
+  printLine(`• Concurrency Workers:      50 Parallel Socket Probes`);
+  printLine(`• Target Processing Speed:  ~900 emails/min (54,000 emails/hour)`);
   printLine(`• Resuming People Cursor:    ${state.people_last_uuid}`);
   printLine(`• Resuming Companies Cursor: ${state.companies_last_uuid}`);
   printLine(`• Total Verified So Far:     ${state.total_people_verified + state.total_companies_verified}`);
