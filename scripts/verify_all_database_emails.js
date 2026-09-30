@@ -4,18 +4,18 @@
  * scripts/verify_all_database_emails.js
  * 
  * Production 50-Worker Continuous Resumable Email Verification Pipeline Engine
- * Performance Specifications:
+ * Specs & Speed:
  *   • Target Speed: ~900 - 1,500 emails / min (54,000 - 90,000 / hour)
  *   • Daily Capacity: ~1.3 - 2.1 Million emails / day
- *   • Total Capacity (20.46M Emails): ~14-15 Days
+ *   • Time for 20.46M Emails: ~14 - 15 Days
  * 
  * Architecture Features:
- *   1. Continuous 50-Worker Parallel Queue (Workers NEVER wait for slow sockets)
- *   2. In-Memory Domain MX & Catch-All LRU Caching (0ms lookup on repeated domains)
- *   3. Freemail Instant Short-Circuiting (Gmail, Yahoo, Hotmail, etc.)
- *   4. Ultra-Fast Multi-Row SQL Bulk UPDATEs (1 database query per 50 results)
- *   5. Persistent Keyset Pagination UUID Cursor State (.verification_progress.json)
- *   6. Step-by-Step Live Telemetry Stream with emails/min and ETA metrics
+ *   1. Continuous 50-Worker Parallel Queue
+ *   2. Phase 1: final.companies FIRST | Phase 2: final.people SECOND
+ *   3. Short-Lived Client Checkout with statement_timeout = 0 (No DB Timeouts)
+ *   4. Auto 3x Retry logic for database bulk updates
+ *   5. In-Memory Domain MX & Catch-All LRU Caching
+ *   6. Persistent Keyset Pagination UUID Cursor State (.verification_progress.json)
  */
 
 process.env.UV_THREADPOOL_SIZE = "128";
@@ -27,8 +27,7 @@ const { Pool } = require("pg");
 const { verifyEmail } = require("../src/services/emailVerification/pipeline");
 
 const CONCURRENCY = 50;
-const FETCH_BATCH_SIZE = 300;
-const WRITE_FLUSH_SIZE = 50;
+const FETCH_BATCH_SIZE = 100;
 const STATE_FILE = path.join(__dirname, ".verification_progress.json");
 const DB_URL = process.env.NEON_DATABASE_URL;
 
@@ -102,7 +101,7 @@ function getBadge(status) {
   return "❓ UNKNOWN      ";
 }
 
-async function bulkUpdateTable(client, tableName, updates) {
+async function bulkUpdateTable(tableName, updates) {
   if (!updates || updates.length === 0) return;
   const validUpdates = updates.filter(u => u && u.uuid);
   if (validUpdates.length === 0) return;
@@ -127,7 +126,39 @@ async function bulkUpdateTable(client, tableName, updates) {
     WHERE t.uuid = v.uuid;
   `;
 
-  await client.query(sql, params);
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    const client = await pool.connect();
+    try {
+      await client.query("SET statement_timeout = 0;");
+      await client.query(sql, params);
+      return;
+    } catch (err) {
+      if (attempt === 3) throw err;
+      printLine(`[DB Retry] Bulk update attempt ${attempt} failed: ${err.message}. Retrying in 1s...`);
+      await new Promise(r => setTimeout(r, 1000));
+    } finally {
+      client.release();
+    }
+  }
+}
+
+async function fetchNextBatch(tableName, lastUuid) {
+  const client = await pool.connect();
+  try {
+    await client.query("SET statement_timeout = 60000;");
+    const res = await client.query(`
+      SELECT uuid, emails 
+      FROM final.${tableName} 
+      WHERE uuid > $1 
+        AND is_email_valid IS NULL 
+        AND emails IS NOT NULL AND emails <> '{}' AND emails <> ''
+      ORDER BY uuid ASC 
+      LIMIT ${FETCH_BATCH_SIZE};
+    `, [lastUuid]);
+    return res.rows;
+  } finally {
+    client.release();
+  }
 }
 
 async function runPipeline() {
@@ -154,114 +185,97 @@ async function runPipeline() {
   const startTime = Date.now();
   let verifiedInSession = 0;
 
-  // Verification Task Queue Processor
   async function processTable(tableName, cursorKey, totalStateKey) {
-    let activeClient = await pool.connect();
-    try {
-      await activeClient.query("SET statement_timeout = 60000;");
+    printLine(`\n🚀 Starting verification for table [final.${tableName}]...`);
 
-      while (running) {
-        // Fetch a fresh batch of unverified records
-        const fetchRes = await activeClient.query(`
-          SELECT uuid, emails 
-          FROM final.${tableName} 
-          WHERE uuid > $1 
-            AND is_email_valid IS NULL 
-            AND emails IS NOT NULL AND emails <> '{}' AND emails <> ''
-          ORDER BY uuid ASC 
-          LIMIT ${FETCH_BATCH_SIZE};
-        `, [state[cursorKey]]);
+    while (running) {
+      const items = await fetchNextBatch(tableName, state[cursorKey]).catch(err => {
+        printLine(`[DB Error] Batch fetch failed: ${err.message}`);
+        return [];
+      });
 
-        if (fetchRes.rows.length === 0) {
-          printLine(`[${new Date().toLocaleTimeString()}] Completed table [final.${tableName}] processing!`);
-          break;
-        }
+      if (items.length === 0) {
+        printLine(`[${new Date().toLocaleTimeString()}] ✅ Table [final.${tableName}] verification 100% complete!`);
+        break;
+      }
 
-        const items = fetchRes.rows;
-        let queueIndex = 0;
-        const pendingUpdates = [];
+      let queueIndex = 0;
+      const pendingUpdates = [];
 
-        // Worker function consuming items asynchronously
-        async function workerTask(workerId) {
-          while (running && queueIndex < items.length) {
-            const myIndex = queueIndex++;
-            if (myIndex >= items.length) break;
+      async function workerTask(workerId) {
+        while (running && queueIndex < items.length) {
+          const myIndex = queueIndex++;
+          if (myIndex >= items.length) break;
 
-            const row = items[myIndex];
-            const targetEmail = parseEmail(row.emails);
-            const start = Date.now();
+          const row = items[myIndex];
+          const targetEmail = parseEmail(row.emails);
+          const start = Date.now();
 
-            if (!targetEmail) {
-              pendingUpdates.push({ uuid: row.uuid, is_valid: false, status: "invalid_syntax", score: 0.0 });
-              continue;
-            }
+          if (!targetEmail) {
+            pendingUpdates.push({ uuid: row.uuid, is_valid: false, status: "invalid_syntax", score: 0.0 });
+            continue;
+          }
 
-            try {
-              const verif = await verifyEmail(targetEmail, { forceRefresh: false, skipSmtp: false });
-              const isValid = verif.state === "deliverable";
-              const durationMs = Date.now() - start;
+          try {
+            const verif = await verifyEmail(targetEmail, { forceRefresh: false, skipSmtp: false });
+            const isValid = verif.state === "deliverable";
+            const durationMs = Date.now() - start;
 
-              if (verif.state === "deliverable") state.deliverable_count++;
-              else if (verif.state === "undeliverable") state.undeliverable_count++;
-              else if (verif.state === "risky") state.risky_count++;
-              else state.unknown_count++;
+            if (verif.state === "deliverable") state.deliverable_count++;
+            else if (verif.state === "undeliverable") state.undeliverable_count++;
+            else if (verif.state === "risky") state.risky_count++;
+            else state.unknown_count++;
 
-              verifiedInSession++;
-              const timeStr = new Date().toLocaleTimeString();
-              const badge = getBadge(verif.state);
-              printLine(`[${timeStr}] [W#${String(workerId).padStart(2, "0")}] [${tableName.slice(0, 4)}] ${targetEmail.padEnd(34)} ➔ ${badge} (${durationMs}ms)`);
+            verifiedInSession++;
+            const timeStr = new Date().toLocaleTimeString();
+            const badge = getBadge(verif.state);
+            printLine(`[${timeStr}] [W#${String(workerId).padStart(2, "0")}] [${tableName.slice(0, 4)}] ${targetEmail.padEnd(34)} ➔ ${badge} (${durationMs}ms)`);
 
-              pendingUpdates.push({
-                uuid: row.uuid,
-                is_valid: isValid,
-                status: verif.state,
-                score: verif.score
-              });
-            } catch (err) {
-              printLine(`[${new Date().toLocaleTimeString()}] [W#${String(workerId).padStart(2, "0")}] [${tableName.slice(0, 4)}] ${targetEmail.padEnd(34)} ➔ ❓ ERROR (${err.message})`);
-              pendingUpdates.push({ uuid: row.uuid, is_valid: false, status: "error", score: 0.0 });
-            }
+            pendingUpdates.push({
+              uuid: row.uuid,
+              is_valid: isValid,
+              status: verif.state,
+              score: verif.score
+            });
+          } catch (err) {
+            printLine(`[${new Date().toLocaleTimeString()}] [W#${String(workerId).padStart(2, "0")}] [${tableName.slice(0, 4)}] ${targetEmail.padEnd(34)} ➔ ❓ ERROR (${err.message})`);
+            pendingUpdates.push({ uuid: row.uuid, is_valid: false, status: "error", score: 0.0 });
           }
         }
-
-        // Launch 50 Workers simultaneously consuming queue items
-        const workerPromises = [];
-        for (let w = 1; w <= CONCURRENCY; w++) {
-          workerPromises.push(workerTask(w));
-        }
-
-        await Promise.all(workerPromises);
-
-        // Bulk update database with results
-        if (pendingUpdates.length > 0) {
-          await bulkUpdateTable(activeClient, tableName, pendingUpdates);
-        }
-
-        // Advance cursor & state checkpoint
-        state[cursorKey] = items[items.length - 1].uuid;
-        state[totalStateKey] += items.length;
-        saveState(state);
-
-        // Telemetry calculation
-        const elapsedSec = (Date.now() - startTime) / 1000;
-        const ratePerMin = elapsedSec > 0 ? Math.round((verifiedInSession / elapsedSec) * 60) : 0;
-        const ratePerHour = ratePerMin * 60;
-        const totalVerif = state.total_people_verified + state.total_companies_verified;
-
-        printLine(`\n─── 📊 Progress Metrics: ${ratePerMin} emails/min (${ratePerHour.toLocaleString()}/hr) | Verified Total: ${totalVerif.toLocaleString()} (✅ Deliverable: ${state.deliverable_count.toLocaleString()}) ───\n`);
       }
-    } finally {
-      activeClient.release();
+
+      const workerPromises = [];
+      for (let w = 1; w <= CONCURRENCY; w++) {
+        workerPromises.push(workerTask(w));
+      }
+
+      await Promise.all(workerPromises);
+
+      // Bulk update database with retry
+      if (pendingUpdates.length > 0) {
+        await bulkUpdateTable(tableName, pendingUpdates);
+      }
+
+      // Advance cursor & state checkpoint
+      state[cursorKey] = items[items.length - 1].uuid;
+      state[totalStateKey] += items.length;
+      saveState(state);
+
+      // Telemetry calculation
+      const elapsedSec = (Date.now() - startTime) / 1000;
+      const ratePerMin = elapsedSec > 0 ? Math.round((verifiedInSession / elapsedSec) * 60) : 0;
+      const ratePerHour = ratePerMin * 60;
+      const totalVerif = state.total_people_verified + state.total_companies_verified;
+
+      printLine(`─── 📊 Rate: ${ratePerMin} emails/min (${ratePerHour.toLocaleString()}/hr) | Verified Total: ${totalVerif.toLocaleString()} (✅ Deliverable: ${state.deliverable_count.toLocaleString()}) ───\n`);
     }
   }
 
   // 1. Run Companies table verification FIRST
-  printLine("🚀 Phase 1: Verifying all Company emails (final.companies)...");
   await processTable("companies", "companies_last_uuid", "total_companies_verified");
 
   // 2. Run People table verification SECOND
   if (running) {
-    printLine("🚀 Phase 2: Verifying all People emails (final.people)...");
     await processTable("people", "people_last_uuid", "total_people_verified");
   }
 
