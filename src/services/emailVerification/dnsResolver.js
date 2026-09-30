@@ -26,6 +26,9 @@ function withTimeout(promise, ms, operationName = "DNS operation") {
   ]);
 }
 
+const LOCAL_A_CACHE = new Map();
+const LOCAL_MX_CACHE = new Map();
+
 /**
  * Stage 2: Domain Existence (A / AAAA records)
  */
@@ -33,11 +36,17 @@ async function resolveDomainExistence(domain) {
   if (!domain) return { valid: false, ips: [], reason: "Empty domain" };
   const cleanDomain = domain.toLowerCase().trim();
 
+  // 0. Check Fast In-Memory Cache
+  if (LOCAL_A_CACHE.has(cleanDomain)) {
+    return { ...LOCAL_A_CACHE.get(cleanDomain), _cached: true };
+  }
+
   // 1. Check Redis Cache
   const cacheKey = `domain:dns:${cleanDomain}`;
   try {
     const cached = await cacheGet(cacheKey);
     if (cached) {
+      LOCAL_A_CACHE.set(cleanDomain, cached);
       return { ...cached, _cached: true };
     }
   } catch (_) {}
@@ -92,6 +101,8 @@ async function resolveDomainExistence(domain) {
     domain: cleanDomain
   };
 
+  LOCAL_A_CACHE.set(cleanDomain, result);
+
   // Cache in Redis
   try {
     await cacheSet(cacheKey, result, DNS_A_CACHE_TTL);
@@ -107,11 +118,17 @@ async function resolveMxRecords(domain) {
   if (!domain) return { valid: false, mxRecords: [], primaryMx: null, reason: "Empty domain" };
   const cleanDomain = domain.toLowerCase().trim();
 
+  // 0. Check Fast In-Memory Cache
+  if (LOCAL_MX_CACHE.has(cleanDomain)) {
+    return { ...LOCAL_MX_CACHE.get(cleanDomain), _cached: true };
+  }
+
   // 1. Check Redis Cache
   const cacheKey = `domain:mx:${cleanDomain}`;
   try {
     const cached = await cacheGet(cacheKey);
     if (cached) {
+      LOCAL_MX_CACHE.set(cleanDomain, cached);
       return { ...cached, _cached: true };
     }
   } catch (_) {}
@@ -207,6 +224,7 @@ async function resolveMxRecords(domain) {
     );
   } catch (_) {}
 
+  LOCAL_MX_CACHE.set(cleanDomain, result);
   return result;
 }
 

@@ -9,7 +9,7 @@ try {
 const { FREEMAIL_DOMAINS, SECURITY_GATEWAY_PATTERNS, SMTP_RESULTS } = require("./constants");
 
 const DEFAULT_SMTP_PORT = 25;
-const DEFAULT_SMTP_TIMEOUT_MS = 8000;
+const DEFAULT_SMTP_TIMEOUT_MS = 3500;
 const SMTP_HELO_DOMAIN = process.env.SMTP_HELO_DOMAIN || "mail-verifier.org";
 const SMTP_MAIL_FROM = process.env.SMTP_MAIL_FROM || "verify@mail-verifier.org";
 

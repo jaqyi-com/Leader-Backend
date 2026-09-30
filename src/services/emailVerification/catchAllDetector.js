@@ -3,23 +3,14 @@
 const crypto = require("crypto");
 const { cacheGet, cacheSet } = require("../../db/redis");
 const { query } = require("../../db/cloudSql");
-const { probeSmtpMailbox, isSmtpProbingEnabled, isSecurityGateway } = require("./smtpVerifier");
+const { probeSmtpMailbox, isSmtpProbingEnabled, isSecurityGateway, isFreemailDomain } = require("./smtpVerifier");
 
 const CATCH_ALL_CACHE_TTL = 7 * 24 * 3600; // 7 days
+const LOCAL_CATCH_ALL_CACHE = new Map();
 
 /**
  * Stage 6: Dual-Probe Catch-All Domain Detection
  * Probes the MX host with TWO randomly generated non-existent mailboxes.
- * 
- * Logic:
- *   - If MX belongs to a known Security Gateway (Microsoft EOP / Mimecast / Proofpoint) -> Catch-All / DHA Shielded.
- *   - Send Probe 1 (`probe_a_<hash>@domain`). If 5xx -> isCatchAll = false.
- *   - If Probe 1 is 250 OK, send Probe 2 (`probe_b_<hash>@domain`).
- *   - If Probe 2 ALSO returns 250 OK -> isCatchAll = true (100% confirmed catch-all).
- * 
- * @param {string} domain       Target domain (e.g. "acme.com")
- * @param {string} primaryMx    Primary MX host (e.g. "mail.acme.com")
- * @returns {Promise<{ isCatchAll: boolean|null, reason: string, probeCode: number|null }>}
  */
 async function detectCatchAll(domain, primaryMx) {
   if (!domain) {
@@ -27,18 +18,33 @@ async function detectCatchAll(domain, primaryMx) {
   }
 
   const cleanDomain = domain.toLowerCase().trim();
+
+  // 0. Fast Freemail Check
+  if (isFreemailDomain(cleanDomain)) {
+    const freemailVerdict = { isCatchAll: false, reason: "Freemail domain (Non-catch-all)", probeCode: 250 };
+    LOCAL_CATCH_ALL_CACHE.set(cleanDomain, freemailVerdict);
+    return freemailVerdict;
+  }
+
+  // 1. Check Fast In-Memory Cache
+  if (LOCAL_CATCH_ALL_CACHE.has(cleanDomain)) {
+    return { ...LOCAL_CATCH_ALL_CACHE.get(cleanDomain), _cached: true };
+  }
+
   const cacheKey = `domain:catch_all:${cleanDomain}`;
 
-  // 1. Check Redis domain-level cache
+  // 2. Check Redis domain-level cache
   try {
     const cached = await cacheGet(cacheKey);
     if (cached !== null && cached !== undefined) {
-      return {
+      const res = {
         isCatchAll: typeof cached === "object" ? cached.isCatchAll : cached,
         reason: "Loaded from domain catch-all cache",
         probeCode: typeof cached === "object" ? cached.probeCode : null,
         _cached: true
       };
+      LOCAL_CATCH_ALL_CACHE.set(cleanDomain, res);
+      return res;
     }
   } catch (_) {}
 
@@ -118,6 +124,7 @@ async function detectCatchAll(domain, primaryMx) {
     }
 
     const verdict = { isCatchAll, reason, probeCode: res2.code || res1.code };
+    LOCAL_CATCH_ALL_CACHE.set(cleanDomain, verdict);
 
     if (isCatchAll !== null) {
       try {

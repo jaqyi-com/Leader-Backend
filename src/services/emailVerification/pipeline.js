@@ -292,7 +292,7 @@ async function verifyEmail(rawEmail, options = {}) {
   let smtpGated = !isSmtpProbingEnabled();
 
   if (isSmtpProbingEnabled() && !skipSmtp && primaryMx) {
-    const probe = await probeSmtpMailbox(primaryMx, email, 6000);
+    const probe = await probeSmtpMailbox(primaryMx, email, 3500);
     smtpResult = probe.result;
     smtpCode = probe.code;
     smtpMessage = probe.message;
