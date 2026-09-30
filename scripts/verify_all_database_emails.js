@@ -3,13 +3,13 @@
 /**
  * scripts/verify_all_database_emails.js
  * 
- * Production-Grade Resumable Bulk Email Verification Pipeline Runner
+ * Production Resumable Email Verification Pipeline (Line-by-Line Step-by-Step Live Monitor)
  * Features:
- *   - Resumable state file (.verification_progress.json) with UUID keyset pagination
- *   - Port 25 SMTP + MX + Dual-Probe Catch-All verification
- *   - High-throughput parallel worker pool (15 workers)
- *   - Real-time Redis & Postgres stats telemetry for live monitoring dashboard
- *   - Automatic reconnection & statement timeout handling
+ *   - Line-by-line step-by-step real-time terminal output
+ *   - Automatic checkpoint resume (.verification_progress.json)
+ *   - Keyset cursor pagination (WHERE uuid > $last_uuid) for sub-second database queries
+ *   - Port 25 SMTP + MX + Dual Probe Catch-All Verification Engine
+ *   - Updates is_email_valid, email_status, email_score, email_verified_at in PostgreSQL
  */
 
 require("dotenv").config({ path: "/Volumes/akshat/LeadGenerator/.env" });
@@ -17,10 +17,9 @@ const fs   = require("fs");
 const path = require("path");
 const { Pool } = require("pg");
 const { verifyEmail } = require("../src/services/emailVerification/pipeline");
-const { cacheSet } = require("../src/db/redis");
 
-const BATCH_SIZE = 20;
-const PARALLEL_CONCURRENCY = 8;
+const BATCH_SIZE = 10;
+const PARALLEL_CONCURRENCY = 5;
 const STATE_FILE = path.join(__dirname, ".verification_progress.json");
 const DB_URL = process.env.NEON_DATABASE_URL;
 
@@ -32,11 +31,15 @@ if (!DB_URL) {
 const pool = new Pool({
   connectionString: DB_URL,
   ssl: { rejectUnauthorized: false },
-  max: 20,
+  max: 15,
   idleTimeoutMillis: 30000,
 });
 
-// Load or initialize persistent state
+// Immediate unbuffered output function for step-by-step live streaming
+function printLine(msg) {
+  process.stdout.write(msg + "\n");
+}
+
 function loadState() {
   try {
     if (fs.existsSync(STATE_FILE)) {
@@ -94,30 +97,11 @@ async function mapConcurrent(items, concurrency, fn) {
   return results;
 }
 
-// Live stream log & Redis update helper
-const recentLogs = [];
-async function broadcastLiveLog(type, email, status, score, durationMs, stateObj) {
-  const entry = {
-    type,
-    email,
-    status,
-    score,
-    durationMs,
-    timestamp: new Date().toLocaleTimeString()
-  };
-
-  recentLogs.unshift(entry);
-  if (recentLogs.length > 10) recentLogs.pop();
-
-  const telemetry = {
-    state: stateObj,
-    recentLogs,
-    updatedAt: new Date().toISOString()
-  };
-
-  try {
-    await cacheSet("doott:verifier:live_telemetry", telemetry, 300);
-  } catch (_) {}
+function getBadge(status) {
+  if (status === "deliverable") return "✅ DELIVERABLE  ";
+  if (status === "undeliverable") return "❌ UNDELIVERABLE";
+  if (status === "risky") return "⚠️ RISKY        ";
+  return "❓ UNKNOWN      ";
 }
 
 async function verifyPeopleBatch(state) {
@@ -134,17 +118,13 @@ async function verifyPeopleBatch(state) {
       LIMIT ${BATCH_SIZE};
     `, [state.people_last_uuid]);
 
-    if (res.rows.length === 0) {
-      // Reset cursor if end reached
-      state.people_last_uuid = "00000000-0000-0000-0000-000000000000";
-      return 0;
-    }
+    if (res.rows.length === 0) return [];
 
     const updates = await mapConcurrent(res.rows, PARALLEL_CONCURRENCY, async (row) => {
       const start = Date.now();
       const targetEmail = parseEmail(row.emails);
       if (!targetEmail) {
-        return { uuid: row.uuid, is_valid: false, status: "invalid_syntax", score: 0.0, email: row.emails, durationMs: 0 };
+        return { uuid: row.uuid, is_valid: false, status: "invalid_syntax", score: 0.0, email: row.emails, durationMs: 0, reason: "Invalid syntax" };
       }
 
       try {
@@ -157,7 +137,9 @@ async function verifyPeopleBatch(state) {
         else if (verif.state === "risky") state.risky_count++;
         else state.unknown_count++;
 
-        await broadcastLiveLog("Person", targetEmail, verif.state, verif.score, durationMs, state);
+        const timeStr = new Date().toLocaleTimeString();
+        const badge = getBadge(verif.state);
+        printLine(`[${timeStr}] [Person]  ${targetEmail.padEnd(36)} ➔ ${badge} (Score: ${verif.score.toFixed(2)} | ${verif.reason} | ${durationMs}ms)`);
 
         return {
           uuid: row.uuid,
@@ -165,10 +147,12 @@ async function verifyPeopleBatch(state) {
           status: verif.state,
           score: verif.score,
           email: targetEmail,
-          durationMs
+          durationMs,
+          reason: verif.reason
         };
       } catch (err) {
-        return { uuid: row.uuid, is_valid: null, status: "error", score: 0.0, email: targetEmail, durationMs: 0 };
+        printLine(`[${new Date().toLocaleTimeString()}] [Person]  ${targetEmail.padEnd(36)} ➔ ❓ ERROR        (${err.message})`);
+        return { uuid: row.uuid, is_valid: null, status: "error", score: 0.0, email: targetEmail, durationMs: 0, reason: err.message };
       }
     });
 
@@ -186,7 +170,7 @@ async function verifyPeopleBatch(state) {
     state.total_people_verified += updates.length;
     saveState(state);
 
-    return updates.length;
+    return updates;
   } finally {
     client.release();
   }
@@ -206,16 +190,13 @@ async function verifyCompaniesBatch(state) {
       LIMIT ${BATCH_SIZE};
     `, [state.companies_last_uuid]);
 
-    if (res.rows.length === 0) {
-      state.companies_last_uuid = "00000000-0000-0000-0000-000000000000";
-      return 0;
-    }
+    if (res.rows.length === 0) return [];
 
     const updates = await mapConcurrent(res.rows, PARALLEL_CONCURRENCY, async (row) => {
       const start = Date.now();
       const targetEmail = parseEmail(row.emails);
       if (!targetEmail) {
-        return { uuid: row.uuid, is_valid: false, status: "invalid_syntax", score: 0.0, email: row.emails, durationMs: 0 };
+        return { uuid: row.uuid, is_valid: false, status: "invalid_syntax", score: 0.0, email: row.emails, durationMs: 0, reason: "Invalid syntax" };
       }
 
       try {
@@ -228,7 +209,9 @@ async function verifyCompaniesBatch(state) {
         else if (verif.state === "risky") state.risky_count++;
         else state.unknown_count++;
 
-        await broadcastLiveLog("Company", targetEmail, verif.state, verif.score, durationMs, state);
+        const timeStr = new Date().toLocaleTimeString();
+        const badge = getBadge(verif.state);
+        printLine(`[${timeStr}] [Company] ${targetEmail.padEnd(36)} ➔ ${badge} (Score: ${verif.score.toFixed(2)} | ${verif.reason} | ${durationMs}ms)`);
 
         return {
           uuid: row.uuid,
@@ -236,10 +219,12 @@ async function verifyCompaniesBatch(state) {
           status: verif.state,
           score: verif.score,
           email: targetEmail,
-          durationMs
+          durationMs,
+          reason: verif.reason
         };
       } catch (err) {
-        return { uuid: row.uuid, is_valid: null, status: "error", score: 0.0, email: targetEmail, durationMs: 0 };
+        printLine(`[${new Date().toLocaleTimeString()}] [Company] ${targetEmail.padEnd(36)} ➔ ❓ ERROR        (${err.message})`);
+        return { uuid: row.uuid, is_valid: null, status: "error", score: 0.0, email: targetEmail, durationMs: 0, reason: err.message };
       }
     });
 
@@ -257,7 +242,7 @@ async function verifyCompaniesBatch(state) {
     state.total_companies_verified += updates.length;
     saveState(state);
 
-    return updates.length;
+    return updates;
   } finally {
     client.release();
   }
@@ -266,40 +251,47 @@ async function verifyCompaniesBatch(state) {
 async function startPipelineRunner() {
   const state = loadState();
 
-  console.log("=================================================");
-  console.log("⚡ DOOTT RESUMABLE EMAIL VERIFICATION PIPELINE ⚡");
-  console.log("=================================================");
-  console.log(`• Resuming People Cursor:    ${state.people_last_uuid}`);
-  console.log(`• Resuming Companies Cursor: ${state.companies_last_uuid}`);
-  console.log(`• Total Previously Verified: ${state.total_people_verified + state.total_companies_verified}`);
-  console.log("• Live Telemetry Stream:    doott:verifier:live_telemetry\n");
+  printLine("===============================================================================");
+  printLine("⚡ DOOTT STEP-BY-STEP LIVE EMAIL VERIFICATION PIPELINE ⚡");
+  printLine("===============================================================================");
+  printLine(`• Resuming People Cursor:    ${state.people_last_uuid}`);
+  printLine(`• Resuming Companies Cursor: ${state.companies_last_uuid}`);
+  printLine(`• Total Verified So Far:     ${state.total_people_verified + state.total_companies_verified}`);
+  printLine(`• Deliverable: ${state.deliverable_count} | Undeliverable: ${state.undeliverable_count} | Risky: ${state.risky_count}`);
+  printLine("===============================================================================\n");
 
   let running = true;
   process.on("SIGINT", () => {
-    console.log("\n⏹️ Saving state & shutting down gracefully...");
+    printLine("\n⏹️ Saving state checkpoint & shutting down gracefully...");
     saveState(state);
     running = false;
   });
 
   while (running) {
-    const pCount = await verifyPeopleBatch(state).catch(err => {
-      console.error("People batch error:", err.message);
-      return 0;
+    const pUpdates = await verifyPeopleBatch(state).catch(err => {
+      printLine(`People batch error: ${err.message}`);
+      return [];
     });
 
-    const cCount = await verifyCompaniesBatch(state).catch(err => {
-      console.error("Companies batch error:", err.message);
-      return 0;
+    const cUpdates = await verifyCompaniesBatch(state).catch(err => {
+      printLine(`Companies batch error: ${err.message}`);
+      return [];
     });
 
-    if (pCount === 0 && cCount === 0) {
-      console.log(`[${new Date().toLocaleTimeString()}] All pending emails verified! Checking again in 15s...`);
+    const pCount = Array.isArray(pUpdates) ? pUpdates.length : 0;
+    const cCount = Array.isArray(cUpdates) ? cUpdates.length : 0;
+
+    if (pCount > 0 || cCount > 0) {
+      const totalVerif = state.total_people_verified + state.total_companies_verified;
+      printLine(`─── 📊 Progress Summary: ${totalVerif.toLocaleString()} verified (People: ${state.total_people_verified} | Companies: ${state.total_companies_verified} | Deliverable: ${state.deliverable_count}) ───\n`);
+    } else {
+      printLine(`[${new Date().toLocaleTimeString()}] All pending emails verified! Checking again in 15 seconds...`);
       await new Promise(r => setTimeout(r, 15000));
     }
   }
 
   await pool.end();
-  console.log("Pipeline runner stopped cleanly.");
+  printLine("Pipeline runner stopped cleanly.");
 }
 
 startPipelineRunner().catch(err => {
