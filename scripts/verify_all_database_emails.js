@@ -255,12 +255,14 @@ async function runPipeline() {
     }
   }
 
-  // Run People table verification
-  await processTable("people", "people_last_uuid", "total_people_verified");
+  // 1. Run Companies table verification FIRST
+  printLine("🚀 Phase 1: Verifying all Company emails (final.companies)...");
+  await processTable("companies", "companies_last_uuid", "total_companies_verified");
 
-  // Run Companies table verification
+  // 2. Run People table verification SECOND
   if (running) {
-    await processTable("companies", "companies_last_uuid", "total_companies_verified");
+    printLine("🚀 Phase 2: Verifying all People emails (final.people)...");
+    await processTable("people", "people_last_uuid", "total_people_verified");
   }
 
   await pool.end();
