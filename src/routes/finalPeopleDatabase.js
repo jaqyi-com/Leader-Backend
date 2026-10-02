@@ -221,21 +221,33 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         "technology / startups": ["Software", "Engineer", "Developer", "CTO", "SaaS", "IT", "Architect"],
         "travel": ["Travel", "Tourism", "Hospitality", "Guide"],
         "travel & recreation": ["Travel", "Tourism", "Hospitality", "Guide"],
+        "hr manager": ["HR", "Human Resources", "People", "Talent"],
+        "talent acquisition specialist": ["Talent", "Recruiter", "Recruitment", "HR"],
+        "digital marketing specialist": ["Digital Marketing", "Marketing", "SEO", "Growth"],
+        "chartered accountant": ["Chartered Accountant", "Accountant", "Finance", "CA", "Audit"],
+        "legal counsel": ["Legal", "Counsel", "Attorney", "Lawyer", "Advocate"],
+        "advocate": ["Advocate", "Lawyer", "Legal", "Attorney", "Counsel"],
       };
 
       let aliases = JOB_TITLE_ALIASES[valLower];
-      if (!aliases && /[\/&,\+]+/.test(valLower)) {
-        const parts = valLower.split(/[\/&,\+]+/).map(p => p.trim()).filter(Boolean);
-        const collected = new Set();
-        for (const p of parts) {
-          if (JOB_TITLE_ALIASES[p]) {
-            JOB_TITLE_ALIASES[p].forEach(a => collected.add(a));
-          } else if (p.length > 2) {
-            collected.add(p);
+      if (!aliases) {
+        if (/[\/&,\+]+/.test(valLower)) {
+          const parts = valLower.split(/[\/&,\+]+/).map(p => p.trim()).filter(Boolean);
+          const collected = new Set();
+          for (const p of parts) {
+            if (JOB_TITLE_ALIASES[p]) {
+              JOB_TITLE_ALIASES[p].forEach(a => collected.add(a));
+            } else if (p.length > 2) {
+              collected.add(p);
+            }
           }
-        }
-        if (collected.size > 0) {
-          aliases = Array.from(collected);
+          if (collected.size > 0) aliases = Array.from(collected);
+        } else if (valLower.includes(" ")) {
+          // Decompose multi-word role titles like "Partner Attorney" or "Manager Supply Chain"
+          const words = valLower.split(/\s+/).filter(w => w.length > 2 && !["and", "the", "for", "with"].includes(w));
+          if (words.length > 1) {
+            aliases = words;
+          }
         }
       }
 
