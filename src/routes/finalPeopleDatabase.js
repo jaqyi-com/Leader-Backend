@@ -128,9 +128,9 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     if (col === "country" && val !== "") {
       const countryLower = val.toLowerCase().trim();
       if (countryLower === "india" || countryLower === "in") {
-        conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IS NOT NULL OR "city" IS NOT NULL)`);
+        conditions.push(`("state" IS NOT NULL OR "city" IS NOT NULL)`);
       } else if (countryLower === "usa" || countryLower === "us" || countryLower === "united states") {
-        conditions.push(`("geo_source" = 'us_zip' OR "location" ILIKE '%United States%')`);
+        conditions.push(`("location" ILIKE '%United States%' OR "state" IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY'))`);
       } else {
         conditions.push(`"location" ILIKE $${idx++}`);
         values.push(`%${val}%`);
@@ -312,12 +312,12 @@ function buildWhere(queryParams, embedding, _schema) {
 
   // Handle explicit country filter (if not already parsed via f_country_*)
   const countryParam = (queryParams.f_country || queryParams.country || "").toLowerCase();
-  const alreadyHasCountry = conditions.some(c => c.includes("geo_source") || c.includes("India") || c.includes("United States"));
+  const alreadyHasCountry = conditions.some(c => c.includes("state") || c.includes("city") || c.includes("United States"));
   if (!alreadyHasCountry && countryParam) {
     if (countryParam === "india") {
-      conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IS NOT NULL OR "city" IS NOT NULL)`);
+      conditions.push(`("state" IS NOT NULL OR "city" IS NOT NULL)`);
     } else if (countryParam === "usa" || countryParam === "us") {
-      conditions.push(`("geo_source" = 'us_zip' OR "location" ILIKE '%United States%')`);
+      conditions.push(`("location" ILIKE '%United States%' OR "state" IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY'))`);
     }
   }
 
