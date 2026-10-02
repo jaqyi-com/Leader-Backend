@@ -131,7 +131,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     if (col === "country" && val !== "") {
       const countryLower = val.toLowerCase().trim();
       if (countryLower === "india" || countryLower === "in") {
-        conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat', 'Telangana', 'Uttar Pradesh', 'Haryana', 'West Bengal', 'Kerala', 'Rajasthan', 'Punjab', 'Madhya Pradesh', 'Andhra Pradesh', 'Bihar', 'Odisha', 'Goa', 'Chandigarh', 'Assam', 'Jharkhand', 'Chhattisgarh', 'Uttarakhand', 'Himachal Pradesh') OR "location" ILIKE '%, India%')`);
+        conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat', 'Telangana', 'Uttar Pradesh', 'Haryana', 'West Bengal', 'Kerala', 'Rajasthan', 'Punjab', 'Madhya Pradesh', 'Andhra Pradesh', 'Bihar', 'Odisha', 'Goa', 'Chandigarh', 'Assam', 'Jharkhand', 'Chhattisgarh', 'Uttarakhand', 'Himachal Pradesh'))`);
       } else if (countryLower === "usa" || countryLower === "us" || countryLower === "united states") {
         conditions.push(`("geo_source" = 'us_zip' OR "location" ILIKE '%United States%')`);
       } else {
@@ -318,7 +318,7 @@ function buildWhere(queryParams, embedding, _schema) {
   const alreadyHasCountry = conditions.some(c => c.includes("geo_source") || c.includes("India") || c.includes("United States"));
   if (!alreadyHasCountry && countryParam) {
     if (countryParam === "india") {
-      conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat', 'Telangana', 'Uttar Pradesh', 'Haryana', 'West Bengal', 'Kerala', 'Rajasthan', 'Punjab', 'Madhya Pradesh', 'Andhra Pradesh', 'Bihar', 'Odisha', 'Goa', 'Chandigarh', 'Assam', 'Jharkhand', 'Chhattisgarh', 'Uttarakhand', 'Himachal Pradesh') OR "location" ILIKE '%, India%')`);
+      conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat', 'Telangana', 'Uttar Pradesh', 'Haryana', 'West Bengal', 'Kerala', 'Rajasthan', 'Punjab', 'Madhya Pradesh', 'Andhra Pradesh', 'Bihar', 'Odisha', 'Goa', 'Chandigarh', 'Assam', 'Jharkhand', 'Chhattisgarh', 'Uttarakhand', 'Himachal Pradesh'))`);
     } else if (countryParam === "usa" || countryParam === "us") {
       conditions.push(`("geo_source" = 'us_zip' OR "location" ILIKE '%United States%')`);
     }
