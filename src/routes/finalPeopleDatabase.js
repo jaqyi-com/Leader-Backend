@@ -131,7 +131,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     if (col === "country" && val !== "") {
       const countryLower = val.toLowerCase().trim();
       if (countryLower === "india" || countryLower === "in") {
-        conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat', 'Telangana', 'Uttar Pradesh', 'Haryana', 'West Bengal', 'Kerala', 'Rajasthan', 'Punjab', 'Madhya Pradesh', 'Andhra Pradesh', 'Bihar', 'Odisha', 'Goa', 'Chandigarh', 'Assam', 'Jharkhand', 'Chhattisgarh', 'Uttarakhand', 'Himachal Pradesh'))`);
+        conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IS NOT NULL OR "city" IS NOT NULL)`);
       } else if (countryLower === "usa" || countryLower === "us" || countryLower === "united states") {
         conditions.push(`("geo_source" = 'us_zip' OR "location" ILIKE '%United States%')`);
       } else {
@@ -288,19 +288,18 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function buildWhere(queryParams, embedding, _schema) {
   const { search = "" } = queryParams;
-  const primaryConditions   = [];
-  const secondaryConditions = [];
+  const conditions = [];
   const values     = [];
   let   idx        = 1;
   let   vectorIdx  = null;
 
   // If vector embedding is available, use vector search; fallback to text ILIKE
   if (embedding && embedding.length === 384) {
-    primaryConditions.push("embedding IS NOT NULL");
+    conditions.push("embedding IS NOT NULL");
     vectorIdx = idx++;
     values.push(JSON.stringify(embedding));
   } else if (search) {
-    secondaryConditions.push(`"full_name" ILIKE $${idx++}`);
+    conditions.push(`"full_name" ILIKE $${idx++}`);
     values.push(`%${search}%`);
   }
 
@@ -311,34 +310,24 @@ function buildWhere(queryParams, embedding, _schema) {
     values,
     idx
   );
-  
-  for (const cond of dynamicConditions) {
-    if (cond.startsWith(`"job_title"`) || cond.startsWith(`"city"`)) {
-      primaryConditions.push(cond);
-    } else {
-      secondaryConditions.push(cond);
-    }
-  }
+  conditions.push(...dynamicConditions);
   idx = nextIdx;
 
   // Handle explicit country filter (if not already parsed via f_country_*)
   const countryParam = (queryParams.f_country || queryParams.country || "").toLowerCase();
-  const alreadyHasCountry = secondaryConditions.some(c => c.includes("geo_source") || c.includes("India") || c.includes("United States"));
+  const alreadyHasCountry = conditions.some(c => c.includes("geo_source") || c.includes("India") || c.includes("United States"));
   if (!alreadyHasCountry && countryParam) {
     if (countryParam === "india") {
-      secondaryConditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat', 'Telangana', 'Uttar Pradesh', 'Haryana', 'West Bengal', 'Kerala', 'Rajasthan', 'Punjab', 'Madhya Pradesh', 'Andhra Pradesh', 'Bihar', 'Odisha', 'Goa', 'Chandigarh', 'Assam', 'Jharkhand', 'Chhattisgarh', 'Uttarakhand', 'Himachal Pradesh'))`);
+      conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IS NOT NULL OR "city" IS NOT NULL)`);
     } else if (countryParam === "usa" || countryParam === "us") {
-      secondaryConditions.push(`("location" ILIKE '%United States%' OR "geo_source" = 'us_zip')`);
+      conditions.push(`("geo_source" = 'us_zip' OR "location" ILIKE '%United States%')`);
     }
   }
 
-  const allConditions = [...primaryConditions, ...secondaryConditions];
-  const userHasFilters = allConditions.length > 0 || (embedding && embedding.length === 384);
+  const userHasFilters = conditions.length > 0 || (embedding && embedding.length === 384);
 
   return {
-    primaryWhereStr: primaryConditions.length > 0 ? `WHERE ${primaryConditions.join(" AND ")}` : "",
-    secondaryWhereStr: secondaryConditions.length > 0 ? `WHERE ${secondaryConditions.join(" AND ")}` : "",
-    whereStr: allConditions.length > 0 ? `WHERE ${allConditions.join(" AND ")}` : "",
+    whereStr: conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "",
     values,
     nextIdx: idx,
     vectorIdx,
@@ -491,7 +480,7 @@ router.get("/", async (req, res) => {
 
     const schema = await getSchema();
     const { selectSQL, selectCols } = schema;
-    const { primaryWhereStr, secondaryWhereStr, whereStr, values, nextIdx, vectorIdx, userHasFilters } = buildWhere(
+    const { whereStr, values, nextIdx, vectorIdx, userHasFilters } = buildWhere(
       req.query,
       embedding,
       schema
@@ -516,26 +505,12 @@ router.get("/", async (req, res) => {
       orderClause = "";
     }
 
-    let dataSQL;
-    if (primaryWhereStr && secondaryWhereStr) {
-      dataSQL = `
-        SELECT ${customSelectSQL} FROM (
-          SELECT * FROM ${FULL_TABLE}
-          ${primaryWhereStr}
-          LIMIT 2500
-        ) subq
-        ${secondaryWhereStr}
-        ${orderClause}
-        LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
-      `;
-    } else {
-      dataSQL = `
-        SELECT ${customSelectSQL} FROM ${FULL_TABLE}
-        ${whereStr}
-        ${orderClause}
-        LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
-      `;
-    }
+    const dataSQL = `
+      SELECT ${customSelectSQL} FROM ${FULL_TABLE}
+      ${whereStr}
+      ${orderClause}
+      LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
+    `;
 
     const dataPromise = pgQuery(dataSQL, [...values, limitNum, offset], 6000);
 
