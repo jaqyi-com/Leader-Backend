@@ -174,7 +174,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       if (aliases && aliases.length > 0) {
         const aliasConds = aliases.map(a => {
           const aIdx = idx++;
-          values.push(`%${a}%`);
+          values.push(`${a}%`);
           return `"city" ILIKE $${aIdx}`;
         });
         conditions.push(`(${aliasConds.join(" OR ")})`);
