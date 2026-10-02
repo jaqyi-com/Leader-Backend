@@ -506,12 +506,25 @@ router.get("/", async (req, res) => {
       orderClause = "";
     }
 
-    const dataSQL = `
-      SELECT ${customSelectSQL} FROM ${FULL_TABLE}
-      ${whereStr}
-      ${orderClause}
-      LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
-    `;
+    let dataSQL;
+    if (userHasFilters && whereStr) {
+      dataSQL = `
+        SELECT ${customSelectSQL} FROM (
+          SELECT * FROM ${FULL_TABLE}
+          ${whereStr}
+          LIMIT 2000
+        ) subq
+        ${orderClause}
+        LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
+      `;
+    } else {
+      dataSQL = `
+        SELECT ${customSelectSQL} FROM ${FULL_TABLE}
+        ${whereStr}
+        ${orderClause}
+        LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
+      `;
+    }
 
     const dataPromise = pgQuery(dataSQL, [...values, limitNum, offset], 6000);
 
