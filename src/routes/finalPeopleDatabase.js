@@ -128,7 +128,18 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     }
 
     // Special compatibility mapping for legacy filters
-    if (col === "has_email") {
+    if (col === "country" && val !== "") {
+      const countryLower = val.toLowerCase().trim();
+      if (countryLower === "india" || countryLower === "in") {
+        conditions.push(`("location" ILIKE '%India%' OR "state" ILIKE '%India%' OR "geo_source" IN ('in_pincode', 'pincode', 'state', 'city'))`);
+      } else if (countryLower === "usa" || countryLower === "us" || countryLower === "united states") {
+        conditions.push(`("location" ILIKE '%United States%' OR "geo_source" = 'us_zip')`);
+      } else {
+        conditions.push(`"location" ILIKE $${idx++}`);
+        values.push(`%${val}%`);
+      }
+      continue;
+    } else if (col === "has_email") {
       col = "emails";
       op = val === "true" ? "nonempty" : "empty";
     } else if (col === "has_phone") {
@@ -181,6 +192,33 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     }
 
     const doubleQuotedCol = `"${col}"`;
+
+    if (col === "job_title" && val !== "") {
+      const valLower = val.toLowerCase().trim();
+      const titleSet = new Set([
+        val.trim(),
+        valLower,
+        val.charAt(0).toUpperCase() + val.slice(1).toLowerCase(),
+      ]);
+
+      if (valLower.includes("founder")) {
+        ["Founder", "Co-Founder", "Co-founder", "Co Founder", "Founding Partner", "Co-Founder & CEO", "Founder & CEO", "founder", "co-founder", "Founding Director", "Co-Founder and CEO", "Founder and CEO"].forEach(v => titleSet.add(v));
+      }
+      if (valLower.includes("ceo")) {
+        ["CEO", "Chief Executive Officer", "CEO & Founder", "Co-Founder & CEO", "CEO and Founder", "Founder & CEO", "ceo"].forEach(v => titleSet.add(v));
+      }
+      if (valLower.includes("cto")) {
+        ["CTO", "Chief Technology Officer", "CTO & Co-Founder", "Co-Founder & CTO", "cto"].forEach(v => titleSet.add(v));
+      }
+      if (valLower.includes("director")) {
+        ["Director", "Managing Director", "Executive Director", "Director & Founder", "director"].forEach(v => titleSet.add(v));
+      }
+
+      const titlesArray = Array.from(titleSet);
+      conditions.push(`${doubleQuotedCol} = ANY($${idx++}::text[])`);
+      values.push(titlesArray);
+      continue;
+    }
 
     if (op === "eq") {
       if (val !== "") {
@@ -275,19 +313,19 @@ function buildWhere(queryParams, embedding, _schema) {
   conditions.push(...dynamicConditions);
   idx = nextIdx;
 
-  // Handle explicit country filter (e.g. from Category Explorer)
+  // Handle explicit country filter (if not already parsed via f_country_*)
   const countryParam = (queryParams.f_country || queryParams.country || "").toLowerCase();
-  if (countryParam === "india") {
-    conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "pincode" ~ '^[1-9][0-9]{5}$' OR "location" ILIKE '%India%')`);
-  } else if (countryParam === "usa" || countryParam === "us") {
-    conditions.push(`("geo_source" = 'us_zip' OR "location" ILIKE '%United States%')`);
+  const alreadyHasCountry = conditions.some(c => c.includes("geo_source") || c.includes("India") || c.includes("United States"));
+  if (!alreadyHasCountry && countryParam) {
+    if (countryParam === "india") {
+      conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "location" ILIKE '%India%')`);
+    } else if (countryParam === "usa" || countryParam === "us") {
+      conditions.push(`("geo_source" = 'us_zip' OR "location" ILIKE '%United States%')`);
+    }
   }
 
-  const hasFilters = dynamicConditions.length > 0 || countryParam !== "";
+  const hasFilters = conditions.length > 0;
   const userHasFilters = hasFilters || (embedding && embedding.length === 384);
-
-  // NOTE: No default filter applied on unfiltered load — avoids full table scan on 43M row table.
-  // Filtering by emails/phones without an index causes statement timeout.
 
   return {
     whereStr: conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "",
@@ -460,9 +498,12 @@ router.get("/", async (req, res) => {
     } else if (sort_by && selectCols.includes(sort_by)) {
       const dir = sort_dir === "desc" ? "DESC" : "ASC";
       orderClause = `ORDER BY "${sort_by}" ${dir} NULLS LAST`;
-    } else {
-      // Use uuid (primary key B-tree index) for fast default pagination — avoids full table sort on 43M rows
+    } else if (!userHasFilters) {
+      // Use uuid (primary key B-tree index) for fast default pagination when no filters applied
       orderClause = `ORDER BY uuid`;
+    } else {
+      // When filters ARE applied, omit ORDER BY uuid to allow PostgreSQL to use fast index/bitmap scan directly
+      orderClause = "";
     }
 
     const dataSQL = `
@@ -492,9 +533,9 @@ router.get("/", async (req, res) => {
       countPromise = (async () => {
         try {
           const countRes = await pgQuery(
-            `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 100001) subq`,
+            `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 10001) subq`,
             values,
-            8000
+            4000
           );
           return parseInt(countRes.rows[0]?.cnt || "0", 10);
         } catch (err) {
