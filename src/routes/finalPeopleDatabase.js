@@ -192,6 +192,36 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
 
     if (col === "job_title" && val !== "") {
       const valLower = val.toLowerCase().trim();
+
+      const JOB_TITLE_ALIASES = {
+        "hospitals": ["Hospital", "Healthcare", "Health", "Medical", "Doctor", "Physician", "Surgeon"],
+        "hospital": ["Hospital", "Healthcare", "Health", "Medical", "Doctor", "Physician", "Surgeon"],
+        "food": ["Food", "Beverage", "FMCG", "Chef", "Catering", "Dairy", "Nutrition"],
+        "restaurant": ["Restaurant", "Cafe", "Dining", "Hospitality", "Chef", "Baker"],
+        "restaurants": ["Restaurant", "Cafe", "Dining", "Hospitality", "Chef", "Baker"],
+        "fitness": ["Fitness", "Gym", "Trainer", "Wellness", "Coach"],
+        "real estate": ["Real Estate", "Property", "Realtor", "Broker", "Architect", "Builder"],
+        "automobile": ["Automobile", "Automotive", "Auto", "Vehicle", "Dealer"],
+        "education": ["Education", "Teacher", "Professor", "Academic", "Principal", "EdTech"],
+        "finance": ["Finance", "Financial", "Accountant", "CFO", "Banking", "Investor", "CA"],
+        "retail": ["Retail", "Store", "Sales", "Merchant", "Brand"],
+        "hotel": ["Hotel", "Hospitality", "Resort", "Lodging"],
+        "fashion": ["Fashion", "Apparel", "Garment", "Designer", "Textile"],
+        "software": ["Software", "Engineer", "Developer", "CTO", "SaaS", "IT", "Architect"],
+        "travel": ["Travel", "Tourism", "Hospitality", "Guide"],
+      };
+
+      const aliases = JOB_TITLE_ALIASES[valLower];
+      if (aliases && aliases.length > 0) {
+        const aliasConds = aliases.map(a => {
+          const aIdx = idx++;
+          values.push(`%${a}%`);
+          return `"job_title" ILIKE $${aIdx}`;
+        });
+        conditions.push(`(${aliasConds.join(" OR ")})`);
+        continue;
+      }
+
       const titleSet = new Set([
         val.trim(),
         valLower,
@@ -212,8 +242,12 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       }
 
       const titlesArray = Array.from(titleSet);
-      const escapedLiterals = titlesArray.map(t => `'${t.replace(/'/g, "''")}'`).join(", ");
-      conditions.push(`${doubleQuotedCol} = ANY(ARRAY[${escapedLiterals}])`);
+      const aliasConds = titlesArray.map(t => {
+        const aIdx = idx++;
+        values.push(`%${t}%`);
+        return `"job_title" ILIKE $${aIdx}`;
+      });
+      conditions.push(`(${aliasConds.join(" OR ")})`);
       continue;
     }
 

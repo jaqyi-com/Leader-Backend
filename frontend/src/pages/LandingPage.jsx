@@ -368,7 +368,7 @@ function CategoriesShowcase() {
       icon: ShoppingBag,
       count: "1,250,000+ Records",
       desc: "Beverage Manufacturers, Packaged Foods, Dairy Brands, FMCG Distributors, Food Tech",
-      targetPath: "/app/people?f_job_title=Food",
+      targetPath: "/app/companies?f_industry=Food&f_country=india",
       color: "text-amber-400 border-amber-500/20 bg-amber-500/10"
     },
     {
@@ -378,7 +378,7 @@ function CategoriesShowcase() {
       icon: UtensilsCrossed,
       count: "850,000+ Records",
       desc: "Fine Dining, QSR Chains, Cafes, Bakeries, Cloud Kitchens, Food Services",
-      targetPath: "/app/people?f_job_title=Restaurant",
+      targetPath: "/app/companies?f_industry=Restaurants&f_country=india",
       color: "text-orange-400 border-orange-500/20 bg-orange-500/10"
     },
     {
@@ -388,7 +388,7 @@ function CategoriesShowcase() {
       icon: Dumbbell,
       count: "420,000+ Records",
       desc: "Gyms, Fitness Centers, Yoga Studios, Spa & Wellness, Health & Nutrition Brands",
-      targetPath: "/app/people?f_job_title=Fitness",
+      targetPath: "/app/companies?f_industry=Fitness&f_country=india",
       color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
     },
     {
@@ -398,7 +398,7 @@ function CategoriesShowcase() {
       icon: Home,
       count: "1,890,000+ Records",
       desc: "Property Developers, Real Estate Agencies, Commercial Builders, Architects, Brokers",
-      targetPath: "/app/people?f_job_title=Real+Estate",
+      targetPath: "/app/companies?f_industry=Real+Estate&f_country=india",
       color: "text-blue-400 border-blue-500/20 bg-blue-500/10"
     },
     {
@@ -408,7 +408,7 @@ function CategoriesShowcase() {
       icon: Car,
       count: "960,000+ Records",
       desc: "Auto Dealerships, EV Manufacturers, Auto Components, Fleet Operators, Repair Chains",
-      targetPath: "/app/people?f_job_title=Automobile",
+      targetPath: "/app/companies?f_industry=Automobile&f_country=india",
       color: "text-red-400 border-red-500/20 bg-red-500/10"
     },
     {
@@ -418,7 +418,7 @@ function CategoriesShowcase() {
       icon: GraduationCap,
       count: "1,420,000+ Records",
       desc: "Universities, K-12 Schools, Online Learning Platforms, EdTech Startups, Academies",
-      targetPath: "/app/people?f_job_title=Education",
+      targetPath: "/app/companies?f_industry=Education&f_country=india",
       color: "text-cyan-400 border-cyan-500/20 bg-cyan-500/10"
     },
     {
@@ -428,7 +428,7 @@ function CategoriesShowcase() {
       icon: Landmark,
       count: "2,150,000+ Records",
       desc: "Banks, Investment Firms, Insurance Brokers, Fintech, Accounting Partners, CAs",
-      targetPath: "/app/people?f_job_title=Finance",
+      targetPath: "/app/companies?f_industry=Financial&f_country=india",
       color: "text-green-400 border-green-500/20 bg-green-500/10"
     },
     {
@@ -438,7 +438,7 @@ function CategoriesShowcase() {
       icon: Store,
       count: "1,680,000+ Records",
       desc: "E-commerce Brands, D2C Startups, Supermarkets, Apparel Outlets, Luxury Goods",
-      targetPath: "/app/people?f_job_title=Retail",
+      targetPath: "/app/companies?f_industry=Retail&f_country=india",
       color: "text-indigo-400 border-indigo-500/20 bg-indigo-500/10"
     },
     {
@@ -448,7 +448,7 @@ function CategoriesShowcase() {
       icon: Hotel,
       count: "640,000+ Records",
       desc: "Luxury Hotels, Resorts, Lodging, Boutique Stays, Event Venues, Travel Hospitality",
-      targetPath: "/app/people?f_job_title=Hotel",
+      targetPath: "/app/companies?f_industry=Hospitality&f_country=india",
       color: "text-purple-400 border-purple-500/20 bg-purple-500/10"
     },
     {
@@ -458,7 +458,7 @@ function CategoriesShowcase() {
       icon: Shirt,
       count: "780,000+ Records",
       desc: "Garment Manufacturers, Apparel Brands, Fashion Designers, Accessories, Textile Mills",
-      targetPath: "/app/people?f_job_title=Fashion",
+      targetPath: "/app/companies?f_industry=Fashion&f_country=india",
       color: "text-pink-400 border-pink-500/20 bg-pink-500/10"
     },
     {
@@ -468,7 +468,7 @@ function CategoriesShowcase() {
       icon: Cpu,
       count: "5,800,000+ Records",
       desc: "Software / SaaS, IT Services, AI & Cloud, Hardware, Telecom, Cyber Security",
-      targetPath: "/app/people?f_job_title=Software",
+      targetPath: "/app/companies?f_industry=Software&f_country=india",
       color: "text-sky-400 border-sky-500/20 bg-sky-500/10"
     },
     {
@@ -478,7 +478,7 @@ function CategoriesShowcase() {
       icon: Compass,
       count: "510,000+ Records",
       desc: "Travel Agencies, Tour Operators, Adventure Sports, Theme Parks, Aviation & Charters",
-      targetPath: "/app/people?f_job_title=Travel",
+      targetPath: "/app/companies?f_industry=Travel&f_country=india",
       color: "text-teal-400 border-teal-500/20 bg-teal-500/10"
     },
 

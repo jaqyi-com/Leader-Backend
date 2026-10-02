@@ -124,7 +124,54 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     }
 
     // Special compatibility mapping for legacy filters
-    if (col === "has_email") {
+    if (col === "country" && val !== "") {
+      const countryLower = val.toLowerCase().trim();
+      if (countryLower === "india" || countryLower === "in") {
+        conditions.push(`("geo_source" != 'us_zip' OR "pincode" ~ '^[1-9][0-9]{5}$' OR "city" IN ('Mumbai', 'Bengaluru', 'Delhi', 'New Delhi', 'Hyderabad', 'Pune', 'Chennai', 'Kolkata', 'Ahmedabad', 'Surat', 'Jaipur', 'Lucknow', 'Indore', 'Vadodara', 'Noida', 'Gurgaon', 'Gurugram', 'Chandigarh'))`);
+      } else if (countryLower === "usa" || countryLower === "us" || countryLower === "united states") {
+        conditions.push(`("geo_source" = 'us_zip' OR "address" ILIKE '%USA%' OR "address" ILIKE '%United States%')`);
+      } else {
+        conditions.push(`"address" ILIKE $${idx++}`);
+        values.push(`%${val}%`);
+      }
+      continue;
+    } else if (col === "industry" && val !== "") {
+      const valLower = val.toLowerCase().trim();
+      const INDUSTRY_ALIASES = {
+        "hospitals": ["Hospital", "Healthcare", "Health", "Medical", "Clinic", "Doctor", "Pharmacy"],
+        "hospital": ["Hospital", "Healthcare", "Health", "Medical", "Clinic", "Doctor", "Pharmacy"],
+        "healthcare": ["Healthcare", "Health", "Hospital", "Medical", "Clinic", "Pharmacy"],
+        "fmcg": ["FMCG", "Food", "Beverage", "Packaged", "Consumer Goods", "Dairy"],
+        "restaurants": ["Restaurant", "Cafe", "Dining", "Caterers", "Food", "Bakery"],
+        "restaurant": ["Restaurant", "Cafe", "Dining", "Caterers", "Food", "Bakery"],
+        "fitness": ["Fitness", "Gym", "Wellness", "Spa", "Health"],
+        "wellness": ["Wellness", "Fitness", "Gym", "Spa", "Health Care"],
+        "real estate": ["Real Estate", "Property", "Construction", "Architect", "Builder"],
+        "automobile": ["Automobile", "Automotive", "Auto", "Vehicle", "Dealership"],
+        "education": ["Education", "School", "University", "College", "EdTech", "Academic"],
+        "finance": ["Financial", "Finance", "Banking", "Insurance", "Investment", "Accounting"],
+        "financial": ["Financial", "Finance", "Banking", "Insurance", "Investment", "Accounting"],
+        "financial services": ["Financial", "Finance", "Banking", "Insurance", "Investment", "Accounting"],
+        "retail": ["Retail", "Store", "Apparel", "Garments", "E-commerce", "Consumer"],
+        "hospitality": ["Hospitality", "Hotel", "Resort", "Lodging", "Travel"],
+        "hotels": ["Hotel", "Hospitality", "Resort", "Lodging"],
+        "fashion": ["Fashion", "Apparel", "Garments", "Clothing", "Textile"],
+        "technology": ["Software", "Technology", "Tech", "Internet", "Computers", "IT"],
+        "software": ["Software", "Technology", "Tech", "Internet", "Computers", "IT"],
+        "travel": ["Travel", "Recreation", "Leisure", "Tour", "Aviation"],
+      };
+
+      const aliases = INDUSTRY_ALIASES[valLower];
+      if (aliases && aliases.length > 0) {
+        const aliasConds = aliases.map(a => {
+          const aIdx = idx++;
+          values.push(`%${a}%`);
+          return `"industry" ILIKE $${aIdx}`;
+        });
+        conditions.push(`(${aliasConds.join(" OR ")})`);
+        continue;
+      }
+    } else if (col === "has_email") {
       col = "emails";
       op = val === "true" ? "nonempty" : "empty";
     } else if (col === "has_phone") {
@@ -285,11 +332,14 @@ function buildWhere(queryParams, embedding, _schema) {
   idx = nextIdx;
 
   // Handle explicit country filter (e.g. from Category Explorer)
-  const countryParam = (queryParams.f_country || queryParams.country || "").toLowerCase();
-  if (countryParam === "india") {
-    conditions.push(`("geo_source" != 'us_zip' OR "pincode" ~ '^[1-9][0-9]{5}$' OR "city" IN ('Mumbai', 'Bengaluru', 'Delhi', 'New Delhi', 'Hyderabad', 'Pune', 'Chennai', 'Kolkata', 'Ahmedabad', 'Surat', 'Jaipur', 'Lucknow', 'Indore', 'Vadodara', 'Noida', 'Gurgaon', 'Gurugram', 'Chandigarh'))`);
-  } else if (countryParam === "usa" || countryParam === "us") {
-    conditions.push(`("geo_source" = 'us_zip')`);
+  const countryParam = (queryParams.f_country || queryParams.f_country_contains || queryParams.f_country_eq || queryParams.country || "").toLowerCase();
+  const alreadyHasCountry = dynamicConditions.some(c => c.includes("geo_source") || c.includes("us_zip"));
+  if (!alreadyHasCountry && countryParam) {
+    if (countryParam === "india") {
+      conditions.push(`("geo_source" != 'us_zip' OR "pincode" ~ '^[1-9][0-9]{5}$' OR "city" IN ('Mumbai', 'Bengaluru', 'Delhi', 'New Delhi', 'Hyderabad', 'Pune', 'Chennai', 'Kolkata', 'Ahmedabad', 'Surat', 'Jaipur', 'Lucknow', 'Indore', 'Vadodara', 'Noida', 'Gurgaon', 'Gurugram', 'Chandigarh'))`);
+    } else if (countryParam === "usa" || countryParam === "us") {
+      conditions.push(`("geo_source" = 'us_zip')`);
+    }
   }
 
   const hasFilters = dynamicConditions.length > 0 || countryParam !== "";
