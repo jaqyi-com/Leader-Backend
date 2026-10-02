@@ -347,7 +347,7 @@ router.get("/health", async (req, res) => {
       );
       totalRecords = parseInt(cnt.rows[0]?.cnt || "0", 10);
     } catch (_) {}
-    res.json({ ok: true, source: "cloud_sql", table: FULL_TABLE,
+    res.json({ ok: true, version: "v2026.10.02-a42c9bb", source: "cloud_sql", table: FULL_TABLE,
       serverTime: pingRes.rows[0].now, totalRecords });
   } catch (err) {
     logger.error(`[health] ${err.message}`);
