@@ -313,7 +313,7 @@ function buildWhere(queryParams, embedding, _schema) {
   );
   
   for (const cond of dynamicConditions) {
-    if (cond.includes(`"job_title"`) || cond.includes(`"city"`) || cond.includes(`"state"`)) {
+    if (cond.startsWith(`"job_title"`) || cond.startsWith(`"city"`)) {
       primaryConditions.push(cond);
     } else {
       secondaryConditions.push(cond);
