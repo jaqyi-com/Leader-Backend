@@ -513,46 +513,45 @@ router.get("/", async (req, res) => {
       LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
     `;
 
-    const dataPromise = pgQuery(dataSQL, [...values, limitNum, offset], 30000);
+    const dataPromise = pgQuery(dataSQL, [...values, limitNum, offset], 6000);
 
-    let countPromise;
-    if (!userHasFilters) {
-      countPromise = (async () => {
-        const cachedCount = await cacheGet(COUNT_CACHE_KEY);
-        if (cachedCount !== null && cachedCount !== undefined) return cachedCount;
-        const countRes = await pgQuery(
-          `SELECT reltuples::bigint AS cnt FROM pg_class WHERE oid = $1::regclass`,
-          [FULL_TABLE],
-          5000
-        );
-        const cnt = parseInt(countRes.rows[0]?.cnt || "0", 10);
-        await cacheSet(COUNT_CACHE_KEY, cnt, COUNT_TTL);
-        return cnt;
-      })();
-    } else {
-      countPromise = (async () => {
-        try {
-          const countRes = await pgQuery(
-            `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 10001) subq`,
-            values,
-            4000
-          );
-          return parseInt(countRes.rows[0]?.cnt || "0", 10);
-        } catch (err) {
-          logger.warn(`Count query timed out or failed (${err.message}), falling back to estimate`);
-          return null;
-        }
-      })();
-    }
-
-    const [dataRes, countResult] = await Promise.all([dataPromise, countPromise]);
+    const dataRes = await dataPromise;
     const records = dataRes.rows.map(row => normalizeRow(schema, row));
 
     let total;
-    if (countResult !== null && countResult !== undefined) {
-      total = countResult;
+    if (!userHasFilters) {
+      const cachedCount = await cacheGet(COUNT_CACHE_KEY);
+      if (cachedCount !== null && cachedCount !== undefined) {
+        total = cachedCount;
+      } else {
+        try {
+          const countRes = await pgQuery(
+            `SELECT reltuples::bigint AS cnt FROM pg_class WHERE oid = $1::regclass`,
+            [FULL_TABLE],
+            2000
+          );
+          total = parseInt(countRes.rows[0]?.cnt || "0", 10);
+          await cacheSet(COUNT_CACHE_KEY, total, COUNT_TTL);
+        } catch (_) {
+          total = 45059532;
+        }
+      }
+    } else if (records.length < limitNum && pageNum === 1) {
+      // Exact total known directly from page 1 results!
+      total = records.length;
     } else {
-      total = records.length >= limitNum ? (pageNum * limitNum) + 5000 : ((pageNum - 1) * limitNum) + records.length;
+      try {
+        const countRes = await pgQuery(
+          `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 5001) subq`,
+          values,
+          2000
+        );
+        const cnt = parseInt(countRes.rows[0]?.cnt || "0", 10);
+        total = cnt >= 5001 ? (pageNum * limitNum) + 5000 : cnt;
+      } catch (err) {
+        logger.warn(`Count query timed out or failed (${err.message}), using estimate`);
+        total = records.length >= limitNum ? (pageNum * limitNum) + 5000 : ((pageNum - 1) * limitNum) + records.length;
+      }
     }
 
     res.json({
