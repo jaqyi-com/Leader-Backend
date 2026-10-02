@@ -6,6 +6,9 @@ import {
   Users2, Building2, Mail, Phone,
   Database, Search, Download, Filter,
   CheckCircle, Zap, Globe, Brain,
+  ShoppingBag, UtensilsCrossed, Dumbbell, Home, Car,
+  GraduationCap, Landmark, Store, Hotel, Shirt, Cpu, Compass,
+  Briefcase, UserCheck, Sparkles, ArrowRight, Tag,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import doottLogo from "../assets/doott-logo.png";
@@ -28,6 +31,7 @@ export default function LandingPage() {
       <Hero />
       <Marquee />
       <DatabaseShowcase />
+      <CategoriesShowcase />
       <Features />
       <Metrics />
       <UseCases />
@@ -56,6 +60,7 @@ function Nav() {
           className="hidden items-center gap-8 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground md:flex"
         >
           <a href="#database" className="transition hover:text-foreground">Database</a>
+          <a href="#categories" className="transition hover:text-foreground">Categories</a>
           <a href="#features" className="transition hover:text-foreground">Features</a>
           <a href="#faq" className="transition hover:text-foreground">FAQ</a>
           <Link to="/pricing" className="transition hover:text-foreground text-primary font-semibold">Pricing</Link>
@@ -341,6 +346,327 @@ function DatabaseShowcase() {
               >
                 {col}
               </span>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Categories Showcase ───────────────────────────────────── */
+function CategoriesShowcase() {
+  const [activeTab, setActiveTab] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const categories = [
+    // 12 Primary Industry Sectors
+    {
+      id: "fmcg",
+      name: "FMCG / Food & Beverage",
+      type: "industry",
+      icon: ShoppingBag,
+      count: "1,250,000+ Records",
+      desc: "Beverage Manufacturers, Packaged Foods, Dairy Brands, FMCG Distributors, Food Tech",
+      targetPath: "/app/people?f_job_title=Food",
+      color: "text-amber-400 border-amber-500/20 bg-amber-500/10"
+    },
+    {
+      id: "restaurants",
+      name: "Restaurants & Cafes",
+      type: "industry",
+      icon: UtensilsCrossed,
+      count: "850,000+ Records",
+      desc: "Fine Dining, QSR Chains, Cafes, Bakeries, Cloud Kitchens, Food Services",
+      targetPath: "/app/people?f_job_title=Restaurant",
+      color: "text-orange-400 border-orange-500/20 bg-orange-500/10"
+    },
+    {
+      id: "fitness",
+      name: "Fitness / Wellness",
+      type: "industry",
+      icon: Dumbbell,
+      count: "420,000+ Records",
+      desc: "Gyms, Fitness Centers, Yoga Studios, Spa & Wellness, Health & Nutrition Brands",
+      targetPath: "/app/people?f_job_title=Fitness",
+      color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
+    },
+    {
+      id: "realestate",
+      name: "Real Estate & Construction",
+      type: "industry",
+      icon: Home,
+      count: "1,890,000+ Records",
+      desc: "Property Developers, Real Estate Agencies, Commercial Builders, Architects, Brokers",
+      targetPath: "/app/people?f_job_title=Real+Estate",
+      color: "text-blue-400 border-blue-500/20 bg-blue-500/10"
+    },
+    {
+      id: "automobile",
+      name: "Automobile / Dealerships",
+      type: "industry",
+      icon: Car,
+      count: "960,000+ Records",
+      desc: "Auto Dealerships, EV Manufacturers, Auto Components, Fleet Operators, Repair Chains",
+      targetPath: "/app/people?f_job_title=Automobile",
+      color: "text-red-400 border-red-500/20 bg-red-500/10"
+    },
+    {
+      id: "education",
+      name: "Education / EdTech",
+      type: "industry",
+      icon: GraduationCap,
+      count: "1,420,000+ Records",
+      desc: "Universities, K-12 Schools, Online Learning Platforms, EdTech Startups, Academies",
+      targetPath: "/app/people?f_job_title=Education",
+      color: "text-cyan-400 border-cyan-500/20 bg-cyan-500/10"
+    },
+    {
+      id: "finance",
+      name: "Financial Services / Insurance",
+      type: "industry",
+      icon: Landmark,
+      count: "2,150,000+ Records",
+      desc: "Banks, Investment Firms, Insurance Brokers, Fintech, Accounting Partners, CAs",
+      targetPath: "/app/people?f_job_title=Finance",
+      color: "text-green-400 border-green-500/20 bg-green-500/10"
+    },
+    {
+      id: "retail",
+      name: "Retail / D2C / Consumer Brands",
+      type: "industry",
+      icon: Store,
+      count: "1,680,000+ Records",
+      desc: "E-commerce Brands, D2C Startups, Supermarkets, Apparel Outlets, Luxury Goods",
+      targetPath: "/app/people?f_job_title=Retail",
+      color: "text-indigo-400 border-indigo-500/20 bg-indigo-500/10"
+    },
+    {
+      id: "hospitality",
+      name: "Hospitality & Hotels",
+      type: "industry",
+      icon: Hotel,
+      count: "640,000+ Records",
+      desc: "Luxury Hotels, Resorts, Lodging, Boutique Stays, Event Venues, Travel Hospitality",
+      targetPath: "/app/people?f_job_title=Hotel",
+      color: "text-purple-400 border-purple-500/20 bg-purple-500/10"
+    },
+    {
+      id: "fashion",
+      name: "Fashion / Lifestyle",
+      type: "industry",
+      icon: Shirt,
+      count: "780,000+ Records",
+      desc: "Garment Manufacturers, Apparel Brands, Fashion Designers, Accessories, Textile Mills",
+      targetPath: "/app/people?f_job_title=Fashion",
+      color: "text-pink-400 border-pink-500/20 bg-pink-500/10"
+    },
+    {
+      id: "technology",
+      name: "Technology / Startups",
+      type: "industry",
+      icon: Cpu,
+      count: "5,800,000+ Records",
+      desc: "Software / SaaS, IT Services, AI & Cloud, Hardware, Telecom, Cyber Security",
+      targetPath: "/app/people?f_job_title=Software",
+      color: "text-sky-400 border-sky-500/20 bg-sky-500/10"
+    },
+    {
+      id: "travel",
+      name: "Travel & Recreation",
+      type: "industry",
+      icon: Compass,
+      count: "510,000+ Records",
+      desc: "Travel Agencies, Tour Operators, Adventure Sports, Theme Parks, Aviation & Charters",
+      targetPath: "/app/people?f_job_title=Travel",
+      color: "text-teal-400 border-teal-500/20 bg-teal-500/10"
+    },
+
+    // Executive Decision Maker Roles
+    {
+      id: "founders",
+      name: "Founders & Co-Founders",
+      type: "roles",
+      icon: Sparkles,
+      count: "1,240,000+ Contacts",
+      desc: "Startup Founders, Business Owners, Co-Founders, Founding Partners, Managing Directors",
+      targetPath: "/app/people?f_job_title=Founder",
+      color: "text-amber-400 border-amber-500/20 bg-amber-500/10"
+    },
+    {
+      id: "ceos",
+      name: "CEOs & Presidents",
+      type: "roles",
+      icon: Briefcase,
+      count: "2,850,000+ Contacts",
+      desc: "Chief Executive Officers, Presidents, Managing Directors, C-Suite Leaders",
+      targetPath: "/app/people?f_job_title=CEO",
+      color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
+    },
+    {
+      id: "sales",
+      name: "Sales & BD Leaders",
+      type: "roles",
+      icon: UserCheck,
+      count: "3,100,000+ Contacts",
+      desc: "VP Sales, Business Development Managers, Sales Directors, Account Executives",
+      targetPath: "/app/people?f_job_title=Sales",
+      color: "text-blue-400 border-blue-500/20 bg-blue-500/10"
+    },
+    {
+      id: "tech_roles",
+      name: "Software & Engineering",
+      type: "roles",
+      icon: Cpu,
+      count: "4,900,000+ Contacts",
+      desc: "CTOs, VP Engineering, Lead Software Engineers, Product Managers, Architects",
+      targetPath: "/app/people?f_job_title=Engineer",
+      color: "text-cyan-400 border-cyan-500/20 bg-cyan-500/10"
+    },
+    {
+      id: "hr_roles",
+      name: "HR & Talent Acquisition",
+      type: "roles",
+      icon: Users2,
+      count: "1,650,000+ Contacts",
+      desc: "Chief HR Officers, HR Managers, Talent Acquisition Leads, Senior Recruiters",
+      targetPath: "/app/people?f_job_title=HR",
+      color: "text-purple-400 border-purple-500/20 bg-purple-500/10"
+    },
+    {
+      id: "marketing_roles",
+      name: "Marketing & Growth Leads",
+      type: "roles",
+      icon: Globe,
+      count: "2,300,000+ Contacts",
+      desc: "CMOs, VP Marketing, Growth Directors, Digital Marketing Heads, Brand Managers",
+      targetPath: "/app/people?f_job_title=Marketing",
+      color: "text-rose-400 border-rose-500/20 bg-rose-500/10"
+    }
+  ];
+
+  const filtered = categories.filter(c => {
+    const matchesTab = activeTab === "all" || c.type === activeTab;
+    const matchesSearch = !searchQuery ||
+      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      c.desc.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
+  return (
+    <section id="categories" className="border-b border-border bg-secondary/10 py-24 md:py-32" aria-label="Browse B2B Categories">
+      <div className="mx-auto max-w-6xl px-6">
+        {/* Section Header */}
+        <div className="mb-14">
+          <p className="eyebrow mb-4">◆ Extensive B2B Industry &amp; Role Catalog</p>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+            <div>
+              <h2 className="display text-3xl md:text-5xl max-w-2xl">
+                Browse by Category &amp; Decision-Maker Roles.
+              </h2>
+              <p className="text-muted-foreground mt-4 max-w-xl text-sm leading-relaxed">
+                Filter 43.9M B2B records by specialized industry sectors, executive job titles, verified emails, and regional location data.
+              </p>
+            </div>
+            <Link
+              to="/app/category-explorer"
+              className="inline-flex h-11 items-center gap-2 border border-primary bg-primary px-5 font-mono text-[11px] uppercase tracking-[0.18em] text-primary-foreground transition hover:opacity-90 self-start md:self-auto"
+            >
+              Explore 4,000+ Subcategories →
+            </Link>
+          </div>
+        </div>
+
+        {/* Filter controls & Search */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 pb-6 border-b border-border">
+          {/* Tabs */}
+          <div className="flex items-center gap-2">
+            {[
+              { id: "all", label: "All Categories" },
+              { id: "industry", label: "Industry Sectors" },
+              { id: "roles", label: "Decision Maker Roles" }
+            ].map(t => (
+              <button
+                key={t.id}
+                onClick={() => setActiveTab(t.id)}
+                className={`px-4 py-2 font-mono text-[11px] uppercase tracking-[0.15em] transition border ${
+                  activeTab === t.id
+                    ? "border-foreground bg-foreground text-background font-semibold"
+                    : "border-border bg-background/50 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Search box */}
+          <div className="relative min-w-[260px]">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search category or role..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-foreground font-mono"
+            />
+          </div>
+        </div>
+
+        {/* Categories Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filtered.map(cat => {
+            const Icon = cat.icon;
+            return (
+              <div
+                key={cat.id}
+                className="border border-border bg-background p-6 flex flex-col justify-between hover:border-foreground/40 transition-all group"
+              >
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`w-10 h-10 border flex items-center justify-center ${cat.color}`}>
+                      <Icon size={18} />
+                    </div>
+                    <span className="font-mono text-[9px] uppercase tracking-[0.15em] px-2.5 py-1 border border-border text-muted-foreground">
+                      {cat.count}
+                    </span>
+                  </div>
+
+                  <h3 className="font-serif text-xl text-foreground mb-2 group-hover:text-primary transition-colors">
+                    {cat.name}
+                  </h3>
+
+                  <p className="text-muted-foreground text-xs leading-relaxed mb-6">
+                    {cat.desc}
+                  </p>
+                </div>
+
+                <Link
+                  to={cat.targetPath}
+                  className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/80 hover:text-foreground font-semibold group-hover:translate-x-1 transition-transform"
+                >
+                  Browse leads in {cat.name.split("/")[0].trim()} <ArrowRight size={12} />
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Quick tags bar */}
+        <div className="mt-12 p-6 border border-border bg-background/50 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Tag size={15} className="text-muted-foreground flex-shrink-0" />
+            <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Quick Filter Tags:</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {["FMCG", "Restaurants", "Real Estate", "EdTech", "Automobile", "Financial Services", "Retail", "Hospitality", "Fashion", "Founder", "CEO", "HR Manager", "Software Engineer"].map(tag => (
+              <Link
+                key={tag}
+                to={`/app/people?f_job_title=${encodeURIComponent(tag)}`}
+                className="px-3 py-1 border border-border bg-secondary/30 font-mono text-[9px] uppercase tracking-[0.12em] text-foreground hover:bg-secondary hover:border-foreground/30 transition-colors"
+              >
+                {tag}
+              </Link>
             ))}
           </div>
         </div>

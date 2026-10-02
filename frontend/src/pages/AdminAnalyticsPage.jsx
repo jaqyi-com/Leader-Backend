@@ -709,6 +709,173 @@ function PlatformTab({ token }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Users Management Tab
+// ─────────────────────────────────────────────────────────────────────────────
+function UsersTab({ token }) {
+  const [users, setUsers]       = useState([]);
+  const [stats, setStats]       = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
+  const [search, setSearch]     = useState("");
+  const [planFilter, setPlanFilter] = useState("all");
+
+  const loadUsers = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/analytics/users`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      setUsers(data.users || []);
+      setStats(data.stats || null);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { loadUsers(); }, [loadUsers]);
+
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = !search ||
+      u.name.toLowerCase().includes(search.toLowerCase()) ||
+      u.email.toLowerCase().includes(search.toLowerCase());
+    const matchesPlan = planFilter === "all" ||
+      (planFilter === "lifetime" && u.plan === "lifetime") ||
+      (planFilter === "free" && u.plan !== "lifetime");
+    return matchesSearch && matchesPlan;
+  });
+
+  return (
+    <div className="p-6 flex flex-col gap-6" style={{ background: "#080810", minHeight: "100%" }}>
+      {/* Header controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-bold text-white flex items-center gap-2">
+            <Users size={18} className="text-indigo-400" /> Registered Doott Users
+          </h2>
+          <p className="text-xs text-white/40 mt-0.5">
+            Manage and view all registered user accounts across Doott
+          </p>
+        </div>
+        <button onClick={loadUsers} disabled={loading}
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium cursor-pointer"
+          style={{ background: "#6366f1", color: "#fff", opacity: loading ? 0.6 : 1 }}>
+          <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Refresh Users
+        </button>
+      </div>
+
+      {error && (
+        <div className="px-4 py-3 rounded-xl flex items-center gap-2 text-xs" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
+          <AlertCircle size={14} /> {error}
+        </div>
+      )}
+
+      {/* Stats row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <KpiCard icon={Users} label="Total Users" value={stats?.total ?? users.length} sub="Registered accounts" iconBg="rgba(99,102,241,0.2)" />
+        <KpiCard icon={Zap} label="Paid / Lifetime" value={stats?.paid ?? 0} sub="Lifetime license" iconBg="rgba(34,197,94,0.18)" />
+        <KpiCard icon={ShieldCheck} label="Verified Email" value={stats?.verified ?? 0} sub="Email confirmed" iconBg="rgba(245,158,11,0.18)" />
+        <KpiCard icon={Globe} label="Google Auth" value={stats?.googleAuth ?? 0} sub="OAuth accounts" iconBg="rgba(14,165,233,0.18)" />
+      </div>
+
+      {/* Filter bar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" />
+          <input type="text" placeholder="Search by user name or email..." value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full pl-9 pr-4 py-2 rounded-xl text-xs bg-white/[0.04] border border-white/10 text-white placeholder-white/30 focus:outline-none focus:border-indigo-500" />
+        </div>
+        <select value={planFilter} onChange={e => setPlanFilter(e.target.value)}
+          className="px-3 py-2 rounded-xl text-xs bg-white/[0.04] border border-white/10 text-white/80 focus:outline-none">
+          <option value="all" className="bg-gray-900">All Plans</option>
+          <option value="lifetime" className="bg-gray-900">Lifetime Access</option>
+          <option value="free" className="bg-gray-900">Free Access</option>
+        </select>
+      </div>
+
+      {/* Users table */}
+      <Card title={`All Registered Users (${filteredUsers.length})`} titleRight="Live Database Sync">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse" style={{ fontSize: 12 }}>
+            <thead>
+              <tr className="border-b border-white/10 text-white/30 text-[10px] uppercase tracking-wider font-semibold">
+                <th className="py-2.5 px-3">User</th>
+                <th className="py-2.5 px-3">Email</th>
+                <th className="py-2.5 px-3">Auth Method</th>
+                <th className="py-2.5 px-3">Plan</th>
+                <th className="py-2.5 px-3">Email Status</th>
+                <th className="py-2.5 px-3">Registered Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-xs text-white/30">
+                    Loading registered users...
+                  </td>
+                </tr>
+              ) : filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-xs text-white/30">
+                    No users found matching filter.
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map(u => (
+                  <tr key={u.id} className="border-b border-white/[0.04] hover:bg-white/[0.02] transition-colors">
+                    <td className="py-3 px-3">
+                      <div className="flex items-center gap-2.5">
+                        {u.avatar ? (
+                          <img src={u.avatar} alt={u.name} className="w-7 h-7 rounded-full object-cover" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-indigo-500/20 text-indigo-300 font-semibold text-[11px] flex items-center justify-center border border-indigo-500/30">
+                            {u.name ? u.name.charAt(0).toUpperCase() : "U"}
+                          </div>
+                        )}
+                        <span className="font-medium text-white/90">{u.name}</span>
+                      </div>
+                    </td>
+                    <td className="py-3 px-3 text-white/70 font-mono text-[11px]">{u.email}</td>
+                    <td className="py-3 px-3">
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-medium border ${u.provider === "google" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" : "bg-purple-500/10 text-purple-400 border-purple-500/20"}`}>
+                        {u.provider === "google" ? "Google OAuth" : "Password"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold border ${u.plan === "lifetime" ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" : "bg-white/5 text-white/40 border-white/10"}`}>
+                        {u.plan === "lifetime" ? "⚡ Lifetime Access" : "Free"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3">
+                      {u.isEmailVerified ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400">
+                          <CheckCircle size={12} /> Verified
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 text-[11px] text-amber-400/80">
+                          <AlertCircle size={12} /> Pending
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 text-white/40 text-[11px] whitespace-nowrap">
+                      {u.createdAt ? new Date(u.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—"}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 403 wall
 // ─────────────────────────────────────────────────────────────────────────────
 function AccessDenied() {
@@ -755,7 +922,8 @@ export default function AdminAnalyticsPage() {
         <div className="flex items-center gap-2">
           {[
             { id: "features", label: "Feature Controls", icon: Sliders },
-            { id: "traffic", label: "Traffic", icon: Activity },
+            { id: "users",    label: "Users List", icon: Users },
+            { id: "traffic",  label: "Traffic", icon: Activity },
             { id: "platform", label: "Platform", icon: BarChart3 }
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
@@ -786,6 +954,8 @@ export default function AdminAnalyticsPage() {
               <div className="p-6">
                 <AdminFeatureManager />
               </div>
+            ) : tab === "users" ? (
+              <UsersTab token={token} />
             ) : tab === "traffic" ? (
               <TrafficTab token={token} />
             ) : (

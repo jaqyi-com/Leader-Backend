@@ -607,4 +607,40 @@ router.get("/traffic", async (req, res) => {
   }
 });
 
+// ─── GET /api/analytics/users ───────────────────────────────────────────────
+router.get("/users", async (req, res) => {
+  try {
+    const User = require("../db/models/user");
+    const users = await User.find()
+      .select("-passwordHash -emailVerifyToken -passwordResetToken -passwordResetExpires -emailVerifyTokenExpires")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const stats = {
+      total: users.length,
+      paid: users.filter(u => u.plan === "lifetime").length,
+      verified: users.filter(u => u.isEmailVerified).length,
+      googleAuth: users.filter(u => u.googleId).length,
+    };
+
+    res.json({
+      success: true,
+      stats,
+      users: users.map(u => ({
+        id: u._id.toString(),
+        name: u.name || "Unnamed",
+        email: u.email,
+        avatar: u.avatar || null,
+        isEmailVerified: !!u.isEmailVerified,
+        provider: u.googleId ? "google" : "password",
+        plan: u.plan || "free",
+        paidAt: u.paidAt || null,
+        createdAt: u.createdAt,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
