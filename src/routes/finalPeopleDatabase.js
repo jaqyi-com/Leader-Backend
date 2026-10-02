@@ -34,20 +34,14 @@ const COUNT_TTL     = 120; // 2 min
 const SKIP_IN_SELECT = new Set(["_row_hash", "embedding", "uuid", "company_uuid", "id", "_id"]);
 
 // ── In-memory schema cache ─────────────────────────────────
-let _schemaCache = null;
+const KNOWN_PEOPLE_COLS = [
+  "uuid", "company_uuid", "full_name", "first_name", "last_name", "job_title",
+  "linked_url", "location", "city", "state", "pincode", "lat", "long",
+  "geo_source", "emails", "phones", "created_at", "embedding",
+  "is_email_valid", "email_status", "email_score", "email_verified_at"
+];
 
-async function getSchema() {
-  if (_schemaCache) return _schemaCache;
-
-  const res = await pgQuery(
-    `SELECT column_name
-     FROM information_schema.columns
-     WHERE table_schema = $1 AND table_name = $2
-     ORDER BY ordinal_position`,
-    [FP_SCHEMA, FP_TABLE]
-  );
-
-  const actualCols = res.rows.map(r => r.column_name);
+function buildSchemaObj(actualCols) {
   const selectCols = actualCols.filter(c => !SKIP_IN_SELECT.has(c));
   const selectSQL  = selectCols.map(c => `"${c}"`).join(", ");
 
@@ -57,9 +51,12 @@ async function getSchema() {
     colToField[col] = col;
     if (!fieldToCol[col]) fieldToCol[col] = col;
   }
+  return { actualCols, selectCols, selectSQL, fieldToCol, colToField };
+}
 
-  logger.info(`[CloudSQL] FinalPeople Schema — ${actualCols.length} cols, ${selectCols.length} selected`);
-  _schemaCache = { actualCols, selectCols, selectSQL, fieldToCol, colToField };
+let _schemaCache = buildSchemaObj(KNOWN_PEOPLE_COLS);
+
+async function getSchema() {
   return _schemaCache;
 }
 
@@ -494,7 +491,7 @@ router.get("/", async (req, res) => {
     let orderClause = "";
     if (vectorIdx !== null) {
       orderClause = `ORDER BY embedding <=> $${vectorIdx}::vector ASC`;
-    } else if (sort_by && selectCols.includes(sort_by)) {
+    } else if (sort_by && selectCols.includes(sort_by) && (sort_by !== "uuid" || !userHasFilters)) {
       const dir = sort_dir === "desc" ? "DESC" : "ASC";
       orderClause = `ORDER BY "${sort_by}" ${dir} NULLS LAST`;
     } else if (!userHasFilters) {
