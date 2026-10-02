@@ -197,21 +197,48 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         "hospitals": ["Hospital", "Healthcare", "Health", "Medical", "Doctor", "Physician", "Surgeon"],
         "hospital": ["Hospital", "Healthcare", "Health", "Medical", "Doctor", "Physician", "Surgeon"],
         "food": ["Food", "Beverage", "FMCG", "Chef", "Catering", "Dairy", "Nutrition"],
+        "fmcg / food & beverage": ["Food", "Beverage", "FMCG", "Chef", "Catering", "Dairy", "Nutrition"],
         "restaurant": ["Restaurant", "Cafe", "Dining", "Hospitality", "Chef", "Baker"],
         "restaurants": ["Restaurant", "Cafe", "Dining", "Hospitality", "Chef", "Baker"],
+        "restaurants & cafes": ["Restaurant", "Cafe", "Dining", "Hospitality", "Chef", "Baker"],
         "fitness": ["Fitness", "Gym", "Trainer", "Wellness", "Coach"],
+        "fitness / wellness": ["Fitness", "Gym", "Trainer", "Wellness", "Coach"],
         "real estate": ["Real Estate", "Property", "Realtor", "Broker", "Architect", "Builder"],
+        "real estate & construction": ["Real Estate", "Property", "Realtor", "Broker", "Architect", "Builder"],
         "automobile": ["Automobile", "Automotive", "Auto", "Vehicle", "Dealer"],
+        "automobile / dealerships": ["Automobile", "Automotive", "Auto", "Vehicle", "Dealer"],
         "education": ["Education", "Teacher", "Professor", "Academic", "Principal", "EdTech"],
+        "education / edtech": ["Education", "Teacher", "Professor", "Academic", "Principal", "EdTech"],
         "finance": ["Finance", "Financial", "Accountant", "CFO", "Banking", "Investor", "CA"],
+        "financial services / insurance": ["Finance", "Financial", "Accountant", "CFO", "Banking", "Investor", "CA"],
         "retail": ["Retail", "Store", "Sales", "Merchant", "Brand"],
+        "retail / d2c / consumer brands": ["Retail", "Store", "Sales", "Merchant", "Brand"],
         "hotel": ["Hotel", "Hospitality", "Resort", "Lodging"],
+        "hospitality & hotels": ["Hotel", "Hospitality", "Resort", "Lodging"],
         "fashion": ["Fashion", "Apparel", "Garment", "Designer", "Textile"],
+        "fashion / lifestyle": ["Fashion", "Apparel", "Garment", "Designer", "Textile"],
         "software": ["Software", "Engineer", "Developer", "CTO", "SaaS", "IT", "Architect"],
+        "technology / startups": ["Software", "Engineer", "Developer", "CTO", "SaaS", "IT", "Architect"],
         "travel": ["Travel", "Tourism", "Hospitality", "Guide"],
+        "travel & recreation": ["Travel", "Tourism", "Hospitality", "Guide"],
       };
 
-      const aliases = JOB_TITLE_ALIASES[valLower];
+      let aliases = JOB_TITLE_ALIASES[valLower];
+      if (!aliases && /[\/&,\+]+/.test(valLower)) {
+        const parts = valLower.split(/[\/&,\+]+/).map(p => p.trim()).filter(Boolean);
+        const collected = new Set();
+        for (const p of parts) {
+          if (JOB_TITLE_ALIASES[p]) {
+            JOB_TITLE_ALIASES[p].forEach(a => collected.add(a));
+          } else if (p.length > 2) {
+            collected.add(p);
+          }
+        }
+        if (collected.size > 0) {
+          aliases = Array.from(collected);
+        }
+      }
+
       if (aliases && aliases.length > 0) {
         const aliasConds = aliases.map(a => {
           const aIdx = idx++;

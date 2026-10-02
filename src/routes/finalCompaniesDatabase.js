@@ -142,26 +142,57 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         "hospital": ["Hospital", "Healthcare", "Health", "Medical", "Clinic", "Doctor", "Pharmacy"],
         "healthcare": ["Healthcare", "Health", "Hospital", "Medical", "Clinic", "Pharmacy"],
         "fmcg": ["FMCG", "Food", "Beverage", "Packaged", "Consumer Goods", "Dairy"],
+        "fmcg / food & beverage": ["FMCG", "Food", "Beverage", "Packaged", "Consumer Goods", "Dairy"],
+        "food & beverage": ["Food", "Beverage", "FMCG", "Dairy", "Consumer Goods"],
+        "restaurants & cafes": ["Restaurant", "Cafe", "Dining", "Caterers", "Food", "Bakery"],
         "restaurants": ["Restaurant", "Cafe", "Dining", "Caterers", "Food", "Bakery"],
         "restaurant": ["Restaurant", "Cafe", "Dining", "Caterers", "Food", "Bakery"],
+        "dining": ["Restaurant", "Food", "Caterers", "Hospitality", "Cafe", "Dining"],
+        "bakery": ["Bakery", "Food", "Restaurant", "Confectionery"],
+        "fitness / wellness": ["Fitness", "Gym", "Wellness", "Spa", "Health"],
         "fitness": ["Fitness", "Gym", "Wellness", "Spa", "Health"],
         "wellness": ["Wellness", "Fitness", "Gym", "Spa", "Health Care"],
+        "real estate & construction": ["Real Estate", "Property", "Construction", "Architect", "Builder"],
         "real estate": ["Real Estate", "Property", "Construction", "Architect", "Builder"],
+        "automobile / dealerships": ["Automobile", "Automotive", "Auto", "Vehicle", "Dealership"],
         "automobile": ["Automobile", "Automotive", "Auto", "Vehicle", "Dealership"],
+        "education / edtech": ["Education", "School", "University", "College", "EdTech", "Academic"],
         "education": ["Education", "School", "University", "College", "EdTech", "Academic"],
+        "financial services / insurance": ["Financial", "Finance", "Banking", "Insurance", "Investment", "Accounting"],
+        "financial services": ["Financial", "Finance", "Banking", "Insurance", "Investment", "Accounting"],
         "finance": ["Financial", "Finance", "Banking", "Insurance", "Investment", "Accounting"],
         "financial": ["Financial", "Finance", "Banking", "Insurance", "Investment", "Accounting"],
-        "financial services": ["Financial", "Finance", "Banking", "Insurance", "Investment", "Accounting"],
+        "retail / d2c / consumer brands": ["Retail", "Store", "Apparel", "Garments", "E-commerce", "Consumer"],
         "retail": ["Retail", "Store", "Apparel", "Garments", "E-commerce", "Consumer"],
+        "hospitality & hotels": ["Hospitality", "Hotel", "Resort", "Lodging", "Travel"],
         "hospitality": ["Hospitality", "Hotel", "Resort", "Lodging", "Travel"],
         "hotels": ["Hotel", "Hospitality", "Resort", "Lodging"],
+        "fashion / lifestyle": ["Fashion", "Apparel", "Garments", "Clothing", "Textile"],
         "fashion": ["Fashion", "Apparel", "Garments", "Clothing", "Textile"],
+        "technology / startups": ["Software", "Technology", "Tech", "Internet", "Computers", "IT"],
         "technology": ["Software", "Technology", "Tech", "Internet", "Computers", "IT"],
         "software": ["Software", "Technology", "Tech", "Internet", "Computers", "IT"],
+        "travel & recreation": ["Travel", "Recreation", "Leisure", "Tour", "Aviation"],
         "travel": ["Travel", "Recreation", "Leisure", "Tour", "Aviation"],
       };
 
-      const aliases = INDUSTRY_ALIASES[valLower];
+      let aliases = INDUSTRY_ALIASES[valLower];
+      if (!aliases && /[\/&,\+]+/.test(valLower)) {
+        // Split multi-term composite categories like "Food / Beverage & Dairy" into constituent parts
+        const parts = valLower.split(/[\/&,\+]+/).map(p => p.trim()).filter(Boolean);
+        const collected = new Set();
+        for (const p of parts) {
+          if (INDUSTRY_ALIASES[p]) {
+            INDUSTRY_ALIASES[p].forEach(a => collected.add(a));
+          } else if (p.length > 2) {
+            collected.add(p);
+          }
+        }
+        if (collected.size > 0) {
+          aliases = Array.from(collected);
+        }
+      }
+
       if (aliases && aliases.length > 0) {
         const aliasConds = aliases.map(a => {
           const aIdx = idx++;
