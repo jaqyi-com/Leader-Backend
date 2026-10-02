@@ -288,18 +288,19 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 function buildWhere(queryParams, embedding, _schema) {
   const { search = "" } = queryParams;
-  const conditions = [];
+  const primaryConditions   = [];
+  const secondaryConditions = [];
   const values     = [];
   let   idx        = 1;
   let   vectorIdx  = null;
 
   // If vector embedding is available, use vector search; fallback to text ILIKE
   if (embedding && embedding.length === 384) {
-    conditions.push("embedding IS NOT NULL");
+    primaryConditions.push("embedding IS NOT NULL");
     vectorIdx = idx++;
     values.push(JSON.stringify(embedding));
   } else if (search) {
-    conditions.push(`"full_name" ILIKE $${idx++}`);
+    secondaryConditions.push(`"full_name" ILIKE $${idx++}`);
     values.push(`%${search}%`);
   }
 
@@ -310,25 +311,34 @@ function buildWhere(queryParams, embedding, _schema) {
     values,
     idx
   );
-  conditions.push(...dynamicConditions);
+  
+  for (const cond of dynamicConditions) {
+    if (cond.includes(`"job_title"`) || cond.includes(`"city"`) || cond.includes(`"state"`)) {
+      primaryConditions.push(cond);
+    } else {
+      secondaryConditions.push(cond);
+    }
+  }
   idx = nextIdx;
 
   // Handle explicit country filter (if not already parsed via f_country_*)
   const countryParam = (queryParams.f_country || queryParams.country || "").toLowerCase();
-  const alreadyHasCountry = conditions.some(c => c.includes("geo_source") || c.includes("India") || c.includes("United States"));
+  const alreadyHasCountry = secondaryConditions.some(c => c.includes("geo_source") || c.includes("India") || c.includes("United States"));
   if (!alreadyHasCountry && countryParam) {
     if (countryParam === "india") {
-      conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat', 'Telangana', 'Uttar Pradesh', 'Haryana', 'West Bengal', 'Kerala', 'Rajasthan', 'Punjab', 'Madhya Pradesh', 'Andhra Pradesh', 'Bihar', 'Odisha', 'Goa', 'Chandigarh', 'Assam', 'Jharkhand', 'Chhattisgarh', 'Uttarakhand', 'Himachal Pradesh'))`);
+      secondaryConditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat', 'Telangana', 'Uttar Pradesh', 'Haryana', 'West Bengal', 'Kerala', 'Rajasthan', 'Punjab', 'Madhya Pradesh', 'Andhra Pradesh', 'Bihar', 'Odisha', 'Goa', 'Chandigarh', 'Assam', 'Jharkhand', 'Chhattisgarh', 'Uttarakhand', 'Himachal Pradesh'))`);
     } else if (countryParam === "usa" || countryParam === "us") {
-      conditions.push(`("geo_source" = 'us_zip' OR "location" ILIKE '%United States%')`);
+      secondaryConditions.push(`("location" ILIKE '%United States%' OR "geo_source" = 'us_zip')`);
     }
   }
 
-  const hasFilters = conditions.length > 0;
-  const userHasFilters = hasFilters || (embedding && embedding.length === 384);
+  const allConditions = [...primaryConditions, ...secondaryConditions];
+  const userHasFilters = allConditions.length > 0 || (embedding && embedding.length === 384);
 
   return {
-    whereStr: conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "",
+    primaryWhereStr: primaryConditions.length > 0 ? `WHERE ${primaryConditions.join(" AND ")}` : "",
+    secondaryWhereStr: secondaryConditions.length > 0 ? `WHERE ${secondaryConditions.join(" AND ")}` : "",
+    whereStr: allConditions.length > 0 ? `WHERE ${allConditions.join(" AND ")}` : "",
     values,
     nextIdx: idx,
     vectorIdx,
@@ -481,7 +491,7 @@ router.get("/", async (req, res) => {
 
     const schema = await getSchema();
     const { selectSQL, selectCols } = schema;
-    const { whereStr, values, nextIdx, vectorIdx, userHasFilters } = buildWhere(
+    const { primaryWhereStr, secondaryWhereStr, whereStr, values, nextIdx, vectorIdx, userHasFilters } = buildWhere(
       req.query,
       embedding,
       schema
@@ -507,13 +517,14 @@ router.get("/", async (req, res) => {
     }
 
     let dataSQL;
-    if (userHasFilters && whereStr) {
+    if (primaryWhereStr && secondaryWhereStr) {
       dataSQL = `
         SELECT ${customSelectSQL} FROM (
           SELECT * FROM ${FULL_TABLE}
-          ${whereStr}
-          LIMIT 2000
+          ${primaryWhereStr}
+          LIMIT 2500
         ) subq
+        ${secondaryWhereStr}
         ${orderClause}
         LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
       `;
