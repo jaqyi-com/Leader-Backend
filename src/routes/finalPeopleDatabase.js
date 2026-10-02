@@ -549,22 +549,10 @@ router.get("/", async (req, res) => {
           total = 45059532;
         }
       }
-    } else if (records.length < limitNum && pageNum === 1) {
-      // Exact total known directly from page 1 results!
-      total = records.length;
     } else {
-      try {
-        const countRes = await pgQuery(
-          `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 501) subq`,
-          values,
-          1500
-        );
-        const cnt = parseInt(countRes.rows[0]?.cnt || "0", 10);
-        total = cnt >= 501 ? (pageNum * limitNum) + 500 : cnt;
-      } catch (err) {
-        logger.warn(`Count query timed out or failed (${err.message}), using estimate`);
-        total = records.length >= limitNum ? (pageNum * limitNum) + 500 : ((pageNum - 1) * limitNum) + records.length;
-      }
+      total = records.length < limitNum && pageNum === 1
+        ? records.length
+        : (pageNum * limitNum) + 500;
     }
 
     res.json({
