@@ -131,9 +131,9 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     if (col === "country" && val !== "") {
       const countryLower = val.toLowerCase().trim();
       if (countryLower === "india" || countryLower === "in") {
-        conditions.push(`("location" ILIKE '%India%' OR "state" ILIKE '%India%' OR "geo_source" IN ('in_pincode', 'pincode', 'state', 'city'))`);
+        conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat', 'Telangana', 'Uttar Pradesh', 'Haryana', 'West Bengal', 'Kerala', 'Rajasthan', 'Punjab', 'Madhya Pradesh', 'Andhra Pradesh', 'Bihar', 'Odisha', 'Goa', 'Chandigarh', 'Assam', 'Jharkhand', 'Chhattisgarh', 'Uttarakhand', 'Himachal Pradesh') OR "location" ILIKE '%, India%')`);
       } else if (countryLower === "usa" || countryLower === "us" || countryLower === "united states") {
-        conditions.push(`("location" ILIKE '%United States%' OR "geo_source" = 'us_zip')`);
+        conditions.push(`("geo_source" = 'us_zip' OR "location" ILIKE '%United States%')`);
       } else {
         conditions.push(`"location" ILIKE $${idx++}`);
         values.push(`%${val}%`);
@@ -318,7 +318,7 @@ function buildWhere(queryParams, embedding, _schema) {
   const alreadyHasCountry = conditions.some(c => c.includes("geo_source") || c.includes("India") || c.includes("United States"));
   if (!alreadyHasCountry && countryParam) {
     if (countryParam === "india") {
-      conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "location" ILIKE '%India%')`);
+      conditions.push(`("geo_source" IN ('in_pincode', 'pincode', 'state', 'city') OR "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Tamil Nadu', 'Gujarat', 'Telangana', 'Uttar Pradesh', 'Haryana', 'West Bengal', 'Kerala', 'Rajasthan', 'Punjab', 'Madhya Pradesh', 'Andhra Pradesh', 'Bihar', 'Odisha', 'Goa', 'Chandigarh', 'Assam', 'Jharkhand', 'Chhattisgarh', 'Uttarakhand', 'Himachal Pradesh') OR "location" ILIKE '%, India%')`);
     } else if (countryParam === "usa" || countryParam === "us") {
       conditions.push(`("geo_source" = 'us_zip' OR "location" ILIKE '%United States%')`);
     }
@@ -542,15 +542,15 @@ router.get("/", async (req, res) => {
     } else {
       try {
         const countRes = await pgQuery(
-          `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 5001) subq`,
+          `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 501) subq`,
           values,
-          2000
+          1500
         );
         const cnt = parseInt(countRes.rows[0]?.cnt || "0", 10);
-        total = cnt >= 5001 ? (pageNum * limitNum) + 5000 : cnt;
+        total = cnt >= 501 ? (pageNum * limitNum) + 500 : cnt;
       } catch (err) {
         logger.warn(`Count query timed out or failed (${err.message}), using estimate`);
-        total = records.length >= limitNum ? (pageNum * limitNum) + 5000 : ((pageNum - 1) * limitNum) + records.length;
+        total = records.length >= limitNum ? (pageNum * limitNum) + 500 : ((pageNum - 1) * limitNum) + records.length;
       }
     }
 
