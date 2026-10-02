@@ -215,8 +215,8 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       }
 
       const titlesArray = Array.from(titleSet);
-      conditions.push(`${doubleQuotedCol} = ANY($${idx++}::text[])`);
-      values.push(titlesArray);
+      const escapedLiterals = titlesArray.map(t => `'${t.replace(/'/g, "''")}'`).join(", ");
+      conditions.push(`${doubleQuotedCol} = ANY(ARRAY[${escapedLiterals}])`);
       continue;
     }
 
