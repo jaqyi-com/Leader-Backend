@@ -104,15 +104,7 @@ function getDirectPool() {
  * @returns {Promise<import('pg').QueryResult>}
  */
 async function query(text, params = [], timeoutMs = 30000) {
-  const client = await getPool().connect();
-  try {
-    // Set per-query statement timeout to prevent long-running queries from
-    // blocking Vercel's serverless function timeout (max 60s on free tier).
-    await client.query(`SET statement_timeout = ${timeoutMs}`);
-    return await client.query(text, params);
-  } finally {
-    client.release();
-  }
+  return await getPool().query(text, params);
 }
 
 /**
