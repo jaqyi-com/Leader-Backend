@@ -209,31 +209,14 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         "civic & social organization": ["Civic", "Social", "Non-Profit", "Organization"],
         "motion pictures and film": ["Motion Pictures", "Film", "Media", "Entertainment"],
         "security and investigations": ["Security", "Investigations", "Safety", "Services"],
+        "environmental health safety": ["Environmental", "Health", "Safety", "EHS", "Services"],
+        "environmental health & safety": ["Environmental", "Health", "Safety", "EHS", "Services"],
+        "environmental health and safety": ["Environmental", "Health", "Safety", "EHS", "Services"],
       };
 
-      let aliases = INDUSTRY_ALIASES[valLower];
-      if (!aliases) {
-        if (/[\/&,\+\-]+/.test(valLower)) {
-          const parts = valLower.split(/[\/&,\+\-]+/).map(p => p.trim()).filter(Boolean);
-          const collected = new Set();
-          for (const p of parts) {
-            if (INDUSTRY_ALIASES[p]) {
-              INDUSTRY_ALIASES[p].forEach(a => collected.add(a));
-            } else if (p.length > 2) {
-              collected.add(p);
-            }
-          }
-          if (collected.size > 0) aliases = Array.from(collected);
-        } else if (valLower.includes(" ")) {
-          const words = valLower.split(/\s+/).filter(w => w.length > 2 && !["and", "the", "for", "with"].includes(w));
-          if (words.length > 0) {
-            aliases = words;
-          }
-        }
-      }
-
-      if (aliases && aliases.length > 0) {
-        const aliasConds = aliases.map(a => {
+      const directAliases = INDUSTRY_ALIASES[valLower];
+      if (directAliases && directAliases.length > 0) {
+        const aliasConds = directAliases.map(a => {
           const aIdx = idx++;
           values.push(`%${a}%`);
           return `"industry" ILIKE $${aIdx}`;
@@ -241,6 +224,25 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         conditions.push(`(${aliasConds.join(" OR ")})`);
         continue;
       }
+
+      // Multi-word / unmapped custom search: Exact phrase OR all constituent words matching with AND
+      const words = valLower.split(/[\s\-\/&\+]+/).filter(w => w.length > 2 && !["and", "the", "for", "with"].includes(w));
+      if (words.length > 1) {
+        const phraseIdx = idx++;
+        values.push(`%${val.trim()}%`);
+
+        const wordConds = words.map(w => {
+          const wIdx = idx++;
+          values.push(`%${w}%`);
+          return `"industry" ILIKE $${wIdx}`;
+        });
+        conditions.push(`("industry" ILIKE $${phraseIdx} OR (${wordConds.join(" AND ")}))`);
+      } else {
+        const singleIdx = idx++;
+        values.push(`%${val.trim()}%`);
+        conditions.push(`"industry" ILIKE $${singleIdx}`);
+      }
+      continue;
     } else if (col === "has_email") {
       col = "emails";
       op = val === "true" ? "nonempty" : "empty";

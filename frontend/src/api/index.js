@@ -12,8 +12,7 @@ if (!isLocal && !import.meta.env.VITE_API_URL) {
 
 const api = axios.create({ baseURL: BASE, timeout: 300000 });
 
-// ── Auth interceptor ───────────────────────────────────────────────────────
-// Automatically attach JWT to every request and redirect on token expiry.
+// ── Auth & Retry interceptors ───────────────────────────────────────────────────────
 function applyAuthInterceptors(instance) {
   instance.interceptors.request.use((config) => {
     const token = localStorage.getItem("leader_token");
@@ -21,16 +20,43 @@ function applyAuthInterceptors(instance) {
     return config;
   });
 
+  // Automatic Retry Interceptor (Exponential Backoff for Timeouts & 5xx)
   instance.interceptors.response.use(
     (res) => res,
-    (err) => {
+    async (err) => {
       if (err.response?.status === 401) {
         // Token expired or invalid — clear and redirect to login
         localStorage.removeItem("leader_token");
         if (!window.location.pathname.startsWith("/login")) {
           window.location.href = "/login";
         }
+        return Promise.reject(err);
       }
+
+      const config = err.config;
+      if (!config) return Promise.reject(err);
+
+      // Only automatically retry GET requests (idempotent)
+      const method = (config.method || "get").toLowerCase();
+      const isGet = method === "get";
+
+      // Retry on network error, 5xx server errors, 504 Gateway Timeout, 503 Service Unavailable, or timeout
+      const status = err.response?.status;
+      const isRetryable = !err.response || status >= 500 || status === 429 || err.code === "ECONNABORTED" || (err.message && err.message.includes("timeout"));
+
+      if (isGet && isRetryable) {
+        config.__retryCount = config.__retryCount || 0;
+        const maxRetries = 3;
+
+        if (config.__retryCount < maxRetries) {
+          config.__retryCount += 1;
+          const delay = 1000 * Math.pow(2, config.__retryCount - 1); // 1s, 2s, 4s
+          console.warn(`[API Retry] ${method.toUpperCase()} ${config.url} failed (${err.message || status}). Automatic retry ${config.__retryCount}/${maxRetries} in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return instance(config);
+        }
+      }
+
       return Promise.reject(err);
     }
   );

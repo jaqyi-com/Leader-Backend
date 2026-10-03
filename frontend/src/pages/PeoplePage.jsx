@@ -110,9 +110,12 @@ export default function PeoplePage() {
     }
   }, []);
 
+  const [hasError, setHasError] = useState(false);
+
   // ── Load records ──────────────────────────────────────────
   const load = useCallback(async () => {
     setLoading(true);
+    setHasError(false);
     try {
       const filterParams = qbFiltersToParams(filters);
       const { data } = await fpGetDatabase({
@@ -145,10 +148,12 @@ export default function PeoplePage() {
       }
       setRecords(recordsData);
       setTotal(data.total || 0);
+      setHasError(false);
     } catch {
       setRecords([]);
       setTotal(0);
-      toast.error("Failed to load People data", { id: "people-load-error" });
+      setHasError(true);
+      toast.error("Failed to load People data. Retrying...", { id: "people-load-error" });
     } finally {
       setLoading(false);
     }
@@ -394,6 +399,20 @@ export default function PeoplePage() {
                     ))}
                   </tr>
                 ))
+              ) : hasError ? (
+                <tr>
+                  <td colSpan={visibleCols.length || 1} className="py-16 text-center text-[var(--text-3)]">
+                    <RefreshCw size={32} className="mx-auto mb-3 opacity-50 text-red-400" />
+                    <p className="text-sm font-semibold text-red-400">Failed to load records after automatic retries</p>
+                    <p className="text-[11px] mt-1 opacity-60">The server took too long to respond. Click below to try again.</p>
+                    <button
+                      onClick={load}
+                      className="mt-4 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs rounded-lg transition-colors inline-flex items-center gap-2"
+                    >
+                      <RefreshCw size={12} /> Retry Loading
+                    </button>
+                  </td>
+                </tr>
               ) : records.length === 0 ? (
                 <tr>
                   <td colSpan={visibleCols.length || 1} className="py-16 text-center text-[var(--text-3)]">

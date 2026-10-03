@@ -215,12 +215,16 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         "retail / d2c / consumer brands": ["Retail", "Store", "Sales", "Merchant", "Brand"],
         "hotel": ["Hotel", "Hospitality", "Resort", "Lodging"],
         "hospitality & hotels": ["Hotel", "Hospitality", "Resort", "Lodging"],
+        "hospitality": ["Hotel", "Hospitality", "Resort", "Lodging"],
         "fashion": ["Fashion", "Apparel", "Garment", "Designer", "Textile"],
         "fashion / lifestyle": ["Fashion", "Apparel", "Garment", "Designer", "Textile"],
         "software": ["Software", "Engineer", "Developer", "CTO", "SaaS", "IT", "Architect"],
         "technology / startups": ["Software", "Engineer", "Developer", "CTO", "SaaS", "IT", "Architect"],
         "travel": ["Travel", "Tourism", "Hospitality", "Guide"],
         "travel & recreation": ["Travel", "Tourism", "Hospitality", "Guide"],
+        "environmental health safety": ["Environmental Health Safety", "Environmental Health & Safety", "Environmental Health and Safety", "EHS"],
+        "environmental health & safety": ["Environmental Health Safety", "Environmental Health & Safety", "Environmental Health and Safety", "EHS"],
+        "environmental health and safety": ["Environmental Health Safety", "Environmental Health & Safety", "Environmental Health and Safety", "EHS"],
         "hr manager": ["HR", "Human Resources", "People", "Talent"],
         "talent acquisition specialist": ["Talent", "Recruiter", "Recruitment", "HR"],
         "digital marketing specialist": ["Digital Marketing", "Marketing", "SEO", "Growth"],
@@ -229,30 +233,9 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         "advocate": ["Advocate", "Lawyer", "Legal", "Attorney", "Counsel"],
       };
 
-      let aliases = JOB_TITLE_ALIASES[valLower];
-      if (!aliases) {
-        if (/[\/&,\+]+/.test(valLower)) {
-          const parts = valLower.split(/[\/&,\+]+/).map(p => p.trim()).filter(Boolean);
-          const collected = new Set();
-          for (const p of parts) {
-            if (JOB_TITLE_ALIASES[p]) {
-              JOB_TITLE_ALIASES[p].forEach(a => collected.add(a));
-            } else if (p.length > 2) {
-              collected.add(p);
-            }
-          }
-          if (collected.size > 0) aliases = Array.from(collected);
-        } else if (valLower.includes(" ")) {
-          // Decompose multi-word role titles like "Partner Attorney" or "Manager Supply Chain"
-          const words = valLower.split(/\s+/).filter(w => w.length > 2 && !["and", "the", "for", "with"].includes(w));
-          if (words.length > 1) {
-            aliases = words;
-          }
-        }
-      }
-
-      if (aliases && aliases.length > 0) {
-        const aliasConds = aliases.map(a => {
+      const directAliases = JOB_TITLE_ALIASES[valLower];
+      if (directAliases && directAliases.length > 0) {
+        const aliasConds = directAliases.map(a => {
           const aIdx = idx++;
           values.push(`%${a}%`);
           return `"job_title" ILIKE $${aIdx}`;
@@ -261,14 +244,10 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         continue;
       }
 
-      const titleSet = new Set([
-        val.trim(),
-        valLower,
-        val.charAt(0).toUpperCase() + val.slice(1).toLowerCase(),
-      ]);
-
+      // Check single role key matches (Founder, CEO, CTO, Director)
+      const titleSet = new Set();
       if (valLower.includes("founder")) {
-        ["Founder", "Co-Founder", "Co-founder", "Co Founder", "Founding Partner", "Co-Founder & CEO", "Founder & CEO", "founder", "co-founder", "Founding Director", "Co-Founder and CEO", "Founder and CEO"].forEach(v => titleSet.add(v));
+        ["Founder", "Co-Founder", "Co-founder", "Co Founder", "Founding Partner", "Co-Founder & CEO", "Founder & CEO", "founder", "co-founder"].forEach(v => titleSet.add(v));
       }
       if (valLower.includes("ceo")) {
         ["CEO", "Chief Executive Officer", "CEO & Founder", "Co-Founder & CEO", "CEO and Founder", "Founder & CEO", "ceo"].forEach(v => titleSet.add(v));
@@ -280,13 +259,34 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         ["Director", "Managing Director", "Executive Director", "Director & Founder", "director"].forEach(v => titleSet.add(v));
       }
 
-      const titlesArray = Array.from(titleSet);
-      const aliasConds = titlesArray.map(t => {
-        const aIdx = idx++;
-        values.push(`%${t}%`);
-        return `"job_title" ILIKE $${aIdx}`;
-      });
-      conditions.push(`(${aliasConds.join(" OR ")})`);
+      if (titleSet.size > 0) {
+        const titlesArray = Array.from(titleSet);
+        const aliasConds = titlesArray.map(t => {
+          const aIdx = idx++;
+          values.push(`%${t}%`);
+          return `"job_title" ILIKE $${aIdx}`;
+        });
+        conditions.push(`(${aliasConds.join(" OR ")})`);
+        continue;
+      }
+
+      // Multi-word / unmapped custom search: Exact phrase OR all constituent words matching with AND
+      const words = valLower.split(/[\s\-\/&\+]+/).filter(w => w.length > 2 && !["and", "the", "for", "with"].includes(w));
+      if (words.length > 1) {
+        const phraseIdx = idx++;
+        values.push(`%${val.trim()}%`);
+
+        const wordConds = words.map(w => {
+          const wIdx = idx++;
+          values.push(`%${w}%`);
+          return `"job_title" ILIKE $${wIdx}`;
+        });
+        conditions.push(`("job_title" ILIKE $${phraseIdx} OR (${wordConds.join(" AND ")}))`);
+      } else {
+        const singleIdx = idx++;
+        values.push(`%${val.trim()}%`);
+        conditions.push(`"job_title" ILIKE $${singleIdx}`);
+      }
       continue;
     }
 
