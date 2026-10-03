@@ -598,8 +598,7 @@ router.get("/", async (req, res) => {
       const dir = sort_dir === "desc" ? "DESC" : "ASC";
       orderClause = `ORDER BY "${sort_by}" ${dir} NULLS LAST`;
     } else {
-      // Use uuid (primary key B-tree index) for fast default pagination — avoids unindexed full table sort
-      orderClause = `ORDER BY uuid ASC`;
+      orderClause = "";
     }
 
     const dataSQL = `
