@@ -1,0 +1,9 @@
+node_modules
+frontend/node_modules
+frontend/dist
+.git
+.env.local
+logs
+scratch
+test.dump
+*.log
