@@ -194,22 +194,41 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         "chemicals": ["Chemical", "Chemicals", "Manufacturing", "Industrial"],
         "fund-raising": ["Fundraising", "Non-Profit", "Charity", "Financial", "Services"],
         "law enforcement": ["Security", "Law", "Government", "Services", "Enforcement"],
+        "public relations and communications": ["Public Relations", "PR", "Communications", "Media"],
+        "writing and editing": ["Writing", "Editing", "Media", "Publishing"],
+        "professional training & coaching": ["Training", "Coaching", "Education", "Consulting"],
+        "environmental services": ["Environmental", "Services", "Waste", "Clean"],
+        "machinery": ["Machinery", "Industrial", "Manufacturing", "Equipment"],
+        "recreation & leisure": ["Recreation", "Leisure", "Travel", "Entertainment"],
+        "distilleries": ["Distilleries", "Beverage", "Liquor", "Wine", "Food"],
+        "building materials": ["Building", "Materials", "Construction", "Real Estate"],
+        "luxury goods & jewelry": ["Luxury", "Jewelry", "Gems", "Apparel", "Fashion"],
+        "venture capital & private equity": ["Venture Capital", "Private Equity", "Investment", "Financial"],
+        "consumer electronics": ["Electronics", "Consumer", "Computers", "Technology"],
+        "arts and crafts": ["Arts", "Crafts", "Retail", "Design"],
+        "civic & social organization": ["Civic", "Social", "Non-Profit", "Organization"],
+        "motion pictures and film": ["Motion Pictures", "Film", "Media", "Entertainment"],
+        "security and investigations": ["Security", "Investigations", "Safety", "Services"],
       };
 
       let aliases = INDUSTRY_ALIASES[valLower];
-      if (!aliases && /[\/&,\+]+/.test(valLower)) {
-        // Split multi-term composite categories like "Food / Beverage & Dairy" into constituent parts
-        const parts = valLower.split(/[\/&,\+]+/).map(p => p.trim()).filter(Boolean);
-        const collected = new Set();
-        for (const p of parts) {
-          if (INDUSTRY_ALIASES[p]) {
-            INDUSTRY_ALIASES[p].forEach(a => collected.add(a));
-          } else if (p.length > 2) {
-            collected.add(p);
+      if (!aliases) {
+        if (/[\/&,\+\-]+/.test(valLower)) {
+          const parts = valLower.split(/[\/&,\+\-]+/).map(p => p.trim()).filter(Boolean);
+          const collected = new Set();
+          for (const p of parts) {
+            if (INDUSTRY_ALIASES[p]) {
+              INDUSTRY_ALIASES[p].forEach(a => collected.add(a));
+            } else if (p.length > 2) {
+              collected.add(p);
+            }
           }
-        }
-        if (collected.size > 0) {
-          aliases = Array.from(collected);
+          if (collected.size > 0) aliases = Array.from(collected);
+        } else if (valLower.includes(" ")) {
+          const words = valLower.split(/\s+/).filter(w => w.length > 2 && !["and", "the", "for", "with"].includes(w));
+          if (words.length > 0) {
+            aliases = words;
+          }
         }
       }
 
