@@ -288,16 +288,12 @@ router.get("/", async (req, res) => {
       LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
     `;
 
-    // Direct DB count every time (no Redis cache!)
-    const countRes = await pgQuery(
-      `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 100001) subq`,
-      values,
-      30000
-    );
-    const total = parseInt(countRes.rows[0].cnt, 10);
-
     const dataRes = await pgQuery(dataSQL, [...values, limitNum, offset], 60000);
     const records = dataRes.rows.map(row => normalizeRow(schema, row));
+
+    const total = records.length < limitNum && pageNum === 1
+      ? records.length
+      : (pageNum * limitNum) + 500;
 
     res.json({
       records,
