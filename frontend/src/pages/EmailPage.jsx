@@ -180,6 +180,8 @@ function TablePanel({ mode }) {
             <option value={25}>25 / page</option>
             <option value={50}>50 / page</option>
             <option value={100}>100 / page</option>
+            <option value={250}>250 / page</option>
+            <option value={500}>500 / page</option>
           </select>
         </div>
         {/* Actions */}
