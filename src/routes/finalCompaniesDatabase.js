@@ -632,9 +632,28 @@ router.get("/", async (req, res) => {
             values,
             8000
           );
-          return parseInt(countRes.rows[0]?.cnt || "0", 10);
+          let cnt = parseInt(countRes.rows[0]?.cnt || "0", 10);
+          if (cnt >= 100001) {
+            try {
+              const explainRes = await pgQuery(`EXPLAIN SELECT * FROM ${FULL_TABLE} ${whereStr}`, values, 3000);
+              if (explainRes.rows && explainRes.rows[0]) {
+                const planStr = explainRes.rows[0]["QUERY PLAN"] || "";
+                const match = planStr.match(/rows=(\d+)/);
+                if (match) cnt = parseInt(match[1], 10);
+              }
+            } catch (_) {}
+          }
+          return cnt;
         } catch (err) {
           logger.warn(`Companies count query timed out or failed (${err.message}), falling back to estimate`);
+          try {
+            const explainRes = await pgQuery(`EXPLAIN SELECT * FROM ${FULL_TABLE} ${whereStr}`, values, 3000);
+            if (explainRes.rows && explainRes.rows[0]) {
+              const planStr = explainRes.rows[0]["QUERY PLAN"] || "";
+              const match = planStr.match(/rows=(\d+)/);
+              if (match) return parseInt(match[1], 10);
+            }
+          } catch (_) {}
           return null;
         }
       })();

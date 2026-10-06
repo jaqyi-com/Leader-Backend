@@ -594,9 +594,23 @@ router.get("/", async (req, res) => {
         }
       }
     } else {
-      total = records.length < limitNum && pageNum === 1
-        ? records.length
-        : (pageNum * limitNum) + 500;
+      if (records.length < limitNum && pageNum === 1) {
+        total = records.length;
+      } else {
+        try {
+          const explainRes = await pgQuery(`EXPLAIN SELECT ${selectSQL} FROM ${FULL_TABLE} ${whereStr}`, values, 5000);
+          if (explainRes.rows && explainRes.rows[0]) {
+            const planStr = explainRes.rows[0]["QUERY PLAN"] || "";
+            const match = planStr.match(/rows=(\d+)/);
+            if (match) total = parseInt(match[1], 10);
+          }
+        } catch (_) {}
+        if (!total) {
+          total = records.length < limitNum
+            ? ((pageNum - 1) * limitNum) + records.length
+            : (pageNum * limitNum) + 1000;
+        }
+      }
     }
 
     res.json({

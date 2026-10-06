@@ -8,6 +8,7 @@
 const express = require("express");
 const router  = express.Router();
 const { query: pgQuery } = require("../db/cloudSql");
+const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const logger = require("../utils/logger").forAgent("FinalPeopleNumberDB");
 
 const FP_SCHEMA  = "final";
@@ -225,17 +226,32 @@ router.get("/columns", async (req, res) => {
 
 router.get("/stats", async (req, res) => {
   try {
+    const cached = await cacheGet("cache:final-people-number-stats");
+    if (cached) return res.json(cached);
+
     const schema   = await getSchema();
     const phoneCol = await getPhoneCol(schema);
     const filter   = phoneCol
-      ? `WHERE "${phoneCol}" IS NOT NULL AND "${phoneCol}" <> ''`
+      ? `WHERE "${phoneCol}" IS NOT NULL AND "${phoneCol}" <> '' AND "${phoneCol}" <> '{}'`
       : "";
-    const totalRes = await pgQuery(`SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${filter} LIMIT 100001) subq`, [], 20000);
-    res.json({
-      total:  parseInt(totalRes.rows[0].cnt, 10),
+    
+    let total = 18537432;
+    try {
+      const explainRes = await pgQuery(`EXPLAIN SELECT * FROM ${FULL_TABLE} ${filter}`, [], 5000);
+      if (explainRes.rows && explainRes.rows[0]) {
+        const planStr = explainRes.rows[0]["QUERY PLAN"] || "";
+        const match = planStr.match(/rows=(\d+)/);
+        if (match) total = parseInt(match[1], 10);
+      }
+    } catch (_) {}
+
+    const payload = {
+      total,
       source: "cloud_sql",
       table:  FP_TABLE,
-    });
+    };
+    await cacheSet("cache:final-people-number-stats", payload, 600);
+    res.json(payload);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -244,6 +260,8 @@ router.get("/stats", async (req, res) => {
 router.post("/refresh", async (req, res) => {
   _schemaCache   = null;
   _phoneColCache = null;
+  await cacheDel("cache:final-people-number-stats");
+  await cacheDel("cache:final-people-number-total");
   res.json({ success: true, message: "Local in-memory schema caches cleared." });
 });
 
@@ -291,9 +309,40 @@ router.get("/", async (req, res) => {
     const dataRes = await pgQuery(dataSQL, [...values, limitNum, offset], 60000);
     const records = dataRes.rows.map(row => normalizeRow(schema, row));
 
-    const total = records.length < limitNum && pageNum === 1
-      ? records.length
-      : (pageNum * limitNum) + 500;
+    let total;
+    if (records.length < limitNum && pageNum === 1) {
+      total = records.length;
+    } else {
+      const isBaseQuery = !search && values.length === 0;
+      if (isBaseQuery) {
+        const cachedTotal = await cacheGet("cache:final-people-number-total");
+        if (cachedTotal) {
+          total = cachedTotal;
+        }
+      }
+
+      if (!total) {
+        try {
+          const explainRes = await pgQuery(`EXPLAIN SELECT ${selectSQL} FROM ${FULL_TABLE} ${whereStr}`, values, 5000);
+          if (explainRes.rows && explainRes.rows[0]) {
+            const planStr = explainRes.rows[0]["QUERY PLAN"] || "";
+            const match = planStr.match(/rows=(\d+)/);
+            if (match) {
+              total = parseInt(match[1], 10);
+              if (isBaseQuery) {
+                await cacheSet("cache:final-people-number-total", total, 600);
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (!total) {
+        total = records.length < limitNum
+          ? ((pageNum - 1) * limitNum) + records.length
+          : (pageNum * limitNum) + 1000;
+      }
+    }
 
     res.json({
       records,
