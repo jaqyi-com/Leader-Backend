@@ -66,6 +66,24 @@ const DB_VALUES_MAP = (() => {
     { label: "3.0+ Stars", value: "3.0" },
   ];
 
+  const emailStatuses = [
+    { label: "Deliverable", value: "Deliverable" },
+    { label: "Undeliverable", value: "Undeliverable" },
+    { label: "Risky / Catch-All", value: "Risky" },
+    { label: "Unknown / Unverified", value: "Unknown" },
+    { label: "Catch All", value: "Catch All" },
+    { label: "valid (Verified)", value: "valid" },
+    { label: "invalid", value: "invalid" },
+  ];
+
+  const phoneStatuses = [
+    { label: "Valid / Verified", value: "valid" },
+    { label: "Invalid", value: "invalid" },
+    { label: "Mobile", value: "mobile" },
+    { label: "Landline", value: "landline" },
+    { label: "Toll Free", value: "toll_free" },
+  ];
+
   return {
     job_title: uniqueTitles,
     title: uniqueTitles,
@@ -78,6 +96,21 @@ const DB_VALUES_MAP = (() => {
     state: allStates,
     geo_source: geoSources,
     rating: ratings,
+    email_status: emailStatuses,
+    email_status_text: emailStatuses,
+    is_email_valid: emailStatuses,
+    email_verification: emailStatuses,
+    email_validity: emailStatuses,
+    email_deliverability: emailStatuses,
+    email_type: emailStatuses,
+    email_validation: emailStatuses,
+    email_verified: emailStatuses,
+    email: emailStatuses,
+    emails: emailStatuses,
+    phone_status: phoneStatuses,
+    phone_validity: phoneStatuses,
+    is_phone_valid: phoneStatuses,
+    phone_type: phoneStatuses,
   };
 })();
 
@@ -218,7 +251,28 @@ function ValueDropdown({ colKey, value, onChange, onEnterKey, placeholder = "Sel
   const [search, setSearch] = useState("");
   const ref = useRef(null);
 
-  const options = DB_VALUES_MAP[colKey] || null;
+  const normKey = (colKey || "").toLowerCase().replace(/[\s_-]+/g, "");
+
+  let options = DB_VALUES_MAP[colKey] || null;
+  if (!options) {
+    if (
+      normKey.includes("emailstatus") ||
+      normKey.includes("emailvalid") ||
+      normKey.includes("emailverif") ||
+      normKey.includes("emaildeliver") ||
+      normKey.includes("emailtype") ||
+      normKey === "email" ||
+      normKey === "emails"
+    ) {
+      options = DB_VALUES_MAP.email_status;
+    } else if (
+      normKey.includes("phonestatus") ||
+      normKey.includes("phonevalid") ||
+      normKey.includes("phonetype")
+    ) {
+      options = DB_VALUES_MAP.phone_status;
+    }
+  }
 
   useEffect(() => {
     const handler = (e) => {
@@ -271,12 +325,16 @@ function ValueDropdown({ colKey, value, onChange, onEnterKey, placeholder = "Sel
             <div className="qb-dropdown-search">
               <input
                 autoFocus
-                placeholder={`Search ${colKey.replace(/_/g, " ")} from DB...`}
+                placeholder={`Search ${colKey.replace(/_/g, " ")}...`}
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 onKeyDown={e => {
-                  if (e.key === "Enter" && filtered.length > 0) {
-                    onChange(filtered[0].value);
+                  if (e.key === "Enter") {
+                    if (filtered.length > 0) {
+                      onChange(filtered[0].value);
+                    } else if (search.trim()) {
+                      onChange(search.trim());
+                    }
                     setOpen(false);
                     setSearch("");
                     if (onEnterKey) onEnterKey();
@@ -309,8 +367,23 @@ function ValueDropdown({ colKey, value, onChange, onEnterKey, placeholder = "Sel
                   )}
                 </button>
               ))}
-              {filtered.length === 0 && (
-                <p className="qb-dropdown-empty">No matching values in DB</p>
+
+              {search.trim() && !options.some(o => o.value.toLowerCase() === search.toLowerCase().trim()) && (
+                <button
+                  type="button"
+                  className="qb-dropdown-item font-medium text-[var(--accent)] border-t border-[var(--border)] mt-1 pt-1.5"
+                  onClick={() => {
+                    onChange(search.trim());
+                    setOpen(false);
+                    setSearch("");
+                  }}
+                >
+                  Use "{search.trim()}"
+                </button>
+              )}
+
+              {filtered.length === 0 && !search.trim() && (
+                <p className="qb-dropdown-empty">No matching values</p>
               )}
             </div>
           </div>
