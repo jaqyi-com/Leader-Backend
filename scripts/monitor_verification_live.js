@@ -21,6 +21,10 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false },
 });
 
+pool.on("error", (err) => {
+  // Silent catch pool network reconnects
+});
+
 function loadStateFile() {
   try {
     if (fs.existsSync(STATE_FILE)) {

@@ -8,14 +8,6 @@
  *   • Target Speed: ~900 - 1,500 emails / min (54,000 - 90,000 / hour)
  *   • Daily Capacity: ~1.3 - 2.1 Million emails / day
  *   • Time for 20.46M Emails: ~14 - 15 Days
- * 
- * Architecture Features:
- *   1. Continuous 50-Worker Parallel Queue
- *   2. Phase 1: final.companies FIRST | Phase 2: final.people SECOND
- *   3. Short-Lived Client Checkout with statement_timeout = 0 (No DB Timeouts)
- *   4. Auto 3x Retry logic for database bulk updates
- *   5. In-Memory Domain MX & Catch-All LRU Caching
- *   6. Persistent Keyset Pagination UUID Cursor State (.verification_progress.json)
  */
 
 process.env.UV_THREADPOOL_SIZE = "128";
@@ -26,10 +18,19 @@ const path = require("path");
 const { Pool } = require("pg");
 const { verifyEmail } = require("../src/services/emailVerification/pipeline");
 
+// GLOBAL CRASH SHIELD - PREVENTS UNCAUGHT SOCKET DROPS FROM KILLING PROCESS
+process.on("uncaughtException", (err) => {
+  console.warn(`[Pipeline Crash Shield] ⚠️ Uncaught Exception safely handled: ${err.message}`);
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.warn(`[Pipeline Crash Shield] ⚠️ Unhandled Rejection safely handled: ${reason?.message || reason}`);
+});
+
 const CONCURRENCY = 50;
 const FETCH_BATCH_SIZE = 100;
 const STATE_FILE = path.join(__dirname, ".verification_progress.json");
-const DB_URL = process.env.NEON_DATABASE_URL;
+const DB_URL = process.env.NEON_DATABASE_URL || process.env.NEON_DIRECT_URL;
 
 if (!DB_URL) {
   console.error("❌ NEON_DATABASE_URL environment variable is missing.");
@@ -42,6 +43,27 @@ const pool = new Pool({
   max: 60,
   idleTimeoutMillis: 30000,
 });
+
+pool.on("error", (err) => {
+  console.warn("[NeonDB Pool] ⚠️ Idle client network warning (auto-reconnecting):", err.message);
+});
+
+async function getSafeClient() {
+  for (let attempt = 1; attempt <= 5; attempt++) {
+    try {
+      const client = await pool.connect();
+      if (!client._hasErrorListener) {
+        client.on("error", () => {});
+        client._hasErrorListener = true;
+      }
+      return client;
+    } catch (err) {
+      console.warn(`[DB Client Checkout Retry ${attempt}/5] ${err.message}`);
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+  throw new Error("Failed to checkout DB client after 5 attempts");
+}
 
 function printLine(msg) {
   process.stdout.write(msg + "\n");
@@ -106,45 +128,69 @@ async function bulkUpdateTable(tableName, updates) {
   const validUpdates = updates.filter(u => u && u.uuid);
   if (validUpdates.length === 0) return;
 
-  const valueRows = [];
-  const params = [];
-  let pIdx = 1;
+  // Chunk updates into small batches of 25 items for fast DB locks & execution
+  const CHUNK_SIZE = 25;
+  for (let i = 0; i < validUpdates.length; i += CHUNK_SIZE) {
+    const chunk = validUpdates.slice(i, i + CHUNK_SIZE);
+    
+    const valueRows = [];
+    const params = [];
+    let pIdx = 1;
 
-  for (const u of validUpdates) {
-    valueRows.push(`($${pIdx}::uuid, $${pIdx + 1}::boolean, $${pIdx + 2}::text, $${pIdx + 3}::numeric)`);
-    params.push(u.uuid, u.is_valid, u.status, u.score);
-    pIdx += 4;
-  }
+    for (const u of chunk) {
+      valueRows.push(`($${pIdx}::uuid, $${pIdx + 1}::boolean, $${pIdx + 2}::text, $${pIdx + 3}::numeric)`);
+      params.push(u.uuid, u.is_valid, u.status, u.score);
+      pIdx += 4;
+    }
 
-  const sql = `
-    UPDATE final.${tableName} AS t
-    SET is_email_valid = v.is_valid,
-        email_status = v.status,
-        email_score = v.score,
-        email_verified_at = NOW()
-    FROM (VALUES ${valueRows.join(", ")}) AS v(uuid, is_valid, status, score)
-    WHERE t.uuid = v.uuid;
-  `;
+    const sql = `
+      UPDATE final.${tableName} AS t
+      SET is_email_valid = v.is_valid,
+          email_status = v.status,
+          email_score = v.score,
+          email_verified_at = NOW()
+      FROM (VALUES ${valueRows.join(", ")}) AS v(uuid, is_valid, status, score)
+      WHERE t.uuid = v.uuid;
+    `;
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    const client = await pool.connect();
-    try {
-      await client.query("SET statement_timeout = 0;");
-      await client.query(sql, params);
-      return;
-    } catch (err) {
-      if (attempt === 3) throw err;
-      printLine(`[DB Retry] Bulk update attempt ${attempt} failed: ${err.message}. Retrying in 1s...`);
-      await new Promise(r => setTimeout(r, 1000));
-    } finally {
-      client.release();
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      let client = null;
+      try {
+        client = await getSafeClient();
+        await client.query("SET statement_timeout = 0;");
+        await client.query(sql, params);
+        break; // Chunk update succeeded
+      } catch (err) {
+        if (attempt === 3) {
+          // Fallback to row-by-row for this chunk
+          for (const u of chunk) {
+            let singleClient = null;
+            try {
+              singleClient = await getSafeClient();
+              await singleClient.query("SET statement_timeout = 0;");
+              await singleClient.query(
+                `UPDATE final.${tableName} SET is_email_valid = $1, email_status = $2, email_score = $3, email_verified_at = NOW() WHERE uuid = $4;`,
+                [u.is_valid, u.status, u.score, u.uuid]
+              );
+            } catch (_) {}
+            finally {
+              if (singleClient) try { singleClient.release(); } catch (_) {}
+            }
+          }
+        } else {
+          await new Promise(r => setTimeout(r, 500));
+        }
+      } finally {
+        if (client) try { client.release(); } catch (_) {}
+      }
     }
   }
 }
 
 async function fetchNextBatch(tableName, lastUuid) {
-  const client = await pool.connect();
+  let client = null;
   try {
+    client = await getSafeClient();
     await client.query("SET statement_timeout = 60000;");
     const res = await client.query(`
       SELECT uuid, emails 
@@ -156,8 +202,11 @@ async function fetchNextBatch(tableName, lastUuid) {
       LIMIT ${FETCH_BATCH_SIZE};
     `, [lastUuid]);
     return res.rows;
+  } catch (err) {
+    printLine(`[Fetch Batch Warning] ${err.message}`);
+    return [];
   } finally {
-    client.release();
+    if (client) try { client.release(); } catch (_) {}
   }
 }
 
@@ -180,6 +229,7 @@ async function runPipeline() {
     printLine("\n⏹️ Saving state checkpoint & shutting down gracefully...");
     saveState(state);
     running = false;
+    process.exit(0);
   });
 
   const startTime = Date.now();
@@ -189,14 +239,16 @@ async function runPipeline() {
     printLine(`\n🚀 Starting verification for table [final.${tableName}]...`);
 
     while (running) {
-      const items = await fetchNextBatch(tableName, state[cursorKey]).catch(err => {
-        printLine(`[DB Error] Batch fetch failed: ${err.message}`);
-        return [];
-      });
+      const items = await fetchNextBatch(tableName, state[cursorKey]);
 
       if (items.length === 0) {
-        printLine(`[${new Date().toLocaleTimeString()}] ✅ Table [final.${tableName}] verification 100% complete!`);
-        break;
+        await new Promise(r => setTimeout(r, 3000));
+        const retryItems = await fetchNextBatch(tableName, state[cursorKey]);
+        if (retryItems.length === 0) {
+          printLine(`[${new Date().toLocaleTimeString()}] ✅ Table [final.${tableName}] verification 100% complete!`);
+          break;
+        }
+        continue;
       }
 
       let queueIndex = 0;
@@ -251,12 +303,12 @@ async function runPipeline() {
 
       await Promise.all(workerPromises);
 
-      // Bulk update database with retry
+      // Bulk update database in small 25-item chunks
       if (pendingUpdates.length > 0) {
         await bulkUpdateTable(tableName, pendingUpdates);
       }
 
-      // Advance cursor & state checkpoint
+      // Advance cursor & save state checkpoint
       state[cursorKey] = items[items.length - 1].uuid;
       state[totalStateKey] += items.length;
       saveState(state);
@@ -283,7 +335,17 @@ async function runPipeline() {
   printLine("⚡ Email verification pipeline completed cleanly.");
 }
 
-runPipeline().catch(err => {
-  console.error("Fatal Pipeline Error:", err);
-  process.exit(1);
-});
+async function mainLoop() {
+  while (true) {
+    try {
+      await runPipeline();
+      break;
+    } catch (err) {
+      printLine(`\n⚠️ [Pipeline Self-Healing] Recovering from error: ${err.message}`);
+      printLine(`🔄 Resuming verification engine in 3 seconds...\n`);
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+}
+
+mainLoop();

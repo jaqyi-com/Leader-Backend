@@ -206,7 +206,7 @@ async function run() {
       { name: "Bhopal", state: "Madhya Pradesh", count: 25000 },
       { name: "Patna", state: "Bihar", count: 23000 },
       { name: "Ludhiana", state: "Punjab", count: 22000 },
-      { name: "Bhubaneswar", state: "Odisha", count: 20000 },
+      { name: "Bhubaneswar", state: "Odisha", count: 520 },
       { name: "Varanasi", state: "Uttar Pradesh", count: 18000 },
       { name: "Thiruvananthapuram", state: "Kerala", count: 17000 },
       { name: "Agra", state: "Uttar Pradesh", count: 16000 },

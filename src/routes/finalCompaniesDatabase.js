@@ -246,6 +246,60 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     } else if (col === "has_email") {
       col = "emails";
       op = val === "true" ? "nonempty" : "empty";
+    } else if ((col === "email_status" || col === "is_email_valid") && val !== "") {
+      const valLower = val.toLowerCase().trim();
+      const hasEmailStatus = schemaColumns.includes("email_status");
+      const hasIsEmailValid = schemaColumns.includes("is_email_valid");
+      const subConds = [];
+
+      if (valLower === "deliverable" || valLower === "valid" || valLower === "true") {
+        if (hasEmailStatus) subConds.push(`"email_status" IN ('deliverable', 'valid')`);
+        if (hasIsEmailValid) subConds.push(`"is_email_valid" = true`);
+      } else if (valLower === "undeliverable" || valLower === "invalid" || valLower === "false") {
+        if (hasEmailStatus) subConds.push(`"email_status" IN ('undeliverable', 'invalid')`);
+        if (hasIsEmailValid) subConds.push(`"is_email_valid" = false`);
+      } else if (valLower === "risky" || valLower.includes("catch")) {
+        if (hasEmailStatus) subConds.push(`"email_status" IN ('risky', 'catch_all', 'catch-all')`);
+      } else if (valLower === "unknown" || valLower === "unverified") {
+        if (hasEmailStatus) subConds.push(`("email_status" IN ('unknown', 'unverified') OR "email_status" IS NULL)`);
+      } else {
+        if (hasEmailStatus) {
+          const sIdx = idx++;
+          values.push(val);
+          subConds.push(`"email_status" ILIKE $${sIdx}`);
+        }
+      }
+
+      if (subConds.length > 0) {
+        conditions.push(`(${subConds.join(" OR ")})`);
+        continue;
+      }
+    } else if ((col === "phone_status" || col === "is_phone_valid") && val !== "") {
+      const valLower = val.toLowerCase().trim();
+      const hasPhoneStatus = schemaColumns.includes("phone_status");
+      const hasIsPhoneValid = schemaColumns.includes("is_phone_valid");
+      const subConds = [];
+
+      if (valLower === "valid" || valLower === "verified" || valLower === "true") {
+        if (hasPhoneStatus) subConds.push(`"phone_status" IN ('valid', 'verified', 'mobile', 'landline', 'toll_free')`);
+        if (hasIsPhoneValid) subConds.push(`"is_phone_valid" = true`);
+      } else if (valLower === "invalid" || valLower === "false") {
+        if (hasPhoneStatus) subConds.push(`"phone_status" = 'invalid'`);
+        if (hasIsPhoneValid) subConds.push(`"is_phone_valid" = false`);
+      } else if (valLower === "mobile" || valLower === "landline" || valLower === "toll_free") {
+        if (hasPhoneStatus) subConds.push(`"phone_status" = '${valLower}'`);
+      } else {
+        if (hasPhoneStatus) {
+          const sIdx = idx++;
+          values.push(val);
+          subConds.push(`"phone_status" ILIKE $${sIdx}`);
+        }
+      }
+
+      if (subConds.length > 0) {
+        conditions.push(`(${subConds.join(" OR ")})`);
+        continue;
+      }
     } else if (col === "has_phone") {
       // companies has BOTH: phone (plain text) AND phones (array-literal text like {+1...})
       // Check either column has data
