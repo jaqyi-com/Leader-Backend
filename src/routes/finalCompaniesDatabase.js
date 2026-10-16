@@ -127,9 +127,9 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     if (col === "country" && val !== "") {
       const countryLower = val.toLowerCase().trim();
       if (countryLower === "india" || countryLower === "in") {
-        conditions.push(`("geo_source" != 'us_zip' OR "pincode" ~ '^[1-9][0-9]{5}$' OR "city" IN ('Mumbai', 'Bengaluru', 'Delhi', 'New Delhi', 'Hyderabad', 'Pune', 'Chennai', 'Kolkata', 'Ahmedabad', 'Surat', 'Jaipur', 'Lucknow', 'Indore', 'Vadodara', 'Noida', 'Gurgaon', 'Gurugram', 'Chandigarh'))`);
+        conditions.push(`("geo_source" IN ('csv_v2_import', 'pincode'))`);
       } else if (countryLower === "usa" || countryLower === "us" || countryLower === "united states") {
-        conditions.push(`("geo_source" = 'us_zip' OR "address" ILIKE '%USA%' OR "address" ILIKE '%United States%')`);
+        conditions.push(`("geo_source" IN ('us_zip', 'us_city', 'us_state'))`);
       } else {
         conditions.push(`"address" ILIKE $${idx++}`);
         values.push(`%${val}%`);
@@ -461,10 +461,10 @@ function buildWhere(queryParams, embedding, _schema) {
   const countryParam = (queryParams.f_country || queryParams.f_country_contains || queryParams.f_country_eq || queryParams.country || "").toLowerCase();
   const alreadyHasCountry = dynamicConditions.some(c => c.includes("geo_source") || c.includes("us_zip"));
   if (!alreadyHasCountry && countryParam) {
-    if (countryParam === "india") {
-      conditions.push(`("geo_source" != 'us_zip' OR "pincode" ~ '^[1-9][0-9]{5}$' OR "city" IN ('Mumbai', 'Bengaluru', 'Delhi', 'New Delhi', 'Hyderabad', 'Pune', 'Chennai', 'Kolkata', 'Ahmedabad', 'Surat', 'Jaipur', 'Lucknow', 'Indore', 'Vadodara', 'Noida', 'Gurgaon', 'Gurugram', 'Chandigarh'))`);
-    } else if (countryParam === "usa" || countryParam === "us") {
-      conditions.push(`("geo_source" = 'us_zip')`);
+    if (countryParam === "india" || countryParam === "in") {
+      conditions.push(`("geo_source" IN ('csv_v2_import', 'pincode'))`);
+    } else if (countryParam === "usa" || countryParam === "us" || countryParam === "united states") {
+      conditions.push(`("geo_source" IN ('us_zip', 'us_city', 'us_state'))`);
     }
   }
 

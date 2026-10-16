@@ -7,8 +7,10 @@
 
 const express = require("express");
 const router  = express.Router();
-const { query: pgQuery } = require("../db/cloudSql");
+const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
+
+
 const logger = require("../utils/logger").forAgent("FinalPeopleNumberDB");
 
 const FP_SCHEMA  = "final";
@@ -111,7 +113,9 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     }
 
     // Special compatibility mapping for legacy filters
-    if (col === "has_email") {
+    if (col === "country") {
+      continue; // Handled centrally in buildWhere
+    } else if (col === "has_email") {
       col = "emails";
       op = val === "true" ? "nonempty" : "empty";
     } else if ((col === "email_status" || col === "is_email_valid") && val !== "") {
@@ -246,6 +250,38 @@ function buildWhere(queryParams, phoneCol, schemaColumns) {
   conditions.push(...dynamicConditions);
   idx = nextIdx;
 
+  // Handle explicit country filter (supports f_country, f_country_eq, f_country_contains, country)
+  const countryParam = (
+    queryParams.f_country ||
+    queryParams.f_country_eq ||
+    queryParams.f_country_contains ||
+    queryParams.country ||
+    ""
+  ).toLowerCase().trim();
+
+  const alreadyHasExplicitCountry = conditions.some(c =>
+    c.startsWith('"state"') ||
+    c.startsWith('"city"') ||
+    c.includes('"location" ILIKE \'%United States%\'')
+  );
+
+  if (!alreadyHasExplicitCountry && countryParam) {
+    if (countryParam === "india" || countryParam === "in") {
+      conditions.push(`(
+        ("geo_source" IS NULL OR "geo_source" NOT IN ('us_zip', 'us_city', 'us_state'))
+        AND ("state" IS NULL OR "state" NOT IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY'))
+        AND ("location" IS NULL OR ("location" NOT ILIKE '%United States%' AND "location" NOT ILIKE '%USA%'))
+        AND "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Telangana', 'Gujarat', 'Haryana', 'West Bengal', 'Uttar Pradesh', 'Rajasthan', 'Kerala', 'Madhya Pradesh', 'Punjab')
+      )`);
+    } else if (countryParam === "usa" || countryParam === "us" || countryParam === "united states") {
+      conditions.push(`(
+        "geo_source" IN ('us_zip', 'us_city', 'us_state')
+        OR "location" ILIKE '%United States%'
+        OR "state" IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY')
+      )`);
+    }
+  }
+
   return {
     whereStr: conditions.length ? `WHERE ${conditions.join(" AND ")}` : "",
     values,
@@ -362,7 +398,10 @@ router.get("/", async (req, res) => {
       LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
     `;
 
-    const dataRes = await pgQuery(dataSQL, [...values, limitNum, offset], 60000);
+    const dataRes = values.length > 0
+      ? await directQueryWithSession(dataSQL, [...values, limitNum, offset], ["SET LOCAL enable_seqscan = off;"], 30000)
+      : await pgQuery(dataSQL, [...values, limitNum, offset], 30000);
+
     const records = dataRes.rows.map(row => normalizeRow(schema, row));
 
     let total;

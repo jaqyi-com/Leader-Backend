@@ -15,8 +15,10 @@
 const express = require("express");
 const router  = express.Router();
 
-const { query: pgQuery } = require("../db/cloudSql");
+const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
+
+
 const logger = require("../utils/logger").forAgent("FinalPeopleDB");
 
 // ── Table config ───────────────────────────────────────────
@@ -264,6 +266,20 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         "fashion": ["Fashion", "Apparel", "Garment", "Designer", "Textile"],
         "fashion / lifestyle": ["Fashion", "Apparel", "Garment", "Designer", "Textile"],
         "software": ["Software", "Engineer", "Developer", "CTO", "SaaS", "IT", "Architect"],
+        "software engineer": ["Software", "Engineer", "Developer", "IT"],
+        "senior software engineer": ["Software", "Engineer", "Developer", "IT"],
+        "lead engineer": ["Lead Engineer", "Engineer", "Developer", "Tech Lead"],
+        "product manager": ["Product Manager", "Product"],
+        "general manager": ["General Manager", "Manager"],
+        "human resources manager": ["Human Resources", "HR Manager", "HR"],
+        "director": ["Director", "Managing Director", "Executive Director"],
+        "managing director": ["Managing Director", "Director"],
+        "founder": ["Founder", "Co-Founder"],
+        "co-founder": ["Co-Founder", "Founder"],
+        "ceo": ["CEO", "Chief Executive Officer"],
+        "chief executive officer": ["Chief Executive Officer", "CEO"],
+        "cto": ["CTO", "Chief Technology Officer"],
+        "chief technology officer": ["Chief Technology Officer", "CTO"],
         "technology / startups": ["Software", "Engineer", "Developer", "CTO", "SaaS", "IT", "Architect"],
         "travel": ["Travel", "Tourism", "Hospitality", "Guide"],
         "travel & recreation": ["Travel", "Tourism", "Hospitality", "Guide"],
@@ -292,16 +308,16 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       // Check single role key matches (Founder, CEO, CTO, Director)
       const titleSet = new Set();
       if (valLower.includes("founder")) {
-        ["Founder", "Co-Founder", "Co-founder", "Co Founder", "Founding Partner", "Co-Founder & CEO", "Founder & CEO", "founder", "co-founder"].forEach(v => titleSet.add(v));
+        ["Founder", "Co-Founder"].forEach(v => titleSet.add(v));
       }
       if (valLower.includes("ceo")) {
-        ["CEO", "Chief Executive Officer", "CEO & Founder", "Co-Founder & CEO", "CEO and Founder", "Founder & CEO", "ceo"].forEach(v => titleSet.add(v));
+        ["CEO", "Chief Executive Officer"].forEach(v => titleSet.add(v));
       }
       if (valLower.includes("cto")) {
-        ["CTO", "Chief Technology Officer", "CTO & Co-Founder", "Co-Founder & CTO", "cto"].forEach(v => titleSet.add(v));
+        ["CTO", "Chief Technology Officer"].forEach(v => titleSet.add(v));
       }
       if (valLower.includes("director")) {
-        ["Director", "Managing Director", "Executive Director", "Director & Founder", "director"].forEach(v => titleSet.add(v));
+        ["Director", "Managing Director"].forEach(v => titleSet.add(v));
       }
 
       if (titleSet.size > 0) {
@@ -315,7 +331,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         continue;
       }
 
-      // Multi-word / unmapped custom search: Exact phrase OR all constituent words matching with AND
+      // Multi-word / unmapped custom search: Exact phrase OR constituent words matching with OR
       const words = valLower.split(/[\s\-\/&\+]+/).filter(w => w.length > 2 && !["and", "the", "for", "with"].includes(w));
       if (words.length > 1) {
         const phraseIdx = idx++;
@@ -326,8 +342,9 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
           values.push(`%${w}%`);
           return `"job_title" ILIKE $${wIdx}`;
         });
-        conditions.push(`("job_title" ILIKE $${phraseIdx} OR (${wordConds.join(" AND ")}))`);
+        conditions.push(`("job_title" ILIKE $${phraseIdx} OR (${wordConds.join(" OR ")}))`);
       } else {
+
         const singleIdx = idx++;
         values.push(`%${val.trim()}%`);
         conditions.push(`"job_title" ILIKE $${singleIdx}`);
@@ -428,14 +445,35 @@ function buildWhere(queryParams, embedding, _schema) {
   conditions.push(...dynamicConditions);
   idx = nextIdx;
 
-  // Handle explicit country filter (if not already parsed via f_country_*)
-  const countryParam = (queryParams.f_country || queryParams.country || "").toLowerCase();
-  const alreadyHasCountry = conditions.some(c => c.includes("state") || c.includes("city") || c.includes("United States"));
-  if (!alreadyHasCountry && countryParam) {
-    if (countryParam === "india") {
-      conditions.push(`("state" IS NOT NULL OR "city" IS NOT NULL)`);
-    } else if (countryParam === "usa" || countryParam === "us") {
-      conditions.push(`("location" ILIKE '%United States%' OR "state" IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY'))`);
+  // Handle explicit country filter (supports f_country, f_country_eq, f_country_contains, country)
+  const countryParam = (
+    queryParams.f_country ||
+    queryParams.f_country_eq ||
+    queryParams.f_country_contains ||
+    queryParams.country ||
+    ""
+  ).toLowerCase().trim();
+
+  const alreadyHasExplicitCountry = conditions.some(c =>
+    c.startsWith('"state"') ||
+    c.startsWith('"city"') ||
+    c.includes('"location" ILIKE \'%United States%\'')
+  );
+
+  if (!alreadyHasExplicitCountry && countryParam) {
+    if (countryParam === "india" || countryParam === "in") {
+      conditions.push(`(
+        ("geo_source" IS NULL OR "geo_source" NOT IN ('us_zip', 'us_city', 'us_state'))
+        AND ("state" IS NULL OR "state" NOT IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY'))
+        AND ("location" IS NULL OR ("location" NOT ILIKE '%United States%' AND "location" NOT ILIKE '%USA%'))
+        AND "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Telangana', 'Gujarat', 'Haryana', 'West Bengal', 'Uttar Pradesh', 'Rajasthan', 'Kerala', 'Madhya Pradesh', 'Punjab')
+      )`);
+    } else if (countryParam === "usa" || countryParam === "us" || countryParam === "united states") {
+      conditions.push(`(
+        "geo_source" IN ('us_zip', 'us_city', 'us_state')
+        OR "location" ILIKE '%United States%'
+        OR "state" IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY')
+      )`);
     }
   }
 
@@ -626,7 +664,9 @@ router.get("/", async (req, res) => {
       LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
     `;
 
-    const dataPromise = pgQuery(dataSQL, [...values, limitNum, offset], 6000);
+    const dataPromise = userHasFilters
+      ? directQueryWithSession(dataSQL, [...values, limitNum, offset], ["SET LOCAL enable_seqscan = off;"], 30000)
+      : pgQuery(dataSQL, [...values, limitNum, offset], 30000);
 
     const dataRes = await dataPromise;
     const records = dataRes.rows.map(row => normalizeRow(schema, row));
