@@ -25,12 +25,12 @@ const SMTP_HELO_DOMAIN = process.env.SMTP_HELO_DOMAIN || "mail-verifier.org";
 const SMTP_MAIL_FROM = process.env.SMTP_MAIL_FROM || "verify@mail-verifier.org";
 
 /**
- * Checks whether outbound SMTP probes (port 25) are enabled in this environment.
- * Default is TRUE unless explicitly set to "false".
+ * Checks whether outbound local SMTP probes (port 25) are enabled.
+ * Default is FALSE: all SMTP checks are routed to the dedicated Doott Cloud VPS Verifier.
  */
 function isSmtpProbingEnabled() {
-  if (process.env.ENABLE_SMTP_PROBES === "false") return false;
-  return true;
+  if (process.env.ENABLE_LOCAL_SMTP_PROBES === "true") return true;
+  return false;
 }
 
 /**

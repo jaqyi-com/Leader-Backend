@@ -221,7 +221,7 @@ async function retryTableErrors(tableName) {
         }
 
         try {
-          const verifPromise = verifyEmail(targetEmail, { forceRefresh: true, skipSmtp: false, timeoutMs: 4000 });
+          const verifPromise = verifyEmail(targetEmail, { forceRefresh: true, timeoutMs: 8000 });
           const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error("Verification timeout (15s)")), 15000)
           );
