@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "outputDirectory": "dist",
   "functions": {
     "api/index.js": {
       "includeFiles": "src/public/**"
