@@ -4,7 +4,7 @@
   "description": "Multi-System AI Agent for Robotics Market Intelligence & Outreach - Keli Sensing",
   "main": "src/server.js",
   "scripts": {
-    "build": "npm --prefix frontend install && npm --prefix frontend run build && rm -rf dist && cp -r frontend/dist ./dist",
+    "build": "npm --prefix frontend install && npm --prefix frontend run build && rm -rf dist public && cp -r frontend/dist ./dist && cp -r frontend/dist ./public",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "scrape": "node src/index.js --phase=scrape",
