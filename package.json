@@ -4,6 +4,7 @@
   "description": "Multi-System AI Agent for Robotics Market Intelligence & Outreach - Keli Sensing",
   "main": "src/server.js",
   "scripts": {
+    "build": "echo 'Build complete'",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "scrape": "node src/index.js --phase=scrape",
