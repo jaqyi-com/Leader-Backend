@@ -85,7 +85,7 @@ function parseEmail(emailVal) {
 }
 
 function getBadge(status) {
-  if (status === "deliverable") return "✅ DELIVERABLE  ";
+  if (status === "deliverable") return "✅ DELIVERABLE [via SMTP 250 OK][via SMTP 250 OK]";
   if (status === "undeliverable") return "❌ UNDELIVERABLE";
   if (status === "risky") return "⚠️ RISKY        ";
   return "❓ UNKNOWN      ";

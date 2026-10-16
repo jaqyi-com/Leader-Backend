@@ -35,12 +35,24 @@ function normalizeVpsResponse(email, vpsData) {
   let reason = "";
   let smtpResult = SMTP_RESULTS.UNKNOWN;
 
-  // 1. Deliverable / Valid
+  // 1. Deliverable / Valid - STRICT: ONLY when confirmed via conclusive SMTP 250 OK and non-catch-all
   if (statusStr === "valid" || statusStr === "deliverable") {
-    state = VERIFICATION_STATES.DELIVERABLE;
-    score = typeof vpsData.confidence === "number" ? vpsData.confidence / 100 : 0.95;
-    reason = "Mailbox exists and is confirmed deliverable via Doott VPS Reacher engine";
-    smtpResult = SMTP_RESULTS.ACCEPTED;
+    if (vpsData.smtp_code === 250 && isCatchAll === false) {
+      state = VERIFICATION_STATES.DELIVERABLE;
+      score = typeof vpsData.confidence === "number" ? Math.max(0.90, vpsData.confidence / 100) : 0.98;
+      reason = "Mailbox exists and is confirmed deliverable via conclusive SMTP 250 OK";
+      smtpResult = SMTP_RESULTS.ACCEPTED;
+    } else if (isCatchAll === true) {
+      state = VERIFICATION_STATES.RISKY;
+      score = 0.50;
+      reason = "Catch-all domain: destination server accepts all incoming addresses";
+      smtpResult = SMTP_RESULTS.ACCEPTED;
+    } else {
+      state = VERIFICATION_STATES.RISKY;
+      score = 0.65;
+      reason = "SMTP accepted target recipient, but catch-all status unverified";
+      smtpResult = SMTP_RESULTS.ACCEPTED;
+    }
   }
   // 2. Undeliverable / Invalid
   else if (statusStr === "invalid" || statusStr === "undeliverable") {
