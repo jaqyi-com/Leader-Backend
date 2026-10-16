@@ -617,8 +617,10 @@ router.get("/", async (req, res) => {
     f_has_email, f_has_phone, f_min_rating, f_min_reviews,
   } = req.query;
 
-  const pageNum  = Math.max(1, parseInt(page, 10));
-  const limitNum = Math.min(500, Math.max(1, parseInt(limit, 10)));
+  const parsedPage  = parseInt(page, 10);
+  const parsedLimit = parseInt(limit, 10);
+  const pageNum  = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+  const limitNum = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(100, parsedLimit) : 50;
   const offset   = (pageNum - 1) * limitNum;
 
   try {
@@ -727,6 +729,7 @@ router.get("/", async (req, res) => {
       records,
       total,
       page:   pageNum,
+      limit:  limitNum,
       pages:  Math.ceil(total / limitNum),
       source: "cloud_sql",
       table:  FC_TABLE,

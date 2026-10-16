@@ -214,10 +214,17 @@ export default function PeoplePage() {
 
   const exportCSV = () => {
     if (!cols.length || !records.length) return;
+    const sanitizeCsvCell = (val) => {
+      const str = String(val ?? "");
+      if (/^[=+\-@\t\r]/.test(str)) {
+        return `'${str}`;
+      }
+      return str;
+    };
     const hdrs = cols.map(c => c.label);
     const rows = records.map(r => cols.map(c => r[c.key] || ""));
     const csv = [hdrs, ...rows]
-      .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .map(r => r.map(v => `"${sanitizeCsvCell(v).replace(/"/g, '""')}"`).join(","))
       .join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));

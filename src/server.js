@@ -653,6 +653,12 @@ app.post("/api/icp", (req, res) => {
 });
 
 app.get("/api/env", (req, res) => {
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
+    return res.status(403).json({ error: "Access denied. Environment inspection is disabled in production." });
+  }
+  if (req.user && req.user.role !== "admin" && req.user.role !== "owner") {
+    return res.status(403).json({ error: "Admin role required." });
+  }
   try {
     const defaultEnv = {
       MONGO_URI: process.env.MONGO_URI || "",
@@ -672,6 +678,12 @@ app.get("/api/env", (req, res) => {
 });
 
 app.post("/api/env", (req, res) => {
+  if (process.env.NODE_ENV === "production" || process.env.VERCEL) {
+    return res.status(403).json({ error: "Access denied. Environment modification is disabled in production." });
+  }
+  if (req.user && req.user.role !== "admin" && req.user.role !== "owner") {
+    return res.status(403).json({ error: "Admin role required." });
+  }
   try {
     const envPath = path.join(process.cwd(), ".env");
     let content = "";

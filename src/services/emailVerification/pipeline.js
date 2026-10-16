@@ -291,8 +291,13 @@ async function verifyEmail(rawEmail, options = {}) {
   let smtpMessage = "";
   let smtpGated = !isSmtpProbingEnabled();
 
-  if (isSmtpProbingEnabled() && !skipSmtp && primaryMx) {
-    const probe = await probeSmtpMailbox(primaryMx, email, 3500);
+  if (catchAllResult && catchAllResult.port25Blocked) {
+    // If port 25 is blocked or unreachable on this MX host, avoid redundant timeout
+    smtpResult = SMTP_RESULTS.UNKNOWN;
+    smtpMessage = "Port 25 blocked or connection timed out on MX host";
+    smtpGated = true;
+  } else if (isSmtpProbingEnabled() && !skipSmtp && primaryMx) {
+    const probe = await probeSmtpMailbox(primaryMx, email, 3000);
     smtpResult = probe.result;
     smtpCode = probe.code;
     smtpMessage = probe.message;

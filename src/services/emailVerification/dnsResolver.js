@@ -6,7 +6,7 @@ const { query } = require("../../db/cloudSql");
 
 const DNS_A_CACHE_TTL = 3600;         // 1 hour
 const DNS_MX_CACHE_TTL = 86400;       // 24 hours
-const DNS_LOOKUP_TIMEOUT = 4000;      // 4s timeout
+const DNS_LOOKUP_TIMEOUT = 1800;      // 1.8s fast timeout
 
 /**
  * Wraps a promise with a timeout.

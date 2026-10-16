@@ -91,23 +91,32 @@ async function detectCatchAll(domain, primaryMx) {
   const probeEmail2 = `probe_b_${hash2}@${cleanDomain}`;
 
   try {
-    // Probe 1
-    const res1 = await probeSmtpMailbox(primaryMx, probeEmail1, 5000);
+    // Probe 1 (fast 2500ms probe)
+    const res1 = await probeSmtpMailbox(primaryMx, probeEmail1, 2500);
 
     if (res1.result === "rejected") {
       // 5xx rejection means server rejects non-existent mailboxes (Explicit only)
       const verdict = { isCatchAll: false, reason: "Domain rejected Probe 1 (Non-catch-all server)", probeCode: res1.code };
+      LOCAL_CATCH_ALL_CACHE.set(cleanDomain, verdict);
       await cacheSet(cacheKey, verdict, CATCH_ALL_CACHE_TTL);
       return verdict;
     }
 
     if (res1.result !== "accepted") {
-      // 4xx or timeout
-      return { isCatchAll: null, reason: `Probe 1 inconclusive: ${res1.message}`, probeCode: res1.code };
+      // 4xx, network error, or TCP timeout
+      const isConnectTimeout = /timeout|connect|refused|unreach|blocked/i.test(res1.message || "");
+      const verdict = {
+        isCatchAll: null,
+        reason: `Probe 1 inconclusive: ${res1.message}`,
+        probeCode: res1.code,
+        port25Blocked: isConnectTimeout
+      };
+      LOCAL_CATCH_ALL_CACHE.set(cleanDomain, verdict);
+      return verdict;
     }
 
-    // Probe 1 returned 250 OK → Confirm with Probe 2 to rule out transient 250
-    const res2 = await probeSmtpMailbox(primaryMx, probeEmail2, 5000);
+    // Probe 1 returned 250 OK → Confirm with Probe 2 (2500ms)
+    const res2 = await probeSmtpMailbox(primaryMx, probeEmail2, 2500);
 
     let isCatchAll = null;
     let reason = "";

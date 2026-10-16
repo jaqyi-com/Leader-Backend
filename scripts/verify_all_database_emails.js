@@ -30,6 +30,7 @@ process.on("unhandledRejection", (reason) => {
 const CONCURRENCY = 50;
 const FETCH_BATCH_SIZE = 100;
 const STATE_FILE = path.join(__dirname, ".verification_progress.json");
+const LOG_FILE = path.join(__dirname, "../pipeline.log");
 const DB_URL = process.env.NEON_DATABASE_URL || process.env.NEON_DIRECT_URL;
 
 if (!DB_URL) {
@@ -40,8 +41,13 @@ if (!DB_URL) {
 const pool = new Pool({
   connectionString: DB_URL,
   ssl: { rejectUnauthorized: false },
-  max: 60,
+  max: 40,
   idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 15000,
+  statement_timeout: 45000,
+  query_timeout: 45000,
+  keepAlive: true,
+  keepAliveInitialDelayMillis: 10000,
 });
 
 pool.on("error", (err) => {
@@ -67,6 +73,9 @@ async function getSafeClient() {
 
 function printLine(msg) {
   process.stdout.write(msg + "\n");
+  try {
+    fs.appendFileSync(LOG_FILE, msg + "\n", "utf8");
+  } catch (_) {}
 }
 
 function loadState() {
@@ -157,7 +166,7 @@ async function bulkUpdateTable(tableName, updates) {
       let client = null;
       try {
         client = await getSafeClient();
-        await client.query("SET statement_timeout = 0;");
+        await client.query("SET statement_timeout = 30000;");
         await client.query(sql, params);
         break; // Chunk update succeeded
       } catch (err) {
@@ -167,7 +176,7 @@ async function bulkUpdateTable(tableName, updates) {
             let singleClient = null;
             try {
               singleClient = await getSafeClient();
-              await singleClient.query("SET statement_timeout = 0;");
+              await singleClient.query("SET statement_timeout = 15000;");
               await singleClient.query(
                 `UPDATE final.${tableName} SET is_email_valid = $1, email_status = $2, email_score = $3, email_verified_at = NOW() WHERE uuid = $4;`,
                 [u.is_valid, u.status, u.score, u.uuid]
@@ -201,10 +210,10 @@ async function fetchNextBatch(tableName, lastUuid) {
       ORDER BY uuid ASC 
       LIMIT ${FETCH_BATCH_SIZE};
     `, [lastUuid]);
-    return res.rows;
+    return { success: true, rows: res.rows };
   } catch (err) {
     printLine(`[Fetch Batch Warning] ${err.message}`);
-    return [];
+    return { success: false, rows: [] };
   } finally {
     if (client) try { client.release(); } catch (_) {}
   }
@@ -225,12 +234,16 @@ async function runPipeline() {
   printLine("===============================================================================\n");
 
   let running = true;
-  process.on("SIGINT", () => {
-    printLine("\n⏹️ Saving state checkpoint & shutting down gracefully...");
+  const gracefulExit = (signal) => {
+    printLine(`\n⏹️ Saving state checkpoint & shutting down gracefully (${signal})...`);
     saveState(state);
     running = false;
     process.exit(0);
-  });
+  };
+
+  process.on("SIGINT", () => gracefulExit("SIGINT"));
+  process.on("SIGTERM", () => gracefulExit("SIGTERM"));
+  process.on("SIGHUP", () => gracefulExit("SIGHUP"));
 
   const startTime = Date.now();
   let verifiedInSession = 0;
@@ -239,12 +252,20 @@ async function runPipeline() {
     printLine(`\n🚀 Starting verification for table [final.${tableName}]...`);
 
     while (running) {
-      const items = await fetchNextBatch(tableName, state[cursorKey]);
+      const fetchRes = await fetchNextBatch(tableName, state[cursorKey]);
+
+      if (!fetchRes.success) {
+        printLine(`[${new Date().toLocaleTimeString()}] ⚠️ Database connection retry in 4s...`);
+        await new Promise(r => setTimeout(r, 4000));
+        continue;
+      }
+
+      const items = fetchRes.rows;
 
       if (items.length === 0) {
         await new Promise(r => setTimeout(r, 3000));
-        const retryItems = await fetchNextBatch(tableName, state[cursorKey]);
-        if (retryItems.length === 0) {
+        const retryRes = await fetchNextBatch(tableName, state[cursorKey]);
+        if (retryRes.success && retryRes.rows.length === 0) {
           printLine(`[${new Date().toLocaleTimeString()}] ✅ Table [final.${tableName}] verification 100% complete!`);
           break;
         }
@@ -269,7 +290,11 @@ async function runPipeline() {
           }
 
           try {
-            const verif = await verifyEmail(targetEmail, { forceRefresh: false, skipSmtp: false });
+            const verifPromise = verifyEmail(targetEmail, { forceRefresh: false, skipSmtp: false });
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("Verification timeout (60s)")), 60000)
+            );
+            const verif = await Promise.race([verifPromise, timeoutPromise]);
             const isValid = verif.state === "deliverable";
             const durationMs = Date.now() - start;
 
@@ -290,8 +315,9 @@ async function runPipeline() {
               score: verif.score
             });
           } catch (err) {
-            printLine(`[${new Date().toLocaleTimeString()}] [W#${String(workerId).padStart(2, "0")}] [${tableName.slice(0, 4)}] ${targetEmail.padEnd(34)} ➔ ❓ ERROR (${err.message})`);
-            pendingUpdates.push({ uuid: row.uuid, is_valid: false, status: "error", score: 0.0 });
+            printLine(`[${new Date().toLocaleTimeString()}] [W#${String(workerId).padStart(2, "0")}] [${tableName.slice(0, 4)}] ${targetEmail.padEnd(34)} ➔ ❓ UNKNOWN (${err.message})`);
+            state.unknown_count++;
+            pendingUpdates.push({ uuid: row.uuid, is_valid: false, status: "unknown", score: 0.5 });
           }
         }
       }
@@ -339,11 +365,12 @@ async function mainLoop() {
   while (true) {
     try {
       await runPipeline();
-      break;
+      printLine("⚡ Pipeline cycle completed. Pausing 30s before checking for new records...");
+      await new Promise(r => setTimeout(r, 30000));
     } catch (err) {
       printLine(`\n⚠️ [Pipeline Self-Healing] Recovering from error: ${err.message}`);
-      printLine(`🔄 Resuming verification engine in 3 seconds...\n`);
-      await new Promise(r => setTimeout(r, 3000));
+      printLine(`🔄 Resuming verification engine in 5 seconds...\n`);
+      await new Promise(r => setTimeout(r, 5000));
     }
   }
 }

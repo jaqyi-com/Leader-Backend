@@ -28,7 +28,7 @@ async function loadDisposableCache(force = false) {
   }
 
   try {
-    const res = await query("SELECT domain FROM final.disposable_domains");
+    const res = await query("SELECT domain FROM final.disposable_domains", [], 2500);
     if (res.rows && res.rows.length > 0) {
       const newSet = new Set(SEED_DISPOSABLE_DOMAINS);
       for (const row of res.rows) {

@@ -65,7 +65,23 @@ async function createSmtpSocket(mxHost, timeoutMs) {
     return info.socket;
   }
 
-  return net.createConnection({ host: mxHost, port: DEFAULT_SMTP_PORT });
+  return new Promise((resolve, reject) => {
+    const socket = net.createConnection({ host: mxHost, port: DEFAULT_SMTP_PORT });
+    const timer = setTimeout(() => {
+      socket.destroy();
+      reject(new Error(`TCP connect timeout to ${mxHost}:25 after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    socket.once("connect", () => {
+      clearTimeout(timer);
+      resolve(socket);
+    });
+
+    socket.once("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
 }
 
 /**

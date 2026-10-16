@@ -18,8 +18,8 @@ const router = express.Router();
 const PLAN_AMOUNT_PAISE = 17900; // ₹179
 const PLAN_CURRENCY     = "INR";
 
-const RAZORPAY_KEY_ID     = process.env.RAZORPAY_KEY_ID     || "rzp_live_ThZtzVX8tHPpj4";
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || "rAF4uYgj0UIb0Rge9xZtCNx9";
+const RAZORPAY_KEY_ID     = process.env.RAZORPAY_KEY_ID;
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
 
 // Lazy getter — Razorpay instance created AFTER env vars or fallbacks are loaded
 function getRazorpay() {
@@ -130,18 +130,35 @@ router.post("/verify-and-register", async (req, res) => {
 router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   try {
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
-    if (webhookSecret) {
-      const sig = req.headers["x-razorpay-signature"];
-      const exp = crypto.createHmac("sha256", webhookSecret).update(req.body).digest("hex");
-      if (sig !== exp) return res.status(400).json({ error: "Invalid webhook signature" });
+    if (!webhookSecret) {
+      logger.error("[Payments] RAZORPAY_WEBHOOK_SECRET is not configured.");
+      return res.status(500).json({ error: "Webhook signature verification misconfigured." });
     }
 
-    const event = JSON.parse(req.body.toString());
+    const sig = req.headers["x-razorpay-signature"];
+    if (!sig) {
+      return res.status(400).json({ error: "Missing webhook signature" });
+    }
+
+    const rawBody = Buffer.isBuffer(req.body)
+      ? req.body
+      : (typeof req.body === "string" ? req.body : JSON.stringify(req.body));
+
+    const exp = crypto.createHmac("sha256", webhookSecret).update(rawBody).digest("hex");
+    if (sig !== exp) {
+      logger.warn("[Payments] Invalid webhook signature detected.");
+      return res.status(400).json({ error: "Invalid webhook signature" });
+    }
+
+    const event = Buffer.isBuffer(req.body)
+      ? JSON.parse(req.body.toString("utf8"))
+      : (typeof req.body === "string" ? JSON.parse(req.body) : req.body);
+
     logger.info(`[Payments] Webhook: ${event.event}`);
 
     if (event.event === "payment.captured") {
-      const payment = event.payload.payment.entity;
-      const email   = payment.notes?.email;
+      const payment = event.payload?.payment?.entity;
+      const email   = payment?.notes?.email;
       if (email) {
         await User.findOneAndUpdate(
           { email: email.toLowerCase() },
