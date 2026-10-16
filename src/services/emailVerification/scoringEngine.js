@@ -1,24 +1,23 @@
 "use strict";
 
-const { VERIFICATION_STATES, SMTP_RESULTS, FREEMAIL_DOMAINS } = require("./constants");
+const { VERIFICATION_STATES, SMTP_RESULTS, FREEMAIL_DOMAINS, TRAP_LOCAL_PARTS } = require("./constants");
 const { isSecurityGateway } = require("./smtpVerifier");
 
 /**
  * Calculates the composite verification verdict and score from all stage signals.
+ * Aligned with reacher / AfterShip / ETL pipeline scoring.
  * 
  * Strict Deliverability Rules:
- *   - DELIVERABLE (Score 0.90 - 0.99): Verified non-catch-all domain, SMTP 250 accepted, non-disposable, valid MX.
- *   - RISKY (Score 0.30 - 0.65): Catch-all domains, Security Gateways (Microsoft EOP/Mimecast DHA), Disposable, Role addresses.
- *   - UNDELIVERABLE (Score 0.0): Syntax error, no MX, domain offline, or SMTP 5xx permanent rejection.
- *   - UNKNOWN (Score 0.45 - 0.50): Port 25 connection timeout, 4xx tempfail, greylisted.
- * 
- * @param {Object} signals
- * @returns {Object} Composite verdict object
+ *   - DELIVERABLE (Score 0.85 - 0.98): Verified non-catch-all domain, SMTP 250 accepted, non-disposable, valid MX.
+ *   - RISKY (Score 0.15 - 0.65): Catch-all domains, mailbox full, disposable, accepted but unproven catch-all.
+ *   - UNDELIVERABLE (Score 0.0): Syntax error, no MX, domain offline, or SMTP invalid/disabled mailbox.
+ *   - UNKNOWN (Score 0.45): Port 25 connection timeout, greylisted, server IP reputation block.
  */
 function computeVerdict(signals) {
   const {
     email,
     domain,
+    localPart = "",
     syntaxValid = false,
     syntaxReason = "",
     typoSuggestion = null,
@@ -33,15 +32,18 @@ function computeVerdict(signals) {
     smtpResult = SMTP_RESULTS.UNKNOWN,
     smtpCode = null,
     smtpMessage = "",
-    smtpGated = false
+    smtpGated = false,
+    blocked = false
   } = signals;
 
   let state = VERIFICATION_STATES.UNKNOWN;
   let score = 0.0;
   let reason = "";
 
+  const cleanLocal = (localPart || email?.split("@")[0] || "").toLowerCase().trim();
+  const isTrap = TRAP_LOCAL_PARTS ? TRAP_LOCAL_PARTS.has(cleanLocal.split("+")[0]) : false;
   const isFreemail = FREEMAIL_DOMAINS.has(domain?.toLowerCase()?.trim());
-  const isGateway  = isSecurityGateway(primaryMx);
+  const isGateway = isSecurityGateway(primaryMx);
 
   // ── Stage 1: Syntax Failure ────────────────────────────────────────────────
   if (!syntaxValid) {
@@ -61,34 +63,38 @@ function computeVerdict(signals) {
     score = 0.15;
     reason = "Disposable or temporary email address";
   }
-  // ── Stage 7: Conclusive SMTP Rejection (5xx Code) ─────────────────────────
-  else if (smtpResult === SMTP_RESULTS.REJECTED) {
+  // ── Stage 7: Conclusive SMTP Rejection (Invalid or Disabled Mailbox) ────────
+  else if (smtpResult === SMTP_RESULTS.INVALID || smtpResult === SMTP_RESULTS.REJECTED || smtpResult === SMTP_RESULTS.DISABLED) {
     state = VERIFICATION_STATES.UNDELIVERABLE;
     score = 0.0;
-    reason = smtpMessage || "Mailbox rejected by destination mail server (5xx user unknown)";
+    reason = (smtpResult === SMTP_RESULTS.DISABLED ? "Mailbox disabled / inactive: " : "Mailbox rejected by destination mail server: ") + (smtpMessage || "5xx user unknown");
+  }
+  // ── Mailbox Full / Quota Exceeded ──────────────────────────────────────────
+  else if (smtpResult === SMTP_RESULTS.FULL) {
+    state = VERIFICATION_STATES.RISKY;
+    score = 0.30;
+    reason = `Mailbox full / quota exceeded: ${smtpMessage || "552/452"}`;
   }
   // ── Stage 6: Catch-All Domain (Accepts any email address) ─────────────────
   else if (catchAll === true) {
     state = VERIFICATION_STATES.RISKY;
     score = 0.50;
-    reason = "Domain is a catch-all server; accepts any mailbox prefix (high bounce risk)";
-  }
-  // ── Security Gateway (Microsoft EOP, Mimecast, Proofpoint, Barracuda) ─────
-  else if (isGateway) {
-    state = VERIFICATION_STATES.RISKY;
-    score = 0.60;
-    reason = "Domain uses Directory Harvest Protection (Microsoft 365 / Security Gateway); simulated 250 OK returned";
+    reason = "Catch-all domain: destination server accepts all incoming addresses";
   }
   // ── Explicit Non-Catch-All + SMTP Accepted (2xx Code) ──────────────────────
   else if (catchAll === false && smtpResult === SMTP_RESULTS.ACCEPTED) {
-    if (roleAddress) {
+    if (isTrap) {
+      state = VERIFICATION_STATES.RISKY;
+      score = 0.40;
+      reason = "Possible spam-trap / abuse mailbox";
+    } else if (roleAddress) {
       state = VERIFICATION_STATES.DELIVERABLE;
       score = 0.85;
       reason = "Verified deliverable role/department address";
     } else {
       state = VERIFICATION_STATES.DELIVERABLE;
       score = 0.98;
-      reason = "Mailbox exists and is confirmed deliverable via SMTP Port 25";
+      reason = "Mailbox exists and is confirmed deliverable via SMTP Port 25 (random address rejected)";
     }
   }
   // ── Major Freemail Domain (Gmail, Outlook, Yahoo) ──────────────────────────
@@ -100,28 +106,28 @@ function computeVerdict(signals) {
     } else {
       state = VERIFICATION_STATES.DELIVERABLE;
       score = 0.85;
-      reason = "Valid freemail domain with active MX records";
+      reason = "Freemail domain with active MX records";
     }
   }
   // ── SMTP Probe Accepted (Without Catch-All Confirmation) ───────────────────
   else if (smtpResult === SMTP_RESULTS.ACCEPTED) {
     state = VERIFICATION_STATES.RISKY;
     score = 0.65;
-    reason = "SMTP accepted RCPT TO command, but catch-all status could not be verified";
+    reason = "SMTP accepted target recipient, but catch-all status could not be verified";
   }
-  // ── Inconclusive / Gated / Timeout SMTP Probing ───────────────────────────
-  else if (smtpResult === SMTP_RESULTS.UNKNOWN || smtpGated) {
+  // ── Server Refusal / IP Reputation Block (Never mark invalid!) ─────────────
+  else if (smtpResult === SMTP_RESULTS.BLOCKED || blocked) {
     state = VERIFICATION_STATES.UNKNOWN;
     score = 0.45;
-    reason = roleAddress
-      ? "Role address on business domain; SMTP probe inconclusive or timed out"
-      : "Valid business domain with MX, but SMTP probing was inconclusive or timed out";
+    reason = `Mail server refused probe (IP/sender reputation): ${smtpMessage || "Policy refusal"}`;
   }
-  // ── Fallback ───────────────────────────────────────────────────────────────
+  // ── Inconclusive / Gated / Timeout SMTP Probing ───────────────────────────
   else {
     state = VERIFICATION_STATES.UNKNOWN;
-    score = 0.40;
-    reason = "Verification inconclusive";
+    score = 0.45;
+    reason = smtpMessage
+      ? `MX ok, SMTP inconclusive: ${smtpMessage}`
+      : "Valid domain and MX, but SMTP verification timed out or was inconclusive";
   }
 
   // Ensure score is bounded strictly [0.0, 1.0] and rounded to 3 decimals
@@ -145,8 +151,11 @@ function computeVerdict(signals) {
       typo_suggestion: typoSuggestion,
       smtp_code: smtpCode,
       smtp_gated: Boolean(smtpGated),
+      is_catch_all: catchAll,
+      smtp_result: smtpResult,
       is_freemail: isFreemail,
-      is_security_gateway: isGateway
+      is_security_gateway: isGateway,
+      is_trap: isTrap
     },
     checked_at: new Date().toISOString()
   };

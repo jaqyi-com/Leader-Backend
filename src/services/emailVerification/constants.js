@@ -97,19 +97,24 @@ const VERIFICATION_STATES = {
 
 const SMTP_RESULTS = {
   ACCEPTED: "accepted",
+  INVALID: "invalid",
+  DISABLED: "disabled",
+  FULL: "full",
+  BLOCKED: "blocked",
+  GREYLISTED: "greylisted",
   REJECTED: "rejected",
   UNKNOWN: "unknown"
 };
 
 /**
  * Known security gateway MX patterns (Microsoft EOP, Mimecast, Proofpoint, Barracuda, Sophos, Cisco IronPort).
- * These gateways use Directory Harvest Protection (DHA) and return false-positive 250 OK
- * for ALL recipient addresses at RCPT TO stage, then silently bounce or send NDR later.
  */
 const SECURITY_GATEWAY_PATTERNS = [
   /protection\.outlook\.com$/i,
+  /\.mx\.microsoft$/i,
   /mimecast\.com$/i,
   /pphosted\.com$/i,
+  /ppe-hosted\.com$/i,
   /proofpoint\.com$/i,
   /barracudanetworks\.com$/i,
   /sophos\.com$/i,
@@ -118,13 +123,51 @@ const SECURITY_GATEWAY_PATTERNS = [
   /messagelabs\.com$/i
 ];
 
+/**
+ * Local parts typical of spam traps / abuse desks
+ */
+const TRAP_LOCAL_PARTS = new Set(["spam", "abuse", "spamtrap", "honeypot", "trap", "blackhole", "devnull"]);
+
+/**
+ * RCPT reply text patterns for granular 7-class heuristics (from reacher / AfterShip / ETL pipeline)
+ */
+const BLOCKED_HINTS = [
+  "spamhaus", "blacklist", "blocklist", "block list", "blocked using", "dnsbl", "abusix", "spamcop",
+  "barracudacentral", "banned", "reputation", "5.7.606", "5.7.511", "client host", "your ip",
+  "is listed", "listed on", "listed at", "sender address rejected", "sender rejected",
+  "reverse dns", "ptr record", "unauthenticated", "not authorized to send", "sender verify"
+];
+
+const INVALID_HINTS = [
+  "5.1.1", "5.1.10", "5.1.0", "5.1.6", "5.4.1", "user unknown", "unknown user", "no such user",
+  "no such recipient", "no such mailbox", "does not exist", "doesn't exist", "not exist",
+  "unknown recipient", "recipient unknown", "recipient not found", "user not found",
+  "mailbox not found", "mailbox unavailable", "mailbox is unavailable", "invalid recipient",
+  "invalid mailbox", "invalid address", "address rejected", "recipient rejected",
+  "not a valid mailbox", "no mailbox", "mailbox does not", "account does not",
+  "unrouteable address", "not listed in"
+];
+
+const DISABLED_HINTS = ["disabled", "inactive", "discontinued", "deactivated", "suspended", "no longer"];
+const FULL_HINTS = ["5.2.2", "quota", "mailbox full", "mailbox is full", "insufficient storage"];
+const GREYLIST_HINTS = ["greylist", "graylist", "postgrey", "try again later", "try later", "temporarily", "deferred", "4.2.1", "4.7.1"];
+const POLICY_HINTS = ["access denied", "5.7.1", "5.7.0", "relay", "not permitted", "policy", "rejected by", "refused", "denied", "spam", "rcpthosts"];
+
 module.exports = {
   COMMON_DOMAINS,
   ROLE_PREFIXES,
   FREEMAIL_DOMAINS,
   SEED_DISPOSABLE_DOMAINS,
   SECURITY_GATEWAY_PATTERNS,
+  TRAP_LOCAL_PARTS,
+  BLOCKED_HINTS,
+  INVALID_HINTS,
+  DISABLED_HINTS,
+  FULL_HINTS,
+  GREYLIST_HINTS,
+  POLICY_HINTS,
   VERIFICATION_STATES,
   SMTP_RESULTS
 };
+
 

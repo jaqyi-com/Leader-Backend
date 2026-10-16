@@ -4,8 +4,8 @@ const { validateSyntax } = require("./syntaxValidator");
 const { resolveDomainExistence, resolveMxRecords } = require("./dnsResolver");
 const { isDisposableDomain } = require("./disposableDetector");
 const { isRoleAddress } = require("./roleDetector");
-const { detectCatchAll } = require("./catchAllDetector");
-const { probeSmtpMailbox, isSmtpProbingEnabled, isFreemailDomain } = require("./smtpVerifier");
+const { detectCatchAll, getCachedCatchAll, setCatchAllCache } = require("./catchAllDetector");
+const { probeSmtp, probeSmtpMailbox, isSmtpProbingEnabled, isFreemailDomain } = require("./smtpVerifier");
 const { computeVerdict } = require("./scoringEngine");
 const { cacheGet, cacheSet } = require("../../db/redis");
 const { query } = require("../../db/cloudSql");
@@ -280,34 +280,53 @@ async function verifyEmail(rawEmail, options = {}) {
     return verdict;
   }
 
-  // ── Stage 6: Catch-All Detection ─────────────────────────────────────────
+  // ── Stage 6 & 7: Unified Single-Session SMTP Probe & Catch-All Resolution ─
+  // Probes both random mailbox (if catch-all unproven) and target recipient in ONE TCP session
   let catchAll = null;
-  const catchAllResult = await detectCatchAll(domain, primaryMx);
-  catchAll = catchAllResult.isCatchAll;
-
-  // ── Stage 7: SMTP-Level Verification (Port 25 RCPT TO Probe for EVERY Email) ─
   let smtpResult = SMTP_RESULTS.UNKNOWN;
   let smtpCode = null;
   let smtpMessage = "";
   let smtpGated = !isSmtpProbingEnabled();
+  let blocked = false;
+  let activeMx = primaryMx;
 
-  if (catchAllResult && catchAllResult.port25Blocked) {
-    // If port 25 is blocked or unreachable on this MX host, avoid redundant timeout
-    smtpResult = SMTP_RESULTS.UNKNOWN;
-    smtpMessage = "Port 25 blocked or connection timed out on MX host";
-    smtpGated = true;
-  } else if (isSmtpProbingEnabled() && !skipSmtp && primaryMx) {
-    const probe = await probeSmtpMailbox(primaryMx, email, 3000);
-    smtpResult = probe.result;
+  // 1. Check cached catch-all status for this domain (memory -> Redis -> Postgres)
+  const cachedCatchAll = await getCachedCatchAll(domain);
+  const knownCatchAll = cachedCatchAll ? cachedCatchAll.isCatchAll : null;
+
+  // 2. Build prioritized MX host list (tries up to 3 MX servers on timeout/failure)
+  const mxHosts = (mxInfo.mxRecords && mxInfo.mxRecords.length > 0)
+    ? mxInfo.mxRecords.map(r => r.exchange).filter(Boolean)
+    : (primaryMx ? [primaryMx] : []);
+
+  if (isSmtpProbingEnabled() && !skipSmtp && mxHosts.length > 0) {
+    const probe = await probeSmtp(email, domain, mxHosts, {
+      knownCatchAll,
+      timeoutMs: options.timeoutMs || 4000,
+      socks5: options.socks5
+    });
+
+    smtpResult = probe.smtpResult;
     smtpCode = probe.code;
     smtpMessage = probe.message;
     smtpGated = probe.smtpGated;
+    catchAll = probe.catchAll;
+    activeMx = probe.primaryMx || primaryMx;
+    blocked = probe.blocked;
+
+    // Cache newly discovered catch-all state across memory, Redis & DB
+    if (knownCatchAll === null && catchAll !== null) {
+      setCatchAllCache(domain, catchAll, "Discovered via unified single-session random probe", probe.code).catch(() => {});
+    }
+  } else {
+    catchAll = knownCatchAll;
   }
 
   // ── Compute Final Composite Verdict ──────────────────────────────────────
   const verdict = computeVerdict({
     email,
     domain,
+    localPart,
     syntaxValid: true,
     syntaxReason: syntax.reason,
     typoSuggestion,
@@ -315,14 +334,15 @@ async function verifyEmail(rawEmail, options = {}) {
     domainReason: domainInfo.reason,
     mxValid: true,
     mxReason: mxInfo.reason,
-    primaryMx,
+    primaryMx: activeMx,
     disposable: isDisposable,
     roleAddress,
     catchAll,
     smtpResult,
     smtpCode,
     smtpMessage,
-    smtpGated
+    smtpGated,
+    blocked
   });
 
   await saveVerificationResult(verdict);

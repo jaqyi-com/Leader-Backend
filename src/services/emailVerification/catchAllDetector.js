@@ -3,43 +3,38 @@
 const crypto = require("crypto");
 const { cacheGet, cacheSet } = require("../../db/redis");
 const { query } = require("../../db/cloudSql");
-const { probeSmtpMailbox, isSmtpProbingEnabled, isSecurityGateway, isFreemailDomain } = require("./smtpVerifier");
+const { isFreemailDomain, singleSmtpSession, classifyReply, isSmtpProbingEnabled } = require("./smtpVerifier");
+const { SMTP_RESULTS } = require("./constants");
 
 const CATCH_ALL_CACHE_TTL = 7 * 24 * 3600; // 7 days
 const LOCAL_CATCH_ALL_CACHE = new Map();
 
 /**
- * Stage 6: Dual-Probe Catch-All Domain Detection
- * Probes the MX host with TWO randomly generated non-existent mailboxes.
+ * Checks in-memory, Redis, and Postgres for known catch-all status of a domain.
  */
-async function detectCatchAll(domain, primaryMx) {
-  if (!domain) {
-    return { isCatchAll: null, reason: "No domain provided", probeCode: null };
-  }
-
+async function getCachedCatchAll(domain) {
+  if (!domain) return null;
   const cleanDomain = domain.toLowerCase().trim();
 
-  // 0. Fast Freemail Check
+  // 0. Fast Freemail Check: Freemail providers (Gmail, Outlook, Yahoo) are never catch-all
   if (isFreemailDomain(cleanDomain)) {
-    const freemailVerdict = { isCatchAll: false, reason: "Freemail domain (Non-catch-all)", probeCode: 250 };
-    LOCAL_CATCH_ALL_CACHE.set(cleanDomain, freemailVerdict);
-    return freemailVerdict;
+    return { isCatchAll: false, reason: "Freemail domain (Non-catch-all)", probeCode: 250 };
   }
 
-  // 1. Check Fast In-Memory Cache
+  // 1. Fast In-Memory Cache
   if (LOCAL_CATCH_ALL_CACHE.has(cleanDomain)) {
-    return { ...LOCAL_CATCH_ALL_CACHE.get(cleanDomain), _cached: true };
+    return LOCAL_CATCH_ALL_CACHE.get(cleanDomain);
   }
 
   const cacheKey = `domain:catch_all:${cleanDomain}`;
 
-  // 2. Check Redis domain-level cache
+  // 2. Redis domain-level cache
   try {
     const cached = await cacheGet(cacheKey);
     if (cached !== null && cached !== undefined) {
       const res = {
         isCatchAll: typeof cached === "object" ? cached.isCatchAll : cached,
-        reason: "Loaded from domain catch-all cache",
+        reason: "Loaded from Redis domain catch-all cache",
         probeCode: typeof cached === "object" ? cached.probeCode : null,
         _cached: true
       };
@@ -48,7 +43,7 @@ async function detectCatchAll(domain, primaryMx) {
     }
   } catch (_) {}
 
-  // 2. Check Postgres final.domain_cache
+  // 3. Postgres final.domain_cache
   try {
     const dbRes = await query(
       "SELECT is_catch_all FROM final.domain_cache WHERE domain = $1 AND is_catch_all IS NOT NULL",
@@ -56,107 +51,104 @@ async function detectCatchAll(domain, primaryMx) {
     );
     if (dbRes.rows.length > 0 && dbRes.rows[0].is_catch_all !== null) {
       const isCatchAll = dbRes.rows[0].is_catch_all;
-      const result = { isCatchAll, reason: "Loaded from database domain cache", probeCode: null };
-      await cacheSet(cacheKey, result, CATCH_ALL_CACHE_TTL);
-      return result;
+      const res = { isCatchAll, reason: "Loaded from database domain cache", probeCode: null };
+      LOCAL_CATCH_ALL_CACHE.set(cleanDomain, res);
+      try {
+        await cacheSet(cacheKey, res, CATCH_ALL_CACHE_TTL);
+      } catch (_) {}
+      return res;
     }
   } catch (_) {}
 
-  // 3. Security Gateway Check (Microsoft 365, Mimecast, Proofpoint, Barracuda)
-  if (isSecurityGateway(primaryMx)) {
-    const gatewayVerdict = {
-      isCatchAll: true,
-      reason: "Domain uses Enterprise Security Gateway (Microsoft EOP / Mimecast / Proofpoint) with Directory Harvest Protection",
-      probeCode: 250
-    };
-    try {
-      await cacheSet(cacheKey, gatewayVerdict, CATCH_ALL_CACHE_TTL);
-    } catch (_) {}
-    return gatewayVerdict;
+  return null;
+}
+
+/**
+ * Persists catch-all verdict in memory, Redis, and PostgreSQL.
+ */
+async function setCatchAllCache(domain, isCatchAll, reason = "", probeCode = null) {
+  if (!domain || isCatchAll === null || isCatchAll === undefined) return;
+  const cleanDomain = domain.toLowerCase().trim();
+  const verdict = { isCatchAll, reason, probeCode };
+
+  LOCAL_CATCH_ALL_CACHE.set(cleanDomain, verdict);
+
+  const cacheKey = `domain:catch_all:${cleanDomain}`;
+  try {
+    await cacheSet(cacheKey, verdict, CATCH_ALL_CACHE_TTL);
+    await query(
+      `INSERT INTO final.domain_cache (domain, is_catch_all, cached_at, expires_at)
+       VALUES ($1, $2, NOW(), NOW() + INTERVAL '7 days')
+       ON CONFLICT (domain) DO UPDATE SET is_catch_all = EXCLUDED.is_catch_all, cached_at = NOW()`,
+      [cleanDomain, isCatchAll]
+    );
+  } catch (_) {}
+}
+
+/**
+ * Stage 6: Catch-All Domain Detection.
+ * Checks cache first; if miss, probes random mailbox on MX host.
+ */
+async function detectCatchAll(domain, primaryMx) {
+  if (!domain) {
+    return { isCatchAll: null, reason: "No domain provided", probeCode: null };
   }
 
-  // If SMTP probing is disabled or no MX host is available
+  const cleanDomain = domain.toLowerCase().trim();
+  const cached = await getCachedCatchAll(cleanDomain);
+  if (cached) return cached;
+
   if (!isSmtpProbingEnabled() || !primaryMx) {
     return {
       isCatchAll: null,
-      reason: !primaryMx ? "No MX host available for probe" : "Catch-all probing skipped (SMTP probes disabled via config)",
+      reason: !primaryMx ? "No MX host available for probe" : "Catch-all probing skipped (SMTP probes disabled)",
       probeCode: null
     };
   }
 
-  // 4. Dual-probe random address generation
-  const hash1 = crypto.randomBytes(6).toString("hex");
-  const hash2 = crypto.randomBytes(6).toString("hex");
-  const probeEmail1 = `probe_a_${hash1}@${cleanDomain}`;
-  const probeEmail2 = `probe_b_${hash2}@${cleanDomain}`;
-
+  // Fast single probe with random address
+  const randomAddr = `${crypto.randomBytes(6).toString("hex")}.${crypto.randomBytes(3).toString("hex")}@${cleanDomain}`;
   try {
-    // Probe 1 (fast 2500ms probe)
-    const res1 = await probeSmtpMailbox(primaryMx, probeEmail1, 2500);
-
-    if (res1.result === "rejected") {
-      // 5xx rejection means server rejects non-existent mailboxes (Explicit only)
-      const verdict = { isCatchAll: false, reason: "Domain rejected Probe 1 (Non-catch-all server)", probeCode: res1.code };
-      LOCAL_CATCH_ALL_CACHE.set(cleanDomain, verdict);
-      await cacheSet(cacheKey, verdict, CATCH_ALL_CACHE_TTL);
-      return verdict;
-    }
-
-    if (res1.result !== "accepted") {
-      // 4xx, network error, or TCP timeout
-      const isConnectTimeout = /timeout|connect|refused|unreach|blocked/i.test(res1.message || "");
-      const verdict = {
+    const res = await singleSmtpSession(primaryMx, [randomAddr], { timeoutMs: 3500 });
+    if (!res || !res.ok) {
+      return {
         isCatchAll: null,
-        reason: `Probe 1 inconclusive: ${res1.message}`,
-        probeCode: res1.code,
-        port25Blocked: isConnectTimeout
+        reason: res?.error || "Catch-all probe connection failed",
+        probeCode: null,
+        port25Blocked: !res?.ok
       };
-      LOCAL_CATCH_ALL_CACHE.set(cleanDomain, verdict);
-      return verdict;
     }
 
-    // Probe 1 returned 250 OK → Confirm with Probe 2 (2500ms)
-    const res2 = await probeSmtpMailbox(primaryMx, probeEmail2, 2500);
+    const reply = res.replies[0];
+    const rclass = classifyReply(reply?.code || 0, reply?.text || "");
 
     let isCatchAll = null;
     let reason = "";
 
-    if (res2.result === "accepted") {
+    if (rclass === SMTP_RESULTS.ACCEPTED) {
       isCatchAll = true;
-      reason = "Domain accepted dual non-existent probes (Confirmed Catch-All server)";
-    } else if (res2.result === "rejected") {
+      reason = "Domain accepted random non-existent mailbox (Catch-All server)";
+    } else if (rclass === SMTP_RESULTS.INVALID || rclass === SMTP_RESULTS.DISABLED) {
       isCatchAll = false;
-      reason = "Probe 2 rejected after Probe 1 accepted (Inconsistent server response)";
+      reason = "Domain rejected random address (Non-catch-all server)";
     } else {
-      isCatchAll = true; // Fallback to catch-all on probe 1 accept
-      reason = "Probe 1 accepted random email; Probe 2 inconclusive (Catch-all assumed)";
+      isCatchAll = null;
+      reason = `Inconclusive catch-all response: ${reply?.text || "Unknown"}`;
     }
-
-    const verdict = { isCatchAll, reason, probeCode: res2.code || res1.code };
-    LOCAL_CATCH_ALL_CACHE.set(cleanDomain, verdict);
 
     if (isCatchAll !== null) {
-      try {
-        await cacheSet(cacheKey, verdict, CATCH_ALL_CACHE_TTL);
-        await query(
-          `INSERT INTO final.domain_cache (domain, is_catch_all, cached_at, expires_at)
-           VALUES ($1, $2, NOW(), NOW() + INTERVAL '7 days')
-           ON CONFLICT (domain) DO UPDATE SET is_catch_all = EXCLUDED.is_catch_all, cached_at = NOW()`,
-          [cleanDomain, isCatchAll]
-        );
-      } catch (_) {}
+      await setCatchAllCache(cleanDomain, isCatchAll, reason, reply?.code);
     }
 
-    return verdict;
+    return { isCatchAll, reason, probeCode: reply?.code || null };
   } catch (err) {
-    return {
-      isCatchAll: null,
-      reason: `Catch-all check failed: ${err.message}`,
-      probeCode: null
-    };
+    return { isCatchAll: null, reason: `Catch-all probe failed: ${err.message}`, probeCode: null };
   }
 }
 
 module.exports = {
-  detectCatchAll
+  detectCatchAll,
+  getCachedCatchAll,
+  setCatchAllCache,
+  LOCAL_CATCH_ALL_CACHE
 };
