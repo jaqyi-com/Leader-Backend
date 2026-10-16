@@ -14,6 +14,7 @@ src/config/googleSheetsCredentials.json
 
 # Frontend build output
 frontend/dist/
+dist/
 
 # Reference project (not part of this repo)
 ai-assistant-backend/
