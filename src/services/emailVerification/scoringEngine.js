@@ -98,15 +98,16 @@ function computeVerdict(signals) {
     }
   }
   // ── Major Freemail Domain (Gmail, Outlook, Yahoo) ──────────────────────────
-  else if (isFreemail && (smtpResult === SMTP_RESULTS.ACCEPTED || smtpResult === SMTP_RESULTS.UNKNOWN || smtpGated)) {
-    if (roleAddress) {
+  // NEVER mark deliverable unless the specific mailbox was conclusively accepted via SMTP!
+  else if (isFreemail) {
+    if (smtpResult === SMTP_RESULTS.ACCEPTED && catchAll === false) {
       state = VERIFICATION_STATES.DELIVERABLE;
-      score = 0.75;
-      reason = "Valid consumer/freemail domain role address with active MX";
+      score = 0.95;
+      reason = "Freemail mailbox exists and is confirmed deliverable via SMTP";
     } else {
-      state = VERIFICATION_STATES.DELIVERABLE;
-      score = 0.85;
-      reason = "Freemail domain with active MX records";
+      state = VERIFICATION_STATES.RISKY;
+      score = 0.50;
+      reason = "Freemail domain with active MX, but specific mailbox is unverified (bounce risk)";
     }
   }
   // ── SMTP Probe Accepted (Without Catch-All Confirmation) ───────────────────
