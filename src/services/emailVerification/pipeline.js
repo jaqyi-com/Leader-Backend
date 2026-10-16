@@ -10,6 +10,7 @@ const { computeVerdict } = require("./scoringEngine");
 const { cacheGet, cacheSet } = require("../../db/redis");
 const { query } = require("../../db/cloudSql");
 const { SMTP_RESULTS } = require("./constants");
+const { isVpsConfigured, verifyViaVps } = require("./vpsVerifierClient");
 
 const VERIFICATION_CACHE_TTL = 90 * 24 * 3600; // 90 days
 
@@ -220,6 +221,20 @@ async function verifyEmail(rawEmail, options = {}) {
   }
 
   const { email, localPart, domain, typoSuggestion } = syntax;
+
+  // ── Primary Engine: Production Doott Cloud VPS Verifier ──────────────────
+  // Fast Reacher engine on static datacenter IP with reverse DNS (verify.doott.world)
+  // Completely avoids Port 25 residential ISP / Vercel serverless blocking
+  if (isVpsConfigured() && !options.skipVps) {
+    const vpsVerdict = await verifyViaVps(email, { timeoutMs: options.timeoutMs || 8000 });
+    if (vpsVerdict) {
+      if (typoSuggestion) {
+        vpsVerdict.details.typo_suggestion = typoSuggestion;
+      }
+      await saveVerificationResult(vpsVerdict);
+      return vpsVerdict;
+    }
+  }
 
   // ── Stage 2: Domain Existence (A / AAAA) ─────────────────────────────────
   const domainInfo = await resolveDomainExistence(domain);
