@@ -19,7 +19,7 @@ const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const {
   escapeLike, hasWord, jobTitleCondition, INDIA_STATES_SQL, exactCappedTotal,
-  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError,
+  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter,
 } = require("../utils/searchFilters");
 
 
@@ -628,6 +628,8 @@ router.get("/", async (req, res) => {
   const offset   = (pageNum - 1) * limitNum;
   const windowErr = resultWindowError(offset, limitNum);
   if (windowErr) return res.status(400).json(windowErr);
+  const shortErr = shortTitleNeedsFilter(req.query);
+  if (shortErr) return res.status(400).json(shortErr);
 
   try {
     const { getLocalQueryEmbedding } = require("../services/localEmbedService");

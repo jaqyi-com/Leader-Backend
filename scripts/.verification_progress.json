@@ -1,0 +1,11 @@
+{
+  "people_last_uuid": "01ae1acc-37d0-5a59-e34c-ce3c90b9fd24",
+  "companies_last_uuid": "6bc55aa8-6656-3c44-37b5-066db2d6040d",
+  "total_people_verified": 137920,
+  "total_companies_verified": 432410,
+  "deliverable_count": 64277,
+  "undeliverable_count": 168516,
+  "risky_count": 128816,
+  "unknown_count": 201421,
+  "started_at": "2026-09-30T18:47:25.841Z"
+}

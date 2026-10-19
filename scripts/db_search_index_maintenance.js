@@ -62,6 +62,18 @@ const INDEXES = [
             ON final.people (email_status)`,
   },
   {
+    name: "idx_people_has_email",
+    why: "f_has_email=true: lists only rows with a real e-mail (the e-mail text index sorts '' and '{}' first, so scanning it skips ~23M empty entries)",
+    sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_people_has_email
+            ON final.people (uuid) WHERE emails IS NOT NULL AND emails <> '' AND emails <> '{}'`,
+  },
+  {
+    name: "idx_people_has_phone",
+    why: "f_has_phone=true: same reason for phones",
+    sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_people_has_phone
+            ON final.people (uuid) WHERE phones IS NOT NULL AND phones <> '' AND phones <> '{}'`,
+  },
+  {
     name: "idx_people_job_title_trgm",
     why: "job-title ILIKE '%x%' and whole-word regex (CTO, CFO, Founder …)",
     skip: SKIP_TRGM,
@@ -129,7 +141,7 @@ async function watchProgress(stop) {
     else if (!exists) plan.push({ step: `CREATE INDEX CONCURRENTLY ${ix.name}`, why: ix.why });
     else plan.push({ step: `(exists) ${ix.name}`, why: "already valid" });
   }
-  plan.push({ step: "ANALYZE final.people (job_title, email_status, is_email_valid)", why: "statistics for the new indexes" });
+  plan.push({ step: "ANALYZE final.people (job_title, email_status, is_email_valid, emails, phones)", why: "statistics for the new indexes" });
   console.log("\nPLAN"); console.table(plan);
 
   if (!EXECUTE) { await c.end(); return; }
@@ -158,7 +170,7 @@ async function watchProgress(stop) {
         throw new Error(`${ix.name} finished INVALID — re-run the script (it will drop and rebuild it)`);
       }
     }
-    await run("ANALYZE final.people (new indexed columns)", "ANALYZE final.people (job_title, email_status, is_email_valid)");
+    await run("ANALYZE final.people (new indexed columns)", "ANALYZE final.people (job_title, email_status, is_email_valid, emails, phones)");
   } finally {
     stop.done = true;
   }

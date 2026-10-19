@@ -10,7 +10,7 @@ const router  = express.Router();
 const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const {
   escapeLike, INDIA_STATES_SQL, exactCappedTotal,
-  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError,
+  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter,
 } = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 
@@ -381,6 +381,8 @@ router.get("/", async (req, res) => {
   const offset   = (pageNum - 1) * limitNum;
   const windowErr = resultWindowError(offset, limitNum);
   if (windowErr) return res.status(400).json(windowErr);
+  const shortErr = shortTitleNeedsFilter(req.query);
+  if (shortErr) return res.status(400).json(shortErr);
 
   try {
     const schema = await getSchema();

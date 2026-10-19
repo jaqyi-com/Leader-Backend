@@ -115,6 +115,24 @@ async function checkSortAllowed(pgQuery, fromTable, whereStr, values, hasFilters
   return null;
 }
 
+/**
+ * One- and two-letter job-title terms ("IT", "HR", "CA") cannot use the trigram index (it needs
+ * 3+ characters), so on its own such a search scans tens of millions of rows and times out.
+ * Require a location filter alongside them. Returns an error body, or null when the search is fine.
+ */
+function shortTitleNeedsFilter(query) {
+  const entries = Object.entries(query || {});
+  const hasShortTitle = entries.some(([k, v]) =>
+    /^f_job_title(_sw|_ew)?$/.test(k) && String(v ?? "").trim().length > 0 && String(v).trim().length <= 2);
+  if (!hasShortTitle) return null;
+  const narrowed = entries.some(([k, v]) => /^f_(city|state|pincode|location)/.test(k) && String(v ?? "").trim() !== "");
+  if (narrowed) return null;
+  return {
+    error: "Very short job titles such as “IT” or “HR” match too many people to search quickly. Add a city or state filter, or use a longer title.",
+    code: "SHORT_TERM_NEEDS_FILTER",
+  };
+}
+
 /** Uniform error response for search routes: timeouts become a clear 503, nothing internal leaks. */
 function sendSearchError(res, err, logger) {
   if (err && err.code === "57014") {
@@ -131,5 +149,5 @@ function sendSearchError(res, err, logger) {
 module.exports = {
   escapeLike, escapeRegex, hasWord, jobTitleCondition, INDIA_STATES, INDIA_STATES_SQL,
   exactCappedTotal, EXACT_COUNT_CAP, searchTimeoutMs, maxResultWindow, sortRowLimit,
-  resultWindowError, checkSortAllowed, sendSearchError,
+  resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter,
 };

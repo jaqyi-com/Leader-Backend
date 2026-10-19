@@ -145,8 +145,21 @@ test("job-title: short role codes match whole words only (CTO ≠ Factory/Direct
   const fm = await titles("?f_job_title=Factory%20Manager");
   assert.ok(fm.includes("Factory Manager"));
   assert.ok(fm.every((t) => /manager/i.test(t)), "unexpected titles: " + fm.join(", "));
-  assert.equal((await all("?f_job_title=IT")).length, 0, "'IT' must not match Recru-it-er");
+  assert.equal((await all("?f_job_title=IT&f_state=Maharashtra")).length, 0, "'IT' must not match Recru-it-er");
   assert.deepEqual(await titles("?f_job_title=Doctor"), ["Doctor"]);
+});
+
+test("job-title: 1-2 letter terms need a location filter (they cannot use the text index)", { skip }, async () => {
+  for (const term of ["IT", "HR", "CA"]) {
+    const bare = await get(`?f_job_title=${term}&limit=10`);
+    assert.equal(bare.status, 400, term);
+    assert.equal(bare.json.code, "SHORT_TERM_NEEDS_FILTER");
+    assert.equal((await get(`?f_job_title=${term}&f_city=Mumbai&limit=10`)).status, 200, `${term} + city`);
+    assert.equal((await get(`?f_job_title=${term}&f_state=Maharashtra&limit=10`)).status, 200, `${term} + state`);
+  }
+  assert.equal((await get("?f_job_title=CEO&limit=10")).status, 200, "3-letter terms are fine");
+  assert.equal((await get("?f_job_title_eq=IT&limit=10")).status, 200, "exact match can use the btree index");
+  assert.equal((await stack.http("GET", "/api/final-people-email?f_job_title=HR", { token: user.token })).status, 400);
 });
 
 test("job-title: 'equals' filter is exact", { skip }, async () => {
@@ -158,7 +171,7 @@ test("job-title: 'equals' filter is exact", { skip }, async () => {
 test("wildcards: % and _ typed by the user are matched literally", { skip }, async () => {
   assert.equal((await all("?f_city=%25")).length, 0);
   assert.equal((await all("?f_city=_")).length, 0);
-  assert.equal((await all("?f_job_title=%25")).length, 0);
+  assert.equal((await all("?f_job_title=%25&f_state=Maharashtra")).length, 0);
   assert.equal((await all("?f_state_sw=%25")).length, 0);
   assert.equal((await all("?f_city=Mum%25")).length, 0);
   assert.equal((await all("?f_city=Mum")).length, 50, "plain prefix search still works");
