@@ -16,7 +16,7 @@ const express = require("express");
 const router  = express.Router();
 
 const { query: pgQuery } = require("../db/cloudSql");
-const { escapeLike } = require("../utils/searchFilters");
+const { escapeLike, resultWindowError, sendSearchError } = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const logger = require("../utils/logger").forAgent("FinalCompaniesDB");
 
@@ -623,6 +623,8 @@ router.get("/", async (req, res) => {
   const pageNum  = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const limitNum = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(100, parsedLimit) : 50;
   const offset   = (pageNum - 1) * limitNum;
+  const windowErr = resultWindowError(offset, limitNum);
+  if (windowErr) return res.status(400).json(windowErr);
 
   try {
     const { getLocalQueryEmbedding } = require("../services/localEmbedService");
@@ -736,8 +738,7 @@ router.get("/", async (req, res) => {
       table:  FC_TABLE,
     });
   } catch (err) {
-    logger.error(`[GET /] ${err.message}`);
-    res.status(500).json({ error: err.message });
+    return sendSearchError(res, err, logger);
   }
 });
 

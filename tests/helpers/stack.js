@@ -13,7 +13,16 @@ const PG_BIN = ["/opt/homebrew/opt/postgresql@16/bin", "/opt/homebrew/opt/postgr
 const hasMongod = spawnSync("mongod", ["--version"]).status === 0;
 const available = { mongod: hasMongod, postgres: Boolean(PG_BIN) };
 
-const rand = (base, span) => base + Math.floor(Math.random() * span);
+// Ports that fetch()/undici refuses to connect to ("bad port") — never hand these out.
+const BAD_PORTS = new Set([4045, 4190, 5060, 5061, 6000, 6566, 6665, 6666, 6667, 6668, 6669, 6679, 6697, 10080]);
+const usedPorts = new Set();
+const rand = (base, span) => {
+  for (let i = 0; i < 100; i++) {
+    const n = base + Math.floor(Math.random() * span);
+    if (!BAD_PORTS.has(n) && !usedPorts.has(n)) { usedPorts.add(n); return n; }
+  }
+  throw new Error("no free test port");
+};
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /** Deterministic synthetic people — 250 rows, no real data. */
@@ -79,11 +88,11 @@ async function startMongo(state) {
 /**
  * @param {{postgres?: boolean}} opts
  */
-async function startStack({ postgres = false } = {}) {
+async function startStack({ postgres = false, env = {} } = {}) {
   const state = {};
   const mongo = await startMongo(state);
   const pg = postgres ? await startPostgres(state) : null;
-  const apiPort = rand(4800, 800);
+  const apiPort = rand(4300, 700);
   const secret = "integration-secret-" + "q".repeat(40);
   const base = `http://127.0.0.1:${apiPort}`;
   state.server = spawn(process.execPath, [path.join(ROOT, "src/server.js")], {
@@ -92,6 +101,9 @@ async function startStack({ postgres = false } = {}) {
       PATH: process.env.PATH, NODE_ENV: "production", PORT: String(apiPort), JWT_SECRET: secret,
       MONGO_URI: mongo.uri, NEON_DATABASE_URL: pg ? pg.url : "postgresql://u:p@127.0.0.1:1/x",
       OPENAI_API_KEY: "fake", APOLLO_API_KEY: "fake", SMTP_USER: "fake", SMTP_PASS: "fake",
+      // generous limits so ordinary tests are not throttled; abuse tests override these
+      RATE_LIMIT_AUTH_MAX: "100000", RATE_LIMIT_LOGIN_ACCOUNT_MAX: "100000", RATE_LIMIT_DATA_MAX: "100000",
+      ...env,
     },
     stdio: "ignore",
   });
@@ -121,14 +133,37 @@ async function startStack({ postgres = false } = {}) {
     return { email, password, token: l.json.token, orgId: String(l.json.org?._id || l.json.org?.id) };
   };
 
+  /** Set a user's plan directly in the test database ("free" | "lifetime"). */
+  const setPlan = async (email, plan) => {
+    const mongoose = require("mongoose");
+    const conn = mongoose.createConnection();
+    await conn.openUri(mongo.uri, { serverSelectionTimeoutMS: 3000 });
+    await conn.collection("users").updateOne({ email: email.toLowerCase() }, { $set: { plan } });
+    await conn.close();
+  };
+
+  // PostgreSQL must be stopped with SIGINT ("fast shutdown"): a SIGKILL leaks its System V
+  // shared-memory segment, and macOS allows only ~32 of those system-wide (initdb then fails
+  // with "No space left on device").
+  const stopProc = (proc, signal) => new Promise((resolve) => {
+    if (!proc || proc.exitCode !== null || proc.signalCode !== null) return resolve();
+    const t = setTimeout(() => { try { proc.kill("SIGKILL"); } catch { /* ignore */ } resolve(); }, 10000);
+    proc.once("exit", () => { clearTimeout(t); resolve(); });
+    try { proc.kill(signal); } catch { clearTimeout(t); resolve(); }
+  });
+
   const stop = async () => {
-    for (const p of [state.server, state.mongo?.proc, state.pg?.proc]) { try { p && p.kill("SIGKILL"); } catch { /* ignore */ } }
     try { await state.pg?.pool.end(); } catch { /* ignore */ }
+    await Promise.all([stopProc(state.server, "SIGTERM"), stopProc(state.mongo?.proc, "SIGTERM"), stopProc(state.pg?.proc, "SIGINT")]);
     for (const d of [state.mongo?.dir, state.pg?.dir]) { try { d && fs.rmSync(d, { recursive: true, force: true }); } catch { /* ignore */ } }
   };
-  process.on("exit", () => { for (const p of [state.server, state.mongo?.proc, state.pg?.proc]) { try { p && p.kill("SIGKILL"); } catch { /* ignore */ } } });
+  process.on("exit", () => {
+    try { state.server && state.server.kill("SIGTERM"); } catch { /* ignore */ }
+    try { state.mongo?.proc && state.mongo.proc.kill("SIGTERM"); } catch { /* ignore */ }
+    try { state.pg?.proc && state.pg.proc.kill("SIGINT"); } catch { /* ignore */ }
+  });
 
-  return { base, secret, http, newUser, stop, pg, mongo };
+  return { base, secret, http, newUser, setPlan, stop, pg, mongo };
 }
 
 module.exports = { startStack, available, syntheticPeople };

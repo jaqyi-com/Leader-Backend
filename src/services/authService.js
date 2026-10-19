@@ -4,6 +4,7 @@ const nodemailer = require("nodemailer");
 const { User, Organization, Member } = require("../db/mongoose");
 
 const { JWT_SECRET } = require("../config/jwtSecret");
+const { registrationMode } = require("../config/registration");
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 // ── Email transporter (reuses existing SMTP config) ─────────────────────────
@@ -133,7 +134,13 @@ async function handleGoogleOAuth({ googleId, email, name, avatar }) {
   let user = await User.findOne({ $or: [{ googleId }, { email: email.toLowerCase() }] });
 
   if (!user) {
-    // New Google user — create user + org
+    // New Google user — only if sign-up is open (REGISTRATION_MODE)
+    if (registrationMode() !== "open") {
+      const err = new Error("New registrations are currently closed.");
+      err.statusCode = 403;
+      throw err;
+    }
+    // create user + org
     const slug = await generateUniqueSlug(name + "'s Org");
 
     user = new User({

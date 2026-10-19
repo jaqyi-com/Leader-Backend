@@ -68,4 +68,68 @@ async function exactCappedTotal(pgQuery, fromTable, whereStr, values, cap = EXAC
   }
 }
 
-module.exports = { escapeLike, escapeRegex, hasWord, jobTitleCondition, INDIA_STATES, INDIA_STATES_SQL, exactCappedTotal, EXACT_COUNT_CAP };
+// ── Resource guards ─────────────────────────────────────────────────────────
+
+/** Per-query statement timeout for filtered searches (fail fast instead of hanging 30s). */
+const searchTimeoutMs = () => parseInt(process.env.SEARCH_TIMEOUT_MS, 10) || 15000;
+
+/** Deepest row a client may page to (OFFSET + LIMIT). Deep OFFSETs scan millions of rows. */
+const maxResultWindow = () => {
+  const n = parseInt(process.env.MAX_RESULT_WINDOW, 10);
+  return Number.isFinite(n) && n >= 0 ? n : 100000;
+};
+
+/** Largest result set that may be sorted (sorting millions of rows always times out). */
+const sortRowLimit = () => parseInt(process.env.SORT_MAX_ROWS, 10) || EXACT_COUNT_CAP;
+
+/** Returns an error body when offset+limit goes deeper than the allowed window, else null. */
+function resultWindowError(offset, limit) {
+  const max = maxResultWindow();
+  if (max > 0 && offset + limit > max) {
+    return {
+      error: `Results are limited to the first ${max.toLocaleString("en-US")} records. Add more filters to narrow your search.`,
+      code: "RESULT_WINDOW_EXCEEDED",
+      max_results: max,
+    };
+  }
+  return null;
+}
+
+/**
+ * Sorting needs the whole matching set in memory. Allow it only when the filter matches few
+ * enough rows; otherwise tell the user to narrow the search (instead of a 30s timeout / 500).
+ * Returns an error body, or null when sorting is allowed.
+ */
+async function checkSortAllowed(pgQuery, fromTable, whereStr, values, hasFilters) {
+  if (!hasFilters) {
+    return { error: "Sorting needs at least one filter (for example a city or state).", code: "SORT_NEEDS_FILTER" };
+  }
+  const cap = sortRowLimit();
+  const exact = await exactCappedTotal(pgQuery, fromTable, whereStr, values, cap);
+  if (!exact) {
+    return {
+      error: `Sorting is available when a search matches at most ${cap.toLocaleString("en-US")} records. Add more filters to sort.`,
+      code: "SORT_NEEDS_NARROWER_FILTERS",
+    };
+  }
+  return null;
+}
+
+/** Uniform error response for search routes: timeouts become a clear 503, nothing internal leaks. */
+function sendSearchError(res, err, logger) {
+  if (err && err.code === "57014") {
+    if (logger) logger.warn(`Search timed out: ${err.message}`);
+    return res.status(503).json({
+      error: "This search is too broad to finish in time. Add more filters (city, state, job title) and try again.",
+      code: "SEARCH_TOO_SLOW",
+    });
+  }
+  if (logger) logger.error(`Search failed: ${err && err.message}`);
+  return res.status(500).json({ error: "Search failed. Please try again." });
+}
+
+module.exports = {
+  escapeLike, escapeRegex, hasWord, jobTitleCondition, INDIA_STATES, INDIA_STATES_SQL,
+  exactCappedTotal, EXACT_COUNT_CAP, searchTimeoutMs, maxResultWindow, sortRowLimit,
+  resultWindowError, checkSortAllowed, sendSearchError,
+};

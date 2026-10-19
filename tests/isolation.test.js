@@ -17,7 +17,7 @@ const hasMongod = spawnSync("mongod", ["--version"]).status === 0;
 const opts = { skip: !hasMongod && "mongod not installed" };
 
 const MONGO_PORT = 27100 + Math.floor(Math.random() * 400);
-const API_PORT = 4800 + Math.floor(Math.random() * 400);
+const API_PORT = 4800 + Math.floor(Math.random() * 200); // 4800-4999: no fetch-blocked ports
 const MONGO_URI = `mongodb://127.0.0.1:${MONGO_PORT}/isolation_test`;
 const BASE = `http://127.0.0.1:${API_PORT}`;
 const SECRET = "isolation-secret-" + "y".repeat(40);

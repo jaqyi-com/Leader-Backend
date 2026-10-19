@@ -11,14 +11,18 @@ const { checkRateLimit } = require("../db/redis");
  * @param {number} maxRequests  Max requests allowed per window (default: 60)
  * @param {number} windowSeconds  Window size in seconds (default: 60)
  */
-function createRateLimiter(maxRequests = 60, windowSeconds = 60) {
-  return async (req, res, next) => {
-    const ip =
-      req.headers["x-forwarded-for"]?.split(",")[0].trim() ||
-      req.socket?.remoteAddress ||
-      "unknown";
+function clientIp(req) {
+  return req.headers["x-forwarded-for"]?.split(",")[0].trim() || req.socket?.remoteAddress || "unknown";
+}
 
-    const identifier = `${ip}:${req.path}`;
+/**
+ * @param {number} maxRequests
+ * @param {number} windowSeconds
+ * @param {{ key?: (req: any) => string }} [opts]  custom bucket key (default: ip + path)
+ */
+function createRateLimiter(maxRequests = 60, windowSeconds = 60, opts = {}) {
+  return async (req, res, next) => {
+    const identifier = opts.key ? opts.key(req) : `${clientIp(req)}:${req.path}`;
     const { allowed, count, limit } = await checkRateLimit(identifier, maxRequests, windowSeconds);
 
     // Set standard rate limit headers
@@ -42,4 +46,26 @@ const pipelineLimiter = createRateLimiter(30, 60);   // 30 req/min for pipeline 
 const placesLimiter   = createRateLimiter(20, 60);   // 20 req/min for Google Places (API cost)
 const generalLimiter  = createRateLimiter(120, 60);  // 120 req/min for general endpoints
 
-module.exports = { createRateLimiter, pipelineLimiter, placesLimiter, generalLimiter };
+// ── Limits promised in the public API docs (env overrides are for tests / tuning) ──────────
+const envInt = (name, dflt) => parseInt(process.env[name], 10) || dflt;
+const FIFTEEN_MIN = 15 * 60;
+
+// Login / register / password reset: 20 per 15 min per IP, one shared bucket for all auth routes.
+const authLimiter = createRateLimiter(envInt("RATE_LIMIT_AUTH_MAX", 20), FIFTEEN_MIN, {
+  key: (req) => `auth:${clientIp(req)}`,
+});
+
+// Per-account login throttle: stops password guessing spread across many IPs.
+const loginAccountLimiter = createRateLimiter(envInt("RATE_LIMIT_LOGIN_ACCOUNT_MAX", 10), FIFTEEN_MIN, {
+  key: (req) => `login-acct:${String(req.body?.email || "").toLowerCase().trim().slice(0, 200) || clientIp(req)}`,
+});
+
+// Data/search endpoints: 300 per 15 min per signed-in user (falls back to IP).
+const dataLimiter = createRateLimiter(envInt("RATE_LIMIT_DATA_MAX", 300), FIFTEEN_MIN, {
+  key: (req) => `data:${req.user?.userId || clientIp(req)}`,
+});
+
+module.exports = {
+  createRateLimiter, pipelineLimiter, placesLimiter, generalLimiter,
+  authLimiter, loginAccountLimiter, dataLimiter,
+};

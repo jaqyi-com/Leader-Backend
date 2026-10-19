@@ -17,7 +17,10 @@ const router  = express.Router();
 
 const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
-const { escapeLike, hasWord, jobTitleCondition, INDIA_STATES_SQL, exactCappedTotal } = require("../utils/searchFilters");
+const {
+  escapeLike, hasWord, jobTitleCondition, INDIA_STATES_SQL, exactCappedTotal,
+  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError,
+} = require("../utils/searchFilters");
 
 
 const logger = require("../utils/logger").forAgent("FinalPeopleDB");
@@ -621,6 +624,8 @@ router.get("/", async (req, res) => {
   const pageNum  = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const limitNum = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(100, parsedLimit) : 50;
   const offset   = (pageNum - 1) * limitNum;
+  const windowErr = resultWindowError(offset, limitNum);
+  if (windowErr) return res.status(400).json(windowErr);
 
   try {
     const { getLocalQueryEmbedding } = require("../services/localEmbedService");
@@ -657,6 +662,12 @@ router.get("/", async (req, res) => {
       orderClause = "";
     }
 
+    if (orderClause && vectorIdx === null) {
+      // Sorting millions of rows always times out — only allow it on narrow result sets.
+      const sortErr = await checkSortAllowed(pgQuery, FULL_TABLE, whereStr, values, userHasFilters);
+      if (sortErr) return res.status(400).json(sortErr);
+    }
+
     const dataSQL = `
       SELECT ${customSelectSQL} FROM ${FULL_TABLE}
       ${whereStr}
@@ -665,7 +676,7 @@ router.get("/", async (req, res) => {
     `;
 
     const dataPromise = userHasFilters
-      ? directQueryWithSession(dataSQL, [...values, limitNum, offset], ["SET LOCAL enable_seqscan = off;"], 30000)
+      ? directQueryWithSession(dataSQL, [...values, limitNum, offset], ["SET LOCAL enable_seqscan = off;"], searchTimeoutMs())
       : pgQuery(dataSQL, [...values, limitNum, offset], 30000);
 
     const dataRes = await dataPromise;
@@ -730,8 +741,7 @@ router.get("/", async (req, res) => {
       table:  FP_TABLE,
     });
   } catch (err) {
-    logger.error(`[GET /] ${err.message}`);
-    res.status(500).json({ error: err.message });
+    return sendSearchError(res, err, logger);
   }
 });
 

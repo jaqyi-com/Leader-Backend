@@ -2,8 +2,7 @@
 // Search, pagination, filter and abuse-resistance tests for /api/final-people against a
 // synthetic local PostgreSQL (250 fake people). Skipped when mongod / PostgreSQL are missing.
 //
-// Tests marked `todo` document KNOWN GAPS: they assert the behaviour we want and currently
-// fail; node:test reports them as TODO without failing the run. Remove `todo` once fixed.
+// Abuse resistance (rate limits, access policy, signup mode, result window) lives in abuse.test.js.
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -53,7 +52,7 @@ test("pagination: limits are capped, bad values fall back, pages cover all rows 
 
   const seen = new Set();
   for (let page = 1; page <= 3; page++) {
-    const r = await get(`?sort_by=full_name&limit=100&page=${page}`);
+    const r = await get(`?f_full_name_nonempty=1&sort_by=full_name&limit=100&page=${page}`); // sorting needs a filter
     for (const rec of r.json.records) seen.add(rec.full_name);
   }
   assert.equal(seen.size, 250, "every row exactly once across pages (sorted)");
@@ -177,31 +176,4 @@ test("email and number routes: wildcard-safe, exact totals, correct rows", { ski
   assert.equal(n.json.total, rows.filter((r) => r.city === "Mumbai" && hasPhone(r)).length);
   const w = await stack.http("GET", "/api/final-people-email?f_city=%25", { token: user.token });
   assert.equal(w.json.records.length, 0, "'%' must not match every city");
-});
-
-// ── Known gaps: abuse resistance / entitlement ───────────────────────────────
-test("entitlement: a brand-new free account cannot bulk-read the people database", { skip, todo: "any self-registered user can page the whole dataset — no plan, quota or credit check server-side" }, async () => {
-  const fresh = await stack.newUser("freeloader");
-  const r = await get("?limit=100", fresh.token);
-  assert.ok(r.status === 402 || r.status === 403, `expected 402/403 for an unpaid account, got ${r.status}`);
-});
-
-test("rate limit: hammering the people search eventually returns 429", { skip, todo: "docs promise 300 req / 15 min / IP, but no limiter is attached to /api/final-people*" }, async () => {
-  let limited = false;
-  for (let i = 0; i < 350 && !limited; i++) limited = (await get("?limit=1")).status === 429;
-  assert.ok(limited, "350 rapid requests were all served");
-});
-
-test("rate limit: repeated wrong-password logins are throttled", { skip, todo: "docs promise 20 req / 15 min / IP on /api/auth/login but no limiter exists — password brute force is unlimited" }, async () => {
-  let limited = false;
-  for (let i = 0; i < 40 && !limited; i++) {
-    const r = await stack.http("POST", "/api/auth/login", { body: { email: user.email, password: "wrong-" + i } });
-    limited = r.status === 429;
-  }
-  assert.ok(limited, "40 wrong-password attempts were all processed");
-});
-
-test("signup: the public register endpoint should not bypass the paid/invite flow", { skip, todo: "/register 'gate' is a client-side password in the JS bundle; POST /api/auth/register is open to anyone and returns a working account" }, async () => {
-  const r = await stack.http("POST", "/api/auth/register", { body: { name: "x", email: `anon${Date.now()}@example.test`, password: "Passw0rd!anon1" } });
-  assert.ok([401, 403].includes(r.status), `anonymous registration returned ${r.status}`);
 });

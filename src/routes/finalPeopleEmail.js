@@ -8,7 +8,10 @@
 const express = require("express");
 const router  = express.Router();
 const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
-const { escapeLike, INDIA_STATES_SQL, exactCappedTotal } = require("../utils/searchFilters");
+const {
+  escapeLike, INDIA_STATES_SQL, exactCappedTotal,
+  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError,
+} = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 
 
@@ -374,6 +377,8 @@ router.get("/", async (req, res) => {
   const pageNum  = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const limitNum = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(100, parsedLimit) : 50;
   const offset   = (pageNum - 1) * limitNum;
+  const windowErr = resultWindowError(offset, limitNum);
+  if (windowErr) return res.status(400).json(windowErr);
 
   try {
     const schema = await getSchema();
@@ -391,6 +396,12 @@ router.get("/", async (req, res) => {
       const dir = sort_dir === "desc" ? "DESC" : "ASC";
       orderClause = `ORDER BY "${sort_by}" ${dir} NULLS LAST`;
     }
+    if (orderClause && vectorIdx === null) {
+      // Sorting millions of rows always times out — only allow it on narrow result sets.
+      const sortErr = await checkSortAllowed(pgQuery, FULL_TABLE, whereStr, values, values.length > 0);
+      if (sortErr) return res.status(400).json(sortErr);
+    }
+
 
     const dataSQL = `
       SELECT ${selectSQL} FROM ${FULL_TABLE}
@@ -400,7 +411,7 @@ router.get("/", async (req, res) => {
     `;
 
     const dataRes = values.length > 0
-      ? await directQueryWithSession(dataSQL, [...values, limitNum, offset], ["SET LOCAL enable_seqscan = off;"], 30000)
+      ? await directQueryWithSession(dataSQL, [...values, limitNum, offset], ["SET LOCAL enable_seqscan = off;"], searchTimeoutMs())
       : await pgQuery(dataSQL, [...values, limitNum, offset], 30000);
 
     const records = dataRes.rows.map(row => normalizeRow(schema, row));
@@ -460,8 +471,7 @@ router.get("/", async (req, res) => {
       pages:  Math.ceil(total / limitNum),
     });
   } catch (err) {
-    logger.error(`[GET /] ${err.message}`);
-    res.status(500).json({ error: err.message });
+    return sendSearchError(res, err, logger);
   }
 });
 

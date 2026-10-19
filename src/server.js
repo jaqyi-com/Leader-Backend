@@ -14,7 +14,8 @@ const PipelineOrchestrator = require("./orchestrator");
 const dedup = require("./utils/deduplication");
 const { connectDB } = require("./db/mongoose");
 const { cacheGet, cacheSet, cacheDel } = require("./db/redis");
-const { pipelineLimiter, placesLimiter, generalLimiter } = require("./middleware/rateLimiter");
+const { pipelineLimiter, placesLimiter, generalLimiter, dataLimiter } = require("./middleware/rateLimiter");
+const { requirePaidAccess } = require("./middleware/entitlement");
 const { auth, requireOrg } = require("./middleware/auth");
 const { publicGet } = require("./utils/urlGuard");
 const { sanitizeBody } = require("./middleware/sanitizeBody");
@@ -1004,16 +1005,16 @@ app.use("/api/crawler",              crawlerRouter);
 app.use("/api/crawler/auto-scraper", autoScraperRouter);
 app.use("/api/lead-generator/auto-gen", autoLeadGenRouter);
 app.use("/api/lead-generator",       leadGeneratorRouter);
-app.use("/api/inbuild-database",     inbuildDatabaseRouter);
-app.use("/api/public-contacts",      publicContactsRouter);
-app.use("/api/niches75m",            niches75mRouter);
-app.use("/api/india-data",           indiaDataRouter);
-app.use("/api/final-people",         finalPeopleRouter);
-app.use("/api/final-people-email",   finalPeopleEmailRouter);
-app.use("/api/final-people-number",  finalPeopleNumberRouter);
-app.use("/api/final-companies",      finalCompaniesRouter);
+app.use("/api/inbuild-database",     dataLimiter, requirePaidAccess, inbuildDatabaseRouter);
+app.use("/api/public-contacts",      dataLimiter, requirePaidAccess, publicContactsRouter);
+app.use("/api/niches75m",            dataLimiter, requirePaidAccess, niches75mRouter);
+app.use("/api/india-data",           dataLimiter, requirePaidAccess, indiaDataRouter);
+app.use("/api/final-people",         dataLimiter, requirePaidAccess, finalPeopleRouter);
+app.use("/api/final-people-email",   dataLimiter, requirePaidAccess, finalPeopleEmailRouter);
+app.use("/api/final-people-number",  dataLimiter, requirePaidAccess, finalPeopleNumberRouter);
+app.use("/api/final-companies",      dataLimiter, requirePaidAccess, finalCompaniesRouter);
 app.use("/api/verify-email",         emailVerificationRouter);
-app.use("/api/search/hybrid",        require("./routes/hybridSearch"));
+app.use("/api/search/hybrid",        dataLimiter, requirePaidAccess, require("./routes/hybridSearch"));
 
 
 

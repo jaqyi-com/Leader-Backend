@@ -77,7 +77,7 @@ test("pickModelFields strips tenant/identity fields and operators", () => {
 });
 
 // ── HTTP-level tests against a real server process ───────────────────────────
-const PORT = 4300 + Math.floor(Math.random() * 500);
+const PORT = 4300 + Math.floor(Math.random() * 500); // 4300-4799: no fetch-blocked ports
 const BASE = `http://127.0.0.1:${PORT}`;
 let server;
 
