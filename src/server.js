@@ -15,7 +15,8 @@ const dedup = require("./utils/deduplication");
 const { connectDB } = require("./db/mongoose");
 const { cacheGet, cacheSet, cacheDel } = require("./db/redis");
 const { pipelineLimiter, placesLimiter, generalLimiter } = require("./middleware/rateLimiter");
-const { auth } = require("./middleware/auth");
+const { auth, requireOrg } = require("./middleware/auth");
+const { publicGet } = require("./utils/urlGuard");
 const authRouter = require("./routes/auth");
 const orgRouter = require("./routes/org");
 const socialRouter = require("./routes/social");
@@ -110,6 +111,18 @@ const ALLOWED_ORIGINS = [
   cleanCorsOrigin,
 ].filter(Boolean);
 
+app.disable("x-powered-by");
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  if (req.secure || req.headers["x-forwarded-proto"] === "https") {
+    res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  }
+  next();
+});
+
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -160,6 +173,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/google633297afc8503e41.html", // Google Search Console ownership verification
   "/doott-og.jpg",              // OG social share image (1200x630)
   "/api/payments",              // Razorpay payment endpoints (pre-auth)
+  "/api/health",                // uptime / readiness probe (no sensitive data)
 ];
 
 app.use((req, res, next) => {
@@ -344,6 +358,22 @@ app.get("/", (req, res) => {
     status: "online",
     version: "1.0.0"
   });
+});
+
+// Readiness probe — reports only up/down per dependency, never connection details.
+app.get("/api/health", generalLimiter, async (req, res) => {
+  const withTimeout = (p, ms = 2000) =>
+    Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
+  const checks = {};
+  try {
+    checks.mongo = require("mongoose").connection.readyState === 1 ? "up" : "down";
+  } catch { checks.mongo = "down"; }
+  try {
+    await withTimeout(require("./db/cloudSql").query("SELECT 1"));
+    checks.postgres = "up";
+  } catch { checks.postgres = "down"; }
+  const ok = Object.values(checks).every((v) => v === "up");
+  res.status(ok ? 200 : 503).json({ status: ok ? "ok" : "degraded", checks });
 });
 
 app.get("/api/stats", generalLimiter, async (req, res) => {
@@ -728,9 +758,9 @@ app.get("/api/logs", (req, res) => {
 // AUTONOMOUS SDR BOT ROUTES (Manual, 1-by-1 AI Outreach)
 // ============================================================
 
-app.get("/api/autonomous", async (req, res) => {
+app.get("/api/autonomous", requireOrg, async (req, res) => {
   try {
-    const leads = await require("./db/mongoose").AutonomousLead.find().sort({ createdAt: -1 });
+    const leads = await require("./db/mongoose").AutonomousLead.find({ orgId: req.user.orgId }).sort({ createdAt: -1 }).limit(500);
     // Map _id to id
     const mapped = leads.map(l => { const obj = l.toObject(); obj.id = obj._id.toString(); return obj; });
     res.json(mapped);
@@ -739,12 +769,22 @@ app.get("/api/autonomous", async (req, res) => {
   }
 });
 
-app.post("/api/autonomous", async (req, res) => {
+app.post("/api/autonomous", requireOrg, async (req, res) => {
   try {
     const AutonomousLead = require("./db/mongoose").AutonomousLead;
+    // Only client-editable fields; status/dossier/draft/orgId are server-controlled.
+    const { company, website, contact_name, contact_role, notes } = req.body || {};
+    if (typeof company !== "string" || !company.trim() || typeof website !== "string" || !website.trim()) {
+      return res.status(422).json({ error: "company and website are required" });
+    }
     const newLead = await AutonomousLead.create({
-      ...req.body,
+      company: company.trim().slice(0, 200),
+      website: website.trim().slice(0, 500),
+      contact_name: typeof contact_name === "string" ? contact_name.slice(0, 200) : undefined,
+      contact_role: typeof contact_role === "string" ? contact_role.slice(0, 200) : undefined,
+      notes: typeof notes === "string" ? notes.slice(0, 5000) : undefined,
       status: "new",
+      orgId: req.user.orgId,
     });
     const obj = newLead.toObject();
     obj.id = obj._id.toString();
@@ -754,9 +794,9 @@ app.post("/api/autonomous", async (req, res) => {
   }
 });
 
-app.get("/api/autonomous/:id", async (req, res) => {
+app.get("/api/autonomous/:id", requireOrg, async (req, res) => {
   try {
-    const lead = await require("./db/mongoose").AutonomousLead.findById(req.params.id);
+    const lead = await require("./db/mongoose").AutonomousLead.findOne({ _id: req.params.id, orgId: req.user.orgId });
     if (!lead) return res.status(404).json({ error: "Lead not found" });
     const leadObj = lead.toObject();
     leadObj.id = leadObj._id.toString();
@@ -766,10 +806,10 @@ app.get("/api/autonomous/:id", async (req, res) => {
   }
 });
 
-app.post("/api/autonomous/:id/research", async (req, res) => {
+app.post("/api/autonomous/:id/research", requireOrg, async (req, res) => {
   try {
     const AutonomousLead = require("./db/mongoose").AutonomousLead;
-    const lead = await AutonomousLead.findById(req.params.id);
+    const lead = await AutonomousLead.findOne({ _id: req.params.id, orgId: req.user.orgId });
     if (!lead) return res.status(404).json({ error: "Lead not found" });
     
     lead.status = "researching";
@@ -778,9 +818,10 @@ app.post("/api/autonomous/:id/research", async (req, res) => {
     let siteText = "";
     if (lead.website) {
        try {
-         const response = await fetch(lead.website, { timeout: 8000, headers: { "User-Agent": "Mozilla/5.0" } });
-         if (response.ok) {
-           const html = await response.text();
+         // SSRF-safe fetch: blocks private/loopback/metadata destinations
+         const response = await publicGet(lead.website, { timeout: 8000, responseType: "text", headers: { "User-Agent": "Mozilla/5.0" } });
+         if (response.status >= 200 && response.status < 300) {
+           const html = String(response.data);
            siteText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 6000);
          }
        } catch (e) {
@@ -804,10 +845,10 @@ app.post("/api/autonomous/:id/research", async (req, res) => {
   }
 });
 
-app.post("/api/autonomous/:id/outreach", async (req, res) => {
+app.post("/api/autonomous/:id/outreach", requireOrg, async (req, res) => {
   try {
     const AutonomousLead = require("./db/mongoose").AutonomousLead;
-    const lead = await AutonomousLead.findById(req.params.id);
+    const lead = await AutonomousLead.findOne({ _id: req.params.id, orgId: req.user.orgId });
     if (!lead) return res.status(404).json({ error: "Lead not found" });
     if (!lead.dossier) return res.status(400).json({ error: "Run research first" });
     
@@ -973,6 +1014,18 @@ app.use("/api/search/hybrid",        require("./routes/hybridSearch"));
 
 
 // Export for Vercel / serverless environments
+// Central error handler — JSON responses, no stack traces or internals.
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  if (err && err.type === "entity.parse.failed") return res.status(400).json({ error: "Malformed JSON body" });
+  if (err && err.type === "entity.too.large") return res.status(413).json({ error: "Request body too large" });
+  if (err && typeof err.message === "string" && err.message.startsWith("CORS:")) {
+    return res.status(403).json({ error: "Origin not allowed" });
+  }
+  logger.error(`[Unhandled] ${req.method} ${req.path}: ${err && err.message}`);
+  res.status(err && err.status >= 400 && err.status < 500 ? err.status : 500).json({ error: "Internal server error" });
+});
+
 module.exports = app;
 
 if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {

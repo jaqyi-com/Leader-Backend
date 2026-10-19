@@ -3,7 +3,7 @@ const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 const { User, Organization, Member } = require("../db/mongoose");
 
-const JWT_SECRET = process.env.JWT_SECRET || "changeme-secret";
+const { JWT_SECRET } = require("../config/jwtSecret");
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
 // ── Email transporter (reuses existing SMTP config) ─────────────────────────

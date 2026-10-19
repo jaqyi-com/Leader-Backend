@@ -15,8 +15,12 @@
 
 const { neon } = require("@neondatabase/serverless");
 
-const NEON_URL =
-  "postgresql://neondb_owner:npg_0RCpItxXTuf6@ep-cool-shape-aik0wbtp-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require";
+require("dotenv").config();
+const NEON_URL = process.env.NEON_DATABASE_URL;
+if (!NEON_URL) {
+  console.error("NEON_DATABASE_URL is not set. Add it to .env (never hard-code credentials in scripts).");
+  process.exit(1);
+}
 
 const sql = neon(NEON_URL);
 

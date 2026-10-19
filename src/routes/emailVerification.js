@@ -11,18 +11,35 @@ const {
   addManualDisposableDomain
 } = require("../services/emailVerification");
 const { query } = require("../db/cloudSql");
+const { requirePlatformAdmin, requireOrg } = require("../middleware/auth");
+const { pipelineLimiter } = require("../middleware/rateLimiter");
+const { safeFilename } = require("../utils/csvSafe");
 
 const router = express.Router();
 const upload = multer({
   limits: { fileSize: 25 * 1024 * 1024 } // 25MB max
 });
 
+// Batch jobs live in process memory (see services/emailVerification/queue.js); remember who
+// started each one so other users cannot poll or download it by guessing a jobId.
+const jobOwners = new Map(); // jobId -> userId
+
+function ownedJobOr404(req, res) {
+  const { jobId } = req.params;
+  const job = getBatchJob(jobId);
+  if (!job || jobOwners.get(jobId) !== String(req.user?.userId)) {
+    res.status(404).json({ error: "Batch job not found." });
+    return null;
+  }
+  return job;
+}
+
 /**
  * POST /api/verify-email
  * On-demand single email verification for the product UI / ETL ingestion.
  * Backed by 90-day cache (Redis + Postgres).
  */
-router.post("/", async (req, res) => {
+router.post("/", pipelineLimiter, async (req, res) => {
   try {
     const { email, force_refresh = false, skip_smtp = false } = req.body || {};
 
@@ -48,7 +65,7 @@ router.post("/", async (req, res) => {
  * POST /api/verify-email/batch
  * Bulk verification via CSV upload or JSON list of emails.
  */
-router.post("/batch", upload.single("file"), async (req, res) => {
+router.post("/batch", pipelineLimiter, upload.single("file"), async (req, res) => {
   try {
     let input = null;
     let fileName = "batch_verification.csv";
@@ -73,6 +90,7 @@ router.post("/batch", upload.single("file"), async (req, res) => {
       fileName,
       forceRefresh: req.body?.force_refresh === true || req.body?.force_refresh === "true"
     });
+    jobOwners.set(job.jobId, String(req.user?.userId));
 
     return res.status(202).json({
       success: true,
@@ -93,12 +111,8 @@ router.post("/batch", upload.single("file"), async (req, res) => {
  * Polls the live progress and metrics of a batch verification job.
  */
 router.get("/batch/:jobId", (req, res) => {
-  const { jobId } = req.params;
-  const job = getBatchJob(jobId);
-
-  if (!job) {
-    return res.status(404).json({ error: `Batch job '${jobId}' not found.` });
-  }
+  const job = ownedJobOr404(req, res);
+  if (!job) return;
 
   const progressPercent = job.total > 0 ? Number(((job.processed / job.total) * 100).toFixed(1)) : 0;
 
@@ -124,11 +138,8 @@ router.get("/batch/:jobId", (req, res) => {
 router.get("/batch/:jobId/download", (req, res) => {
   try {
     const { jobId } = req.params;
-    const job = getBatchJob(jobId);
-
-    if (!job) {
-      return res.status(404).json({ error: `Batch job '${jobId}' not found.` });
-    }
+    const job = ownedJobOr404(req, res);
+    if (!job) return;
 
     if (job.status !== "completed" && job.results.length === 0) {
       return res.status(400).json({
@@ -137,7 +148,7 @@ router.get("/batch/:jobId/download", (req, res) => {
     }
 
     const csvData = generateResultCsv(jobId);
-    const downloadName = `verified_${job.metadata?.fileName || `${jobId}.csv`}`;
+    const downloadName = `verified_${safeFilename(job.metadata?.fileName, `${jobId}.csv`)}`;
 
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="${downloadName}"`);
@@ -152,7 +163,7 @@ router.get("/batch/:jobId/download", (req, res) => {
  * POST /api/verify-email/sync-disposable
  * Admin / Cron trigger to sync disposable domains from upstream GitHub blocklist.
  */
-router.post("/sync-disposable", async (req, res) => {
+router.post("/sync-disposable", requirePlatformAdmin, async (req, res) => {
   try {
     const syncResult = await syncDisposableDomainsFromGitHub();
     return res.json({
@@ -170,7 +181,7 @@ router.post("/sync-disposable", async (req, res) => {
  * POST /api/verify-email/disposable-domains
  * Manually append a disposable domain.
  */
-router.post("/disposable-domains", async (req, res) => {
+router.post("/disposable-domains", requirePlatformAdmin, async (req, res) => {
   try {
     const { domain, source = "manual_api" } = req.body || {};
     if (!domain || typeof domain !== "string") {
@@ -188,7 +199,7 @@ router.post("/disposable-domains", async (req, res) => {
  * GET /api/verify-email/stats
  * Overview statistics of verified emails and domain cache.
  */
-router.get("/stats", async (req, res) => {
+router.get("/stats", requirePlatformAdmin, async (req, res) => {
   try {
     const [countsRes, disposableCountRes, domainCacheRes] = await Promise.all([
       query(`

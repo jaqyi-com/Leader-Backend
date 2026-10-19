@@ -13,7 +13,7 @@ RUN npm ci --only=production
 # Copy application source code
 COPY src/ ./src/
 COPY scripts/ ./scripts/
-COPY .env* ./
+# Secrets are injected at runtime (docker run --env-file / platform env vars) — never baked into the image.
 
 # Expose API port
 EXPOSE 3001

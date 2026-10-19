@@ -401,19 +401,25 @@ router.post("/places/export-csv", async (req, res) => {
       return res.status(400).json({ error: "No places data provided." });
     }
 
+    if (!Array.isArray(places) || places.length > 5000) {
+      return res.status(400).json({ error: "Provide an array of at most 5000 places." });
+    }
+    const { neutralizeRow } = require("../utils/csvSafe");
+    const safePlaces = places.map(neutralizeRow);
+
     const fields = ["place_id", "name", "phone", "website", "address", "lat", "lng", "types", "rating", "user_ratings_total", "category_keyword"];
 
     let csvData;
     try {
       const { parse } = require("json2csv");
-      csvData = parse(places, { fields });
+      csvData = parse(safePlaces, { fields });
     } catch (_) {
       // Inline fallback CSV builder
       const replacer = (_, v) => (v === null || v === undefined ? "" : v);
       const header = fields;
       csvData = [
         header.join(","),
-        ...places.map(row =>
+        ...safePlaces.map(row =>
           header.map(f => JSON.stringify(row[f], replacer)).join(",")
         ),
       ].join("\r\n");
