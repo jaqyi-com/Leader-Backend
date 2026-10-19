@@ -13,7 +13,7 @@ const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const indexedQuery = (sql, params, ms) => directQueryWithSession(sql, params, ["SET LOCAL enable_seqscan = off;"], ms);
 const {
   escapeLike, INDIA_STATES_SQL, exactCappedTotal,
-  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter, runFilteredSearch,
+  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, runFilteredSearch,
 } = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 
@@ -384,8 +384,6 @@ router.get("/", async (req, res) => {
   const offset   = (pageNum - 1) * limitNum;
   const windowErr = resultWindowError(offset, limitNum);
   if (windowErr) return res.status(400).json(windowErr);
-  const shortErr = shortTitleNeedsFilter(req.query);
-  if (shortErr) return res.status(400).json(shortErr);
 
   try {
     const schema = await getSchema();

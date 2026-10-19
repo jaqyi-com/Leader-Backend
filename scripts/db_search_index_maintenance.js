@@ -62,6 +62,12 @@ const INDEXES = [
             ON final.people (email_status)`,
   },
   {
+    name: "idx_people_job_title_fts",
+    why: "whole-word job-title matching for short terms (CTO, CEO, IT, HR, CA…): trigram indexes need 3+ characters and cannot tell 'CTO' from Dire-cto-r, so any OR-list containing IT/HR forced a full table scan",
+    sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_people_job_title_fts
+            ON final.people USING gin (to_tsvector('simple', job_title))`,
+  },
+  {
     name: "idx_people_city_trgm",
     why: "city ILIKE '%Los Angeles%': the btree on city cannot serve contains-searches, so every rare city scanned the whole 87 GB table",
     sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_people_city_trgm

@@ -18,15 +18,19 @@ function hasWord(text, word) {
 
 /**
  * Job-title condition for one search term.
- * Short terms (≤3 chars: CTO, CEO, CA, IT, HR, EHS…) match whole words only; "%CTO%" would also
- * hit Fa-cto-ry, Dire-cto-r, Do-cto-r and "%IT%" would hit Recru-it-er, Qual-it-y.
- * Longer terms keep the substring match.
+ *
+ * Short terms (≤3 chars: CTO, CEO, CA, IT, HR, EHS…) must match WHOLE WORDS: "%CTO%" also hits
+ * Fa-cto-ry, Dire-cto-r, Do-cto-r and "%IT%" hits Recru-it-er, Qual-it-y. Trigram indexes cannot do that
+ * (they need 3+ characters and ignore word boundaries), so these use full-text search over the
+ * 'simple' dictionary (no stop words / stemming), served by idx_people_job_title_fts. plainto_tsquery
+ * treats the text as plain words, so user input can never inject query operators.
+ * Longer terms keep the substring match (idx_people_job_title_trgm).
  * Pushes the bound parameter onto `values` and returns { sql, nextIdx }.
  */
 function jobTitleCondition(term, values, idx, col = '"job_title"') {
   if (term.length <= 3) {
-    values.push(`\\y${escapeRegex(term)}\\y`);
-    return { sql: `${col} ~* $${idx}`, nextIdx: idx + 1 };
+    values.push(term);
+    return { sql: `to_tsvector('simple', ${col}) @@ plainto_tsquery('simple', $${idx})`, nextIdx: idx + 1 };
   }
   values.push(`%${escapeLike(term)}%`);
   return { sql: `${col} ILIKE $${idx}`, nextIdx: idx + 1 };
@@ -52,9 +56,16 @@ const EXACT_COUNT_CAP = 10000;
  * Exact result count, capped. Returns { total, exact: true } when the filter matches at most
  * `cap` rows, or null when there are more (or the count timed out) so the caller can fall back
  * to an estimate. Replaces EXPLAIN-based guesses, which were off even on tiny tables.
- * The 4s limit bounds the extra latency on 45M-row tables when a filter cannot use an index.
+ * The 1.5s limit bounds the extra latency on 45M-row tables when a filter cannot use an index.
  */
-async function exactCappedTotal(pgQuery, fromTable, whereStr, values, cap = EXACT_COUNT_CAP, timeoutMs = 4000) {
+async function exactCappedTotal(pgQuery, fromTable, whereStr, values, cap = EXACT_COUNT_CAP, timeoutMs = 1500) {
+  // A planner estimate is nearly free. When it says the filter matches far more than `cap` rows, an
+  // exact capped count would only burn its whole time budget (and the answer is "more than cap").
+  try {
+    const ex = await pgQuery(`EXPLAIN SELECT 1 FROM ${fromTable} ${whereStr}`, values, 2000);
+    const m = String(ex.rows?.[0]?.["QUERY PLAN"] || "").match(/rows=(\d+)/);
+    if (m && parseInt(m[1], 10) > cap * 5) return null;
+  } catch { /* no estimate available — just try the count */ }
   try {
     const r = await pgQuery(
       `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${fromTable} ${whereStr} LIMIT ${cap + 1}) s`,
@@ -116,32 +127,14 @@ async function checkSortAllowed(pgQuery, fromTable, whereStr, values, hasFilters
 }
 
 /**
- * One- and two-letter job-title terms ("IT", "HR", "CA") cannot use the trigram index (it needs
- * 3+ characters), so the database must test every title in the matching rows. A state has millions
- * of people (15 s for "IT" in Maharashtra); a city has thousands. Require a city or pincode. Returns an error body, or null when the search is fine.
- */
-function shortTitleNeedsFilter(query) {
-  const entries = Object.entries(query || {});
-  const hasShortTitle = entries.some(([k, v]) =>
-    /^f_job_title(_sw|_ew)?$/.test(k) && String(v ?? "").trim().length > 0 && String(v).trim().length <= 2);
-  if (!hasShortTitle) return null;
-  const narrowed = entries.some(([k, v]) => /^f_(city|pincode)/.test(k) && String(v ?? "").trim() !== "");
-  if (narrowed) return null;
-  return {
-    error: "Very short job titles such as “IT” or “HR” match too many people to search quickly. Add a city filter, or use a longer title.",
-    code: "SHORT_TERM_NEEDS_FILTER",
-  };
-}
-
-/**
  * Run a filtered search with two plans, because no single plan wins:
  *
  *  1. sequential-scan first (indexes disabled), 1.5 s budget. For common values (Mumbai, Maharashtra,
  *     "has email") 25 matches turn up within the first few thousand rows: ~10 ms, versus 1-20 s when
  *     an index plan has to build a bitmap of millions of rows.
  *  2. if that times out the value is rare, so fall back to the index plan (sequential scans disabled:
- *     trigram / btree indexes): rare cities, rare titles and combinations answer in ~50-500 ms,
- *     where a sequential scan would run for tens of seconds.
+ *     trigram / full-text / btree indexes): rare cities, rare titles and combinations answer in
+ *     ~50-500 ms, where a sequential scan would run for tens of seconds.
  *
  * Vector (semantic) queries keep the index-only plan. Non-timeout errors are never retried.
  */
@@ -176,6 +169,6 @@ function sendSearchError(res, err, logger) {
 module.exports = {
   escapeLike, escapeRegex, hasWord, jobTitleCondition, INDIA_STATES, INDIA_STATES_SQL,
   exactCappedTotal, EXACT_COUNT_CAP, searchTimeoutMs, maxResultWindow, sortRowLimit,
-  resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter, runFilteredSearch,
+  resultWindowError, checkSortAllowed, sendSearchError, runFilteredSearch,
   INDEX_PLAN,
 };

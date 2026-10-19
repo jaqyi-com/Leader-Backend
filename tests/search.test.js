@@ -149,18 +149,25 @@ test("job-title: short role codes match whole words only (CTO ≠ Factory/Direct
   assert.deepEqual(await titles("?f_job_title=Doctor"), ["Doctor"]);
 });
 
-test("job-title: 1-2 letter terms need a city filter (they cannot use the text index)", { skip }, async () => {
+test("job-title: 2-3 letter terms (IT, HR, CA, CEO) work on their own and match whole words only", { skip }, async () => {
+  const titles = async (qs) => [...new Set((await all(qs)).map((x) => x.job_title))].sort();
+  // fixture titles never contain the WORD "IT"/"HR"/"CA" (only Recru-it-er, Cha-ir…) → nothing may match
   for (const term of ["IT", "HR", "CA"]) {
-    const bare = await get(`?f_job_title=${term}&limit=10`);
-    assert.equal(bare.status, 400, term);
-    assert.equal(bare.json.code, "SHORT_TERM_NEEDS_FILTER");
-    assert.equal((await get(`?f_job_title=${term}&f_city=Mumbai&limit=10`)).status, 200, `${term} + city`);
-    // a state has millions of people — too many titles to test one by one
-    assert.equal((await get(`?f_job_title=${term}&f_state=Maharashtra&limit=10`)).status, 400, `${term} + state only`);
+    const r = await get(`?f_job_title=${term}&limit=10`);
+    assert.equal(r.status, 200, `${term} alone is allowed`);
+    assert.equal(r.json.records.length, 0, `${term} must not match substrings (Recruiter, Director …)`);
   }
-  assert.equal((await get("?f_job_title=CEO&limit=10")).status, 200, "3-letter terms are fine");
-  assert.equal((await get("?f_job_title_eq=IT&limit=10")).status, 200, "exact match can use the btree index");
-  assert.equal((await stack.http("GET", "/api/final-people-email?f_job_title=HR", { token: user.token })).status, 400);
+  assert.deepEqual(await titles("?f_job_title=CEO"), []); // no CEO in the fixture → none (and no "Dire-ceo" style hits)
+  assert.deepEqual(await titles("?f_job_title=CTO"), ["CTO"]);
+  assert.equal((await stack.http("GET", "/api/final-people-email?f_job_title=HR", { token: user.token })).status, 200);
+});
+
+test("job-title: user text cannot inject full-text operators", { skip }, async () => {
+  for (const evil of ["CTO | Doctor", "CTO & !x", "cto:*", "'; DROP TABLE final.people; --", "a b c ((("]) {
+    const r = await get(`?f_job_title=${encodeURIComponent(evil)}&limit=10`);
+    assert.ok([200, 400].includes(r.status), `${evil} → ${r.status}`);
+  }
+  assert.equal((await get("?f_job_title=CTO%20%7C%20Doctor&limit=100")).json.records.every((x) => x.job_title === "CTO" || /cto/i.test(x.job_title)), true);
 });
 
 test("job-title: 'equals' filter is exact", { skip }, async () => {
@@ -245,4 +252,27 @@ test("two-attempt runner: sequential scan first, index plan only after a timeout
   q = async (sql, params, session, ms) => { seen.push(ms); if (seen.length === 1) throw timeout(); return { rows: [] }; };
   await runFilteredSearch(q, "SELECT 1", [], 600);
   assert.deepEqual(seen, [300, 300]);
+});
+
+test("exact count: skipped (free planner estimate) when the filter is clearly dense", { skip: false }, async () => {
+  const { exactCappedTotal } = require("../src/utils/searchFilters");
+  const seen = [];
+  // dense: EXPLAIN says 3,000,000 rows → no count query is run at all
+  const dense = async (sql) => { seen.push(sql.split(" ")[0]); return { rows: [{ "QUERY PLAN": "Seq Scan on people (cost=0.00..1.00 rows=3000000 width=8)" }] }; };
+  assert.equal(await exactCappedTotal(dense, "t", "WHERE x", []), null);
+  assert.deepEqual(seen, ["EXPLAIN"]);
+  // small: EXPLAIN says 120 rows → exact capped count runs and is returned
+  const calls = [];
+  const small = async (sql) => {
+    calls.push(sql.split(" ")[0]);
+    return sql.startsWith("EXPLAIN") ? { rows: [{ "QUERY PLAN": "Bitmap Heap Scan (cost=1..2 rows=120 width=8)" }] } : { rows: [{ cnt: "97" }] };
+  };
+  assert.deepEqual(await exactCappedTotal(small, "t", "WHERE x", []), { total: 97, exact: true });
+  assert.deepEqual(calls, ["EXPLAIN", "SELECT"]);
+  // estimate says small but the real count exceeds the cap → null (caller uses the estimate)
+  const liar = async (sql) => sql.startsWith("EXPLAIN") ? { rows: [{ "QUERY PLAN": "rows=50" }] } : { rows: [{ cnt: "10001" }] };
+  assert.equal(await exactCappedTotal(liar, "t", "WHERE x", []), null);
+  // EXPLAIN failing must not break counting
+  const noExplain = async (sql) => { if (sql.startsWith("EXPLAIN")) throw new Error("nope"); return { rows: [{ cnt: "5" }] }; };
+  assert.deepEqual(await exactCappedTotal(noExplain, "t", "WHERE x", []), { total: 5, exact: true });
 });
