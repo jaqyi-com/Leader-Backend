@@ -200,3 +200,18 @@ test("email and number routes: wildcard-safe, exact totals, correct rows", { ski
   const w = await stack.http("GET", "/api/final-people-email?f_city=%25", { token: user.token });
   assert.equal(w.json.records.length, 0, "'%' must not match every city");
 });
+
+test("planner steering: has-contact predicate stays indexable only when it is the sole filter", { skip: false }, () => {
+  const { steerContactPredicates } = require("../src/utils/searchFilters");
+  const mail = `("emails" IS NOT NULL AND "emails" <> '' AND "emails" <> '{}')`;
+  const phone = `("phones" IS NOT NULL AND "phones" <> '' AND "phones" <> '{}')`;
+  // sole filter → untouched (the partial index serves it)
+  assert.equal(steerContactPredicates(`WHERE ${mail}`), `WHERE ${mail}`);
+  // combined → rewritten so the partial index cannot be chosen
+  const combined = steerContactPredicates(`WHERE "city" ILIKE $1 AND ${mail} AND ${phone}`);
+  assert.ok(!combined.includes(`"emails" <> ''`), combined);
+  assert.ok(combined.includes(`btrim("emails", '{}') <> ''`) && combined.includes(`btrim("phones", '{}') <> ''`), combined);
+  assert.equal(steerContactPredicates(`WHERE ${mail} AND ${phone}`).includes("btrim"), true, "two contact filters = combined");
+  assert.equal(steerContactPredicates(""), "");
+  assert.equal(steerContactPredicates(`WHERE "city" ILIKE $1`), `WHERE "city" ILIKE $1`);
+});

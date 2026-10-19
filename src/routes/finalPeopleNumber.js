@@ -10,7 +10,7 @@ const router  = express.Router();
 const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const {
   escapeLike, INDIA_STATES_SQL, exactCappedTotal,
-  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter,
+  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter, steerContactPredicates,
 } = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 
@@ -389,11 +389,12 @@ router.get("/", async (req, res) => {
     const { selectSQL, selectCols } = schema;
     const phoneCol = await getPhoneCol(schema);
 
-    const { whereStr, values, nextIdx } = buildWhere(
+    const { whereStr: whereRaw, values, nextIdx } = buildWhere(
       req.query,
       phoneCol,
       selectCols
     );
+    const whereStr = steerContactPredicates(whereRaw);
 
     let orderClause = "";
     if (sort_by && selectCols.includes(sort_by)) {

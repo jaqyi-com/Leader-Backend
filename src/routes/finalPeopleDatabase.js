@@ -19,7 +19,7 @@ const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const {
   escapeLike, hasWord, jobTitleCondition, INDIA_STATES_SQL, exactCappedTotal,
-  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter,
+  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter, steerContactPredicates,
 } = require("../utils/searchFilters");
 
 
@@ -644,11 +644,13 @@ router.get("/", async (req, res) => {
 
     const schema = await getSchema();
     const { selectSQL, selectCols } = schema;
-    const { whereStr, values, nextIdx, vectorIdx, userHasFilters } = buildWhere(
+    const built = buildWhere(
       req.query,
       embedding,
       schema
     );
+    const { values, nextIdx, vectorIdx, userHasFilters } = built;
+    const whereStr = steerContactPredicates(built.whereStr);
 
     let customSelectSQL = selectSQL;
     if (vectorIdx !== null) {

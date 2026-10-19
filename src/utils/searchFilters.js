@@ -133,6 +133,24 @@ function shortTitleNeedsFilter(query) {
   };
 }
 
+/**
+ * Keep the "has e-mail / has phone" partial indexes for the one case they are good at.
+ *
+ * Partial indexes on rows with a real e-mail/phone make a lone "has email" listing instant, but
+ * when the same predicate is combined with other filters (city + job title + has email) the
+ * planner underestimates how rare the combination is and walks that huge index row by row,
+ * timing out. Rewriting the predicate into an equivalent form the partial index cannot match
+ * (btrim(col,'{}') <> '' is true exactly when col is not '' or '{}') steers combined searches
+ * back to the text-index plans, while a lone has-contact filter keeps the exact indexed form.
+ */
+const CONTACT_PREDICATE = /\("([a-z_]+)" IS NOT NULL AND "\1" <> '' AND "\1" <> '\{\}'\)/g;
+function steerContactPredicates(whereStr) {
+  if (!whereStr) return whereStr;
+  const found = whereStr.match(CONTACT_PREDICATE) || [];
+  if (found.length === 1 && whereStr.trim() === `WHERE ${found[0]}`) return whereStr; // sole filter
+  return whereStr.replace(CONTACT_PREDICATE, (m, col) => `("${col}" IS NOT NULL AND btrim("${col}", '{}') <> '')`);
+}
+
 /** Uniform error response for search routes: timeouts become a clear 503, nothing internal leaks. */
 function sendSearchError(res, err, logger) {
   if (err && err.code === "57014") {
@@ -149,5 +167,5 @@ function sendSearchError(res, err, logger) {
 module.exports = {
   escapeLike, escapeRegex, hasWord, jobTitleCondition, INDIA_STATES, INDIA_STATES_SQL,
   exactCappedTotal, EXACT_COUNT_CAP, searchTimeoutMs, maxResultWindow, sortRowLimit,
-  resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter,
+  resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter, steerContactPredicates,
 };
