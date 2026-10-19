@@ -29,3 +29,7 @@ doott-promo-video/
 __pycache__/
 *.pyc
 
+
+# Playwright artifacts
+e2e-results/
+playwright-report/
