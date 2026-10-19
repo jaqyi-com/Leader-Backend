@@ -58,8 +58,8 @@ export default function IndiaDataPage() {
       });
       setRecords(data.records || []);
       setTotal(data.total || 0);
-    } catch {
-      toast.error("Failed to load India Data");
+    } catch (err) {
+      toast.error(err?.userMessage || "Failed to load India Data");
     } finally {
       setLoading(false);
     }

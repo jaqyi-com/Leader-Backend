@@ -72,8 +72,8 @@ export default function PeopleNumberPage() {
       }
       setRecords(recordsData);
       setTotal(data.total || 0);
-    } catch {
-      toast.error("Failed to load Number data");
+    } catch (err) {
+      toast.error(err?.userMessage || "Failed to load Number data");
     } finally {
       setLoading(false);
     }

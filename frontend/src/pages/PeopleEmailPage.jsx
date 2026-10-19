@@ -72,8 +72,8 @@ export default function PeopleEmailPage() {
       }
       setRecords(recordsData);
       setTotal(data.total || 0);
-    } catch {
-      toast.error("Failed to load Email data");
+    } catch (err) {
+      toast.error(err?.userMessage || "Failed to load Email data");
     } finally {
       setLoading(false);
     }

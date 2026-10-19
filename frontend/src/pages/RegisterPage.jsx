@@ -6,7 +6,7 @@ import { useAuth } from "../context/AuthContext";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
-export default function RegisterPage() {
+export default function RegisterPage({ inviteCode, onInviteRejected } = {}) {
   const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
 
@@ -50,11 +50,15 @@ export default function RegisterPage() {
       const res = await fetch(`${API}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(inviteCode ? { ...form, inviteCode } : form),
       });
       const data = await res.json();
 
       if (!res.ok) {
+        if (data.code === "INVALID_INVITE_CODE" && onInviteRejected) {
+          onInviteRejected();
+          return;
+        }
         setError(data.error || "Registration failed.");
         return;
       }

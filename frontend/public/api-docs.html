@@ -161,17 +161,17 @@
   <div class="section" id="start">
     <div class="sec-title">🚀 Getting Started</div>
     <div class="sec-desc">Everything you need to make your first API call in under 2 minutes.</div>
-    <div class="base-banner"><span class="bl">PRODUCTION</span><span class="bv">https://doott.jaqyi.com/api</span></div>
+    <div class="base-banner"><span class="bl">PRODUCTION</span><span class="bv">https://leader-backend.vercel.app/api</span></div>
     <div class="base-banner"><span class="bl">LOCAL DEV</span><span class="bv" style="color:#64748b">http://localhost:3000/api</span></div>
     <div class="cb" style="margin-top:20px">
       <div class="ch"><span class="cl">QUICK START · cURL</span><button class="cpbtn" onclick="cp(this)">Copy</button></div>
       <pre><span class="cmt"># 1. Login to get Bearer token</span>
-curl -X POST https://doott.jaqyi.com/api/auth/login \
+curl -X POST https://leader-backend.vercel.app/api/auth/login \
   -H <span class="str">"Content-Type: application/json"</span> \
   -d <span class="str">'{"email":"you@example.com","password":"yourpassword"}'</span>
 
 <span class="cmt"># 2. Query companies with the returned token</span>
-curl -G https://doott.jaqyi.com/api/final-companies \
+curl -G https://leader-backend.vercel.app/api/final-companies \
   -H <span class="str">"Authorization: Bearer &lt;TOKEN&gt;"</span> \
   --data-urlencode <span class="str">"f_city=Mumbai"</span> \
   --data-urlencode <span class="str">"f_has_email=true"</span> \
@@ -247,7 +247,7 @@ curl -G https://doott.jaqyi.com/api/final-companies \
         <div class="ep-panel" data-tab="e">
           <div class="cb"><div class="ch"><span class="cl">cURL</span><button class="cpbtn" onclick="cp(this)">Copy</button></div>
           <pre><span class="cmt"># Mumbai food companies with verified emails</span>
-curl -G https://doott.jaqyi.com/api/final-companies \
+curl -G https://leader-backend.vercel.app/api/final-companies \
   -H <span class="str">"Authorization: Bearer &lt;TOKEN&gt;"</span> \
   --data-urlencode <span class="str">"f_city=Mumbai"</span> \
   --data-urlencode <span class="str">"f_industry=Food"</span> \
@@ -255,7 +255,7 @@ curl -G https://doott.jaqyi.com/api/final-companies \
   --data-urlencode <span class="str">"limit=50"</span></pre></div>
           <div class="cb" style="margin-top:12px"><div class="ch"><span class="cl">JavaScript · fetch</span><button class="cpbtn" onclick="cp(this)">Copy</button></div>
           <pre><span class="kw">const</span> res = <span class="kw">await</span> fetch(
-  <span class="str">`https://doott.jaqyi.com/api/final-companies?${new URLSearchParams({
+  <span class="str">`https://leader-backend.vercel.app/api/final-companies?${new URLSearchParams({
     f_city:'Mumbai', f_industry:'Food', f_has_email:'true', limit:'50'
   })}`</span>,
   { headers: { Authorization: <span class="str">`Bearer ${token}`</span> } }
@@ -356,7 +356,7 @@ curl -G https://doott.jaqyi.com/api/final-companies \
         <div class="ep-panel" data-tab="e">
           <div class="cb"><div class="ch"><span class="cl">cURL</span><button class="cpbtn" onclick="cp(this)">Copy</button></div>
           <pre><span class="cmt"># CEOs in Bangalore with verified emails</span>
-curl -G https://doott.jaqyi.com/api/final-people \
+curl -G https://leader-backend.vercel.app/api/final-people \
   -H <span class="str">"Authorization: Bearer &lt;TOKEN&gt;"</span> \
   --data-urlencode <span class="str">"f_job_title=CEO"</span> \
   --data-urlencode <span class="str">"f_city=Bangalore"</span> \
@@ -421,7 +421,7 @@ curl -G https://doott.jaqyi.com/api/final-people \
       </div>
       <div class="ep-panel active" data-tab="e"><div class="cb"><div class="ch"><span class="cl">cURL</span><button class="cpbtn" onclick="cp(this)">Copy</button></div>
       <pre><span class="cmt"># India Founders with emails</span>
-curl -G https://doott.jaqyi.com/api/final-people-email \
+curl -G https://leader-backend.vercel.app/api/final-people-email \
   -H <span class="str">"Authorization: Bearer &lt;TOKEN&gt;"</span> \
   --data-urlencode <span class="str">"f_job_title=Founder"</span> \
   --data-urlencode <span class="str">"country=india"</span> \
@@ -441,7 +441,7 @@ curl -G https://doott.jaqyi.com/api/final-people-email \
       <div class="ep-hdr" onclick="tog(this)"><span class="mth get">GET</span><span class="ep-path">/api/final-people-number</span><span class="ep-sum">People with phone number — paginated</span><span class="chevron">▶</span></div>
       <div class="ep-body"><div class="ep-tabs"><div class="ep-tab active" onclick="sw(this,'e')">Example</div></div>
       <div class="ep-panel active" data-tab="e"><div class="cb"><div class="ch"><span class="cl">cURL</span><button class="cpbtn" onclick="cp(this)">Copy</button></div>
-      <pre>curl -G https://doott.jaqyi.com/api/final-people-number \
+      <pre>curl -G https://leader-backend.vercel.app/api/final-people-number \
   -H <span class="str">"Authorization: Bearer &lt;TOKEN&gt;"</span> \
   --data-urlencode <span class="str">"f_job_title=HR Manager"</span> \
   --data-urlencode <span class="str">"f_city=Delhi"</span> \
@@ -470,7 +470,7 @@ curl -G https://doott.jaqyi.com/api/final-people-email \
         </tbody></table>
       </div>
       <div class="ep-panel" data-tab="e"><div class="cb"><div class="ch"><span class="cl">cURL</span><button class="cpbtn" onclick="cp(this)">Copy</button></div>
-      <pre>curl -X POST https://doott.jaqyi.com/api/verify-email \
+      <pre>curl -X POST https://leader-backend.vercel.app/api/verify-email \
   -H <span class="str">"Authorization: Bearer &lt;TOKEN&gt;"</span> \
   -H <span class="str">"Content-Type: application/json"</span> \
   -d <span class="str">'{"email":"john@example.com"}'</span></pre></div></div>
@@ -504,12 +504,12 @@ curl -G https://doott.jaqyi.com/api/final-people-email \
       </div>
       <div class="ep-panel" data-tab="e">
         <div class="cb"><div class="ch"><span class="cl">cURL · JSON Array</span><button class="cpbtn" onclick="cp(this)">Copy</button></div>
-        <pre>curl -X POST https://doott.jaqyi.com/api/verify-email/batch \
+        <pre>curl -X POST https://leader-backend.vercel.app/api/verify-email/batch \
   -H <span class="str">"Authorization: Bearer &lt;TOKEN&gt;"</span> \
   -H <span class="str">"Content-Type: application/json"</span> \
   -d <span class="str">'{"emails":["a@example.com","b@test.org","c@domain.com"]}'</span></pre></div>
         <div class="cb" style="margin-top:10px"><div class="ch"><span class="cl">cURL · CSV File Upload</span><button class="cpbtn" onclick="cp(this)">Copy</button></div>
-        <pre>curl -X POST https://doott.jaqyi.com/api/verify-email/batch \
+        <pre>curl -X POST https://leader-backend.vercel.app/api/verify-email/batch \
   -H <span class="str">"Authorization: Bearer &lt;TOKEN&gt;"</span> \
   -F <span class="str">"file=@/path/to/emails.csv"</span></pre></div>
       </div>
@@ -556,7 +556,7 @@ curl -G https://doott.jaqyi.com/api/final-people-email \
         </tbody></table>
       </div>
       <div class="ep-panel" data-tab="e"><div class="cb"><div class="ch"><span class="cl">cURL</span><button class="cpbtn" onclick="cp(this)">Copy</button></div>
-      <pre>curl -X POST https://doott.jaqyi.com/api/auth/register \
+      <pre>curl -X POST https://leader-backend.vercel.app/api/auth/register \
   -H <span class="str">"Content-Type: application/json"</span> \
   -d <span class="str">'{"name":"Jane Doe","email":"jane@company.com","password":"secure123","orgName":"Acme Corp"}'</span></pre></div></div>
       </div>
@@ -569,7 +569,7 @@ curl -G https://doott.jaqyi.com/api/final-people-email \
         <div class="ep-tab" onclick="sw(this,'r')">Response</div>
       </div>
       <div class="ep-panel active" data-tab="e"><div class="cb"><div class="ch"><span class="cl">cURL</span><button class="cpbtn" onclick="cp(this)">Copy</button></div>
-      <pre>curl -X POST https://doott.jaqyi.com/api/auth/login \
+      <pre>curl -X POST https://leader-backend.vercel.app/api/auth/login \
   -H <span class="str">"Content-Type: application/json"</span> \
   -d <span class="str">'{"email":"jane@company.com","password":"secure123"}'</span></pre></div></div>
       <div class="ep-panel" data-tab="r"><div class="cb"><div class="ch"><span class="cl">200 OK · JSON</span></div>

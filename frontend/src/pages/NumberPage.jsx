@@ -104,8 +104,8 @@ function TablePanel({ mode }) {
         setRecords(data.records || []);
         setTotal(data.total || 0);
       }
-    } catch {
-      toast.error("Failed to load data");
+    } catch (err) {
+      toast.error(err?.userMessage || "Failed to load data");
     } finally {
       setLoading(false);
     }

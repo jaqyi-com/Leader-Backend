@@ -149,11 +149,11 @@ export default function PeoplePage() {
       setRecords(recordsData);
       setTotal(data.total || 0);
       setHasError(false);
-    } catch {
+    } catch (err) {
       setRecords([]);
       setTotal(0);
       setHasError(true);
-      toast.error("Failed to load People data. Retrying...", { id: "people-load-error" });
+      toast.error(err?.userMessage || "Failed to load People data.", { id: "people-load-error" });
     } finally {
       setLoading(false);
     }
