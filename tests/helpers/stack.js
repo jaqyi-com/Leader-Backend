@@ -25,6 +25,8 @@ const rand = (base, span) => {
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const STATUSES = ["pending", "deliverable", "pending", "undeliverable", "pending", "risky", "unknown", "pending", "pending"];
+
 /** Deterministic synthetic people — 250 rows, no real data. */
 function syntheticPeople(n = 250) {
   const cities = [["Mumbai", "Maharashtra"], ["Pune", "Maharashtra"], ["Delhi", "Delhi"], ["Chennai", "Tamil Nadu"], ["Austin", "TX"]];
@@ -40,7 +42,10 @@ function syntheticPeople(n = 250) {
       city, state,
       emails: i % 2 === 0 ? `person${i}@example.test` : (i % 4 === 1 ? "{}" : ""),
       phones: i % 3 === 0 ? `+9100000${String(i).padStart(5, "0")}` : "{}",
-      email_status: i % 2 === 0 ? "deliverable" : "pending",
+      // Mirrors production: unverified rows are "pending" with is_email_valid NULL; every verified
+      // non-deliverable status (undeliverable / risky / unknown) has is_email_valid FALSE.
+      email_status: STATUSES[i % STATUSES.length],
+      is_email_valid: { deliverable: true, undeliverable: false, risky: false, unknown: false }[STATUSES[i % STATUSES.length]] ?? null,
     });
   }
   return rows;
@@ -64,8 +69,8 @@ async function startPostgres(state) {
   const rows = syntheticPeople();
   for (const r of rows) {
     await pool.query(
-      "insert into final.people (full_name, job_title, city, state, emails, phones, email_status, created_at) values ($1,$2,$3,$4,$5,$6,$7,'2026-01-01')",
-      [r.full_name, r.job_title, r.city, r.state, r.emails, r.phones, r.email_status]);
+      "insert into final.people (full_name, job_title, city, state, emails, phones, email_status, is_email_valid, created_at) values ($1,$2,$3,$4,$5,$6,$7,$8,'2026-01-01')",
+      [r.full_name, r.job_title, r.city, r.state, r.emails, r.phones, r.email_status, r.is_email_valid]);
   }
   await pool.query("analyze final.people");
   state.pg = { proc, dir, pool, url, rows };

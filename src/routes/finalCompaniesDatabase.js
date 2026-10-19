@@ -257,8 +257,10 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         if (hasEmailStatus) subConds.push(`"email_status" IN ('deliverable', 'valid')`);
         if (hasIsEmailValid) subConds.push(`"is_email_valid" = true`);
       } else if (valLower === "undeliverable" || valLower === "invalid" || valLower === "false") {
+        // Only the status column: is_email_valid is FALSE for risky / unknown / undeliverable alike,
+        // so "is_email_valid = false" would also return risky and unknown addresses.
         if (hasEmailStatus) subConds.push(`"email_status" IN ('undeliverable', 'invalid')`);
-        if (hasIsEmailValid) subConds.push(`"is_email_valid" = false`);
+        else if (hasIsEmailValid) subConds.push(`"is_email_valid" = false`);
       } else if (valLower === "risky" || valLower.includes("catch")) {
         if (hasEmailStatus) subConds.push(`"email_status" IN ('risky', 'catch_all', 'catch-all')`);
       } else if (valLower === "unknown" || valLower === "unverified") {

@@ -74,8 +74,18 @@ test("filters: city, state, job title, has_email and combinations return exactly
   assert.ok((await all("?f_city=Mumbai")).every((r) => r.city === "Mumbai"));
 });
 
-test("email status filter maps friendly names to stored values", { skip }, async () => {
-  assert.equal((await all("?f_email_status=deliverable")).length, stack.pg.rows.filter((x) => x.email_status === "deliverable").length);
+test("email status filter: each friendly name returns only its own status (undeliverable ≠ risky/unknown)", { skip }, async () => {
+  const rows = stack.pg.rows;
+  for (const status of ["deliverable", "undeliverable", "risky", "unknown", "pending"]) {
+    const got = await all(`?f_email_status=${status}`);
+    assert.equal(got.length, rows.filter((x) => x.email_status === status).length, `${status}: count`);
+    assert.ok(got.every((r) => r.email_status === status), `${status}: only ${status} rows (got ${[...new Set(got.map((r) => r.email_status))]})`);
+  }
+  // production quirk: is_email_valid is FALSE for risky/unknown/undeliverable alike — "invalid" must not use it
+  const invalid = await all("?f_email_status=invalid");
+  assert.ok(invalid.every((r) => r.email_status === "undeliverable"));
+  // verified-good via the boolean alias
+  assert.equal((await all("?f_email_status=valid")).length, rows.filter((x) => x.email_status === "deliverable").length);
 });
 
 test("injection: hostile filter keys/values and sort columns are inert", { skip }, async () => {
