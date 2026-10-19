@@ -17,6 +17,7 @@ const { cacheGet, cacheSet, cacheDel } = require("./db/redis");
 const { pipelineLimiter, placesLimiter, generalLimiter } = require("./middleware/rateLimiter");
 const { auth, requireOrg } = require("./middleware/auth");
 const { publicGet } = require("./utils/urlGuard");
+const { sanitizeBody } = require("./middleware/sanitizeBody");
 const authRouter = require("./routes/auth");
 const orgRouter = require("./routes/org");
 const socialRouter = require("./routes/social");
@@ -189,6 +190,9 @@ app.use((req, res, next) => {
   // Everything else — require valid JWT
   return auth(req, res, next);
 });
+
+// Strip server-owned fields (orgId, _id, …) and Mongo operators from every authenticated body.
+app.use(sanitizeBody);
 
 // ------------------------------------------------------------
 // PUBLIC DOCS PAGE — /api-docs (no auth, no React Router)
