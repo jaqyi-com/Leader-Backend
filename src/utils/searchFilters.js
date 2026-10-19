@@ -117,38 +117,47 @@ async function checkSortAllowed(pgQuery, fromTable, whereStr, values, hasFilters
 
 /**
  * One- and two-letter job-title terms ("IT", "HR", "CA") cannot use the trigram index (it needs
- * 3+ characters), so on its own such a search scans tens of millions of rows and times out.
- * Require a location filter alongside them. Returns an error body, or null when the search is fine.
+ * 3+ characters), so the database must test every title in the matching rows. A state has millions
+ * of people (15 s for "IT" in Maharashtra); a city has thousands. Require a city or pincode. Returns an error body, or null when the search is fine.
  */
 function shortTitleNeedsFilter(query) {
   const entries = Object.entries(query || {});
   const hasShortTitle = entries.some(([k, v]) =>
     /^f_job_title(_sw|_ew)?$/.test(k) && String(v ?? "").trim().length > 0 && String(v).trim().length <= 2);
   if (!hasShortTitle) return null;
-  const narrowed = entries.some(([k, v]) => /^f_(city|state|pincode|location)/.test(k) && String(v ?? "").trim() !== "");
+  const narrowed = entries.some(([k, v]) => /^f_(city|pincode)/.test(k) && String(v ?? "").trim() !== "");
   if (narrowed) return null;
   return {
-    error: "Very short job titles such as “IT” or “HR” match too many people to search quickly. Add a city or state filter, or use a longer title.",
+    error: "Very short job titles such as “IT” or “HR” match too many people to search quickly. Add a city filter, or use a longer title.",
     code: "SHORT_TERM_NEEDS_FILTER",
   };
 }
 
 /**
- * Keep the "has e-mail / has phone" partial indexes for the one case they are good at.
+ * Run a filtered search with two plans, because no single plan wins:
  *
- * Partial indexes on rows with a real e-mail/phone make a lone "has email" listing instant, but
- * when the same predicate is combined with other filters (city + job title + has email) the
- * planner underestimates how rare the combination is and walks that huge index row by row,
- * timing out. Rewriting the predicate into an equivalent form the partial index cannot match
- * (btrim(col,'{}') <> '' is true exactly when col is not '' or '{}') steers combined searches
- * back to the text-index plans, while a lone has-contact filter keeps the exact indexed form.
+ *  1. sequential-scan first (indexes disabled), 1.5 s budget. For common values (Mumbai, Maharashtra,
+ *     "has email") 25 matches turn up within the first few thousand rows: ~10 ms, versus 1-20 s when
+ *     an index plan has to build a bitmap of millions of rows.
+ *  2. if that times out the value is rare, so fall back to the index plan (sequential scans disabled:
+ *     trigram / btree indexes): rare cities, rare titles and combinations answer in ~50-500 ms,
+ *     where a sequential scan would run for tens of seconds.
+ *
+ * Vector (semantic) queries keep the index-only plan. Non-timeout errors are never retried.
  */
-const CONTACT_PREDICATE = /\("([a-z_]+)" IS NOT NULL AND "\1" <> '' AND "\1" <> '\{\}'\)/g;
-function steerContactPredicates(whereStr) {
-  if (!whereStr) return whereStr;
-  const found = whereStr.match(CONTACT_PREDICATE) || [];
-  if (found.length === 1 && whereStr.trim() === `WHERE ${found[0]}`) return whereStr; // sole filter
-  return whereStr.replace(CONTACT_PREDICATE, (m, col) => `("${col}" IS NOT NULL AND btrim("${col}", '{}') <> '')`);
+const SEQ_FIRST_MS = () => parseInt(process.env.SEARCH_SEQ_FIRST_MS, 10) || 1500;
+const INDEX_PLAN = ["SET LOCAL enable_seqscan = off;"];
+const SEQ_PLAN = ["SET LOCAL enable_bitmapscan = off;", "SET LOCAL enable_indexscan = off;", "SET LOCAL enable_indexonlyscan = off;"];
+
+async function runFilteredSearch(directQuery, sql, params, totalMs, { vector = false } = {}) {
+  if (vector) return directQuery(sql, params, INDEX_PLAN, totalMs);
+  const quick = Math.max(1, Math.min(SEQ_FIRST_MS(), Math.floor(totalMs / 2)));
+  try {
+    return await directQuery(sql, params, SEQ_PLAN, quick);
+  } catch (err) {
+    if (!err || err.code !== "57014") throw err;
+  }
+  return directQuery(sql, params, INDEX_PLAN, Math.max(1, totalMs - quick));
 }
 
 /** Uniform error response for search routes: timeouts become a clear 503, nothing internal leaks. */
@@ -167,5 +176,6 @@ function sendSearchError(res, err, logger) {
 module.exports = {
   escapeLike, escapeRegex, hasWord, jobTitleCondition, INDIA_STATES, INDIA_STATES_SQL,
   exactCappedTotal, EXACT_COUNT_CAP, searchTimeoutMs, maxResultWindow, sortRowLimit,
-  resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter, steerContactPredicates,
+  resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter, runFilteredSearch,
+  INDEX_PLAN,
 };

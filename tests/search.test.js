@@ -145,17 +145,18 @@ test("job-title: short role codes match whole words only (CTO ≠ Factory/Direct
   const fm = await titles("?f_job_title=Factory%20Manager");
   assert.ok(fm.includes("Factory Manager"));
   assert.ok(fm.every((t) => /manager/i.test(t)), "unexpected titles: " + fm.join(", "));
-  assert.equal((await all("?f_job_title=IT&f_state=Maharashtra")).length, 0, "'IT' must not match Recru-it-er");
+  assert.equal((await all("?f_job_title=IT&f_city=Mumbai")).length, 0, "'IT' must not match Recru-it-er");
   assert.deepEqual(await titles("?f_job_title=Doctor"), ["Doctor"]);
 });
 
-test("job-title: 1-2 letter terms need a location filter (they cannot use the text index)", { skip }, async () => {
+test("job-title: 1-2 letter terms need a city filter (they cannot use the text index)", { skip }, async () => {
   for (const term of ["IT", "HR", "CA"]) {
     const bare = await get(`?f_job_title=${term}&limit=10`);
     assert.equal(bare.status, 400, term);
     assert.equal(bare.json.code, "SHORT_TERM_NEEDS_FILTER");
     assert.equal((await get(`?f_job_title=${term}&f_city=Mumbai&limit=10`)).status, 200, `${term} + city`);
-    assert.equal((await get(`?f_job_title=${term}&f_state=Maharashtra&limit=10`)).status, 200, `${term} + state`);
+    // a state has millions of people — too many titles to test one by one
+    assert.equal((await get(`?f_job_title=${term}&f_state=Maharashtra&limit=10`)).status, 400, `${term} + state only`);
   }
   assert.equal((await get("?f_job_title=CEO&limit=10")).status, 200, "3-letter terms are fine");
   assert.equal((await get("?f_job_title_eq=IT&limit=10")).status, 200, "exact match can use the btree index");
@@ -171,7 +172,7 @@ test("job-title: 'equals' filter is exact", { skip }, async () => {
 test("wildcards: % and _ typed by the user are matched literally", { skip }, async () => {
   assert.equal((await all("?f_city=%25")).length, 0);
   assert.equal((await all("?f_city=_")).length, 0);
-  assert.equal((await all("?f_job_title=%25&f_state=Maharashtra")).length, 0);
+  assert.equal((await all("?f_job_title=%25&f_city=Mumbai")).length, 0);
   assert.equal((await all("?f_state_sw=%25")).length, 0);
   assert.equal((await all("?f_city=Mum%25")).length, 0);
   assert.equal((await all("?f_city=Mum")).length, 50, "plain prefix search still works");
@@ -201,17 +202,47 @@ test("email and number routes: wildcard-safe, exact totals, correct rows", { ski
   assert.equal(w.json.records.length, 0, "'%' must not match every city");
 });
 
-test("planner steering: has-contact predicate stays indexable only when it is the sole filter", { skip: false }, () => {
-  const { steerContactPredicates } = require("../src/utils/searchFilters");
-  const mail = `("emails" IS NOT NULL AND "emails" <> '' AND "emails" <> '{}')`;
-  const phone = `("phones" IS NOT NULL AND "phones" <> '' AND "phones" <> '{}')`;
-  // sole filter → untouched (the partial index serves it)
-  assert.equal(steerContactPredicates(`WHERE ${mail}`), `WHERE ${mail}`);
-  // combined → rewritten so the partial index cannot be chosen
-  const combined = steerContactPredicates(`WHERE "city" ILIKE $1 AND ${mail} AND ${phone}`);
-  assert.ok(!combined.includes(`"emails" <> ''`), combined);
-  assert.ok(combined.includes(`btrim("emails", '{}') <> ''`) && combined.includes(`btrim("phones", '{}') <> ''`), combined);
-  assert.equal(steerContactPredicates(`WHERE ${mail} AND ${phone}`).includes("btrim"), true, "two contact filters = combined");
-  assert.equal(steerContactPredicates(""), "");
-  assert.equal(steerContactPredicates(`WHERE "city" ILIKE $1`), `WHERE "city" ILIKE $1`);
+test("two-attempt runner: sequential scan first, index plan only after a timeout", { skip: false }, async () => {
+  const { runFilteredSearch, INDEX_PLAN } = require("../src/utils/searchFilters");
+  const calls = [];
+  const timeout = () => Object.assign(new Error("canceling statement due to statement timeout"), { code: "57014" });
+
+  // common value: first attempt (indexes disabled) answers → no second call
+  let q = async (sql, params, session, ms) => { calls.push({ session, ms }); return { rows: [1] }; };
+  const r1 = await runFilteredSearch(q, "SELECT 1", [], 15000);
+  assert.deepEqual(r1.rows, [1]);
+  assert.equal(calls.length, 1);
+  assert.ok(calls[0].session.some((c) => /enable_indexscan = off/.test(c)) && calls[0].session.some((c) => /enable_bitmapscan = off/.test(c)));
+  assert.equal(calls[0].ms, 1500);
+
+  // rare value: first attempt times out → index plan with the remaining budget
+  calls.length = 0;
+  q = async (sql, params, session, ms) => { calls.push({ session, ms }); if (calls.length === 1) throw timeout(); return { rows: [2] }; };
+  const r2 = await runFilteredSearch(q, "SELECT 1", [], 15000);
+  assert.deepEqual(r2.rows, [2]);
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[1].session, INDEX_PLAN);
+  assert.equal(calls[1].ms, 13500);
+
+  // both attempts time out → the timeout reaches the caller (becomes a clear 503)
+  q = async () => { throw timeout(); };
+  await assert.rejects(() => runFilteredSearch(q, "SELECT 1", [], 15000), (e) => e.code === "57014");
+
+  // other errors are not retried
+  calls.length = 0;
+  q = async () => { calls.push(1); throw new Error("syntax error"); };
+  await assert.rejects(() => runFilteredSearch(q, "SELECT 1", [], 15000), /syntax error/);
+  assert.equal(calls.length, 1);
+
+  // vector queries keep the index-only plan
+  calls.length = 0;
+  q = async (sql, params, session) => { calls.push(session); return { rows: [] }; };
+  await runFilteredSearch(q, "SELECT 1", [], 15000, { vector: true });
+  assert.deepEqual(calls, [INDEX_PLAN]);
+
+  // tiny budgets are split in half
+  const seen = [];
+  q = async (sql, params, session, ms) => { seen.push(ms); if (seen.length === 1) throw timeout(); return { rows: [] }; };
+  await runFilteredSearch(q, "SELECT 1", [], 600);
+  assert.deepEqual(seen, [300, 300]);
 });

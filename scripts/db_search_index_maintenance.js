@@ -14,7 +14,6 @@
  *   node scripts/db_search_index_maintenance.js              # DRY RUN: read-only checks, prints the plan
  *   node scripts/db_search_index_maintenance.js --execute    # applies the plan
  *   node scripts/db_search_index_maintenance.js --execute --skip-trgm   # skip the big job-title index
- *   node scripts/db_search_index_maintenance.js --execute --with-contact-indexes   # ONLY after the planner-steering code is deployed
  *
  * Safety:
  *   • every index is built CONCURRENTLY (reads and writes on the table keep working)
@@ -29,10 +28,6 @@ const { Client } = require("pg");
 
 const EXECUTE = process.argv.includes("--execute");
 const SKIP_TRGM = process.argv.includes("--skip-trgm");
-// Partial indexes for "has email / has phone" are only safe with the code that steers the planner away
-// from them (steerContactPredicates, commit "perf(search): ..."). With the OLD code they made combined
-// searches (city + title + has_email) scan millions of rows and time out. Build them AFTER deploying.
-const WITH_CONTACT = process.argv.includes("--with-contact-indexes");
 
 const url = process.env.NEON_DIRECT_URL || (process.env.NEON_DATABASE_URL || "").replace("-pooler.", ".");
 if (!url) {
@@ -77,20 +72,6 @@ const INDEXES = [
     why: "state ILIKE '%Goa%' (3+ character state names; 2-letter codes are dense and fast anyway)",
     sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_people_state_trgm
             ON final.people USING gin (state gin_trgm_ops) WHERE state IS NOT NULL`,
-  },
-  {
-    name: "idx_people_has_email",
-    skip: !WITH_CONTACT,
-    why: "f_has_email=true: lists only rows with a real e-mail (the e-mail text index sorts '' and '{}' first, so scanning it skips ~23M empty entries)",
-    sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_people_has_email
-            ON final.people (uuid) WHERE emails IS NOT NULL AND emails <> '' AND emails <> '{}'`,
-  },
-  {
-    name: "idx_people_has_phone",
-    skip: !WITH_CONTACT,
-    why: "f_has_phone=true: same reason for phones",
-    sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_people_has_phone
-            ON final.people (uuid) WHERE phones IS NOT NULL AND phones <> '' AND phones <> '{}'`,
   },
   {
     name: "idx_people_job_title_trgm",
@@ -156,11 +137,11 @@ async function watchProgress(stop) {
   plan.push({ step: "ANALYZE final.people; ANALYZE final.companies", why: "refresh planner statistics (people: last run 2026-09-09; verification columns never analyzed)" });
   for (const ix of INDEXES) {
     const exists = before.idx.find((r) => r.name.endsWith(ix.name) && r.indisvalid);
-    if (ix.skip) plan.push({ step: `(skipped) ${ix.name}`, why: ix.name.includes("has_") ? "opt-in: --with-contact-indexes (deploy the new code first)" : "--skip-trgm" });
+    if (ix.skip) plan.push({ step: `(skipped) ${ix.name}`, why: "--skip-trgm" });
     else if (!exists) plan.push({ step: `CREATE INDEX CONCURRENTLY ${ix.name}`, why: ix.why });
     else plan.push({ step: `(exists) ${ix.name}`, why: "already valid" });
   }
-  plan.push({ step: "ANALYZE final.people (job_title, email_status, is_email_valid, emails, phones)", why: "statistics for the new indexes" });
+  plan.push({ step: "ANALYZE final.people (job_title, email_status, is_email_valid, city, state)", why: "statistics for the new indexes" });
   console.log("\nPLAN"); console.table(plan);
 
   if (!EXECUTE) { await c.end(); return; }
@@ -189,7 +170,7 @@ async function watchProgress(stop) {
         throw new Error(`${ix.name} finished INVALID — re-run the script (it will drop and rebuild it)`);
       }
     }
-    await run("ANALYZE final.people (new indexed columns)", "ANALYZE final.people (job_title, email_status, is_email_valid, emails, phones)");
+    await run("ANALYZE final.people (new indexed columns)", "ANALYZE final.people (job_title, email_status, is_email_valid, city, state)");
   } finally {
     stop.done = true;
   }

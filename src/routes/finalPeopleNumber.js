@@ -8,9 +8,12 @@
 const express = require("express");
 const router  = express.Router();
 const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
+// Count/sort-guard queries use the index plan: exact when a filter matches few rows, they time out
+// (and fall back to an estimate) when it matches millions.
+const indexedQuery = (sql, params, ms) => directQueryWithSession(sql, params, ["SET LOCAL enable_seqscan = off;"], ms);
 const {
   escapeLike, INDIA_STATES_SQL, exactCappedTotal,
-  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter, steerContactPredicates,
+  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, shortTitleNeedsFilter, runFilteredSearch,
 } = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 
@@ -389,12 +392,11 @@ router.get("/", async (req, res) => {
     const { selectSQL, selectCols } = schema;
     const phoneCol = await getPhoneCol(schema);
 
-    const { whereStr: whereRaw, values, nextIdx } = buildWhere(
+    const { whereStr, values, nextIdx } = buildWhere(
       req.query,
       phoneCol,
       selectCols
     );
-    const whereStr = steerContactPredicates(whereRaw);
 
     let orderClause = "";
     if (sort_by && selectCols.includes(sort_by)) {
@@ -403,7 +405,7 @@ router.get("/", async (req, res) => {
     }
     if (orderClause && vectorIdx === null) {
       // Sorting millions of rows always times out — only allow it on narrow result sets.
-      const sortErr = await checkSortAllowed(pgQuery, FULL_TABLE, whereStr, values, values.length > 0);
+      const sortErr = await checkSortAllowed(indexedQuery, FULL_TABLE, whereStr, values, values.length > 0);
       if (sortErr) return res.status(400).json(sortErr);
     }
 
@@ -416,7 +418,7 @@ router.get("/", async (req, res) => {
     `;
 
     const dataRes = values.length > 0
-      ? await directQueryWithSession(dataSQL, [...values, limitNum, offset], ["SET LOCAL enable_seqscan = off;"], searchTimeoutMs())
+      ? await runFilteredSearch(directQueryWithSession, dataSQL, [...values, limitNum, offset], searchTimeoutMs())
       : await pgQuery(dataSQL, [...values, limitNum, offset], 30000);
 
     const records = dataRes.rows.map(row => normalizeRow(schema, row));
@@ -437,7 +439,7 @@ router.get("/", async (req, res) => {
 
       if (!total && !isBaseQuery) {
         // Exact count when the filter matches ≤ 10,000 rows; planner estimate only beyond that.
-        const exact = await exactCappedTotal(pgQuery, FULL_TABLE, whereStr, values);
+        const exact = await exactCappedTotal(indexedQuery, FULL_TABLE, whereStr, values);
         if (exact) {
           total = exact.total;
           totalExact = true;
