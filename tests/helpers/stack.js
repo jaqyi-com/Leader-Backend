@@ -19,7 +19,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /** Deterministic synthetic people — 250 rows, no real data. */
 function syntheticPeople(n = 250) {
   const cities = [["Mumbai", "Maharashtra"], ["Pune", "Maharashtra"], ["Delhi", "Delhi"], ["Chennai", "Tamil Nadu"], ["Austin", "TX"]];
-  const titles = ["Software Engineer", "Sales Manager", "CTO", "Designer", "Factory Manager"];
+  // 8 titles vs 5 cities: coprime periods, so title and city are not correlated.
+  // Several contain "cto"/"it" inside other words (Factory, Director, Doctor, Recruiter) on purpose.
+  const titles = ["Software Engineer", "Sales Manager", "CTO", "Designer", "Factory Manager", "Director", "Recruiter", "Doctor"];
   const rows = [];
   for (let i = 0; i < n; i++) {
     const [city, state] = cities[i % cities.length];

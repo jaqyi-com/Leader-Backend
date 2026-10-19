@@ -103,17 +103,80 @@ test("counts: unfiltered total equals the real row count (after ANALYZE)", { ski
   assert.equal((await get("?limit=10")).json.total, 250);
 });
 
-test("counts: filtered total equals the real number of matches", { skip, todo: "total is a planner ESTIMATE (EXPLAIN rows=) or page*limit+1000 — pagination UI shows wrong totals" }, async () => {
-  // Correlated filters defeat the planner's independence assumption, so EXPLAIN's rows= is off.
-  const expected = stack.pg.rows.filter((r) => r.city === "Mumbai" && r.emails && r.emails !== "{}").length; // 25
+test("counts: filtered totals are exact (not planner estimates) and flagged as exact", { skip }, async () => {
+  const rows = stack.pg.rows;
+  // Correlated filters used to defeat the planner estimate (28 reported vs 25 real).
+  const both = rows.filter((r) => r.city === "Mumbai" && r.emails && r.emails !== "{}").length;
   const r = await get("?f_city=Mumbai&f_has_email=true&limit=10");
-  assert.equal(r.json.total, expected);
+  assert.equal(r.json.total, both);
+  assert.equal(r.json.total_exact, true);
+  assert.equal(r.json.pages, Math.ceil(both / 10));
+
+  // Asking for a page past the end still reports the real total.
+  const far = await get("?f_city=Mumbai&f_has_email=true&limit=10&page=99");
+  assert.equal(far.json.records.length, 0);
+  assert.equal(far.json.total, both);
+
+  assert.equal((await get("?f_state=Maharashtra&limit=10")).json.total, rows.filter((x) => x.state === "Maharashtra").length);
+  assert.equal((await get("?f_city=Atlantis&limit=10")).json.total, 0);
+  // Unfiltered totals come from table statistics and must say so.
+  assert.equal((await get("?limit=10")).json.total_exact, false);
 });
 
-test("job-title matching: 'Factory Manager' must not also match CTOs", { skip, todo: "valLower.includes('cto') fires inside 'fa-cto-ry' / 'dire-cto-r' and adds CTO titles to the results" }, async () => {
-  const recs = await all("?f_job_title=Factory%20Manager");
-  assert.ok(recs.length > 0);
-  assert.ok(recs.every((x) => /factory manager/i.test(x.job_title)), "only Factory Manager rows expected: " + [...new Set(recs.map((x) => x.job_title))].join(", "));
+test("job-title: short role codes match whole words only (CTO ≠ Factory/Director/Doctor)", { skip }, async () => {
+  const rows = stack.pg.rows;
+  const titles = async (qs) => [...new Set((await all(qs)).map((x) => x.job_title))].sort();
+
+  assert.deepEqual(await titles("?f_job_title=CTO"), ["CTO"]);
+  assert.deepEqual(await titles("?f_job_title=cto"), ["CTO"]);
+  assert.equal((await all("?f_job_title=CTO")).length, rows.filter((r) => r.job_title === "CTO").length);
+  assert.deepEqual(await titles("?f_job_title=Director"), ["Director"]);
+  // Multi-word searches are intentionally fuzzy (phrase OR any word, e.g. "manager"), so other
+  // Managers may appear — but never CTO/Director/Doctor, which only matched via the "cto" substring.
+  const fm = await titles("?f_job_title=Factory%20Manager");
+  assert.ok(fm.includes("Factory Manager"));
+  assert.ok(fm.every((t) => /manager/i.test(t)), "unexpected titles: " + fm.join(", "));
+  assert.equal((await all("?f_job_title=IT")).length, 0, "'IT' must not match Recru-it-er");
+  assert.deepEqual(await titles("?f_job_title=Doctor"), ["Doctor"]);
+});
+
+test("job-title: 'equals' filter is exact", { skip }, async () => {
+  const exact = await all("?f_job_title_eq=CTO");
+  assert.equal(exact.length, stack.pg.rows.filter((r) => r.job_title === "CTO").length);
+  assert.ok(exact.every((r) => r.job_title === "CTO"));
+});
+
+test("wildcards: % and _ typed by the user are matched literally", { skip }, async () => {
+  assert.equal((await all("?f_city=%25")).length, 0);
+  assert.equal((await all("?f_city=_")).length, 0);
+  assert.equal((await all("?f_job_title=%25")).length, 0);
+  assert.equal((await all("?f_state_sw=%25")).length, 0);
+  assert.equal((await all("?f_city=Mum%25")).length, 0);
+  assert.equal((await all("?f_city=Mum")).length, 50, "plain prefix search still works");
+});
+
+test("country filter: India includes every Indian state (Tamil Nadu was missing), USA unchanged", { skip }, async () => {
+  const rows = stack.pg.rows;
+  const india = await all("?country=india");
+  assert.equal(india.length, rows.filter((r) => r.state !== "TX").length);
+  assert.ok(india.some((r) => r.state === "Tamil Nadu"), "Chennai / Tamil Nadu must be included");
+  assert.equal((await all("?country=usa")).length, rows.filter((r) => r.state === "TX").length);
+});
+
+test("email and number routes: wildcard-safe, exact totals, correct rows", { skip }, async () => {
+  const rows = stack.pg.rows;
+  const hasEmail = (r) => r.emails && r.emails !== "{}";
+  const hasPhone = (r) => r.phones && r.phones !== "{}";
+  const e = await stack.http("GET", "/api/final-people-email?f_city=Mumbai&limit=10", { token: user.token });
+  assert.equal(e.status, 200);
+  assert.equal(e.json.total, rows.filter((r) => r.city === "Mumbai" && hasEmail(r)).length);
+  assert.equal(e.json.total_exact, true);
+  assert.ok(e.json.records.every((r) => r.city === "Mumbai"));
+  const n = await stack.http("GET", "/api/final-people-number?f_city=Mumbai&limit=10", { token: user.token });
+  assert.equal(n.status, 200);
+  assert.equal(n.json.total, rows.filter((r) => r.city === "Mumbai" && hasPhone(r)).length);
+  const w = await stack.http("GET", "/api/final-people-email?f_city=%25", { token: user.token });
+  assert.equal(w.json.records.length, 0, "'%' must not match every city");
 });
 
 // ── Known gaps: abuse resistance / entitlement ───────────────────────────────

@@ -17,6 +17,7 @@ const router  = express.Router();
 
 const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
+const { escapeLike, hasWord, jobTitleCondition, INDIA_STATES_SQL, exactCappedTotal } = require("../utils/searchFilters");
 
 
 const logger = require("../utils/logger").forAgent("FinalPeopleDB");
@@ -151,7 +152,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       } else {
         if (hasEmailStatus) {
           const sIdx = idx++;
-          values.push(val);
+          values.push(escapeLike(val));
           subConds.push(`"email_status" ILIKE $${sIdx}`);
         }
       }
@@ -177,7 +178,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       } else {
         if (hasPhoneStatus) {
           const sIdx = idx++;
-          values.push(val);
+          values.push(escapeLike(val));
           subConds.push(`"phone_status" ILIKE $${sIdx}`);
         }
       }
@@ -237,7 +238,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
 
     const doubleQuotedCol = `"${col}"`;
 
-    if (col === "job_title" && val !== "") {
+    if (col === "job_title" && val !== "" && op === "contains") {
       const valLower = val.toLowerCase().trim();
 
       const JOB_TITLE_ALIASES = {
@@ -297,9 +298,9 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       const directAliases = JOB_TITLE_ALIASES[valLower];
       if (directAliases && directAliases.length > 0) {
         const aliasConds = directAliases.map(a => {
-          const aIdx = idx++;
-          values.push(`%${a}%`);
-          return `"job_title" ILIKE $${aIdx}`;
+          const c = jobTitleCondition(a, values, idx);
+          idx = c.nextIdx;
+          return c.sql;
         });
         conditions.push(`(${aliasConds.join(" OR ")})`);
         continue;
@@ -310,10 +311,10 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       if (valLower.includes("founder")) {
         ["Founder", "Co-Founder"].forEach(v => titleSet.add(v));
       }
-      if (valLower.includes("ceo")) {
+      if (hasWord(valLower, "ceo")) {
         ["CEO", "Chief Executive Officer"].forEach(v => titleSet.add(v));
       }
-      if (valLower.includes("cto")) {
+      if (hasWord(valLower, "cto")) {
         ["CTO", "Chief Technology Officer"].forEach(v => titleSet.add(v));
       }
       if (valLower.includes("director")) {
@@ -323,9 +324,9 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       if (titleSet.size > 0) {
         const titlesArray = Array.from(titleSet);
         const aliasConds = titlesArray.map(t => {
-          const aIdx = idx++;
-          values.push(`%${t}%`);
-          return `"job_title" ILIKE $${aIdx}`;
+          const c = jobTitleCondition(t, values, idx);
+          idx = c.nextIdx;
+          return c.sql;
         });
         conditions.push(`(${aliasConds.join(" OR ")})`);
         continue;
@@ -335,19 +336,18 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       const words = valLower.split(/[\s\-\/&\+]+/).filter(w => w.length > 2 && !["and", "the", "for", "with"].includes(w));
       if (words.length > 1) {
         const phraseIdx = idx++;
-        values.push(`%${val.trim()}%`);
+        values.push(`%${escapeLike(val.trim())}%`);
 
         const wordConds = words.map(w => {
-          const wIdx = idx++;
-          values.push(`%${w}%`);
-          return `"job_title" ILIKE $${wIdx}`;
+          const c = jobTitleCondition(w, values, idx);
+          idx = c.nextIdx;
+          return c.sql;
         });
         conditions.push(`("job_title" ILIKE $${phraseIdx} OR (${wordConds.join(" OR ")}))`);
       } else {
-
-        const singleIdx = idx++;
-        values.push(`%${val.trim()}%`);
-        conditions.push(`"job_title" ILIKE $${singleIdx}`);
+        const c = jobTitleCondition(val.trim(), values, idx);
+        idx = c.nextIdx;
+        conditions.push(c.sql);
       }
       continue;
     }
@@ -360,12 +360,12 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     } else if (op === "sw") {
       if (val !== "") {
         conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
-        values.push(`${val}%`);
+        values.push(`${escapeLike(val)}%`);
       }
     } else if (op === "ew") {
       if (val !== "") {
         conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
-        values.push(`%${val}`);
+        values.push(`%${escapeLike(val)}`);
       }
     } else if (op === "nonempty") {
       // Works for plain TEXT columns AND array-literal strings ({} / {val1,val2})
@@ -382,22 +382,22 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
           const words = rawVal.split(/[\s\-_\/]+/).filter(w => w.length > 0);
           if (words.length <= 1) {
             conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
-            values.push(`%${rawVal}%`);
+            values.push(`%${escapeLike(rawVal)}%`);
           } else {
             // Match exact phrase, normalized spaced phrase, OR all constituent tokens
             const phraseIdx = idx++;
-            values.push(`%${rawVal}%`);
+            values.push(`%${escapeLike(rawVal)}%`);
             
             const spacedVal = words.join(" ");
             let spacedIdx = null;
             if (spacedVal.toLowerCase() !== rawVal.toLowerCase()) {
               spacedIdx = idx++;
-              values.push(`%${spacedVal}%`);
+              values.push(`%${escapeLike(spacedVal)}%`);
             }
             
             const wordConds = words.map(w => {
               const wIdx = idx++;
-              values.push(`%${w}%`);
+              values.push(`%${escapeLike(w)}%`);
               return `${doubleQuotedCol} ILIKE $${wIdx}`;
             });
             
@@ -432,7 +432,7 @@ function buildWhere(queryParams, embedding, _schema) {
     values.push(JSON.stringify(embedding));
   } else if (search) {
     conditions.push(`"full_name" ILIKE $${idx++}`);
-    values.push(`%${search}%`);
+    values.push(`%${escapeLike(search)}%`);
   }
 
   // Parse all query filters dynamically
@@ -466,7 +466,7 @@ function buildWhere(queryParams, embedding, _schema) {
         ("geo_source" IS NULL OR "geo_source" NOT IN ('us_zip', 'us_city', 'us_state'))
         AND ("state" IS NULL OR "state" NOT IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY'))
         AND ("location" IS NULL OR ("location" NOT ILIKE '%United States%' AND "location" NOT ILIKE '%USA%'))
-        AND "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Telangana', 'Gujarat', 'Haryana', 'West Bengal', 'Uttar Pradesh', 'Rajasthan', 'Kerala', 'Madhya Pradesh', 'Punjab')
+        AND "state" IN (${INDIA_STATES_SQL})
       )`);
     } else if (countryParam === "usa" || countryParam === "us" || countryParam === "united states") {
       conditions.push(`(
@@ -672,6 +672,7 @@ router.get("/", async (req, res) => {
     const records = dataRes.rows.map(row => normalizeRow(schema, row));
 
     let total;
+    let totalExact = false;
     if (!userHasFilters) {
       const cachedCount = await cacheGet(COUNT_CACHE_KEY);
       if (cachedCount !== null && cachedCount !== undefined) {
@@ -692,19 +693,28 @@ router.get("/", async (req, res) => {
     } else {
       if (records.length < limitNum && pageNum === 1) {
         total = records.length;
+        totalExact = true;
       } else {
-        try {
-          const explainRes = await pgQuery(`EXPLAIN SELECT ${selectSQL} FROM ${FULL_TABLE} ${whereStr}`, values, 5000);
-          if (explainRes.rows && explainRes.rows[0]) {
-            const planStr = explainRes.rows[0]["QUERY PLAN"] || "";
-            const match = planStr.match(/rows=(\d+)/);
-            if (match) total = parseInt(match[1], 10);
+        // Exact count when the filter matches ≤ 10,000 rows; planner estimate only beyond that.
+        const exact = await exactCappedTotal(pgQuery, FULL_TABLE, whereStr, values);
+        if (exact) {
+          total = exact.total;
+          totalExact = true;
+        } else {
+          try {
+            const explainRes = await pgQuery(`EXPLAIN SELECT ${selectSQL} FROM ${FULL_TABLE} ${whereStr}`, values, 5000);
+            if (explainRes.rows && explainRes.rows[0]) {
+              const planStr = explainRes.rows[0]["QUERY PLAN"] || "";
+              const match = planStr.match(/rows=(\d+)/);
+              if (match) total = parseInt(match[1], 10);
+            }
+          } catch (_) {}
+          if (!total) {
+            total = records.length < limitNum
+              ? ((pageNum - 1) * limitNum) + records.length
+              : (pageNum * limitNum) + 1000;
+            totalExact = records.length < limitNum;
           }
-        } catch (_) {}
-        if (!total) {
-          total = records.length < limitNum
-            ? ((pageNum - 1) * limitNum) + records.length
-            : (pageNum * limitNum) + 1000;
         }
       }
     }
@@ -712,6 +722,7 @@ router.get("/", async (req, res) => {
     res.json({
       records,
       total,
+      total_exact: totalExact,
       page:   pageNum,
       limit:  limitNum,
       pages:  Math.ceil(total / limitNum),

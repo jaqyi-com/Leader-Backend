@@ -8,6 +8,7 @@
 const express = require("express");
 const router  = express.Router();
 const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
+const { escapeLike, INDIA_STATES_SQL, exactCappedTotal } = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 
 
@@ -137,7 +138,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       } else {
         if (hasEmailStatus) {
           const sIdx = idx++;
-          values.push(val);
+          values.push(escapeLike(val));
           subConds.push(`"email_status" ILIKE $${sIdx}`);
         }
       }
@@ -163,7 +164,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       } else {
         if (hasPhoneStatus) {
           const sIdx = idx++;
-          values.push(val);
+          values.push(escapeLike(val));
           subConds.push(`"phone_status" ILIKE $${sIdx}`);
         }
       }
@@ -192,12 +193,12 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     } else if (op === "sw") {
       if (val !== "") {
         conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
-        values.push(`${val}%`);
+        values.push(`${escapeLike(val)}%`);
       }
     } else if (op === "ew") {
       if (val !== "") {
         conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
-        values.push(`%${val}`);
+        values.push(`%${escapeLike(val)}`);
       }
     } else if (op === "nonempty") {
       // Works for plain TEXT columns AND array-literal strings ({} / {val1,val2})
@@ -211,7 +212,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
           values.push(val);
         } else {
           conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
-          values.push(`%${val}%`);
+          values.push(`%${escapeLike(val)}%`);
         }
       }
     }
@@ -237,7 +238,7 @@ function buildWhere(queryParams, phoneCol, schemaColumns) {
   // search: ILIKE on full_name only (trgm GIN indexed -> super fast!)
   if (search) {
     conditions.push(`"full_name" ILIKE $${idx++}`);
-    values.push(`%${search}%`);
+    values.push(`%${escapeLike(search)}%`);
   }
 
   // Parse all query filters dynamically
@@ -271,7 +272,7 @@ function buildWhere(queryParams, phoneCol, schemaColumns) {
         ("geo_source" IS NULL OR "geo_source" NOT IN ('us_zip', 'us_city', 'us_state'))
         AND ("state" IS NULL OR "state" NOT IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY'))
         AND ("location" IS NULL OR ("location" NOT ILIKE '%United States%' AND "location" NOT ILIKE '%USA%'))
-        AND "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Telangana', 'Gujarat', 'Haryana', 'West Bengal', 'Uttar Pradesh', 'Rajasthan', 'Kerala', 'Madhya Pradesh', 'Punjab')
+        AND "state" IN (${INDIA_STATES_SQL})
       )`);
     } else if (countryParam === "usa" || countryParam === "us" || countryParam === "united states") {
       conditions.push(`(
@@ -405,8 +406,10 @@ router.get("/", async (req, res) => {
     const records = dataRes.rows.map(row => normalizeRow(schema, row));
 
     let total;
+    let totalExact = false;
     if (records.length < limitNum && pageNum === 1) {
       total = records.length;
+      totalExact = true;
     } else {
       const isBaseQuery = !search && values.length === 0;
       if (isBaseQuery) {
@@ -416,7 +419,16 @@ router.get("/", async (req, res) => {
         }
       }
 
-      if (!total) {
+      if (!total && !isBaseQuery) {
+        // Exact count when the filter matches ≤ 10,000 rows; planner estimate only beyond that.
+        const exact = await exactCappedTotal(pgQuery, FULL_TABLE, whereStr, values);
+        if (exact) {
+          total = exact.total;
+          totalExact = true;
+        }
+      }
+
+      if (!total && !totalExact) {
         try {
           const explainRes = await pgQuery(`EXPLAIN SELECT ${selectSQL} FROM ${FULL_TABLE} ${whereStr}`, values, 5000);
           if (explainRes.rows && explainRes.rows[0]) {
@@ -432,16 +444,18 @@ router.get("/", async (req, res) => {
         } catch (_) {}
       }
 
-      if (!total) {
+      if (!total && !totalExact) {
         total = records.length < limitNum
           ? ((pageNum - 1) * limitNum) + records.length
           : (pageNum * limitNum) + 1000;
+        totalExact = records.length < limitNum;
       }
     }
 
     res.json({
       records,
       total,
+      total_exact: totalExact,
       page:   pageNum,
       pages:  Math.ceil(total / limitNum),
     });
