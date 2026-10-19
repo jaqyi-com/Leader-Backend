@@ -209,33 +209,53 @@ test("email and number routes: wildcard-safe, exact totals, correct rows", { ski
   assert.equal(w.json.records.length, 0, "'%' must not match every city");
 });
 
-test("two-attempt runner: sequential scan first, index plan only after a timeout", { skip: false }, async () => {
+test("search runner: sequential scan first, index plan second, sequential again last", { skip: false }, async () => {
   const { runFilteredSearch, INDEX_PLAN } = require("../src/utils/searchFilters");
-  const calls = [];
   const timeout = () => Object.assign(new Error("canceling statement due to statement timeout"), { code: "57014" });
+  const isSeq = (session) => session.some((c) => /enable_indexscan = off/.test(c)) && session.some((c) => /enable_bitmapscan = off/.test(c));
+  const calls = [];
 
-  // common value: first attempt (indexes disabled) answers → no second call
+  // common value: attempt 1 (indexes disabled) answers → nothing else runs
   let q = async (sql, params, session, ms) => { calls.push({ session, ms }); return { rows: [1] }; };
-  const r1 = await runFilteredSearch(q, "SELECT 1", [], 15000);
-  assert.deepEqual(r1.rows, [1]);
+  assert.deepEqual((await runFilteredSearch(q, "SELECT 1", [], 15000)).rows, [1]);
   assert.equal(calls.length, 1);
-  assert.ok(calls[0].session.some((c) => /enable_indexscan = off/.test(c)) && calls[0].session.some((c) => /enable_bitmapscan = off/.test(c)));
+  assert.ok(isSeq(calls[0].session));
   assert.equal(calls[0].ms, 1500);
 
-  // rare value: first attempt times out → index plan with the remaining budget
+  // rare value: attempt 1 times out, attempt 2 (index plan) answers
   calls.length = 0;
   q = async (sql, params, session, ms) => { calls.push({ session, ms }); if (calls.length === 1) throw timeout(); return { rows: [2] }; };
-  const r2 = await runFilteredSearch(q, "SELECT 1", [], 15000);
-  assert.deepEqual(r2.rows, [2]);
+  assert.deepEqual((await runFilteredSearch(q, "SELECT 1", [], 15000)).rows, [2]);
   assert.equal(calls.length, 2);
   assert.deepEqual(calls[1].session, INDEX_PLAN);
-  assert.equal(calls[1].ms, 13500);
+  assert.equal(calls[1].ms, Math.floor((15000 - 1500) * 0.75));
 
-  // both attempts time out → the timeout reaches the caller (becomes a clear 503)
+  // index plan also times out → one more sequential scan with what is left (cache is warm by now)
+  calls.length = 0;
+  q = async (sql, params, session, ms) => { calls.push({ session, ms }); if (calls.length < 3) throw timeout(); return { rows: [3] }; };
+  assert.deepEqual((await runFilteredSearch(q, "SELECT 1", [], 15000)).rows, [3]);
+  assert.equal(calls.length, 3);
+  assert.ok(isSeq(calls[2].session));
+  assert.equal(calls[2].ms, 15000 - 1500 - Math.floor((15000 - 1500) * 0.75));
+
+  // two-letter state ("%TX%"): no text index can help → attempt 2 is a second sequential scan with the whole rest
+  calls.length = 0;
+  q = async (sql, params, session, ms) => { calls.push({ session, ms }); if (calls.length === 1) throw timeout(); return { rows: [4] }; };
+  assert.deepEqual((await runFilteredSearch(q, "SELECT 1", ["%TX%", 25, 0], 15000)).rows, [4]);
+  assert.equal(calls.length, 2);
+  assert.ok(isSeq(calls[1].session), "no index plan for a 2-character pattern");
+  assert.equal(calls[1].ms, 13500);
+  // 3+ characters (or non-LIKE values) still get the index plan
+  calls.length = 0;
+  q = async (sql, params, session, ms) => { calls.push({ session }); if (calls.length === 1) throw timeout(); return { rows: [5] }; };
+  await runFilteredSearch(q, "SELECT 1", ["%Goa%", "cto", 25, 0], 15000);
+  assert.deepEqual(calls[1].session, INDEX_PLAN);
+
+  // all three time out → the timeout reaches the caller (becomes a clear 503)
   q = async () => { throw timeout(); };
   await assert.rejects(() => runFilteredSearch(q, "SELECT 1", [], 15000), (e) => e.code === "57014");
 
-  // other errors are not retried
+  // other errors are never retried
   calls.length = 0;
   q = async () => { calls.push(1); throw new Error("syntax error"); };
   await assert.rejects(() => runFilteredSearch(q, "SELECT 1", [], 15000), /syntax error/);
@@ -247,11 +267,12 @@ test("two-attempt runner: sequential scan first, index plan only after a timeout
   await runFilteredSearch(q, "SELECT 1", [], 15000, { vector: true });
   assert.deepEqual(calls, [INDEX_PLAN]);
 
-  // tiny budgets are split in half
+  // tiny budgets are split three ways and never go below 1 ms
   const seen = [];
-  q = async (sql, params, session, ms) => { seen.push(ms); if (seen.length === 1) throw timeout(); return { rows: [] }; };
-  await runFilteredSearch(q, "SELECT 1", [], 600);
-  assert.deepEqual(seen, [300, 300]);
+  q = async (sql, params, session, ms) => { seen.push(ms); throw timeout(); };
+  await assert.rejects(() => runFilteredSearch(q, "SELECT 1", [], 600));
+  assert.equal(seen.length, 3);
+  assert.ok(seen.every((ms) => ms >= 1) && seen.reduce((a, b) => a + b, 0) <= 600, String(seen));
 });
 
 test("exact count: skipped (free planner estimate) when the filter is clearly dense", { skip: false }, async () => {
@@ -275,4 +296,18 @@ test("exact count: skipped (free planner estimate) when the filter is clearly de
   // EXPLAIN failing must not break counting
   const noExplain = async (sql) => { if (sql.startsWith("EXPLAIN")) throw new Error("nope"); return { rows: [{ cnt: "5" }] }; };
   assert.deepEqual(await exactCappedTotal(noExplain, "t", "WHERE x", []), { total: 5, exact: true });
+});
+
+test("exact count: full-text predicates always get a real count (their estimate is a constant)", { skip: false }, async () => {
+  const { exactCappedTotal } = require("../src/utils/searchFilters");
+  const seen = [];
+  const run = async (sql) => {
+    seen.push(sql.split(" ")[0]);
+    return sql.startsWith("EXPLAIN") ? { rows: [{ "QUERY PLAN": "rows=224870" }] } : { rows: [{ cnt: "311" }] };
+  };
+  // plain predicate + huge estimate → skipped; full-text predicate + same estimate → counted exactly
+  assert.equal(await exactCappedTotal(run, "t", `WHERE "city" ILIKE $1`, []), null);
+  seen.length = 0;
+  assert.deepEqual(await exactCappedTotal(run, "t", `WHERE to_tsvector('simple', "job_title") @@ plainto_tsquery('simple', $1)`, []), { total: 311, exact: true });
+  assert.deepEqual(seen, ["SELECT"], "no EXPLAIN shortcut for @@");
 });
