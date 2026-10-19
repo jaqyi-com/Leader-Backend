@@ -14,6 +14,7 @@
  *   node scripts/db_search_index_maintenance.js              # DRY RUN: read-only checks, prints the plan
  *   node scripts/db_search_index_maintenance.js --execute    # applies the plan
  *   node scripts/db_search_index_maintenance.js --execute --skip-trgm   # skip the big job-title index
+ *   node scripts/db_search_index_maintenance.js --execute --with-location-indexes   # city/state trigram: ONLY after deploying the new search code
  *
  * Safety:
  *   • every index is built CONCURRENTLY (reads and writes on the table keep working)
@@ -28,6 +29,11 @@ const { Client } = require("pg");
 
 const EXECUTE = process.argv.includes("--execute");
 const SKIP_TRGM = process.argv.includes("--skip-trgm");
+// City/state trigram indexes make rare cities fast (Los Angeles 16 s -> 0.05 s) but, with the OLD search code,
+// they made common values slower (Mumbai 0.4 s -> 4 s, "CA" 0.6 s -> 20 s) because that code forces index
+// plans. The NEW code (runFilteredSearch: sequential scan first, index plan second) handles both, so build
+// these only AFTER deploying it.
+const WITH_LOCATION = process.argv.includes("--with-location-indexes");
 
 const url = process.env.NEON_DIRECT_URL || (process.env.NEON_DATABASE_URL || "").replace("-pooler.", ".");
 if (!url) {
@@ -69,12 +75,14 @@ const INDEXES = [
   },
   {
     name: "idx_people_city_trgm",
+    skip: !WITH_LOCATION,
     why: "city ILIKE '%Los Angeles%': the btree on city cannot serve contains-searches, so every rare city scanned the whole 87 GB table",
     sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_people_city_trgm
             ON final.people USING gin (city gin_trgm_ops) WHERE city IS NOT NULL`,
   },
   {
     name: "idx_people_state_trgm",
+    skip: !WITH_LOCATION,
     why: "state ILIKE '%Goa%' (3+ character state names; 2-letter codes are dense and fast anyway)",
     sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_people_state_trgm
             ON final.people USING gin (state gin_trgm_ops) WHERE state IS NOT NULL`,
@@ -143,7 +151,7 @@ async function watchProgress(stop) {
   plan.push({ step: "ANALYZE final.people; ANALYZE final.companies", why: "refresh planner statistics (people: last run 2026-09-09; verification columns never analyzed)" });
   for (const ix of INDEXES) {
     const exists = before.idx.find((r) => r.name.endsWith(ix.name) && r.indisvalid);
-    if (ix.skip) plan.push({ step: `(skipped) ${ix.name}`, why: "--skip-trgm" });
+    if (ix.skip) plan.push({ step: `(skipped) ${ix.name}`, why: ix.name.includes("city_") || ix.name.includes("state_") ? "opt-in: --with-location-indexes (deploy the new search code first)" : "--skip-trgm" });
     else if (!exists) plan.push({ step: `CREATE INDEX CONCURRENTLY ${ix.name}`, why: ix.why });
     else plan.push({ step: `(exists) ${ix.name}`, why: "already valid" });
   }

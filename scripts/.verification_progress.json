@@ -1,11 +1,11 @@
 {
   "people_last_uuid": "01ae1acc-37d0-5a59-e34c-ce3c90b9fd24",
-  "companies_last_uuid": "72bf5f0d-6e63-9688-9d12-679bd95577ad",
+  "companies_last_uuid": "72d3c717-725d-2e6a-a77a-46957d199f61",
   "total_people_verified": 137920,
-  "total_companies_verified": 449310,
-  "deliverable_count": 64324,
-  "undeliverable_count": 171487,
-  "risky_count": 130835,
-  "unknown_count": 213281,
+  "total_companies_verified": 449510,
+  "deliverable_count": 64325,
+  "undeliverable_count": 171533,
+  "risky_count": 130861,
+  "unknown_count": 213408,
   "started_at": "2026-09-30T18:47:25.841Z"
 }
