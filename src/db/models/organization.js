@@ -39,12 +39,6 @@ const organizationSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
-    gmailIntegration: {
-      email: { type: String, default: null },
-      accessToken: { type: String, default: null },
-      refreshToken: { type: String, default: null },
-      expiryDate: { type: Number, default: null }, // Timestamp
-    },
   },
   {
     timestamps: true,

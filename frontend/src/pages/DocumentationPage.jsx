@@ -2,7 +2,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   BookOpen, ChevronDown, ChevronRight, ArrowRight, Info,
-  Users2, Bot, Filter, Layers,
+  Users2, Filter, Layers,
 } from "lucide-react";
 
 const sections = [
@@ -11,14 +11,14 @@ const sections = [
     icon: Layers,
     title: "Platform Overview",
     color: "from-violet-500 to-purple-600",
-    content: `Doott is a B2B intelligence platform that gives you direct access to a live database of 43.9M+ people and companies — with AI-powered tools to search, explore, visualise, and query your data.
+    content: `Doott is a B2B intelligence platform that gives you direct access to a live database of 43.9M+ people and companies — with tools to search, explore, filter and export your data.
 
 **What you can do:**
 1. **Companies & People** — Browse and search millions of live records. Filter by any column, export to CSV instantly.
 2. **Emails** — Auto-filtered view of People with confirmed email addresses.
 3. **Numbers** — Auto-filtered view of People with confirmed phone numbers.
 4. **Categories** — Explore job roles (People) and industries (Companies) as browsable tag clouds.
-5. **Ask Doott** — AI assistant trained on your own uploaded documents. Ask it anything about your data.`,
+5. **Cities** — Explore people and companies by city and state.`,
   },
   {
     id: "people-companies",
@@ -60,32 +60,6 @@ The Emails tab auto-filters People to only records with a confirmed email addres
 - Quickly find the largest industry segments in your database
 - Identify underrepresented niches that could be high-value targets
 - Explore which job titles have the most records before deciding who to target`,
-  },
-  {
-    id: "chatbot",
-    icon: Bot,
-    title: "Ask Doott — AI Assistant",
-    color: "from-violet-500 to-indigo-600",
-    content: `Ask Doott is a RAG (Retrieval-Augmented Generation) powered AI assistant. It answers questions using context from your own uploaded documents — not just generic AI responses.
-
-**How it works:**
-1. Upload documents (PDF, TXT, DOCX) in the ChatBot Data section
-2. The system chunks, embeds, and indexes your content using OpenAI embeddings
-3. When you ask a question, the AI retrieves the most semantically relevant chunks from your knowledge base
-4. GPT-4 generates a contextual, cited answer using only your data
-5. Responses stream in real-time via Server-Sent Events (SSE)
-
-**Chat history:**
-All your conversations are saved in the panel on the right side of the chat. Click any past conversation to resume it. Start a fresh chat with the **+ New** button.
-
-**Use cases:**
-- Ask it questions about your People or Companies data
-- Train it on product documentation to answer sales questions instantly
-- Upload research reports for on-demand intelligence briefings
-- Store ICP definitions and have it help qualify inbound leads
-
-**Organization-wide:**
-All uploaded documents are shared across your entire organization — every team member gets the same enriched knowledge base.`,
   },
 ];
 
@@ -302,8 +276,7 @@ export default function DocumentationPage() {
       <div className="card p-4 flex items-start gap-3">
         <Info size={16} className="flex-shrink-0 mt-0.5" style={{ color: "var(--accent)" }} />
         <p className="text-sm" style={{ color: "var(--text-3)" }}>
-          For live support, use <strong style={{ color: "var(--text)" }}>Ask Doott</strong> — the AI assistant
-          trained on your organization's knowledge base — or reach out to your account administrator.
+          For support, reach out to your account administrator.
         </p>
       </div>
     </div>

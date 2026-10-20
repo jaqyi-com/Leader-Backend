@@ -4,19 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 
 
 const PAGE_META = {
-  "/app":                 { title: "Overview",        sub: "Real-time pipeline intelligence" },
-  "/app/pipeline":        { title: "Pipeline",        sub: "Run and monitor scrape phases" },
-  "/app/icp":             { title: "ICP Config",      sub: "Configure ideal customer profile" },
-  "/app/scheduler":       { title: "Scheduler",       sub: "Automate pipeline phases" },
-  "/app/sheets":          { title: "Data",            sub: "Browse and manage all records" },
-  "/app/leads":           { title: "Lead Scores",     sub: "Prioritized contacts by AI score" },
-  "/app/autonomousagents":{ title: "Autonomous SDR",  sub: "One-on-one AI outreach agent" },
-  "/app/crawler":         { title: "Web Crawler",     sub: "Crawl websites and extract intelligence" },
-  "/app/places":          { title: "Places Scraper",  sub: "Discover local businesses near any location" },
-  "/app/websites":        { title: "Website Intel",   sub: "Technology & contact data from crawled sites" },
-  "/app/settings":        { title: "Settings",        sub: "Manage org, members and credentials" },
+  "/app":                 { title: "Overview",        sub: "Company and contact intelligence" },
+  "/app/settings":        { title: "Settings",        sub: "Manage your organization and members" },
   "/app/docs":            { title: "How It Works",    sub: "Complete platform documentation" },
-  "/app/chatbot":         { title: "Ask Doott", sub: "Your AI assistant powered by your knowledge base" },
   "/app/categories":      { title: "Categories",      sub: "Explore industries and job roles" },
   "/app/people":          { title: "People",          sub: "Browse and filter people records" },
   "/app/companies":       { title: "Companies",       sub: "Browse and filter company records" },

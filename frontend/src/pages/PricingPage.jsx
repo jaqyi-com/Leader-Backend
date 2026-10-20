@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Check, Zap, Database, Mail, Phone, Download, Brain, Globe, Shield, Lock, ArrowRight } from "lucide-react";
+import { Check, Zap, Database, Mail, Phone, Download, Users, Globe, Shield, Lock, ArrowRight } from "lucide-react";
 import doottLogo from "../assets/doott-logo.png";
 
 const FEATURES = [
@@ -9,7 +9,7 @@ const FEATURES = [
   { icon: Phone,    title: "Direct Phone Numbers", desc: "Mobile & direct dial numbers for decision makers" },
   { icon: Download, title: "Unlimited CSV Exports", desc: "Export unlimited leads with zero row limits" },
   { icon: Globe,    title: "Company Intelligence", desc: "Filter by city, industry, category, revenue & size" },
-  { icon: Brain,    title: "AI RAG Lead Assistant", desc: "Smart AI chatbot to search and filter leads naturally" },
+  { icon: Users,    title: "People Search", desc: "Find decision-makers by job title, company and location" },
   { icon: Zap,      title: "City & Category Explorer", desc: "Hyper-local business lead generation across India" },
   { icon: Shield,   title: "Lifetime Access Included", desc: "Pay ₹179 once — enjoy all future database updates" },
 ];

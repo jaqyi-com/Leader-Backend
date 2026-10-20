@@ -9,14 +9,8 @@ function validateCredentials() {
   const missing = [];
 
   // Required keys for full functionality
-  if (!process.env.OPENAI_API_KEY) {
-    missing.push("OPENAI_API_KEY (Needed for LLM Personalization)");
-  }
-  if (!process.env.APOLLO_API_KEY) {
-    missing.push("APOLLO_API_KEY (Needed for Lead Enrichment)");
-  }
   if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    missing.push("SMTP_USER / SMTP_PASS (Needed for Email Delivery)");
+    missing.push("SMTP_USER / SMTP_PASS (Needed for verification and password-reset emails)");
   }
   
   if (!process.env.JWT_SECRET) {

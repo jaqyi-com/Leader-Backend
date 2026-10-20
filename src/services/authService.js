@@ -123,7 +123,7 @@ async function loginWithEmail({ email, password }) {
 
   const token = generateToken(user, orgId, role);
 
-  const org = orgId ? await Organization.findById(orgId).lean() : null;
+  const org = orgId ? await Organization.findById(orgId).select("-smtpCredentials -gmailIntegration").lean() : null;
 
   return { token, user: user.toPublicProfile(), org };
 }
@@ -186,7 +186,7 @@ async function handleGoogleOAuth({ googleId, email, name, avatar }) {
   const role = member?.role || "member";
 
   const token = generateToken(user, orgId, role);
-  const org = orgId ? await Organization.findById(orgId).lean() : null;
+  const org = orgId ? await Organization.findById(orgId).select("-smtpCredentials -gmailIntegration").lean() : null;
 
   return { token, user: user.toPublicProfile(), org };
 }
@@ -217,7 +217,7 @@ async function verifyEmail(token) {
   const orgId = user.defaultOrgId || member?.orgId || null;
   const role = member?.role || "member";
   const authToken = generateToken(user, orgId, role);
-  const org = orgId ? await Organization.findById(orgId).lean() : null;
+  const org = orgId ? await Organization.findById(orgId).select("-smtpCredentials -gmailIntegration").lean() : null;
 
   return { token: authToken, user: user.toPublicProfile(), org };
 }

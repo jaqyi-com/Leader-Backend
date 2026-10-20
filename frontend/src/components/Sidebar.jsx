@@ -5,16 +5,7 @@ import { useTheme } from "../context/ThemeContext";
 import { useFeatureFlags } from "../context/FeatureFlagContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ChevronLeft, ChevronRight,
-  Settings, MessageSquare,
-  Users2, Building2, BookOpen,
-  ShieldCheck, ChevronDown, LogOut, Sun, Moon,
-  Mail, Phone, Grid3x3, MapPin, Database, Sparkles,
-  Globe, Contact, Linkedin, AtSign, Briefcase, Zap,
-  Bot, Cpu, Globe2, Search, Compass, Share2, Send,
-  GitBranch, Target, Calendar, FileSpreadsheet, Bookmark,
-  BarChart3, Kanban, CheckSquare, FileText, Receipt,
-  Calculator, Package, DollarSign, BookMarked, EyeOff
+  ChevronLeft, ChevronRight, Settings, Users2, Building2, ChevronDown, LogOut, Sun, Moon, Mail, Phone, Grid3x3, MapPin, BookMarked, EyeOff
 } from "lucide-react";
 
 // Navigation definition with feature keys
@@ -29,67 +20,6 @@ const NAV_SECTIONS = [
       { key: "numbers",           to: "/app/number",            label: "Numbers",           icon: Phone },
       { key: "categories",        to: "/app/categories",        label: "Categories",        icon: Grid3x3 },
       { key: "cities",            to: "/app/cities",            label: "Cities",            icon: MapPin },
-      { key: "inbuild_db",        to: "/app/inbuild-db",        label: "In-Build DB",       icon: Database },
-      { key: "db_intelligence",   to: "/app/db-intelligence",   label: "DB Intelligence",   icon: Sparkles },
-      { key: "india_data",        to: "/app/india-data",        label: "India Data",        icon: Globe },
-      { key: "public_data",       to: "/app/public-data",       label: "Public Contacts",   icon: Contact },
-      { key: "lg_linkedin",       to: "/app/lg/linkedin",       label: "LinkedIn Finder",   icon: Linkedin },
-      { key: "lg_email",          to: "/app/lg/email",          label: "Email Finder",      icon: AtSign },
-      { key: "lg_companies",      to: "/app/lg/companies",      label: "Company Intel",     icon: Briefcase },
-      { key: "lg_auto_lead_gen",  to: "/app/lg/auto-lead-gen",  label: "Auto Lead Gen",     icon: Zap },
-    ]
-  },
-  {
-    id: "ai_automation",
-    label: "AI & SDR Automation",
-    links: [
-      { key: "chatbot",           to: "/app/chatbot",           label: "Ask Doott",         icon: MessageSquare },
-      { key: "chatbot_data",      to: "/app/chatbot/data",      label: "AI Knowledge Base", icon: BookOpen },
-      { key: "autonomous_agents", to: "/app/autonomousagents",  label: "Autonomous SDR",    icon: Bot },
-      { key: "lg_research",       to: "/app/lg/research",       label: "Deep Research",     icon: Cpu },
-    ]
-  },
-  {
-    id: "crawlers",
-    label: "Scrapers & Crawlers",
-    links: [
-      { key: "places_scraper",    to: "/app/places",            label: "Google Places",     icon: MapPin },
-      { key: "websites_crawler",  to: "/app/websites",          label: "Web Scraper",       icon: Globe2 },
-      { key: "auto_scraper",      to: "/app/auto-scraper",      label: "Auto Scraper",      icon: Search },
-      { key: "crawler",           to: "/app/crawler",           label: "Web Crawler",       icon: Compass },
-    ]
-  },
-  {
-    id: "outreach_social",
-    label: "Outreach & Social",
-    links: [
-      { key: "social_media",      to: "/app/social",            label: "Social Media",      icon: Share2 },
-      { key: "smart_outreach",    to: "/app/outreach",          label: "Smart Outreach",    icon: Send },
-      { key: "pipeline",          to: "/app/pipeline",          label: "Sales Pipeline",    icon: GitBranch },
-      { key: "icp",               to: "/app/icp",               label: "ICP Target",        icon: Target },
-      { key: "scheduler",         to: "/app/scheduler",         label: "Scheduler",         icon: Calendar },
-      { key: "sheets",            to: "/app/sheets",            label: "Google Sheets",     icon: FileSpreadsheet },
-      { key: "leads",             to: "/app/leads",             label: "Saved Leads",       icon: Bookmark },
-    ]
-  },
-  {
-    id: "crm_suite",
-    label: "CRM Suite",
-    links: [
-      { key: "crm_dashboard",     to: "/app/crm/dashboard",     label: "CRM Dashboard",     icon: BarChart3 },
-      { key: "crm_pipeline",      to: "/app/crm/pipeline",      label: "Deals Pipeline",    icon: Kanban },
-      { key: "crm_activities",    to: "/app/crm/activities",    label: "Activities",        icon: CheckSquare },
-      { key: "crm_quotations",    to: "/app/crm/quotations",    label: "Quotations",        icon: FileText },
-      { key: "crm_invoices",      to: "/app/crm/invoices",      label: "Invoices",          icon: Receipt },
-    ]
-  },
-  {
-    id: "erp_suite",
-    label: "ERP Suite",
-    links: [
-      { key: "accounting",        to: "/app/accounting",        label: "Accounting",        icon: Calculator },
-      { key: "inventory",         to: "/app/inventory",         label: "Inventory",         icon: Package },
-      { key: "payroll",           to: "/app/payroll",           label: "Payroll",           icon: DollarSign },
     ]
   }
 ];
@@ -375,10 +305,6 @@ function ProfileSection({ collapsed }) {
 export default function Sidebar({ collapsed, onToggle }) {
   const { user } = useAuth();
   const { isFeatureEnabled, features, isAdmin, simulationMode } = useFeatureFlags();
-  const navigate = useNavigate();
-
-  // Check if Ask Doott chatbot is enabled
-  const isChatbotActive = isFeatureEnabled("chatbot");
 
   return (
     <motion.aside
@@ -399,52 +325,12 @@ export default function Sidebar({ collapsed, onToggle }) {
         }}
       />
 
-      {/* ── Header: profile + Ask Doott (if enabled) ─────────── */}
+      {/* ── Header: profile ─────────── */}
       <div
         className="flex flex-col gap-2 px-2 pt-3 pb-2 flex-shrink-0"
         style={{ borderBottom: "1px solid var(--border)" }}
       >
         <ProfileSection collapsed={collapsed} />
-
-        {/* Ask Doott button — only shown if chatbot feature is enabled */}
-        {isChatbotActive && (
-          <motion.button
-            onClick={() => navigate("/app/chatbot")}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.97 }}
-            title={collapsed ? "Ask Doott" : undefined}
-            className="relative flex items-center gap-2 rounded-xl overflow-hidden cursor-pointer"
-            style={{
-              width: "100%",
-              padding: collapsed ? "8px" : "8px 12px",
-              justifyContent: collapsed ? "center" : "flex-start",
-              background: "linear-gradient(135deg, rgba(226,55,68,0.12) 0%, rgba(244,87,106,0.06) 100%)",
-              border: "1px solid rgba(226,55,68,0.25)",
-              color: "var(--text)",
-              fontSize: 13,
-              fontWeight: 600,
-            }}
-          >
-            <MessageSquare size={15} style={{ color: "var(--accent)", flexShrink: 0 }} />
-            <AnimatePresence initial={false}>
-              {!collapsed && (
-                <motion.span
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: "auto" }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="overflow-hidden whitespace-nowrap font-bold"
-                >
-                  Ask Doott
-                </motion.span>
-              )}
-            </AnimatePresence>
-            <span
-              className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full"
-              style={{ background: "var(--accent)" }}
-            />
-          </motion.button>
-        )}
       </div>
 
       {/* ── Dynamic Navigation Sections ── */}

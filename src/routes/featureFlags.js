@@ -6,49 +6,25 @@ const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
 
 // ─── Preset Configurations ───
 const PRESETS = {
-  full_suite: {
-    name: "Full Enterprise Suite",
-    description: "Enable all 30+ features across Lead Gen, AI, Crawlers, Outreach, CRM, and ERP.",
+  all_enabled: {
+    name: "Enable Everything",
+    description: "Turn on every data feature, Docs and Settings.",
     apply: (flags) => flags.map(f => ({ ...f, status: f.key === "admin" ? "admin_only" : "enabled" }))
   },
-  lead_gen_core: {
-    name: "Core Lead Gen Only",
-    description: "Keep Lead Gen, Cities, Categories, and Ask Doott enabled. Turn off CRM, ERP, and Crawlers.",
+  data_only: {
+    name: "Data Only",
+    description: "Keep the data features on. Hide Docs and Settings.",
     apply: (flags) => flags.map(f => {
-      if (f.category === "lead_gen" || f.key === "chatbot" || f.key === "docs" || f.key === "settings") {
-        return { ...f, status: "enabled" };
-      }
       if (f.key === "admin") return { ...f, status: "admin_only" };
+      if (f.category === "lead_gen") return { ...f, status: "enabled" };
       return { ...f, status: "disabled" };
-    })
-  },
-  ai_and_outreach: {
-    name: "AI & Outreach Focus",
-    description: "Enable Lead Gen, AI Chatbot, Autonomous SDR, and Social Outreach. Disable ERP & Accounting.",
-    apply: (flags) => flags.map(f => {
-      if (f.category === "erp_suite") {
-        return { ...f, status: "disabled" };
-      }
-      if (f.key === "admin") return { ...f, status: "admin_only" };
-      return { ...f, status: "enabled" };
-    })
-  },
-  lean_crm: {
-    name: "Lean Sales & CRM",
-    description: "Enable Lead Gen and CRM Suite. Disable complex ERP and Autonomous agents.",
-    apply: (flags) => flags.map(f => {
-      if (f.category === "erp_suite" || f.key === "autonomous_agents") {
-        return { ...f, status: "disabled" };
-      }
-      if (f.key === "admin") return { ...f, status: "admin_only" };
-      return { ...f, status: "enabled" };
     })
   }
 };
 
 // ─── Public / Client Feature Flags Endpoint ───
 // GET /api/features
-// Returns active feature flags map to frontend (e.g. { companies: 'enabled', accounting: 'disabled' })
+// Returns active feature flags map to frontend (e.g. { companies: 'enabled', docs: 'disabled' })
 router.get("/features", async (req, res) => {
   try {
     await FeatureFlag.ensureDefaults();
