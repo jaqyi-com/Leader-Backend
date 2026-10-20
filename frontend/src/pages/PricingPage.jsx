@@ -11,7 +11,7 @@ const FEATURES = [
   { icon: Globe,    title: "Company Intelligence", desc: "Filter by city, industry, category, revenue & size" },
   { icon: Users,    title: "People Search", desc: "Find decision-makers by job title, company and location" },
   { icon: Zap,      title: "City & Category Explorer", desc: "Hyper-local business lead generation across India" },
-  { icon: Shield,   title: "Lifetime Access Included", desc: "Pay ₹179 once — enjoy all future database updates" },
+  { icon: Shield,   title: "Lifetime Access Included", desc: "Free forever — all future database updates included" },
 ];
 
 export default function PricingPage() {
@@ -79,15 +79,15 @@ export default function PricingPage() {
           marginBottom: 16,
         }}>
           <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#e23744", display: "inline-block" }} />
-          Lifetime Deal · One-Time Payment
+          Free Lifetime Access · No Payment
         </div>
 
         <h1 style={{ fontSize: "clamp(32px, 5vw, 46px)", fontWeight: 800, color: "#ffffff", margin: 0, lineHeight: 1.15, letterSpacing: "-1.2px" }}>
-          One Price. <span style={{ background: "linear-gradient(135deg, #ffffff 30%, #f47a88 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Everything Included.</span>
+          Free. <span style={{ background: "linear-gradient(135deg, #ffffff 30%, #f47a88 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Everything Included.</span>
         </h1>
         <p style={{ color: "#94a3b8", fontSize: 16, marginTop: 14, lineHeight: 1.6 }}>
           No monthly subscriptions. No per-seat limits. No hidden export fees.<br />
-          Pay once and access the entire B2B contact database forever.
+          Create an account and access the entire B2B contact database for life — free.
         </p>
       </motion.div>
 
@@ -127,22 +127,22 @@ export default function PricingPage() {
           alignItems: "center",
           gap: 6,
         }}>
-          🔥 Limited Spots — ₹179 Lifetime Access
+          🎉 Free Lifetime Access
         </div>
 
         {/* Pricing Header */}
         <div style={{ borderBottom: "1px solid rgba(255, 255, 255, 0.08)", paddingBottom: 24, marginBottom: 24, marginTop: 8 }}>
           <p style={{ fontFamily: "monospace", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.2em", color: "#f47a88", fontWeight: 700, marginBottom: 8 }}>
-            Lifetime Subscription
+            Lifetime Access
           </p>
           <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 6 }}>
             <span style={{ fontSize: 56, fontWeight: 900, color: "#ffffff", lineHeight: 1, letterSpacing: "-2px" }}>
-              ₹179
+              ₹0
             </span>
-            <span style={{ fontSize: 16, color: "#94a3b8", fontWeight: 600 }}>/ one-time</span>
+            <span style={{ fontSize: 16, color: "#94a3b8", fontWeight: 600 }}>/ forever</span>
           </div>
           <p style={{ fontSize: 13.5, color: "#cbd5e1", margin: 0, display: "flex", alignItems: "center", gap: 6 }}>
-            <Check size={15} color="#22c55e" /> Pay once, no recurring billing ever.
+            <Check size={15} color="#22c55e" /> No credit card, no billing — ever.
           </p>
         </div>
 
@@ -177,7 +177,7 @@ export default function PricingPage() {
         </div>
 
         {/* CTA Button */}
-        <Link to="/join" style={{ textDecoration: "none", display: "block" }}>
+        <Link to="/register" style={{ textDecoration: "none", display: "block" }}>
           <motion.button
             whileHover={{ scale: 1.02, boxShadow: "0 10px 30px rgba(226, 55, 68, 0.5)" }}
             whileTap={{ scale: 0.98 }}
@@ -200,7 +200,7 @@ export default function PricingPage() {
             }}
           >
             <Zap size={18} />
-            Get Lifetime Access Now — ₹179
+            Create Your Free Account
             <ArrowRight size={18} />
           </motion.button>
         </Link>
@@ -208,7 +208,7 @@ export default function PricingPage() {
         {/* Security badge */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 6, fontSize: 12, color: "#94a3b8", marginTop: 16 }}>
           <Lock size={13} color="#22c55e" />
-          <span>Secured by <strong>Razorpay</strong> · Instant Activation</span>
+          <span>No payment details needed · Instant Activation</span>
         </div>
       </motion.div>
 
@@ -229,7 +229,7 @@ export default function PricingPage() {
       >
         <p style={{ fontSize: 13, color: "#94a3b8", margin: 0, lineHeight: 1.6 }}>
           💡 <strong style={{ color: "#ffffff" }}>Compare:</strong> ZoomInfo costs ₹15,000+/mo · Apollo costs ₹3,000+/mo.<br />
-          <span style={{ color: "#22c55e", fontWeight: 700 }}>Doott gives you 43.9M+ contacts for ₹179 lifetime.</span>
+          <span style={{ color: "#22c55e", fontWeight: 700 }}>Doott gives you 43.9M+ contacts free, for life.</span>
         </p>
       </motion.div>
 
