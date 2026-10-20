@@ -18,7 +18,7 @@ const router  = express.Router();
 const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const {
   hasNoSearchableChars, escapeLike, resultWindowError, sendSearchError,
-  exactCappedTotal, runFilteredSearch, searchTimeoutMs } = require("../utils/searchFilters");
+  exactCappedTotal, runFilteredSearch, searchTimeoutMs, checkSortAllowed } = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const logger = require("../utils/logger").forAgent("FinalCompaniesDB");
 
@@ -669,6 +669,13 @@ router.get("/", async (req, res) => {
       orderClause = "";
     }
 
+    // Sorting a large result set always times out: answer unsorted (with a notice) instead of failing.
+    let sortNotice = null;
+    if (orderClause && vectorIdx === null) {
+      const sortErr = await checkSortAllowed(indexedQuery, FULL_TABLE, whereStr, values, userHasFilters);
+      if (sortErr) { orderClause = ""; sortNotice = sortErr.error; }
+    }
+
     const dataSQL = `
       SELECT ${customSelectSQL} FROM ${FULL_TABLE}
       ${whereStr}
@@ -724,6 +731,7 @@ router.get("/", async (req, res) => {
       records,
       total,
       total_exact: totalExact,
+      ...(sortNotice ? { sort_applied: false, sort_notice: sortNotice } : {}),
       page:   pageNum,
       limit:  limitNum,
       pages:  Math.ceil(total / limitNum),
