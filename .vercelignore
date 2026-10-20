@@ -7,7 +7,7 @@ test.dump
 .git
 .env
 email-verifier
-scripts
+/scripts
 doott-promo-video
 final_data
 client1
