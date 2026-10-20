@@ -159,11 +159,11 @@ function Hero() {
             className="mt-10 flex flex-wrap items-center gap-4"
           >
             <Link
-              to="/register"
+              to="/pricing"
               className="inline-flex h-12 items-center px-6 border border-primary bg-primary font-mono text-[11px] uppercase tracking-[0.2em] text-primary-foreground transition hover:opacity-90"
-              aria-label="Create a free Doott account with lifetime access to the B2B contact database"
+              aria-label="Get lifetime access to Doott B2B contact database for ₹179"
             >
-              Get Started Free →
+              Get Access — ₹179 →
             </Link>
             <a
               href="#database"
@@ -835,7 +835,7 @@ function FAQ() {
             },
             {
               q: "Is Doott a free alternative to ZoomInfo or Apollo.io?",
-              a: "Yes. Every Doott account gets free lifetime access with no credit card required and no per-seat pricing — giving you access to a 43.9M contact B2B database similar to ZoomInfo, Apollo.io, and Hunter.io, but without the high subscription costs.",
+              a: "Yes. Doott is free to start with no credit card required and no per-seat pricing — giving you access to a 43.9M contact B2B database similar to ZoomInfo, Apollo.io, and Hunter.io, but without the high subscription costs.",
             },
           ].map((faq, i) => (
             <details key={i} className="group border border-border bg-secondary/10 p-6 [&_summary::-webkit-details-marker]:hidden">
@@ -864,16 +864,16 @@ function FinalCTA() {
           The B2B data is live.<br />Start prospecting now.
         </h2>
         <p className="text-background/60 mb-10 max-w-lg font-serif text-lg">
-          Free lifetime access. No credit card required. No per-seat pricing.
+          Free to start. No credit card required. No per-seat pricing.
           Access verified B2B People, Email, Phone, and Companies databases immediately.
         </p>
         <div className="flex flex-wrap gap-4 justify-center">
           <Link
-            to="/register"
+            to="/pricing"
             className="inline-flex h-12 items-center px-10 border border-background/40 bg-transparent font-mono text-[11px] uppercase tracking-[0.2em] text-background/70 transition hover:border-background hover:text-background"
-            aria-label="Create a free Doott account with lifetime access"
+            aria-label="Get lifetime access to Doott for ₹179"
           >
-            Get Lifetime Access — Free
+            Get Lifetime Access — ₹179
           </Link>
         </div>
       </div>

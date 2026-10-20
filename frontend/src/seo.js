@@ -14,9 +14,9 @@ const DEFAULT = {
 export const INDEXABLE_ROUTES = {
   "/": DEFAULT,
   "/pricing": {
-    title: "Doott Pricing – Free Lifetime Access to 43.9M B2B Contacts",
+    title: "Doott Pricing – Lifetime Access to 43.9M B2B Contacts",
     description:
-      "Doott is free: lifetime access to the B2B database with verified emails, direct phone numbers, company data and unlimited CSV exports. No credit card.",
+      "One price, lifetime access to Doott's B2B database: verified emails, direct phone numbers, company data and unlimited CSV exports. No per-seat fees.",
   },
 };
 
