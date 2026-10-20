@@ -98,7 +98,7 @@ test("access policy: DATA_ACCESS_POLICY=paid blocks free accounts, allows paid u
     const r = await s.http("GET", `${P}?limit=5`, { token: free.token });
     assert.equal(r.status, 402);
     assert.equal(r.json.code, "UPGRADE_REQUIRED");
-    for (const route of ["/api/final-people-email", "/api/final-people-number", "/api/final-companies", "/api/search/hybrid"]) {
+    for (const route of ["/api/final-people-email", "/api/final-people-number", "/api/final-companies"]) {
       assert.equal((await s.http("GET", route, { token: free.token })).status, 402, route);
     }
     assert.equal((await s.http("GET", `${P}?limit=5`, { token: paid.token })).status, 200);

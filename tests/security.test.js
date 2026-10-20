@@ -64,15 +64,15 @@ test("CSV helpers neutralise formulas and sanitise filenames", () => {
 
 // ── Mass assignment ──────────────────────────────────────────────────────────
 test("pickModelFields strips tenant/identity fields and operators", () => {
-  const { GeneratedLead } = require("../src/db/mongoose");
+  const { Organization } = require("../src/db/mongoose");
   const { pickModelFields, escapeRegex } = require("../src/utils/tenant");
   const out = pickModelFields({
-    status: "contacted", orgId: "attacker-org", _id: "x", createdAt: "2000-01-01",
-    "$set": { orgId: "y" }, "a.b": 1, notAField: 1, tags: ["a"],
-  }, GeneratedLead);
-  assert.deepEqual(out, { status: "contacted", tags: ["a"] });
-  assert.deepEqual(pickModelFields("str", GeneratedLead), {});
-  assert.deepEqual(pickModelFields([1], GeneratedLead), {});
+    name: "Acme", orgId: "attacker-org", _id: "x", createdAt: "2000-01-01",
+    "$set": { orgId: "y" }, "a.b": 1, notAField: 1, industry: "Retail",
+  }, Organization);
+  assert.deepEqual(out, { name: "Acme", industry: "Retail" });
+  assert.deepEqual(pickModelFields("str", Organization), {});
+  assert.deepEqual(pickModelFields([1], Organization), {});
   assert.equal(new RegExp(escapeRegex("(a+)+$")).test("(a+)+$"), true);
 });
 
@@ -123,31 +123,31 @@ test("server: security headers present, X-Powered-By removed", async () => {
 test("auth: no token / forged tokens / wrong algorithm are rejected", async () => {
   assert.equal((await call("GET", "/api/final-people")).status, 401);
   const forged = sign({ userId: "u1", orgId: "o1", role: "owner" }, "changeme-secret");
-  assert.equal((await call("GET", "/api/lead-generator/database", { token: forged })).status, 401);
+  assert.equal((await call("GET", "/api/final-people", { token: forged })).status, 401);
   const none = Buffer.from(JSON.stringify({ alg: "none", typ: "JWT" })).toString("base64url") + "." +
     Buffer.from(JSON.stringify({ userId: "u1", orgId: "o1", role: "owner" })).toString("base64url") + ".";
-  assert.equal((await call("GET", "/api/lead-generator/database", { token: none })).status, 401);
+  assert.equal((await call("GET", "/api/final-people", { token: none })).status, 401);
 });
 
 test("auth: token in the URL is no longer accepted", async () => {
   const good = sign({ userId: "u1", orgId: "507f1f77bcf86cd799439011", role: "admin", email: "a@example.test" });
-  const r = await call("GET", "/api/lead-generator/database", { query: `?token=${good}` });
+  const r = await call("GET", "/api/final-people", { query: `?token=${good}` });
   assert.equal(r.status, 401);
 });
 
-test("tenant guard: users without an organisation are refused on tenant data routes", async () => {
-  const orgless = sign({ userId: "u1", orgId: null, role: "member", email: "a@example.test" });
+test("removed features: their endpoints no longer exist", async () => {
+  const user = sign({ userId: "u1", orgId: "507f1f77bcf86cd799439011", role: "admin", email: "a@example.test" });
   for (const [m, u] of [
-    ["GET", "/api/lead-generator/database"], ["DELETE", "/api/lead-generator/database/507f1f77bcf86cd799439011"],
-    ["PATCH", "/api/lead-generator/database/507f1f77bcf86cd799439011"], ["POST", "/api/lead-generator/database"],
-    ["GET", "/api/social/posts"], ["DELETE", "/api/social/posts/507f1f77bcf86cd799439011"],
-    ["POST", "/api/social/posts/507f1f77bcf86cd799439011/publish"],
-    ["GET", "/api/autonomous"], ["GET", "/api/autonomous/507f1f77bcf86cd799439011"],
-    ["POST", "/api/autonomous/507f1f77bcf86cd799439011/research"],
-    ["POST", "/api/lead-generator/auto-gen/start"], ["POST", "/api/lead-generator/research/start"],
+    ["POST", "/api/reset"], ["POST", "/api/pipeline/all"], ["GET", "/api/schedule"], ["POST", "/api/icp"],
+    ["GET", "/api/logs"], ["GET", "/api/sheets/data"], ["DELETE", "/api/sheets/clear"],
+    ["GET", "/api/autonomous"], ["GET", "/api/lead-generator/database"], ["GET", "/api/social/posts"],
+    ["GET", "/api/crm/deals"], ["GET", "/api/accounting/ledgers"], ["GET", "/api/inventory/items"],
+    ["GET", "/api/payroll/employees"], ["GET", "/api/chatbot/conversations"], ["GET", "/api/outreach/campaigns"],
+    ["GET", "/api/crawler/websites"], ["GET", "/api/inbuild-database"], ["GET", "/api/india-data"],
+    ["GET", "/api/public-contacts"], ["GET", "/api/niches75m"], ["GET", "/api/search/hybrid"], ["GET", "/api/gmail/status"],
   ]) {
-    const r = await call(m, u, { token: orgless, body: m === "GET" || m === "DELETE" ? undefined : { prompt: "x", description: "x" } });
-    assert.equal(r.status, 403, `${m} ${u} should be 403 without an org, got ${r.status}`);
+    const r = await call(m, u, { token: user, body: m === "GET" || m === "DELETE" ? undefined : {} });
+    assert.equal(r.status, 404, `${m} ${u} should be gone, got ${r.status}`);
   }
 });
 
