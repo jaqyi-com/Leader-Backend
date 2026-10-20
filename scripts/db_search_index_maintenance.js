@@ -88,6 +88,24 @@ const INDEXES = [
             ON final.people USING gin (state gin_trgm_ops) WHERE state IS NOT NULL`,
   },
   {
+    name: "idx_companies_city_trgm",
+    why: "companies city ILIKE 'Mumbai%' (count + filter scanned the whole 3.7 GB table: 10-28 s)",
+    sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_companies_city_trgm
+            ON final.companies USING gin (city gin_trgm_ops) WHERE city IS NOT NULL`,
+  },
+  {
+    name: "idx_companies_state_trgm",
+    why: "companies state ILIKE filters",
+    sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_companies_state_trgm
+            ON final.companies USING gin (state gin_trgm_ops) WHERE state IS NOT NULL`,
+  },
+  {
+    name: "idx_companies_name_trgm",
+    why: "companies business_name ILIKE '%Tata%' (name search)",
+    sql: `CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_companies_name_trgm
+            ON final.companies USING gin (business_name gin_trgm_ops) WHERE business_name IS NOT NULL`,
+  },
+  {
     name: "idx_people_job_title_trgm",
     why: "job-title ILIKE '%x%' and whole-word regex (CTO, CFO, Founder …)",
     skip: SKIP_TRGM,
@@ -185,6 +203,7 @@ async function watchProgress(stop) {
       }
     }
     await run("ANALYZE final.people (new indexed columns)", "ANALYZE final.people (job_title, email_status, is_email_valid, city, state)");
+    await run("ANALYZE final.companies (new indexed columns)", "ANALYZE final.companies (city, state, business_name)");
   } finally {
     stop.done = true;
   }

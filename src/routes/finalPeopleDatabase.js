@@ -21,6 +21,7 @@ const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const indexedQuery = (sql, params, ms) => directQueryWithSession(sql, params, ["SET LOCAL enable_seqscan = off;"], ms);
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const {
+  hasNoSearchableChars,
   escapeLike, hasWord, jobTitleCondition, INDIA_STATES_SQL, exactCappedTotal,
   searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, runFilteredSearch,
 } = require("../utils/searchFilters");
@@ -108,6 +109,8 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
   for (const [key, rawVal] of Object.entries(queryParams)) {
     if (!key.startsWith("f_")) continue;
     const val = rawVal ? String(rawVal).trim() : "";
+    // "%" / "_" alone match nothing: answer instantly instead of scanning the whole table.
+    if (hasNoSearchableChars(val)) { conditions.push("FALSE"); continue; }
 
     // Parse the column and operator suffix
     let col = null;
@@ -275,8 +278,8 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         "fashion": ["Fashion", "Apparel", "Garment", "Designer", "Textile"],
         "fashion / lifestyle": ["Fashion", "Apparel", "Garment", "Designer", "Textile"],
         "software": ["Software", "Engineer", "Developer", "CTO", "SaaS", "IT", "Architect"],
-        "software engineer": ["Software", "Engineer", "Developer", "IT"],
-        "senior software engineer": ["Software", "Engineer", "Developer", "IT"],
+        "software engineer": ["Software", "Engineer", "Developer"],
+        "senior software engineer": ["Software", "Engineer", "Developer"],
         "lead engineer": ["Lead Engineer", "Engineer", "Developer", "Tech Lead"],
         "product manager": ["Product Manager", "Product"],
         "general manager": ["General Manager", "Manager"],
@@ -667,10 +670,11 @@ router.get("/", async (req, res) => {
       orderClause = "";
     }
 
+    let sortNotice = null;
     if (orderClause && vectorIdx === null) {
       // Sorting millions of rows always times out — only allow it on narrow result sets.
       const sortErr = await checkSortAllowed(indexedQuery, FULL_TABLE, whereStr, values, userHasFilters);
-      if (sortErr) return res.status(400).json(sortErr);
+      if (sortErr) { orderClause = ""; sortNotice = sortErr.error; }
     }
 
     const dataSQL = `
@@ -739,6 +743,7 @@ router.get("/", async (req, res) => {
       records,
       total,
       total_exact: totalExact,
+      ...(sortNotice ? { sort_applied: false, sort_notice: sortNotice } : {}),
       page:   pageNum,
       limit:  limitNum,
       pages:  Math.ceil(total / limitNum),

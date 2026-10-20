@@ -61,7 +61,7 @@ const userSchema = new mongoose.Schema(
     plan: {
       type: String,
       enum: ["free", "lifetime"],
-      default: "free",
+      default: "lifetime",
     },
     razorpayPaymentId: { type: String, default: null },
     razorpayOrderId:   { type: String, default: null },

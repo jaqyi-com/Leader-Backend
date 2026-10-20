@@ -10,7 +10,6 @@
  *  🌍 Countries | 💻 Devices + Browsers | 🏷️ UTM campaigns
  *  📋 Recent visits table with duration + entry badge
  *
- * PLATFORM tab — app-level metrics.
  * Locked to ADMIN_EMAIL — everyone else gets a lock screen.
  */
 
@@ -19,11 +18,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import AdminFeatureManager from "../components/admin/AdminFeatureManager";
 import {
-  Eye, TrendingUp, Activity, Users, RefreshCw, AlertCircle,
-  Lock, ShieldCheck, Monitor, Smartphone, Tablet, Globe,
-  Chrome, Share2, ExternalLink, ArrowRight, Sliders,
-  Building2, Mail, Target, Briefcase, UserCog, Calculator, Package, MapPin, BarChart3,
-  Zap, Search, CheckCircle,
+  Eye, TrendingUp, Activity, Users, RefreshCw, AlertCircle, Lock, ShieldCheck, Monitor, Smartphone, Tablet, Globe, Chrome, ExternalLink, ArrowRight, Sliders, Zap, Search, CheckCircle,
 } from "lucide-react";
 
 const API_BASE     = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
@@ -606,110 +601,6 @@ function TrafficTab({ token }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Platform Tab
-// ─────────────────────────────────────────────────────────────────────────────
-function PlatformTab({ token }) {
-  const [data, setData]       = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState(null);
-  const [days, setDays]       = useState(30);
-
-  const load = useCallback(async () => {
-    setLoading(true); setError(null);
-    try {
-      const res = await fetch(`${API_BASE}/analytics?days=${days}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      if (!res.ok) throw new Error(`${res.status}`);
-      setData(await res.json());
-    } catch (e) { setError(e.message); }
-    finally { setLoading(false); }
-  }, [days, token]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const o   = data?.overview       ?? {};
-  const ls  = data?.leadScoring    ?? {};
-  const out = data?.outreach       ?? {};
-  const crm = data?.crm            ?? {};
-  const soc = data?.social         ?? {};
-
-  const kpis = [
-    { icon: Building2,  label: "Companies",     val: fmt(o.totalCompanies),       color: "#22d3ee" },
-    { icon: Mail,       label: "Contacts",      val: fmt(o.totalContacts),        color: "#a78bfa" },
-    { icon: Target,     label: "Gen. Leads",    val: fmt(o.totalGeneratedLeads),  color: "#f59e0b" },
-    { icon: MapPin,     label: "Places",        val: fmt(o.totalPlaces),          color: "#10b981" },
-    { icon: Mail,       label: "Sent",          val: fmt(out.sent),               color: "#22d3ee" },
-    { icon: Activity,   label: "Reply Rate",    val: out.replyRate ?? "—",        color: "#E23744" },
-    { icon: Briefcase,  label: "Deals Won",     val: fmt(crm.deals?.won),         color: "#10b981" },
-    { icon: Share2,     label: "Published",     val: fmt(soc.published),          color: "#a78bfa" },
-    { icon: UserCog,    label: "Employees",     val: fmt(data?.hr?.employees),    color: "#22d3ee" },
-    { icon: Calculator, label: "Vouchers",      val: fmt(data?.accounting?.vouchers), color: "#f59e0b" },
-    { icon: Package,    label: "Stock Items",   val: fmt(data?.inventory?.stockItems), color: "#10b981" },
-    { icon: Package,    label: "Orders",        val: fmt(data?.inventory?.orders), color: "#f59e0b" },
-  ];
-
-  return (
-    <div className="p-6 flex flex-col gap-5" style={{ background: "#080810", minHeight: "100%" }}>
-      <div className="flex items-center gap-3">
-        <div className="flex gap-1 rounded-xl p-1" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)" }}>
-          {[7,14,30,90].map(d => (
-            <button key={d} onClick={() => setDays(d)}
-              className="px-3 py-1 rounded-lg text-xs font-medium transition-all"
-              style={{ background: days === d ? "#6366f1" : "transparent", color: days === d ? "#fff" : "rgba(255,255,255,0.4)" }}>
-              {d}d
-            </button>
-          ))}
-        </div>
-        <button onClick={load} disabled={loading}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-          style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" }}>
-          <RefreshCw size={12} className={loading ? "animate-spin" : ""} /> Refresh
-        </button>
-      </div>
-
-      {error && (
-        <div className="px-4 py-3 rounded-xl flex items-center gap-2 text-xs"
-          style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#f87171" }}>
-          <AlertCircle size={13} /> {error}
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        {kpis.map(k => (
-          <motion.div key={k.label} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl p-4 flex flex-col gap-2"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <div className="flex items-center gap-1.5">
-              <k.icon size={11} style={{ color: k.color }} />
-              <span className="text-[10px] uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.32)" }}>{k.label}</span>
-            </div>
-            <span className="text-xl font-bold" style={{ color: k.color }}>{k.val}</span>
-          </motion.div>
-        ))}
-      </div>
-
-      {/* Lead scoring */}
-      <Card title="Lead Priority Distribution">
-        <div className="flex gap-8">
-          {[
-            { label: "High Priority",   val: ls.high,   color: "#f43f5e", bg: "rgba(244,63,94,0.12)"  },
-            { label: "Medium Priority", val: ls.medium, color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
-            { label: "Low Priority",    val: ls.low,    color: "#10b981", bg: "rgba(16,185,129,0.12)" },
-          ].map(s => (
-            <div key={s.label} className="flex flex-col gap-2 flex-1 rounded-xl p-4"
-              style={{ background: s.bg, border: `1px solid ${s.color}25` }}>
-              <span className="text-xs" style={{ color: "rgba(255,255,255,0.4)" }}>{s.label}</span>
-              <span className="text-3xl font-bold" style={{ color: s.color }}>{fmt(s.val)}</span>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  );
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Users Management Tab
 // ─────────────────────────────────────────────────────────────────────────────
 function UsersTab({ token }) {
@@ -916,7 +807,7 @@ export default function AdminAnalyticsPage() {
           <div>
             <h1 className="text-[15px] font-bold" style={{ color: "#fff" }}>Doott Command Center</h1>
             <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.32)" }}>
-              Feature toggles, platform telemetry &amp; live traffic
+              Feature toggles, users &amp; live traffic
             </p>
           </div>
         </div>
@@ -924,8 +815,7 @@ export default function AdminAnalyticsPage() {
           {[
             { id: "features", label: "Feature Controls", icon: Sliders },
             { id: "users",    label: "Users List", icon: Users },
-            { id: "traffic",  label: "Traffic", icon: Activity },
-            { id: "platform", label: "Platform", icon: BarChart3 }
+            { id: "traffic",  label: "Traffic", icon: Activity }
           ].map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className="px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer"
@@ -957,10 +847,8 @@ export default function AdminAnalyticsPage() {
               </div>
             ) : tab === "users" ? (
               <UsersTab token={token} />
-            ) : tab === "traffic" ? (
-              <TrafficTab token={token} />
             ) : (
-              <PlatformTab token={token} />
+              <TrafficTab token={token} />
             )}
           </motion.div>
         </AnimatePresence>

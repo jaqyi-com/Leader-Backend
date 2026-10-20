@@ -1,5 +1,14 @@
 const { User, Organization, Member } = require("../db/mongoose");
 
+// Older documents may still hold credentials from the removed outreach integrations — never return them.
+function publicOrg(org) {
+  if (org) {
+    delete org.smtpCredentials;
+    delete org.gmailIntegration;
+  }
+  return org;
+}
+
 // ── Get org by ID ────────────────────────────────────────────────────────────
 async function getOrgById(orgId) {
   const org = await Organization.findById(orgId).lean();
@@ -8,10 +17,7 @@ async function getOrgById(orgId) {
     err.statusCode = 404;
     throw err;
   }
-  if (org && org.smtpCredentials && org.smtpCredentials.pass) {
-    org.smtpCredentials.pass = "********";
-  }
-  return org;
+  return publicOrg(org);
 }
 
 // ── Get all members of an org (populated) ───────────────────────────────────
@@ -174,7 +180,7 @@ async function switchOrg({ userId, newOrgId }) {
   const { generateToken } = require("./authService");
   const user = await User.findById(userId).lean();
   const token = generateToken(user, newOrgId, member.role);
-  const org = await Organization.findById(newOrgId).lean();
+  const org = publicOrg(await Organization.findById(newOrgId).lean());
 
   return { token, org };
 }
@@ -187,7 +193,7 @@ async function updateOrg({ orgId, updates }) {
     if (updates[key] !== undefined) clean[key] = updates[key];
   }
   const org = await Organization.findByIdAndUpdate(orgId, clean, { new: true }).lean();
-  return org;
+  return publicOrg(org);
 }
 
 // ── Get user's orgs ──────────────────────────────────────────────────────────

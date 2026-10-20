@@ -27,11 +27,6 @@ const ICON_MAP = {
 const CATEGORIES = [
   { key: "all", label: "All Modules" },
   { key: "lead_gen", label: "Data" },
-  { key: "ai_automation", label: "AI & SDR" },
-  { key: "crawlers", label: "Scrapers & Crawlers" },
-  { key: "outreach_social", label: "Outreach & Social" },
-  { key: "crm_suite", label: "CRM Suite" },
-  { key: "erp_suite", label: "ERP Suite" },
   { key: "system", label: "System & Core" },
 ];
 

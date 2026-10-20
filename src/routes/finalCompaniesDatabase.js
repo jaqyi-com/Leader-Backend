@@ -15,10 +15,15 @@
 const express = require("express");
 const router  = express.Router();
 
-const { query: pgQuery } = require("../db/cloudSql");
-const { escapeLike, resultWindowError, sendSearchError } = require("../utils/searchFilters");
+const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
+const {
+  hasNoSearchableChars, escapeLike, resultWindowError, sendSearchError,
+  exactCappedTotal, runFilteredSearch, searchTimeoutMs, checkSortAllowed } = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const logger = require("../utils/logger").forAgent("FinalCompaniesDB");
+
+// Index-forced variant for counts (a narrow filter counts quickly through its index).
+const indexedQuery = (sql, params, ms) => directQueryWithSession(sql, params, ["SET LOCAL enable_seqscan = off;"], ms);
 
 // ── Table config ───────────────────────────────────────────
 const FC_SCHEMA  = "final";
@@ -99,6 +104,8 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
   for (const [key, rawVal] of Object.entries(queryParams)) {
     if (!key.startsWith("f_")) continue;
     const val = rawVal ? String(rawVal).trim() : "";
+    // "%" / "_" alone match nothing: answer instantly instead of scanning the whole table.
+    if (hasNoSearchableChars(val)) { conditions.push("FALSE"); continue; }
 
     // Parse the column and operator suffix
     let col = null;
@@ -662,6 +669,13 @@ router.get("/", async (req, res) => {
       orderClause = "";
     }
 
+    // Sorting a large result set always times out: answer unsorted (with a notice) instead of failing.
+    let sortNotice = null;
+    if (orderClause && vectorIdx === null) {
+      const sortErr = await checkSortAllowed(indexedQuery, FULL_TABLE, whereStr, values, userHasFilters);
+      if (sortErr) { orderClause = ""; sortNotice = sortErr.error; }
+    }
+
     const dataSQL = `
       SELECT ${customSelectSQL} FROM ${FULL_TABLE}
       ${whereStr}
@@ -669,70 +683,55 @@ router.get("/", async (req, res) => {
       LIMIT $${nextIdx} OFFSET $${nextIdx + 1}
     `;
 
-    const dataPromise = pgQuery(dataSQL, [...values, limitNum, offset], 30000);
+    // Same planner-safe runner as the people routes: sequential scan first (fast for common values),
+    // index plan second (fast for rare values), a friendly 503 if both are too slow.
+    const dataRes = userHasFilters
+      ? await runFilteredSearch(directQueryWithSession, dataSQL, [...values, limitNum, offset], searchTimeoutMs(), { vector: vectorIdx !== null })
+      : await pgQuery(dataSQL, [...values, limitNum, offset], 30000);
+    const records = dataRes.rows.map(row => normalizeRow(schema, row));
 
-    let countPromise;
+    let total = null;
+    let totalExact = false;
     if (!userHasFilters) {
-      countPromise = (async () => {
-        const cachedCount = await cacheGet(COUNT_CACHE_KEY);
-        if (cachedCount !== null && cachedCount !== undefined) return cachedCount;
+      const cachedCount = await cacheGet(COUNT_CACHE_KEY);
+      if (cachedCount !== null && cachedCount !== undefined) {
+        total = cachedCount;
+      } else {
         const countRes = await pgQuery(
           `SELECT reltuples::bigint AS cnt FROM pg_class WHERE oid = $1::regclass`,
           [FULL_TABLE],
           5000
         );
-        const cnt = parseInt(countRes.rows[0]?.cnt || "0", 10);
-        await cacheSet(COUNT_CACHE_KEY, cnt, COUNT_TTL);
-        return cnt;
-      })();
+        total = parseInt(countRes.rows[0]?.cnt || "0", 10);
+        await cacheSet(COUNT_CACHE_KEY, total, COUNT_TTL);
+      }
+    } else if (records.length < limitNum && pageNum === 1) {
+      total = records.length;
+      totalExact = true;
     } else {
-      countPromise = (async () => {
+      // Exact count when the filter matches <= 10,000 rows; planner estimate beyond that.
+      const exact = await exactCappedTotal(indexedQuery, FULL_TABLE, whereStr, values);
+      if (exact) {
+        total = exact.total;
+        totalExact = true;
+      } else {
         try {
-          const countRes = await pgQuery(
-            `SELECT COUNT(*) AS cnt FROM (SELECT 1 FROM ${FULL_TABLE} ${whereStr} LIMIT 100001) subq`,
-            values,
-            8000
-          );
-          let cnt = parseInt(countRes.rows[0]?.cnt || "0", 10);
-          if (cnt >= 100001) {
-            try {
-              const explainRes = await pgQuery(`EXPLAIN SELECT * FROM ${FULL_TABLE} ${whereStr}`, values, 3000);
-              if (explainRes.rows && explainRes.rows[0]) {
-                const planStr = explainRes.rows[0]["QUERY PLAN"] || "";
-                const match = planStr.match(/rows=(\d+)/);
-                if (match) cnt = parseInt(match[1], 10);
-              }
-            } catch (_) {}
-          }
-          return cnt;
-        } catch (err) {
-          logger.warn(`Companies count query timed out or failed (${err.message}), falling back to estimate`);
-          try {
-            const explainRes = await pgQuery(`EXPLAIN SELECT * FROM ${FULL_TABLE} ${whereStr}`, values, 3000);
-            if (explainRes.rows && explainRes.rows[0]) {
-              const planStr = explainRes.rows[0]["QUERY PLAN"] || "";
-              const match = planStr.match(/rows=(\d+)/);
-              if (match) return parseInt(match[1], 10);
-            }
-          } catch (_) {}
-          return null;
-        }
-      })();
+          const explainRes = await pgQuery(`EXPLAIN SELECT * FROM ${FULL_TABLE} ${whereStr}`, values, 3000);
+          const match = (explainRes.rows?.[0]?.["QUERY PLAN"] || "").match(/rows=(\d+)/);
+          if (match) total = parseInt(match[1], 10);
+        } catch (_) {}
+      }
     }
-
-    const [dataRes, countResult] = await Promise.all([dataPromise, countPromise]);
-    const records = dataRes.rows.map(row => normalizeRow(schema, row));
-
-    let total;
-    if (countResult !== null && countResult !== undefined) {
-      total = countResult;
-    } else {
+    if (total === null || total === undefined) {
       total = records.length >= limitNum ? (pageNum * limitNum) + 5000 : ((pageNum - 1) * limitNum) + records.length;
+      totalExact = records.length < limitNum;
     }
 
     res.json({
       records,
       total,
+      total_exact: totalExact,
+      ...(sortNotice ? { sort_applied: false, sort_notice: sortNotice } : {}),
       page:   pageNum,
       limit:  limitNum,
       pages:  Math.ceil(total / limitNum),

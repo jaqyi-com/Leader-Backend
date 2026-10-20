@@ -1,5 +1,4 @@
 const express = require("express");
-const nodemailer = require("nodemailer");
 const { auth, requireRole } = require("../middleware/auth");
 const orgService = require("../services/orgService");
 
@@ -65,19 +64,14 @@ router.get("/all", async (req, res) => {
       return res.status(403).json({ error: "Access denied. Owner only." });
     }
 
-    const { Organization, Member, GeneratedLead, OutreachLog, Deal } = require("../db/mongoose");
+    const { Organization, Member } = require("../db/mongoose");
 
-    const allOrgs = await Organization.find().sort({ createdAt: -1 }).lean();
+    const allOrgs = await Organization.find().select("-smtpCredentials -gmailIntegration").sort({ createdAt: -1 }).lean();
 
     const orgsWithStats = await Promise.all(
       allOrgs.map(async (org) => {
-        const [memberCount, leads, outreach, deals] = await Promise.all([
-          Member.countDocuments({ orgId: org._id, status: "active" }),
-          GeneratedLead.countDocuments({ orgId: org._id }),
-          OutreachLog.countDocuments({ orgId: org._id }),
-          Deal.countDocuments({ orgId: org._id }),
-        ]);
-        return { ...org, memberCount, leads, outreach, deals };
+        const memberCount = await Member.countDocuments({ orgId: org._id, status: "active" });
+        return { ...org, memberCount };
       })
     );
 
@@ -168,78 +162,6 @@ router.delete("/members/:userId", requireRole("admin"), async (req, res) => {
     res.json({ success: true, message: result.message });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });
-  }
-});
-
-// ── Update SMTP Settings ───────────────────────────────────────────────────────
-// PUT /api/org/settings/smtp
-router.put("/settings/smtp", requireRole("admin"), async (req, res) => {
-  try {
-    const { host, port, secure, user, pass, fromName, fromEmail } = req.body;
-    
-    // Allow pass to be omitted if just updating other settings
-    const updates = {
-      "smtpCredentials.host": host,
-      "smtpCredentials.port": parseInt(port, 10),
-      "smtpCredentials.secure": secure === "true" || secure === true,
-      "smtpCredentials.user": user,
-      "smtpCredentials.fromName": fromName,
-      "smtpCredentials.fromEmail": fromEmail,
-    };
-
-    if (pass !== undefined && pass !== "") {
-      updates["smtpCredentials.pass"] = pass;
-    }
-
-    const org = await orgService.updateOrg({
-      orgId: req.user.orgId,
-      updates,
-    });
-    
-    // Obfuscate password in response
-    if (org.smtpCredentials && org.smtpCredentials.pass) {
-      org.smtpCredentials.pass = "********";
-    }
-
-    res.json({ success: true, org });
-  } catch (err) {
-    res.status(err.statusCode || 500).json({ error: err.message });
-  }
-});
-
-// ── Test SMTP Connection ───────────────────────────────────────────────────────
-// POST /api/org/settings/smtp/test
-router.post("/settings/smtp/test", requireRole("admin"), async (req, res) => {
-  try {
-    const { host, port, secure, user, pass } = req.body;
-    let actualPass = pass;
-
-    // If pass is empty or masked, fetch the real one from DB
-    if (!actualPass || actualPass === "********") {
-      const { Organization } = require("../db/mongoose");
-      const org = await Organization.findById(req.user.orgId).lean();
-      if (org && org.smtpCredentials && org.smtpCredentials.pass) {
-        actualPass = org.smtpCredentials.pass;
-      } else {
-        return res.status(400).json({ error: "Password is required to test connection." });
-      }
-    }
-
-    const transporter = nodemailer.createTransport({
-      host,
-      port: parseInt(port, 10),
-      secure: secure === "true" || secure === true,
-      auth: {
-        user,
-        pass: actualPass,
-      },
-    });
-
-    await transporter.verify();
-    
-    res.json({ success: true, message: "Connection successful! Credentials are valid." });
-  } catch (err) {
-    res.status(400).json({ error: "Connection failed: " + err.message });
   }
 });
 
