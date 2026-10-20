@@ -11,6 +11,8 @@ import toast from "react-hot-toast";
 export default function PeopleNumberPage() {
   const [records,    setRecords]    = useState([]);
   const [total,      setTotal]      = useState(0);
+  const [totalExact, setTotalExact] = useState(true);
+  const [sortNotice, setSortNotice] = useState("");
   const [stats,      setStats]      = useState(null);
   const [cols,       setCols]       = useState([]);
   const [loading,    setLoading]    = useState(true);
@@ -72,6 +74,8 @@ export default function PeopleNumberPage() {
       }
       setRecords(recordsData);
       setTotal(data.total || 0);
+      setTotalExact(data.total_exact !== false);
+      setSortNotice(data.sort_applied === false ? (data.sort_notice || "Sorting skipped for this large result set.") : "");
     } catch (err) {
       toast.error(err?.userMessage || "Failed to load Number data");
     } finally {
@@ -195,7 +199,7 @@ export default function PeopleNumberPage() {
             </span>
           </h2>
           <p className="text-sm text-[var(--text-3)] mt-0.5">
-            {total.toLocaleString()} people with phone ·{" "}
+            {totalExact ? "" : "about "}{total.toLocaleString()} people with phone ·{" "}
             <span className="font-mono text-[11px] opacity-60">final_people</span>
           </p>
         </div>
@@ -327,11 +331,16 @@ export default function PeopleNumberPage() {
           </table>
         </div>
 
+        {sortNotice && (
+          <div className="px-4 py-2 text-xs text-[var(--text-3)] border-t border-[var(--border)]">
+            Showing unsorted results. {sortNotice}
+          </div>
+        )}
         {/* Pagination */}
         {pages > 1 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-[var(--border)]">
             <span className="text-xs text-[var(--text-3)]">
-              Page {page} of {pages} · {total.toLocaleString()} total records
+              Page {page} of {pages} · {totalExact ? "" : "about "}{total.toLocaleString()} total records
             </span>
             <div className="flex gap-1">
               <button onClick={() => setPage(1)} disabled={page === 1} className="btn-ghost text-xs px-2 py-1 disabled:opacity-40">«</button>

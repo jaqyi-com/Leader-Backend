@@ -371,7 +371,10 @@ app.get("/api/health", generalLimiter, async (req, res) => {
     Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
   const checks = {};
   try {
-    checks.mongo = require("mongoose").connection.readyState === 1 ? "up" : "down";
+    // On a cold start the connection is still opening; give it a few seconds before calling it down.
+    const conn = require("mongoose").connection;
+    for (let i = 0; i < 20 && conn.readyState !== 1; i++) await new Promise((r) => setTimeout(r, 200));
+    checks.mongo = conn.readyState === 1 ? "up" : "down";
   } catch { checks.mongo = "down"; }
   try {
     await withTimeout(require("./db/cloudSql").query("SELECT 1"));

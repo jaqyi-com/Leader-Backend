@@ -188,7 +188,12 @@ function sendSearchError(res, err, logger) {
   return res.status(500).json({ error: "Search failed. Please try again." });
 }
 
+// A value with no letter or digit ("%", "_", "--") cannot match a real city / state / title. Used to answer
+// "no rows" instantly instead of scanning 45M rows for a literal "%".
+const hasNoSearchableChars = (v) => typeof v === "string" && v !== "" && !/[\p{L}\p{N}]/u.test(v);
+
 module.exports = {
+  hasNoSearchableChars,
   escapeLike, escapeRegex, hasWord, jobTitleCondition, INDIA_STATES, INDIA_STATES_SQL,
   exactCappedTotal, EXACT_COUNT_CAP, searchTimeoutMs, maxResultWindow, sortRowLimit,
   resultWindowError, checkSortAllowed, sendSearchError, runFilteredSearch,

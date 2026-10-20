@@ -145,7 +145,7 @@ test("deep paging: requests beyond the result window are refused instantly", { s
   }
 });
 
-test("sorting: allowed on narrow result sets, refused with a clear message on broad ones", { skip }, async () => {
+test("sorting: applied on narrow result sets, skipped with a clear notice (results still returned) on broad ones", { skip }, async () => {
   const mine = [];
   const boot = async (o) => { const x = await bootBase(o); mine.push(x); return x; };
   try {
@@ -157,11 +157,14 @@ test("sorting: allowed on narrow result sets, refused with a clear message on br
     const names = narrow.json.records.map((r) => r.full_name);
     assert.deepEqual(names, [...names].sort().reverse(), "descending order");
     const broad = await get("f_state=Maharashtra&sort_by=full_name&limit=25"); // 100 rows > 60
-    assert.equal(broad.status, 400);
-    assert.equal(broad.json.code, "SORT_NEEDS_NARROWER_FILTERS");
+    assert.equal(broad.status, 200, "broad sort no longer errors: results come back unsorted");
+    assert.equal(broad.json.sort_applied, false);
+    assert.match(broad.json.sort_notice, /Sorting is available/);
+    assert.equal(broad.json.records.length, 25);
     const none = await get("sort_by=full_name&limit=25");
-    assert.equal(none.status, 400);
-    assert.equal(none.json.code, "SORT_NEEDS_FILTER");
+    assert.equal(none.status, 200);
+    assert.equal(none.json.sort_applied, false);
+    assert.equal(narrow.json.sort_applied, undefined, "no notice when the sort was applied");
     assert.equal((await get("f_state=Maharashtra&limit=25")).status, 200, "unsorted broad search still works");
   } finally {
     await release(...mine);

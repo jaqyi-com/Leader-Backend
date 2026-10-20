@@ -12,6 +12,7 @@ const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 // (and fall back to an estimate) when it matches millions.
 const indexedQuery = (sql, params, ms) => directQueryWithSession(sql, params, ["SET LOCAL enable_seqscan = off;"], ms);
 const {
+  hasNoSearchableChars,
   escapeLike, INDIA_STATES_SQL, exactCappedTotal,
   searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, runFilteredSearch,
 } = require("../utils/searchFilters");
@@ -94,6 +95,8 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
   for (const [key, rawVal] of Object.entries(queryParams)) {
     if (!key.startsWith("f_")) continue;
     const val = rawVal ? String(rawVal).trim() : "";
+    // "%" / "_" alone match nothing: answer instantly instead of scanning the whole table.
+    if (hasNoSearchableChars(val)) { conditions.push("FALSE"); continue; }
 
     // Parse the column and operator suffix
     let col = null;
@@ -401,10 +404,11 @@ router.get("/", async (req, res) => {
       const dir = sort_dir === "desc" ? "DESC" : "ASC";
       orderClause = `ORDER BY "${sort_by}" ${dir} NULLS LAST`;
     }
+    let sortNotice = null;
     if (orderClause && vectorIdx === null) {
       // Sorting millions of rows always times out — only allow it on narrow result sets.
       const sortErr = await checkSortAllowed(indexedQuery, FULL_TABLE, whereStr, values, values.length > 0);
-      if (sortErr) return res.status(400).json(sortErr);
+      if (sortErr) { orderClause = ""; sortNotice = sortErr.error; }
     }
 
 
@@ -472,6 +476,7 @@ router.get("/", async (req, res) => {
       records,
       total,
       total_exact: totalExact,
+      ...(sortNotice ? { sort_applied: false, sort_notice: sortNotice } : {}),
       page:   pageNum,
       pages:  Math.ceil(total / limitNum),
     });
