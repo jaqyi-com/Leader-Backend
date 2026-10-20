@@ -92,6 +92,7 @@ test("access policy: DATA_ACCESS_POLICY=paid blocks free accounts, allows paid u
   try {
     const s = await boot({ env: { DATA_ACCESS_POLICY: "paid", ADMIN_EMAIL: "boss@example.test" } });
     const free = await s.newUser("freebie");
+    await s.setPlan(free.email, "free"); // new signups default to lifetime
     const paid = await s.newUser("payer");
     await s.setPlan(paid.email, "lifetime");
     const r = await s.http("GET", `${P}?limit=5`, { token: free.token });
@@ -117,6 +118,7 @@ test("access policy: default (open) is unchanged for free accounts", { skip }, a
   try {
     const s = await boot();
     const free = await s.newUser("openuser");
+    await s.setPlan(free.email, "free");
     assert.equal((await s.http("GET", `${P}?limit=5`, { token: free.token })).status, 200);
   } finally {
     await release(...mine);

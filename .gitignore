@@ -33,3 +33,7 @@ __pycache__/
 # Playwright artifacts
 e2e-results/
 playwright-report/
+
+# Local Claude chat context (not shared)
+CHAT_CONTEXT.md
+CLAUDE.md
