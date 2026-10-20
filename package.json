@@ -17,7 +17,9 @@
     "backup": "node scripts/backup_database.js",
     "backup:fast": "node scripts/backup_database.js --fast",
     "backup:auth": "node scripts/backup_database.js --schema=neon_auth",
-    "backup:resilient": "node scripts/backup_resilient.js"
+    "backup:resilient": "node scripts/backup_resilient.js",
+    "test": "node --test --test-concurrency=1 \"tests/**/*.test.js\"",
+    "test:e2e": "playwright test -c e2e/playwright.config.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
@@ -46,7 +48,7 @@
     "natural": "^6.10.4",
     "node-cron": "^3.0.3",
     "node-fetch": "^2.7.0",
-    "nodemailer": "^6.9.7",
+    "nodemailer": "10.0.13",
     "openai": "^6.32.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
@@ -59,10 +61,10 @@
     "uuid": "^9.0.0",
     "validator": "^13.11.0",
     "winston": "^3.11.0",
-    "winston-daily-rotate-file": "^4.7.1",
-    "xlsx": "^0.18.5"
+    "winston-daily-rotate-file": "^4.7.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "nodemon": "^3.0.2"
   },
   "engines": {

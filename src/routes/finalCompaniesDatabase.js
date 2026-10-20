@@ -16,6 +16,7 @@ const express = require("express");
 const router  = express.Router();
 
 const { query: pgQuery } = require("../db/cloudSql");
+const { escapeLike, resultWindowError, sendSearchError } = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const logger = require("../utils/logger").forAgent("FinalCompaniesDB");
 
@@ -132,7 +133,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         conditions.push(`("geo_source" IN ('us_zip', 'us_city', 'us_state'))`);
       } else {
         conditions.push(`"address" ILIKE $${idx++}`);
-        values.push(`%${val}%`);
+        values.push(`%${escapeLike(val)}%`);
       }
       continue;
     } else if (col === "industry" && val !== "") {
@@ -229,17 +230,17 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       const words = valLower.split(/[\s\-\/&\+]+/).filter(w => w.length > 2 && !["and", "the", "for", "with"].includes(w));
       if (words.length > 1) {
         const phraseIdx = idx++;
-        values.push(`%${val.trim()}%`);
+        values.push(`%${escapeLike(val.trim())}%`);
 
         const wordConds = words.map(w => {
           const wIdx = idx++;
-          values.push(`%${w}%`);
+          values.push(`%${escapeLike(w)}%`);
           return `"industry" ILIKE $${wIdx}`;
         });
         conditions.push(`("industry" ILIKE $${phraseIdx} OR (${wordConds.join(" AND ")}))`);
       } else {
         const singleIdx = idx++;
-        values.push(`%${val.trim()}%`);
+        values.push(`%${escapeLike(val.trim())}%`);
         conditions.push(`"industry" ILIKE $${singleIdx}`);
       }
       continue;
@@ -256,8 +257,10 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         if (hasEmailStatus) subConds.push(`"email_status" IN ('deliverable', 'valid')`);
         if (hasIsEmailValid) subConds.push(`"is_email_valid" = true`);
       } else if (valLower === "undeliverable" || valLower === "invalid" || valLower === "false") {
+        // Only the status column: is_email_valid is FALSE for risky / unknown / undeliverable alike,
+        // so "is_email_valid = false" would also return risky and unknown addresses.
         if (hasEmailStatus) subConds.push(`"email_status" IN ('undeliverable', 'invalid')`);
-        if (hasIsEmailValid) subConds.push(`"is_email_valid" = false`);
+        else if (hasIsEmailValid) subConds.push(`"is_email_valid" = false`);
       } else if (valLower === "risky" || valLower.includes("catch")) {
         if (hasEmailStatus) subConds.push(`"email_status" IN ('risky', 'catch_all', 'catch-all')`);
       } else if (valLower === "unknown" || valLower === "unverified") {
@@ -265,7 +268,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       } else {
         if (hasEmailStatus) {
           const sIdx = idx++;
-          values.push(val);
+          values.push(escapeLike(val));
           subConds.push(`"email_status" ILIKE $${sIdx}`);
         }
       }
@@ -291,7 +294,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       } else {
         if (hasPhoneStatus) {
           const sIdx = idx++;
-          values.push(val);
+          values.push(escapeLike(val));
           subConds.push(`"phone_status" ILIKE $${sIdx}`);
         }
       }
@@ -372,12 +375,12 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     } else if (op === "sw") {
       if (val !== "") {
         conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
-        values.push(`${val}%`);
+        values.push(`${escapeLike(val)}%`);
       }
     } else if (op === "ew") {
       if (val !== "") {
         conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
-        values.push(`%${val}`);
+        values.push(`%${escapeLike(val)}`);
       }
     } else if (op === "nonempty") {
       // Works for plain TEXT columns AND array-literal strings ({} / {val1,val2})
@@ -394,22 +397,22 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
           const words = rawVal.split(/[\s\-_\/]+/).filter(w => w.length > 0);
           if (words.length <= 1) {
             conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
-            values.push(`%${rawVal}%`);
+            values.push(`%${escapeLike(rawVal)}%`);
           } else {
             // Match exact phrase, normalized spaced phrase, OR all constituent tokens
             const phraseIdx = idx++;
-            values.push(`%${rawVal}%`);
+            values.push(`%${escapeLike(rawVal)}%`);
             
             const spacedVal = words.join(" ");
             let spacedIdx = null;
             if (spacedVal.toLowerCase() !== rawVal.toLowerCase()) {
               spacedIdx = idx++;
-              values.push(`%${spacedVal}%`);
+              values.push(`%${escapeLike(spacedVal)}%`);
             }
             
             const wordConds = words.map(w => {
               const wIdx = idx++;
-              values.push(`%${w}%`);
+              values.push(`%${escapeLike(w)}%`);
               return `${doubleQuotedCol} ILIKE $${wIdx}`;
             });
             
@@ -444,7 +447,7 @@ function buildWhere(queryParams, embedding, _schema) {
     values.push(JSON.stringify(embedding));
   } else if (search) {
     conditions.push(`"business_name" ILIKE $${idx++}`);
-    values.push(`%${search}%`);
+    values.push(`%${escapeLike(search)}%`);
   }
 
   // Parse all query filters dynamically
@@ -622,6 +625,8 @@ router.get("/", async (req, res) => {
   const pageNum  = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const limitNum = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(100, parsedLimit) : 50;
   const offset   = (pageNum - 1) * limitNum;
+  const windowErr = resultWindowError(offset, limitNum);
+  if (windowErr) return res.status(400).json(windowErr);
 
   try {
     const { getLocalQueryEmbedding } = require("../services/localEmbedService");
@@ -735,8 +740,7 @@ router.get("/", async (req, res) => {
       table:  FC_TABLE,
     });
   } catch (err) {
-    logger.error(`[GET /] ${err.message}`);
-    res.status(500).json({ error: err.message });
+    return sendSearchError(res, err, logger);
   }
 });
 

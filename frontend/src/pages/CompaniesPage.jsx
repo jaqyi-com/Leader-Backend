@@ -143,10 +143,10 @@ export default function CompaniesPage() {
       }
       setRecords(recordsData);
       setTotal(data.total || 0);
-    } catch {
+    } catch (err) {
       setRecords([]);
       setTotal(0);
-      toast.error("Failed to load Companies data", { id: "companies-load-error" });
+      toast.error(err?.userMessage || "Failed to load Companies data", { id: "companies-load-error" });
     } finally {
       setLoading(false);
     }

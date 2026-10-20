@@ -10,11 +10,8 @@ try {
 
 module.exports = (req, res) => {
   if (initError) {
-    return res.status(500).json({
-      error: "Backend initialization failed",
-      message: initError.message,
-      stack: initError.stack
-    });
+    // Details go to the server log only; never return stack traces or messages to clients.
+    return res.status(500).json({ error: "Backend initialization failed" });
   }
   return app(req, res);
 };

@@ -11,6 +11,14 @@ import {
 } from "../api";
 import toast from "react-hot-toast";
 
+// Email signatures may contain markup; render them as plain text so injected HTML can never execute.
+const signatureToText = (html) =>
+  String(html ?? "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div)>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .trim();
+
 // ── Tag Input (reused for roles) ────────────────────────────────────────────
 function TagInput({ tags, setTags, placeholder }) {
   const [input, setInput] = useState("");
@@ -288,7 +296,7 @@ function OutreachModal({ onClose, onRun, scrapeRuns }) {
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Body</p>
                 <p className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-line">{email.body}</p>
                 <div className="mt-3 pt-3 border-t border-slate-100 dark:border-gray-800">
-                  <p className="text-xs text-slate-400" dangerouslySetInnerHTML={{ __html: email.signature }} />
+                  <p className="text-xs text-slate-400 whitespace-pre-line">{signatureToText(email.signature)}</p>
                 </div>
               </div>
             </div>

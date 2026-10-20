@@ -16,3 +16,7 @@ exports
 *.pptx
 *.pdf
 *.dump
+tests
+e2e
+e2e-results
+playwright-report

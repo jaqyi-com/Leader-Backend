@@ -142,22 +142,19 @@ async function directQuery(text, params = [], timeoutMs = 25000) {
 async function directQueryWithSession(text, params = [], sessionCommands = [], timeoutMs = 25000) {
   const client = await getDirectPool().connect();
   try {
-    await client.query(`SET statement_timeout = ${timeoutMs}`);
-    if (sessionCommands.length > 0) {
-      await client.query("BEGIN;");
-      for (const cmd of sessionCommands) {
-        await client.query(cmd);
-      }
-      const res = await client.query(text, params);
-      await client.query("COMMIT;");
-      return res;
-    } else {
+    if (sessionCommands.length === 0) {
+      await client.query(`SET statement_timeout = ${timeoutMs | 0}`);
       return await client.query(text, params);
     }
+    // One round trip for BEGIN + timeout + planner settings (was 2 + one per setting): each trip costs a
+    // full network RTT. SET LOCAL keeps the timeout from leaking onto the pooled connection.
+    const cmds = sessionCommands.map((c) => String(c).trim().replace(/;+$/, "")).join("; ");
+    await client.query(`BEGIN; SET LOCAL statement_timeout = ${timeoutMs | 0}; ${cmds}`);
+    const res = await client.query(text, params);
+    await client.query("COMMIT");
+    return res;
   } catch (err) {
-    if (sessionCommands.length > 0) {
-      try { await client.query("ROLLBACK;"); } catch (_) {}
-    }
+    try { await client.query("ROLLBACK;"); } catch (_) {}
     throw err;
   } finally {
     client.release();

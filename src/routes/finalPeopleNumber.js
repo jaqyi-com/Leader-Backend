@@ -8,6 +8,13 @@
 const express = require("express");
 const router  = express.Router();
 const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
+// Count/sort-guard queries use the index plan: exact when a filter matches few rows, they time out
+// (and fall back to an estimate) when it matches millions.
+const indexedQuery = (sql, params, ms) => directQueryWithSession(sql, params, ["SET LOCAL enable_seqscan = off;"], ms);
+const {
+  escapeLike, INDIA_STATES_SQL, exactCappedTotal,
+  searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, runFilteredSearch,
+} = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 
 
@@ -128,8 +135,10 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         if (hasEmailStatus) subConds.push(`"email_status" IN ('deliverable', 'valid')`);
         if (hasIsEmailValid) subConds.push(`"is_email_valid" = true`);
       } else if (valLower === "undeliverable" || valLower === "invalid" || valLower === "false") {
+        // Only the status column: is_email_valid is FALSE for risky / unknown / undeliverable alike,
+        // so "is_email_valid = false" would also return risky and unknown addresses.
         if (hasEmailStatus) subConds.push(`"email_status" IN ('undeliverable', 'invalid')`);
-        if (hasIsEmailValid) subConds.push(`"is_email_valid" = false`);
+        else if (hasIsEmailValid) subConds.push(`"is_email_valid" = false`);
       } else if (valLower === "risky" || valLower.includes("catch")) {
         if (hasEmailStatus) subConds.push(`"email_status" IN ('risky', 'catch_all', 'catch-all')`);
       } else if (valLower === "unknown" || valLower === "unverified") {
@@ -137,7 +146,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       } else {
         if (hasEmailStatus) {
           const sIdx = idx++;
-          values.push(val);
+          values.push(escapeLike(val));
           subConds.push(`"email_status" ILIKE $${sIdx}`);
         }
       }
@@ -163,7 +172,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       } else {
         if (hasPhoneStatus) {
           const sIdx = idx++;
-          values.push(val);
+          values.push(escapeLike(val));
           subConds.push(`"phone_status" ILIKE $${sIdx}`);
         }
       }
@@ -192,12 +201,12 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     } else if (op === "sw") {
       if (val !== "") {
         conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
-        values.push(`${val}%`);
+        values.push(`${escapeLike(val)}%`);
       }
     } else if (op === "ew") {
       if (val !== "") {
         conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
-        values.push(`%${val}`);
+        values.push(`%${escapeLike(val)}`);
       }
     } else if (op === "nonempty") {
       // Works for plain TEXT columns AND array-literal strings ({} / {val1,val2})
@@ -211,7 +220,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
           values.push(val);
         } else {
           conditions.push(`${doubleQuotedCol} ILIKE $${idx++}`);
-          values.push(`%${val}%`);
+          values.push(`%${escapeLike(val)}%`);
         }
       }
     }
@@ -237,7 +246,7 @@ function buildWhere(queryParams, phoneCol, schemaColumns) {
   // search: ILIKE on full_name only (trgm GIN indexed -> super fast!)
   if (search) {
     conditions.push(`"full_name" ILIKE $${idx++}`);
-    values.push(`%${search}%`);
+    values.push(`%${escapeLike(search)}%`);
   }
 
   // Parse all query filters dynamically
@@ -271,7 +280,7 @@ function buildWhere(queryParams, phoneCol, schemaColumns) {
         ("geo_source" IS NULL OR "geo_source" NOT IN ('us_zip', 'us_city', 'us_state'))
         AND ("state" IS NULL OR "state" NOT IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY'))
         AND ("location" IS NULL OR ("location" NOT ILIKE '%United States%' AND "location" NOT ILIKE '%USA%'))
-        AND "state" IN ('Maharashtra', 'Karnataka', 'Delhi', 'Telangana', 'Gujarat', 'Haryana', 'West Bengal', 'Uttar Pradesh', 'Rajasthan', 'Kerala', 'Madhya Pradesh', 'Punjab')
+        AND "state" IN (${INDIA_STATES_SQL})
       )`);
     } else if (countryParam === "usa" || countryParam === "us" || countryParam === "united states") {
       conditions.push(`(
@@ -373,6 +382,8 @@ router.get("/", async (req, res) => {
   const pageNum  = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const limitNum = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(100, parsedLimit) : 50;
   const offset   = (pageNum - 1) * limitNum;
+  const windowErr = resultWindowError(offset, limitNum);
+  if (windowErr) return res.status(400).json(windowErr);
 
   try {
     const schema = await getSchema();
@@ -390,6 +401,12 @@ router.get("/", async (req, res) => {
       const dir = sort_dir === "desc" ? "DESC" : "ASC";
       orderClause = `ORDER BY "${sort_by}" ${dir} NULLS LAST`;
     }
+    if (orderClause && vectorIdx === null) {
+      // Sorting millions of rows always times out — only allow it on narrow result sets.
+      const sortErr = await checkSortAllowed(indexedQuery, FULL_TABLE, whereStr, values, values.length > 0);
+      if (sortErr) return res.status(400).json(sortErr);
+    }
+
 
     const dataSQL = `
       SELECT ${selectSQL} FROM ${FULL_TABLE}
@@ -399,14 +416,16 @@ router.get("/", async (req, res) => {
     `;
 
     const dataRes = values.length > 0
-      ? await directQueryWithSession(dataSQL, [...values, limitNum, offset], ["SET LOCAL enable_seqscan = off;"], 30000)
+      ? await runFilteredSearch(directQueryWithSession, dataSQL, [...values, limitNum, offset], searchTimeoutMs())
       : await pgQuery(dataSQL, [...values, limitNum, offset], 30000);
 
     const records = dataRes.rows.map(row => normalizeRow(schema, row));
 
     let total;
+    let totalExact = false;
     if (records.length < limitNum && pageNum === 1) {
       total = records.length;
+      totalExact = true;
     } else {
       const isBaseQuery = !search && values.length === 0;
       if (isBaseQuery) {
@@ -416,7 +435,16 @@ router.get("/", async (req, res) => {
         }
       }
 
-      if (!total) {
+      if (!total && !isBaseQuery) {
+        // Exact count when the filter matches ≤ 10,000 rows; planner estimate only beyond that.
+        const exact = await exactCappedTotal(indexedQuery, FULL_TABLE, whereStr, values);
+        if (exact) {
+          total = exact.total;
+          totalExact = true;
+        }
+      }
+
+      if (!total && !totalExact) {
         try {
           const explainRes = await pgQuery(`EXPLAIN SELECT ${selectSQL} FROM ${FULL_TABLE} ${whereStr}`, values, 5000);
           if (explainRes.rows && explainRes.rows[0]) {
@@ -432,22 +460,23 @@ router.get("/", async (req, res) => {
         } catch (_) {}
       }
 
-      if (!total) {
+      if (!total && !totalExact) {
         total = records.length < limitNum
           ? ((pageNum - 1) * limitNum) + records.length
           : (pageNum * limitNum) + 1000;
+        totalExact = records.length < limitNum;
       }
     }
 
     res.json({
       records,
       total,
+      total_exact: totalExact,
       page:   pageNum,
       pages:  Math.ceil(total / limitNum),
     });
   } catch (err) {
-    logger.error(`[GET /] ${err.message}`);
-    res.status(500).json({ error: err.message });
+    return sendSearchError(res, err, logger);
   }
 });
 

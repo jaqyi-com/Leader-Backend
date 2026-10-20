@@ -20,7 +20,9 @@ function applyAuthInterceptors(instance) {
     return config;
   });
 
-  // Automatic Retry Interceptor (Exponential Backoff for Timeouts & 5xx)
+  // Automatic Retry Interceptor (exponential backoff for transient network / gateway failures only).
+  // Never retry what the server deliberately refused or what is already slow: re-running a
+  // timed-out search (HTTP 500/503) multiplies the load on the database, and 429 means "slow down".
   instance.interceptors.response.use(
     (res) => res,
     async (err) => {
@@ -33,6 +35,10 @@ function applyAuthInterceptors(instance) {
         return Promise.reject(err);
       }
 
+      // Keep the server's plain-language message (e.g. "add more filters") for the UI.
+      const code = err.response?.data?.code;
+      if (err.response?.data?.error) err.userMessage = err.response.data.error;
+
       const config = err.config;
       if (!config) return Promise.reject(err);
 
@@ -40,17 +46,17 @@ function applyAuthInterceptors(instance) {
       const method = (config.method || "get").toLowerCase();
       const isGet = method === "get";
 
-      // Retry on network error, 5xx server errors, 504 Gateway Timeout, 503 Service Unavailable, or timeout
+      // Retry only on network errors and 502/503/504 gateway errors that carry no application code.
       const status = err.response?.status;
-      const isRetryable = !err.response || status >= 500 || status === 429 || err.code === "ECONNABORTED" || (err.message && err.message.includes("timeout"));
+      const isRetryable = !code && (!err.response || [502, 503, 504].includes(status));
 
       if (isGet && isRetryable) {
         config.__retryCount = config.__retryCount || 0;
-        const maxRetries = 3;
+        const maxRetries = 2;
 
         if (config.__retryCount < maxRetries) {
           config.__retryCount += 1;
-          const delay = 1000 * Math.pow(2, config.__retryCount - 1); // 1s, 2s, 4s
+          const delay = 1000 * Math.pow(2, config.__retryCount - 1); // 1s, 2s
           console.warn(`[API Retry] ${method.toUpperCase()} ${config.url} failed (${err.message || status}). Automatic retry ${config.__retryCount}/${maxRetries} in ${delay}ms...`);
           await new Promise(resolve => setTimeout(resolve, delay));
           return instance(config);

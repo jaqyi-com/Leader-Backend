@@ -5,6 +5,7 @@
 // ============================================================
 
 const axios = require("axios");
+const { publicGet } = require("../utils/urlGuard");
 const cheerio = require("cheerio");
 const logger = require("../utils/logger").forAgent("WebsiteCrawler");
 const openAILLM = require("../integrations/OpenAILLM");
@@ -121,7 +122,7 @@ function removeWww(url) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 async function safeGet(url) {
   try {
-    const resp = await axios.get(url, {
+    const resp = await publicGet(url, {
       timeout: 12000,
       maxRedirects: 5,
       headers: {

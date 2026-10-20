@@ -1,34 +1,54 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Lock, Eye, EyeOff, ShieldCheck, AlertCircle } from "lucide-react";
 import RegisterPage from "../pages/RegisterPage";
 
-const SECRET = "2420074#Akshat";
-const SESSION_KEY = "rg_unlocked";
+// Sign-up policy is enforced by the server (REGISTRATION_MODE / REGISTRATION_INVITE_CODE).
+// The old client-side password lived in this JavaScript bundle, so anyone could read it — and the
+// register API itself was open anyway. This gate now only asks for an invite code when needed.
+const API = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
 export default function RegisterGate() {
-  const [unlocked, setUnlocked] = useState(
-    () => sessionStorage.getItem(SESSION_KEY) === "1"
-  );
+  const [mode, setMode] = useState(null); // null = loading, "open" | "invite" | "closed"
+  const [inviteCode, setInviteCode] = useState("");
+  const [unlocked, setUnlocked] = useState(false);
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
   const [shaking, setShaking] = useState(false);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`${API}/auth/registration`)
+      .then((r) => r.json())
+      .then((d) => { if (!cancelled) setMode(["open", "invite", "closed"].includes(d.mode) ? d.mode : "open"); })
+      .catch(() => { if (!cancelled) setMode("invite"); });
+    return () => { cancelled = true; };
+  }, []);
+
   function handleSubmit(e) {
     e.preventDefault();
-    if (password === SECRET) {
-      sessionStorage.setItem(SESSION_KEY, "1");
-      setUnlocked(true);
-    } else {
-      setError("Incorrect password. Access denied.");
-      setShaking(true);
-      setTimeout(() => setShaking(false), 500);
-      setPassword("");
+    if (!password.trim()) {
+      setError("Please enter your invite code.");
+      return;
     }
+    // The server checks the code when the account is created.
+    setInviteCode(password.trim());
+    setUnlocked(true);
   }
 
-  if (unlocked) return <RegisterPage />;
+  function handleInviteRejected() {
+    setUnlocked(false);
+    setInviteCode("");
+    setPassword("");
+    setError("That invite code was not accepted. Please check it and try again.");
+    setShaking(true);
+    setTimeout(() => setShaking(false), 500);
+  }
+
+  if (mode === null) return null;
+  if (mode === "open") return <RegisterPage />;
+  if (mode === "invite" && unlocked) return <RegisterPage inviteCode={inviteCode} onInviteRejected={handleInviteRejected} />;
 
   return (
     <div
@@ -93,15 +113,18 @@ export default function RegisterGate() {
               Internal Access Only
             </h1>
             <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 8, marginBottom: 0 }}>
-              This area is restricted. Enter the access password to continue.
+              {mode === "closed"
+                ? "New registrations are currently closed."
+                : "Registration is by invitation. Enter your invite code to continue."}
             </p>
           </div>
 
+          {mode === "closed" ? null : (
           <form onSubmit={handleSubmit}>
             {/* Password field */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: 500, display: "block", marginBottom: 8 }}>
-                ACCESS PASSWORD
+                INVITE CODE
               </label>
               <div style={{ position: "relative" }}>
                 <div style={{
@@ -115,7 +138,7 @@ export default function RegisterGate() {
                   type={showPw ? "text" : "password"}
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(""); }}
-                  placeholder="Enter password"
+                  placeholder="Enter invite code"
                   style={{
                     width: "100%",
                     background: "rgba(255,255,255,0.06)",
@@ -184,9 +207,10 @@ export default function RegisterGate() {
               }}
             >
               <ShieldCheck size={16} />
-              Unlock Access
+              Continue
             </motion.button>
           </form>
+          )}
         </motion.div>
       </motion.div>
 

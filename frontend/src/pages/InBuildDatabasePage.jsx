@@ -147,7 +147,7 @@ export default function InBuildDatabasePage() {
       const { data } = await ibGetDatabase({ page, limit, sort_by: sortBy, sort_dir: sortDir, ...filters });
       setLeads(data.leads || []);
       setTotal(data.total || 0);
-    } catch { toast.error("Failed to load database"); }
+    } catch (err) { toast.error(err?.userMessage || "Failed to load database"); }
     finally { setLoading(false); }
   }, [page, limit, sortBy, sortDir, filters, semanticMode]);
 

@@ -67,6 +67,10 @@ function startBulkVerification(input, options = {}) {
   if (rows.length === 0) {
     throw new Error("No rows found to verify in provided input.");
   }
+  const MAX_BATCH_ROWS = parseInt(process.env.VERIFY_MAX_BATCH_ROWS, 10) || 10000;
+  if (rows.length > MAX_BATCH_ROWS) {
+    throw new Error(`Batch too large: ${rows.length} rows (max ${MAX_BATCH_ROWS}).`);
+  }
 
   // Deduplicate and normalize
   const seenCanonical = new Map(); // canonical -> first item
@@ -112,6 +116,8 @@ function startBulkVerification(input, options = {}) {
 /**
  * Generates an enriched CSV string from completed job results.
  */
+const { neutralizeRow } = require("../../utils/csvSafe");
+
 function generateResultCsv(jobId) {
   const job = getBatchJob(jobId);
   if (!job) throw new Error("Job not found");
@@ -166,7 +172,7 @@ function generateResultCsv(jobId) {
     };
   });
 
-  return csvStringifier.getHeaderString() + csvStringifier.stringifyRecords(records);
+  return csvStringifier.getHeaderString() + csvStringifier.stringifyRecords(records.map(neutralizeRow));
 }
 
 module.exports = {

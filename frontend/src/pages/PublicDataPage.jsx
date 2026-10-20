@@ -85,7 +85,7 @@ export default function PublicDataPage() {
       setRecords(data.records || []);
       setTotal(data.total || 0);
     } catch (e) {
-      toast.error("Failed to load public contacts");
+      toast.error(e?.userMessage || "Failed to load public contacts");
     } finally {
       setLoading(false);
     }

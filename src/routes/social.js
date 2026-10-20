@@ -6,6 +6,15 @@
 require("dotenv").config();
 const express = require("express");
 const router = express.Router();
+const crypto = require("crypto");
+const { requireOrg } = require("../middleware/auth");
+
+/** Constant-time string comparison (approval tokens). */
+function safeEqual(a, b) {
+  const x = Buffer.from(String(a ?? ""));
+  const y = Buffer.from(String(b ?? ""));
+  return x.length === y.length && crypto.timingSafeEqual(x, y);
+}
 const axios = require("axios");
 const { v4: uuidv4 } = require("uuid");
 const nodemailer = require("nodemailer");
@@ -306,7 +315,7 @@ router.post("/generate", async (req, res) => {
 });
 
 // ── POST /api/social/posts — save draft, send approval email ─────────────────
-router.post("/posts", async (req, res) => {
+router.post("/posts", requireOrg, async (req, res) => {
   try {
     const { keywords, platform, connectionId, generatedContent, trendSummary, hashtags, approvalEmail } = req.body;
 
@@ -325,6 +334,7 @@ router.post("/posts", async (req, res) => {
       status:          "pending_approval",
       approvalToken,
       approvalEmail,
+      orgId:           req.user.orgId,
     });
 
     // Send approval email
@@ -348,9 +358,9 @@ router.post("/posts", async (req, res) => {
 });
 
 // ── GET /api/social/posts — list all posts ──────────────────────────────────
-router.get("/posts", async (req, res) => {
+router.get("/posts", requireOrg, async (req, res) => {
   try {
-    const posts = await SocialPost.find().sort({ createdAt: -1 }).limit(100).lean();
+    const posts = await SocialPost.find({ orgId: req.user.orgId }).sort({ createdAt: -1 }).limit(100).lean();
     const mapped = posts.map(p => ({ ...p, id: p._id.toString() }));
     res.json({ success: true, posts: mapped });
   } catch (err) {
@@ -364,7 +374,7 @@ router.get("/posts/approve/:id", async (req, res) => {
   try {
     const post = await SocialPost.findById(req.params.id);
     if (!post) return res.status(404).send("<h2>Post not found</h2>");
-    if (post.approvalToken !== req.query.token) return res.status(403).send("<h2>Invalid or expired token</h2>");
+    if (!post.approvalToken || !safeEqual(post.approvalToken, req.query.token)) return res.status(403).send("<h2>Invalid or expired token</h2>");
     if (post.status === "published") {
       return res.send(`<html><body style="font-family:sans-serif;text-align:center;padding:60px;background:#0a0a0f;color:#f0f0f8;"><h2 style="color:#10b981">✅ Already published!</h2><p>This post was already published to ${post.platform}.</p></body></html>`);
     }
@@ -395,7 +405,7 @@ router.get("/posts/reject/:id", async (req, res) => {
   try {
     const post = await SocialPost.findById(req.params.id);
     if (!post) return res.status(404).send("<h2>Post not found</h2>");
-    if (post.approvalToken !== req.query.token) return res.status(403).send("<h2>Invalid or expired token</h2>");
+    if (!post.approvalToken || !safeEqual(post.approvalToken, req.query.token)) return res.status(403).send("<h2>Invalid or expired token</h2>");
 
     post.status = "rejected";
     await post.save();
@@ -419,9 +429,9 @@ router.get("/posts/reject/:id", async (req, res) => {
 });
 
 // ── POST /api/social/posts/:id/publish — publish approved post via Unified.to ─
-router.post("/posts/:id/publish", async (req, res) => {
+router.post("/posts/:id/publish", requireOrg, async (req, res) => {
   try {
-    const post = await SocialPost.findById(req.params.id);
+    const post = await SocialPost.findOne({ _id: req.params.id, orgId: req.user.orgId });
     if (!post) return res.status(404).json({ error: "Post not found" });
     if (post.status !== "approved") {
       return res.status(400).json({ error: `Post must be approved before publishing. Current status: ${post.status}` });
@@ -483,9 +493,10 @@ router.post("/posts/:id/publish", async (req, res) => {
 });
 
 // ── DELETE /api/social/posts/:id — delete a post ────────────────────────────
-router.delete("/posts/:id", async (req, res) => {
+router.delete("/posts/:id", requireOrg, async (req, res) => {
   try {
-    await SocialPost.findByIdAndDelete(req.params.id);
+    const del = await SocialPost.findOneAndDelete({ _id: req.params.id, orgId: req.user.orgId });
+    if (!del) return res.status(404).json({ error: "Post not found" });
     res.json({ success: true });
   } catch (err) {
     logger.error(`[Social] Delete post failed: ${err.message}`);

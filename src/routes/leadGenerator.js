@@ -21,11 +21,16 @@ const router  = express.Router();
 const OpenAI  = require("openai");
 const { GeneratedLead, AutoScraperLead, Place } = require("../db/mongoose");
 const logger  = require("../utils/logger").forAgent("LeadGeneratorAPI");
+const { requireOrg } = require("../middleware/auth");
+const { escapeRegex, pickModelFields, parsePaging } = require("../utils/tenant");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY || "dummy" });
 
 // In-memory research sessions for SSE
-const researchSessions = {}; // id → { logs: [], status: "running"|"done"|"failed", leads: [] }
+const researchSessions = {}; // id → { logs: [], status: "running"|"done"|"failed", leads: [], orgId }
+
+// Every lead-database route below is tenant-scoped by req.user.orgId.
+router.use("/database", requireOrg);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // POST /analyze-prospect — AI extracts structured prospect search criteria
@@ -197,21 +202,22 @@ Use REAL, existing companies. Be specific and accurate.`;
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/database", async (req, res) => {
   try {
-    const { page = 1, limit = 50, status, source, search } = req.query;
-    const query = {};
-    if (status) query.status = status;
-    if (source) query.source = source;
-    if (search) {
-      const re = new RegExp(search, "i");
+    const { status, source, search } = req.query;
+    const { page, limit } = parsePaging(req.query);
+    const query = { orgId: req.user.orgId };
+    if (typeof status === "string") query.status = status;
+    if (typeof source === "string") query.source = source;
+    if (typeof search === "string" && search) {
+      const re = new RegExp(escapeRegex(search.slice(0, 100)), "i");
       query.$or = [{ fullName: re }, { companyName: re }, { email: re }, { jobTitle: re }];
     }
 
     const [leads, total] = await Promise.all([
-      GeneratedLead.find(query).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(parseInt(limit)).lean(),
+      GeneratedLead.find(query).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
       GeneratedLead.countDocuments(query),
     ]);
 
-    res.json({ leads, total, page: parseInt(page), pages: Math.ceil(total / limit) });
+    res.json({ leads, total, page, pages: Math.ceil(total / limit) });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -222,7 +228,9 @@ router.get("/database", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.post("/database", async (req, res) => {
   try {
-    const payload = Array.isArray(req.body) ? req.body : [req.body];
+    const raw = Array.isArray(req.body) ? req.body : [req.body];
+    if (raw.length > 500) return res.status(413).json({ error: "Too many leads in one request (max 500)." });
+    const payload = raw.map((l) => ({ ...pickModelFields(l, GeneratedLead), orgId: req.user.orgId }));
     const saved = await GeneratedLead.insertMany(payload, { ordered: false });
     res.json({ saved: saved.length });
   } catch (err) {
@@ -235,7 +243,11 @@ router.post("/database", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.patch("/database/:id", async (req, res) => {
   try {
-    const lead = await GeneratedLead.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+    const lead = await GeneratedLead.findOneAndUpdate(
+      { _id: req.params.id, orgId: req.user.orgId },
+      { $set: pickModelFields(req.body, GeneratedLead) },
+      { new: true, runValidators: true }
+    );
     if (!lead) return res.status(404).json({ error: "Lead not found" });
     res.json(lead);
   } catch (err) {
@@ -248,7 +260,8 @@ router.patch("/database/:id", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.delete("/database/:id", async (req, res) => {
   try {
-    await GeneratedLead.findByIdAndDelete(req.params.id);
+    const del = await GeneratedLead.findOneAndDelete({ _id: req.params.id, orgId: req.user.orgId });
+    if (!del) return res.status(404).json({ error: "Lead not found" });
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -260,7 +273,7 @@ router.delete("/database/:id", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.post("/database/import-auto-scraper", async (req, res) => {
   try {
-    const scraperLeads = await AutoScraperLead.find({}).lean();
+    const scraperLeads = await AutoScraperLead.find({ orgId: req.user.orgId }).lean();
     const toInsert = scraperLeads.map(l => ({
       fullName: l.brand_name || null,
       companyName: l.brand_name || l.website_title,
@@ -271,6 +284,7 @@ router.post("/database/import-auto-scraper", async (req, res) => {
       source: "auto_scraper",
       sourceQuery: l.keyword,
       status: "new",
+      orgId: req.user.orgId,
     })).filter(l => l.email || l.companyWebsite);
 
     const inserted = await GeneratedLead.insertMany(toInsert, { ordered: false }).catch(e => ({ length: 0 }));
@@ -283,15 +297,15 @@ router.post("/database/import-auto-scraper", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // POST /research/start — AI Research Agent (SSE-backed)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-router.post("/research/start", async (req, res) => {
+router.post("/research/start", requireOrg, async (req, res) => {
   const { prompt } = req.body;
   if (!prompt?.trim()) return res.status(422).json({ error: "prompt required" });
 
   const sessionId = require("crypto").randomUUID();
-  researchSessions[sessionId] = { logs: [], status: "running", leads: [] };
+  researchSessions[sessionId] = { logs: [], status: "running", leads: [], orgId: String(req.user.orgId) };
 
   // Fire and forget
-  runResearchAgent(sessionId, prompt).catch(err => {
+  runResearchAgent(sessionId, prompt, req.user.orgId).catch(err => {
     researchSessions[sessionId].status = "failed";
     researchSessions[sessionId].logs.push(`❌ Fatal: ${err.message}`);
   });
@@ -304,7 +318,9 @@ router.post("/research/start", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/research/status/:id", (req, res) => {
   const session = researchSessions[req.params.id];
-  if (!session) return res.status(404).json({ error: "Session not found" });
+  if (!session || (session.orgId && String(req.user?.orgId) !== session.orgId)) {
+    return res.status(404).json({ error: "Session not found" });
+  }
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -333,7 +349,7 @@ router.get("/research/status/:id", (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // AI Research Agent — internal runner
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function runResearchAgent(sessionId, userPrompt) {
+async function runResearchAgent(sessionId, userPrompt, orgId) {
   const session = researchSessions[sessionId];
   const pushLog = (msg) => session.logs.push(msg);
 
@@ -418,7 +434,7 @@ If you don't know the exact email, construct a plausible one using common format
   // Step 3: Save to database
   pushLog(`💾 Step 3: Saving ${leads.length} leads to database...`);
   try {
-    await GeneratedLead.insertMany(leads, { ordered: false });
+    await GeneratedLead.insertMany(leads.map((l) => ({ ...l, orgId })), { ordered: false });
     pushLog(`✅ ${leads.length} leads saved to Lead Database`);
   } catch (e) {
     pushLog(`⚠ Some leads may be duplicates: ${e.message}`);

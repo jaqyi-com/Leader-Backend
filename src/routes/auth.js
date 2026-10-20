@@ -2,6 +2,8 @@ const express = require("express");
 const passport = require("passport");
 const authService = require("../services/authService");
 const { auth } = require("../middleware/auth");
+const { authLimiter, loginAccountLimiter } = require("../middleware/rateLimiter");
+const { checkRegistration, registrationMode } = require("../config/registration");
 
 const { connectDB } = require("../db/mongoose");
 
@@ -17,11 +19,20 @@ router.use(async (req, res, next) => {
   }
 });
 
+// ── Which sign-up mode is active (open | invite | closed) — lets the UI show the right form ──
+// GET /api/auth/registration
+router.get("/registration", (req, res) => {
+  res.json({ mode: registrationMode() });
+});
+
 // ── Register with Email ──────────────────────────────────────────────────────
 // POST /api/auth/register
-router.post("/register", async (req, res) => {
+router.post("/register", authLimiter, async (req, res) => {
   try {
-    const { name, email, password, orgName } = req.body;
+    const { name, email, password, orgName, inviteCode } = req.body;
+
+    const blocked = checkRegistration(inviteCode);
+    if (blocked) return res.status(blocked.status).json({ error: blocked.error, code: blocked.code });
 
     if (!name || !email || !password) {
       return res.status(400).json({ error: "Name, email, and password are required." });
@@ -44,7 +55,7 @@ router.post("/register", async (req, res) => {
 
 // ── Login with Email ─────────────────────────────────────────────────────────
 // POST /api/auth/login
-router.post("/login", async (req, res) => {
+router.post("/login", authLimiter, loginAccountLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
 
@@ -91,7 +102,7 @@ router.get("/verify-email", async (req, res) => {
 
 // ── Resend Verification Email ─────────────────────────────────────────────────
 // POST /api/auth/resend-verification
-router.post("/resend-verification", async (req, res) => {
+router.post("/resend-verification", authLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: "Email is required." });
@@ -104,7 +115,7 @@ router.post("/resend-verification", async (req, res) => {
 
 // ── Forgot Password ───────────────────────────────────────────────────────────
 // POST /api/auth/forgot-password
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", authLimiter, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return res.status(400).json({ error: "Email is required." });
@@ -118,7 +129,7 @@ router.post("/forgot-password", async (req, res) => {
 
 // ── Reset Password ────────────────────────────────────────────────────────────
 // POST /api/auth/reset-password
-router.post("/reset-password", async (req, res) => {
+router.post("/reset-password", authLimiter, async (req, res) => {
   try {
     const { token, password } = req.body;
     if (!token || !password) return res.status(400).json({ error: "Token and new password are required." });

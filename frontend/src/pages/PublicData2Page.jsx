@@ -152,8 +152,8 @@ export default function PublicData2Page() {
       });
       setRecords(data.records || []);
       setTotal(data.total || 0);
-    } catch {
-      toast.error("Failed to load Niches 75M data");
+    } catch (err) {
+      toast.error(err?.userMessage || "Failed to load Niches 75M data");
     } finally {
       setLoading(false);
     }

@@ -19,6 +19,13 @@ function validateCredentials() {
     missing.push("SMTP_USER / SMTP_PASS (Needed for Email Delivery)");
   }
   
+  if (!process.env.JWT_SECRET) {
+    missing.push("JWT_SECRET (Needed to sign login tokens — generate with `openssl rand -hex 32`)");
+  }
+  if (!process.env.NEON_DATABASE_URL) {
+    missing.push("NEON_DATABASE_URL (Needed for the lead database)");
+  }
+
   // Optional but recommended
   const warnings = [];
   if (!process.env.MONGO_URI) {

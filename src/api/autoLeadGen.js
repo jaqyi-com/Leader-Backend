@@ -17,6 +17,7 @@ const OpenAI  = require("openai");
 const axios   = require("axios");
 
 const { GeneratedLead }      = require("../db/mongoose");
+const { requireOrg }         = require("../middleware/auth");
 const apollo                  = require("../integrations/ApolloIntegration");
 const googlePlaces            = require("../services/GoogleSearchService");
 const { buildWebsiteRecord }  = require("../services/WebsiteCrawlerService");
@@ -67,14 +68,14 @@ async function googleCSE(query, num = 8) {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // POST /start
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-router.post("/start", async (req, res) => {
+router.post("/start", requireOrg, async (req, res) => {
   const { description, maxAgeHours = 0, resultCount = 20 } = req.body;
   if (!description?.trim()) return res.status(422).json({ error: "description is required" });
 
   const sessionId = require("crypto").randomUUID();
-  sessions[sessionId] = { logs: [], status: "running", leads: [] };
+  sessions[sessionId] = { logs: [], status: "running", leads: [], orgId: String(req.user.orgId) };
 
-  runPipeline(sessionId, description.trim(), parseInt(resultCount) || 20)
+  runPipeline(sessionId, description.trim(), Math.min(100, parseInt(resultCount) || 20), req.user.orgId)
     .catch(err => {
       if (sessions[sessionId]) {
         sessions[sessionId].status = "failed";
@@ -91,7 +92,9 @@ router.post("/start", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/status/:sessionId", (req, res) => {
   const session = sessions[req.params.sessionId];
-  if (!session) return res.status(404).json({ error: "Session not found" });
+  if (!session || (session.orgId && String(req.user?.orgId) !== session.orgId)) {
+    return res.status(404).json({ error: "Session not found" });
+  }
 
   res.setHeader("Content-Type", "text/event-stream");
   res.setHeader("Cache-Control", "no-cache");
@@ -118,7 +121,7 @@ router.get("/status/:sessionId", (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // MAIN PIPELINE
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-async function runPipeline(sessionId, userDescription, resultCount) {
+async function runPipeline(sessionId, userDescription, resultCount, orgId) {
   const session = sessions[sessionId];
   const log = msg => session.logs.push(msg);
 
@@ -397,7 +400,7 @@ Return ONLY valid JSON:
   log(`\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
   log(`💾 Saving ${scoredLeads.length} qualified leads...`);
 
-  const toSave = scoredLeads.map(l => ({ ...l, source: "auto_lead_gen", sourceQuery: userDescription, status: "new" }));
+  const toSave = scoredLeads.map(l => ({ ...l, source: "auto_lead_gen", sourceQuery: userDescription, status: "new", orgId }));
   try {
     await GeneratedLead.insertMany(toSave, { ordered: false });
     log(`✅ ${scoredLeads.length} leads saved to Lead Database`);
