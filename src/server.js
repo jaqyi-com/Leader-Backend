@@ -160,6 +160,7 @@ User-agent: *
 
 # Allow public marketing pages
 Allow: /$
+Allow: /pricing
 Allow: /login
 Allow: /register
 Allow: /api-docs
@@ -195,12 +196,12 @@ app.get("/sitemap.xml", (req, res) => {
     <priority>1.0</priority>
   </url>
 
-  <!-- Auth pages -->
+  <!-- Pricing -->
   <url>
-    <loc>https://doott.jaqyi.com/login</loc>
+    <loc>https://doott.jaqyi.com/pricing</loc>
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.8</priority>
   </url>
 
   <!-- API Docs -->

@@ -7,23 +7,23 @@
   <!-- Landing page — highest priority, updated daily -->
   <url>
     <loc>https://doott.jaqyi.com/</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-10-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
-  <!-- Auth pages — useful for crawling by Googlebot -->
+  <!-- Pricing -->
   <url>
-    <loc>https://doott.jaqyi.com/login</loc>
-    <lastmod>2026-09-29</lastmod>
+    <loc>https://doott.jaqyi.com/pricing</loc>
+    <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <priority>0.8</priority>
   </url>
 
   <!-- API Docs — public page, helps with developer SEO -->
   <url>
     <loc>https://doott.jaqyi.com/api-docs</loc>
-    <lastmod>2026-09-29</lastmod>
+    <lastmod>2026-10-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>

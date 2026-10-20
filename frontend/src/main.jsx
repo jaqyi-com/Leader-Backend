@@ -6,6 +6,7 @@ import "./index.css";
 import "nprogress/nprogress.css";
 import { Toaster } from "react-hot-toast";
 import PageProgressBar from "./components/PageProgressBar";
+import RouteMeta from "./components/RouteMeta";
 
 // Theme is managed by ThemeContext (respects localStorage + system preference)
 
@@ -14,6 +15,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <BrowserRouter>
       {/* Global progress bar — fires on every route change across the entire app */}
       <PageProgressBar />
+      <RouteMeta />
       <App />
       <Toaster
         position="bottom-right"

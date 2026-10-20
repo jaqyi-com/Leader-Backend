@@ -5,6 +5,7 @@ User-agent: *
 
 # Allow public marketing pages
 Allow: /$
+Allow: /pricing
 Allow: /login
 Allow: /register
 Allow: /api-docs

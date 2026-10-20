@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { FeatureFlagProvider } from "./context/FeatureFlagContext";
@@ -5,34 +6,33 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import FeatureGate from "./components/FeatureGate";
 
-// Auth pages
-import LoginPage from "./pages/LoginPage";
-import RegisterGate from "./components/RegisterGate"; // password-protected internal signup
-import AuthCallbackPage from "./pages/AuthCallbackPage";
-import VerifyEmailPage from "./pages/VerifyEmailPage";
-import ForgotPasswordPage from "./pages/ForgotPasswordPage";
-import ResetPasswordPage from "./pages/ResetPasswordPage";
-
-// App pages
-import LandingPage from "./pages/LandingPage";
-import PricingPage from "./pages/PricingPage";
-import JoinPage from "./pages/JoinPage";
-import SettingsPage from "./pages/SettingsPage";
-import DocumentationPage from "./pages/DocumentationPage";
-import PeoplePage               from "./pages/PeoplePage";
-import PeopleEmailPage          from "./pages/PeopleEmailPage";
-import PeopleNumberPage         from "./pages/PeopleNumberPage";
-import EmailPage                from "./pages/EmailPage";
-import NumberPage               from "./pages/NumberPage";
-import CompaniesPage            from "./pages/CompaniesPage";
-import CategoryExplorerPage     from "./pages/CategoryExplorerPage";
-import CityExplorerPage         from "./pages/CityExplorerPage";
-import AdminAnalyticsPage from "./pages/AdminAnalyticsPage";
 import PageTracker        from "./components/PageTracker";
-
 import { ThemeProvider } from "./context/ThemeContext";
 
-import ApiDocsPage from "./pages/ApiDocsPage";
+// Public marketing pages — loaded eagerly because they are pre-rendered (scripts/prerender.mjs)
+import LandingPage from "./pages/LandingPage";
+import PricingPage from "./pages/PricingPage";
+
+// Everything except the public marketing pages loads on demand, so the landing page stays light.
+const LoginPage = lazy(() => import("./pages/LoginPage"));
+const RegisterGate = lazy(() => import("./components/RegisterGate")); // password-protected internal signup
+const AuthCallbackPage = lazy(() => import("./pages/AuthCallbackPage"));
+const VerifyEmailPage = lazy(() => import("./pages/VerifyEmailPage"));
+const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const JoinPage = lazy(() => import("./pages/JoinPage"));
+const SettingsPage = lazy(() => import("./pages/SettingsPage"));
+const DocumentationPage = lazy(() => import("./pages/DocumentationPage"));
+const PeoplePage = lazy(() => import("./pages/PeoplePage"));
+const PeopleEmailPage = lazy(() => import("./pages/PeopleEmailPage"));
+const PeopleNumberPage = lazy(() => import("./pages/PeopleNumberPage"));
+const EmailPage = lazy(() => import("./pages/EmailPage"));
+const NumberPage = lazy(() => import("./pages/NumberPage"));
+const CompaniesPage = lazy(() => import("./pages/CompaniesPage"));
+const CategoryExplorerPage = lazy(() => import("./pages/CategoryExplorerPage"));
+const CityExplorerPage = lazy(() => import("./pages/CityExplorerPage"));
+const AdminAnalyticsPage = lazy(() => import("./pages/AdminAnalyticsPage"));
+const ApiDocsPage = lazy(() => import("./pages/ApiDocsPage"));
 
 export default function App() {
   return (
@@ -40,6 +40,7 @@ export default function App() {
       <AuthProvider>
         <FeatureFlagProvider>
           <PageTracker />
+          <Suspense fallback={null}>
           <Routes>
             {/* ── Public routes ─────────────────────────────────── */}
             <Route path="/"                element={<LandingPage />} />
@@ -84,6 +85,7 @@ export default function App() {
             {/* ── 404 catch-all → redirect to login ─────────────── */}
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
+          </Suspense>
         </FeatureFlagProvider>
       </AuthProvider>
     </ThemeProvider>

@@ -4,6 +4,7 @@ const ThemeCtx = createContext({});
 
 export function ThemeProvider({ children }) {
   const [dark, setDark] = useState(() => {
+    if (typeof window === "undefined") return true; // build-time pre-render
     const saved = localStorage.getItem("keli-theme");
     return saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
   });
