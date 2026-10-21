@@ -8,12 +8,15 @@
  * as the Companies / People search (buildWhere from the route), with the same URL filters the card
  * sends. So the number on a card and the result after clicking it always agree.
  *
- * The card lists come from the current JSON files: names are de-duplicated (case-insensitive, and
- * city spellings such as Bangalore/Bengaluru become one card), cards that match nothing are
- * dropped, and each list is sorted by count.
+ * Category cards are the current names plus the largest real industries / job titles found in the
+ * data for each country (so big groups such as "Chief Executive Officer" always have a card), minus
+ * values that are not categories (card tiers like "Visa Gold", bare numbers, placeholders).
+ * City cards come from the current JSON. Names are de-duplicated (case-insensitive, and city
+ * spellings such as Bangalore/Bengaluru become one card), cards that match nothing are dropped,
+ * and each list is sorted by count.
  *
- * Read-only on the database. Scans final.companies (~1.5M rows) and final.people (~45M rows) once
- * each; the people scan takes several minutes.
+ * Read-only on the database. Scans final.companies (~1.5M rows) twice and final.people (~45M rows)
+ * twice (find the largest values, then count); the people scans take about 15 minutes together.
  *
  * Usage:
  *   node scripts/refresh_explorer_counts.js                  # recount everything
@@ -23,7 +26,7 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const { Client } = require("pg");
-const { CITY_ALIASES, CITY_ALIAS_GROUPS } = require("../src/utils/searchFilters");
+const { CITY_ALIASES, CITY_ALIAS_GROUPS, peopleCountryCondition } = require("../src/utils/searchFilters");
 const { buildWhere: companiesWhere } = require("../src/routes/finalCompaniesDatabase");
 const { buildWhere: peopleWhere } = require("../src/routes/finalPeopleDatabase");
 
@@ -54,8 +57,35 @@ function canonicalCity(name) {
   return titleCase(name.split("/")[0].trim());
 }
 
+// Values in the industry / job_title columns that are not categories: membership or card tiers
+// ("GOLD", "Visa Silver Plus"), bare numbers or letters, and placeholders.
+const NOT_A_CATEGORY = /^(\d+|[a-z]|\W{1,2}|others?|n\/?a|none|null|nil|-+|\.+|gold|silver|classic|platinum|landmark gold|visa\b.*|bc ?gold.*|eplc|owned|resident|hni\b.*)$/i;
+
 function categoryCards(list) {
-  return dedupe(list.map(({ name }) => ({ name })), (c) => c.name.toLowerCase());
+  const cards = list.map(({ name }) => ({ name: String(name).trim() })).filter((c) => !NOT_A_CATEGORY.test(c.name));
+  return dedupe(cards, (c) => c.name.toLowerCase());
+}
+
+/**
+ * Largest real values of `col` per country, each with its most common spelling.
+ * `bucketSql` assigns 'india' / 'usa' / 'other' using the same country rules as the search.
+ */
+async function discover(db, table, col, bucketSql, limits) {
+  const { rows } = await db.query(`
+    SELECT b, name, n FROM (
+      SELECT b, mode() WITHIN GROUP (ORDER BY btrim(${col})) AS name, count(*) AS n,
+             row_number() OVER (PARTITION BY b ORDER BY count(*) DESC) AS rk
+      FROM (SELECT ${bucketSql} AS b, ${col} FROM ${table} WHERE ${col} IS NOT NULL AND btrim(${col}) <> '') s
+      WHERE b <> 'other'
+      GROUP BY b, lower(btrim(${col}))
+    ) t WHERE rk <= 1000 ORDER BY n DESC`);
+  const out = { india: [], usa: [] };
+  for (const r of rows) {
+    const lim = limits[r.b];
+    // ALL-CAPS values are shown in normal case; cards match case-insensitively, so the count is the same.
+    if (Number(r.n) >= lim.min && out[r.b].length < lim.max && !NOT_A_CATEGORY.test(r.name)) out[r.b].push({ name: r.name.length > 3 ? titleCase(r.name) : r.name });
+  }
+  return out;
 }
 
 function indiaCityCards(list) {
@@ -145,11 +175,19 @@ async function main() {
   const indiaCities = indiaCityCards(oldIndiaCities);
   const usaCities = usaCityCards(oldUsaCities);
 
-  console.log("Counting companies…");
+  console.log("Finding the largest industries…");
   let t = Date.now();
+  const companyBucket = `CASE WHEN geo_source IN ('csv_v2_import', 'pincode') THEN 'india'
+                              WHEN geo_source IN ('us_zip', 'us_city', 'us_state') THEN 'usa' ELSE 'other' END`;
+  const topIndustries = await discover(db, "final.companies", "industry", companyBucket,
+    { india: { min: 50, max: 400 }, usa: { min: 100, max: 300 } });
+  console.log(`  done in ${Math.round((Date.now() - t) / 1000)}s`);
+
+  console.log("Counting companies…");
+  t = Date.now();
   const companyCards = [
-    ...categoryCards(categories.india.company).map(categoryCard("india")),
-    ...categoryCards(categories.usa.company).map(categoryCard("usa")),
+    ...categoryCards([...categories.india.company, ...topIndustries.india]).map(categoryCard("india")),
+    ...categoryCards([...categories.usa.company, ...topIndustries.usa]).map(categoryCard("usa")),
   ];
   const companyCityCards = [...indiaCities.map(cityCard("india")), ...usaCities.map(cityCard("usa"))];
   const companyCounts = await countCards(db, companiesAgg, [...companyCards, ...companyCityCards],
@@ -171,11 +209,19 @@ async function main() {
   };
 
   if (!COMPANIES_ONLY) {
+    console.log("Finding the largest job titles (one scan of ~45M rows)…");
+    t = Date.now();
+    const peopleBucket = `CASE WHEN ${peopleCountryCondition("usa")} THEN 'usa'
+                               WHEN ${peopleCountryCondition("india")} THEN 'india' ELSE 'other' END`;
+    const topTitles = await discover(db, "final.people", "job_title", peopleBucket,
+      { india: { min: 20, max: 150 }, usa: { min: 1000, max: 300 } });
+    console.log(`  done in ${Math.round((Date.now() - t) / 1000)}s`);
+
     console.log("Counting people (one scan of ~45M rows, takes several minutes)…");
     t = Date.now();
     const titleCards = [
-      ...categoryCards(categories.india.people).map(categoryCard("india")),
-      ...categoryCards(categories.usa.people).map(categoryCard("usa")),
+      ...categoryCards([...categories.india.people, ...topTitles.india]).map(categoryCard("india")),
+      ...categoryCards([...categories.usa.people, ...topTitles.usa]).map(categoryCard("usa")),
     ];
     const peopleCityCards = [...indiaCities.map(cityCard("india")), ...usaCities.map(cityCard("usa"))];
     const peopleCounts = await countCards(db, peopleAgg, [...titleCards, ...peopleCityCards],

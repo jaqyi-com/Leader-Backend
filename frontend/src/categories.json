@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-21T11:28:44.926Z",
+  "generatedAt": "2026-10-21T12:20:28.153Z",
   "india": {
     "company": [
       {
@@ -35,8 +35,16 @@
         "count": 1444
       },
       {
+        "name": "Pipes & Pipe Fittings",
+        "count": 1252
+      },
+      {
         "name": "Financial",
         "count": 1181
+      },
+      {
+        "name": "Bricks & Tiles",
+        "count": 1048
       },
       {
         "name": "Caterers- Wedding & Events",
@@ -107,6 +115,10 @@
         "count": 487
       },
       {
+        "name": "Bathroom & Toilet Accessories/Fittings",
+        "count": 459
+      },
+      {
         "name": "caterers",
         "count": 444
       },
@@ -123,6 +135,10 @@
         "count": 426
       },
       {
+        "name": "Nursing",
+        "count": 419
+      },
+      {
         "name": "Garments Readymade",
         "count": 417
       },
@@ -133,6 +149,10 @@
       {
         "name": "Clearing & Forwarding Agents",
         "count": 397
+      },
+      {
+        "name": "Finished Leather",
+        "count": 385
       },
       {
         "name": "Department Stores",
@@ -151,6 +171,10 @@
         "count": 353
       },
       {
+        "name": "Timber, Timber Products & Plank",
+        "count": 340
+      },
+      {
         "name": "Caterers- Wedding",
         "count": 335
       },
@@ -167,6 +191,14 @@
         "count": 318
       },
       {
+        "name": "Doors/Windows Accessories & Fittings",
+        "count": 315
+      },
+      {
+        "name": "Dental",
+        "count": 315
+      },
+      {
         "name": "Apparel/Garments, Manufacturing/Industrial",
         "count": 308
       },
@@ -177,6 +209,14 @@
       {
         "name": "Real Estate Developers",
         "count": 292
+      },
+      {
+        "name": "Chemical Supplies",
+        "count": 282
+      },
+      {
+        "name": "Builders & Construction Hardware",
+        "count": 280
       },
       {
         "name": "Hotels",
@@ -195,6 +235,10 @@
         "count": 258
       },
       {
+        "name": "Sheet Metal",
+        "count": 258
+      },
+      {
         "name": "Home Appliances",
         "count": 257
       },
@@ -203,8 +247,16 @@
         "count": 254
       },
       {
+        "name": "Marble",
+        "count": 253
+      },
+      {
         "name": "Pharmacies",
         "count": 250
+      },
+      {
+        "name": "Automotive Parts, Components & Spares",
+        "count": 248
       },
       {
         "name": "Apparel/Garments, Fashion/Modelling, Gems & Jewellery, Consumer Durables/FMCG, Retailing",
@@ -235,8 +287,20 @@
         "count": 228
       },
       {
+        "name": "Building & Construction Material & Supplies",
+        "count": 228
+      },
+      {
+        "name": "Doors/Wooden Door Panels",
+        "count": 224
+      },
+      {
         "name": "Hardware",
         "count": 221
+      },
+      {
+        "name": "Physiotherapy",
+        "count": 219
       },
       {
         "name": "Printers- Offset",
@@ -245,6 +309,10 @@
       {
         "name": "Advertising Agencies & Counsellors",
         "count": 218
+      },
+      {
+        "name": "Cement & Sand",
+        "count": 216
       },
       {
         "name": "Interior Decorators & Designers",
@@ -275,6 +343,10 @@
         "count": 202
       },
       {
+        "name": "Furniture, Furniture Fittings & Fixtures",
+        "count": 202
+      },
+      {
         "name": "Building Contractors",
         "count": 192
       },
@@ -284,6 +356,10 @@
       },
       {
         "name": "IT Enabled Services (ITES)",
+        "count": 186
+      },
+      {
+        "name": "Plywood",
         "count": 186
       },
       {
@@ -311,15 +387,23 @@
         "count": 180
       },
       {
+        "name": "Software",
+        "count": 180
+      },
+      {
         "name": "Machine Tools",
         "count": 178
       },
       {
-        "name": "DELHI",
+        "name": "Delhi",
         "count": 175
       },
       {
         "name": "Real Estate Agents",
+        "count": 169
+      },
+      {
+        "name": "Agro & Agro Based Products & Commodities",
         "count": 169
       },
       {
@@ -331,8 +415,16 @@
         "count": 163
       },
       {
+        "name": "Building Material",
+        "count": 163
+      },
+      {
         "name": "Apparel/Garments, Agriculture/Forestry/Fishing, Export/Import/Merchandising",
         "count": 162
+      },
+      {
+        "name": "Readymade Garments",
+        "count": 158
       },
       {
         "name": "Pharmaceutical Distributors",
@@ -355,8 +447,20 @@
         "count": 151
       },
       {
+        "name": "Control Panel Boards",
+        "count": 151
+      },
+      {
+        "name": "Punjab",
+        "count": 148
+      },
+      {
         "name": "Courier Service",
         "count": 146
+      },
+      {
+        "name": "Other Medical",
+        "count": 143
       },
       {
         "name": "Dental Surgeons",
@@ -367,12 +471,24 @@
         "count": 142
       },
       {
+        "name": "CNC Machined Components",
+        "count": 142
+      },
+      {
         "name": "Doctors- Paediatrics (Child Specialists",
         "count": 141
       },
       {
         "name": "Computer Accessories & Supplies",
         "count": 141
+      },
+      {
+        "name": "Other Healthcare",
+        "count": 141
+      },
+      {
+        "name": "Electronic Products & Components",
+        "count": 139
       },
       {
         "name": "Media",
@@ -391,6 +507,10 @@
         "count": 134
       },
       {
+        "name": "Scaffolding",
+        "count": 134
+      },
+      {
         "name": "Lodges",
         "count": 132
       },
@@ -399,7 +519,23 @@
         "count": 131
       },
       {
+        "name": "Clinical Research",
+        "count": 131
+      },
+      {
+        "name": "Electrical Goods, Equipment & Supplies",
+        "count": 128
+      },
+      {
         "name": "Car Renting & Leasing",
+        "count": 127
+      },
+      {
+        "name": "Lab/Medical Technician",
+        "count": 127
+      },
+      {
+        "name": "Resume",
         "count": 127
       },
       {
@@ -415,6 +551,10 @@
         "count": 123
       },
       {
+        "name": "General Practitioner",
+        "count": 123
+      },
+      {
         "name": "Transformers",
         "count": 122
       },
@@ -423,12 +563,32 @@
         "count": 122
       },
       {
+        "name": "Dies,Jigs,Fixtures",
+        "count": 122
+      },
+      {
         "name": "Anesthesiology",
+        "count": 121
+      },
+      {
+        "name": "Sandstone",
         "count": 121
       },
       {
         "name": "Incense- Whsle & Mfrs",
         "count": 118
+      },
+      {
+        "name": "Machinery",
+        "count": 118
+      },
+      {
+        "name": "Maharashtra",
+        "count": 117
+      },
+      {
+        "name": "Engineering Goods & Equipment",
+        "count": 116
       },
       {
         "name": "Doctors",
@@ -443,11 +603,19 @@
         "count": 114
       },
       {
+        "name": "Flooring",
+        "count": 114
+      },
+      {
         "name": "Furniture Mfrs",
         "count": 112
       },
       {
         "name": "Security Services",
+        "count": 112
+      },
+      {
+        "name": "Gates & Grills",
         "count": 112
       },
       {
@@ -467,6 +635,10 @@
         "count": 109
       },
       {
+        "name": "Childrenwear & Baby Garments",
+        "count": 108
+      },
+      {
         "name": "Pathology",
         "count": 107
       },
@@ -475,11 +647,31 @@
         "count": 107
       },
       {
+        "name": "Stone",
+        "count": 106
+      },
+      {
         "name": "Training Centre And Facilities",
         "count": 105
       },
       {
+        "name": "Adhesives",
+        "count": 104
+      },
+      {
+        "name": "Boxes",
+        "count": 104
+      },
+      {
+        "name": "Dies & Moulds",
+        "count": 104
+      },
+      {
         "name": "Veterinarians",
+        "count": 103
+      },
+      {
+        "name": "Computer Hardware & Peripherals",
         "count": 103
       },
       {
@@ -487,11 +679,23 @@
         "count": 102
       },
       {
+        "name": "Precision Auto Turned Parts & Components",
+        "count": 102
+      },
+      {
         "name": "Diagnostic Centres",
         "count": 101
       },
       {
+        "name": "Decorative Laminates",
+        "count": 101
+      },
+      {
         "name": "Plywood & Veneers- Retail",
+        "count": 98
+      },
+      {
+        "name": "Freight Forwarders & Brokers",
         "count": 98
       },
       {
@@ -519,6 +723,10 @@
         "count": 94
       },
       {
+        "name": "Incense & Agarbatti",
+        "count": 93
+      },
+      {
         "name": "Corrugated Boxes",
         "count": 91
       },
@@ -531,7 +739,23 @@
         "count": 91
       },
       {
+        "name": "Leather Goods & Accessories",
+        "count": 91
+      },
+      {
         "name": "Charities",
+        "count": 90
+      },
+      {
+        "name": "Fountains",
+        "count": 90
+      },
+      {
+        "name": "Cutting Tools, Broaches & Cutters",
+        "count": 90
+      },
+      {
+        "name": "Hydraulic Products & Equipment",
         "count": 90
       },
       {
@@ -556,6 +780,10 @@
       },
       {
         "name": "Sweets & Savouries",
+        "count": 88
+      },
+      {
+        "name": "Bags & Luggage - Leather",
         "count": 88
       },
       {
@@ -591,6 +819,10 @@
         "count": 85
       },
       {
+        "name": "Medical Officer",
+        "count": 85
+      },
+      {
         "name": "Hydraulic Equipment & Supplies",
         "count": 84
       },
@@ -611,6 +843,10 @@
         "count": 83
       },
       {
+        "name": "Pharmaceutical Formulations",
+        "count": 83
+      },
+      {
         "name": "Motorcycles & Motor Scooters",
         "count": 82
       },
@@ -620,6 +856,10 @@
       },
       {
         "name": "Internal Medicine",
+        "count": 81
+      },
+      {
+        "name": "Pediatrics",
         "count": 81
       },
       {
@@ -667,6 +907,10 @@
         "count": 77
       },
       {
+        "name": "Bags & Luggage - Cotton/Canvas/Synthetic",
+        "count": 77
+      },
+      {
         "name": "Screen Printing",
         "count": 76
       },
@@ -679,7 +923,19 @@
         "count": 75
       },
       {
+        "name": "Die Castings",
+        "count": 75
+      },
+      {
+        "name": "Nozzles",
+        "count": 75
+      },
+      {
         "name": "Aluminium Fabricators",
+        "count": 74
+      },
+      {
+        "name": "Silk, Silk Fabric",
         "count": 74
       },
       {
@@ -689,6 +945,10 @@
       {
         "name": "Religious Organizations",
         "count": 72
+      },
+      {
+        "name": "Medical Equipment",
+        "count": 71
       },
       {
         "name": "Automobile Parts & Supplies- Whsle",
@@ -707,11 +967,19 @@
         "count": 70
       },
       {
+        "name": "Other B.Pharm",
+        "count": 70
+      },
+      {
         "name": "Rubber Products",
         "count": 69
       },
       {
         "name": "Cellular Telephones- Accessories & Supplies",
+        "count": 69
+      },
+      {
+        "name": "Waterproof Materials",
         "count": 69
       },
       {
@@ -727,11 +995,23 @@
         "count": 67
       },
       {
+        "name": "Fashion & Garment Accessories",
+        "count": 67
+      },
+      {
+        "name": "Logistics",
+        "count": 67
+      },
+      {
         "name": "Exporters",
         "count": 66
       },
       {
         "name": "Tools",
+        "count": 66
+      },
+      {
+        "name": "Critical Care",
         "count": 66
       },
       {
@@ -747,6 +1027,18 @@
         "count": 65
       },
       {
+        "name": "Cables/Cable Accessories & Conductors",
+        "count": 65
+      },
+      {
+        "name": "Admin Services/Medical Facilities",
+        "count": 65
+      },
+      {
+        "name": "Leather",
+        "count": 65
+      },
+      {
         "name": "UPS",
         "count": 64
       },
@@ -759,6 +1051,10 @@
         "count": 64
       },
       {
+        "name": "Injection Moulding",
+        "count": 64
+      },
+      {
         "name": "Tyre Dealers- Retail",
         "count": 63
       },
@@ -767,7 +1063,15 @@
         "count": 63
       },
       {
+        "name": "Labels, Stickers & Tags",
+        "count": 63
+      },
+      {
         "name": "Electro Plating",
+        "count": 62
+      },
+      {
+        "name": "Microbiology",
         "count": 62
       },
       {
@@ -791,6 +1095,26 @@
         "count": 61
       },
       {
+        "name": "Slotted Angles",
+        "count": 61
+      },
+      {
+        "name": "Iron & Steel",
+        "count": 61
+      },
+      {
+        "name": "Merchandiser",
+        "count": 60
+      },
+      {
+        "name": "Menswear",
+        "count": 60
+      },
+      {
+        "name": "Lime & Lime Products",
+        "count": 60
+      },
+      {
         "name": "Steel Fabricators",
         "count": 59
       },
@@ -799,11 +1123,47 @@
         "count": 59
       },
       {
+        "name": "Auto Parts",
+        "count": 59
+      },
+      {
+        "name": "Material Handling Equipment",
+        "count": 59
+      },
+      {
+        "name": "Dietician/Nutritionist",
+        "count": 59
+      },
+      {
+        "name": "Electric Motors & Engines",
+        "count": 59
+      },
+      {
+        "name": "Orthopaedic",
+        "count": 59
+      },
+      {
         "name": "Embroidery",
         "count": 58
       },
       {
         "name": "Shoes- Retail",
+        "count": 58
+      },
+      {
+        "name": "Valves",
+        "count": 58
+      },
+      {
+        "name": "Packaging Machinery",
+        "count": 58
+      },
+      {
+        "name": "Herbal & Botanical Products",
+        "count": 58
+      },
+      {
+        "name": "Ophthalmology",
         "count": 58
       },
       {
@@ -839,6 +1199,10 @@
         "count": 57
       },
       {
+        "name": "Cast Products & Equipment",
+        "count": 57
+      },
+      {
         "name": "Publishers- Book",
         "count": 56
       },
@@ -847,11 +1211,27 @@
         "count": 56
       },
       {
+        "name": "Rubber & Rubber Products",
+        "count": 56
+      },
+      {
+        "name": "Leather Garment",
+        "count": 56
+      },
+      {
         "name": "Electric Supplies- Retail",
         "count": 55
       },
       {
         "name": "Metals- Ferrous & Non-Ferrous",
+        "count": 55
+      },
+      {
+        "name": "Conveyor & Conveyor/Industrial Belts",
+        "count": 55
+      },
+      {
+        "name": "School Uniforms",
         "count": 55
       },
       {
@@ -887,6 +1267,10 @@
         "count": 53
       },
       {
+        "name": "Ayurvedic Products",
+        "count": 53
+      },
+      {
         "name": "Textile Mfrs",
         "count": 52
       },
@@ -915,11 +1299,39 @@
         "count": 52
       },
       {
+        "name": "Book Publishers",
+        "count": 52
+      },
+      {
+        "name": "Paper Products",
+        "count": 52
+      },
+      {
+        "name": "Aluminium & Foils",
+        "count": 52
+      },
+      {
+        "name": "CNC Machines",
+        "count": 52
+      },
+      {
         "name": "Adhesives & Glues",
         "count": 51
       },
       {
         "name": "Stationers' Supplies",
+        "count": 51
+      },
+      {
+        "name": "Apparel/Garments, Export/Import/Merchandising, Retailing",
+        "count": 51
+      },
+      {
+        "name": "Roofing Systems",
+        "count": 51
+      },
+      {
+        "name": "Shipping Agents",
         "count": 51
       },
       {
@@ -989,19 +1401,259 @@
     ],
     "people": [
       {
+        "name": "Sales/Business Development",
+        "count": 2660
+      },
+      {
         "name": "Director",
         "count": 2506
+      },
+      {
+        "name": "Banks/Insurance/Financial Services",
+        "count": 2294
+      },
+      {
+        "name": "Educational/Training",
+        "count": 1760
       },
       {
         "name": "Managing Director",
         "count": 1583
       },
       {
+        "name": "Physiotherapy",
+        "count": 1516
+      },
+      {
+        "name": "Nursing",
+        "count": 1340
+      },
+      {
+        "name": "Telecaller",
+        "count": 1109
+      },
+      {
+        "name": "IT-Hardware/Networking",
+        "count": 1039
+      },
+      {
+        "name": "Entertainment/Media",
+        "count": 1003
+      },
+      {
+        "name": "Engg. project Mgmt./site Engg./Civil Engg.",
+        "count": 972
+      },
+      {
+        "name": "Dental",
+        "count": 912
+      },
+      {
+        "name": "Lab/Medical Technician",
+        "count": 856
+      },
+      {
+        "name": "Wholetime Director",
+        "count": 770
+      },
+      {
+        "name": "Pharmacy",
+        "count": 767
+      },
+      {
+        "name": "General Practitioner",
+        "count": 665
+      },
+      {
+        "name": "Medical Officer",
+        "count": 609
+      },
+      {
+        "name": "Other Medical",
+        "count": 601
+      },
+      {
+        "name": "Dietician/Nutritionist",
+        "count": 596
+      },
+      {
+        "name": "IT-Software",
+        "count": 559
+      },
+      {
+        "name": "IT/Telecom - Software",
+        "count": 552
+      },
+      {
+        "name": "Construction/Cement/Metal/Steel/Iron",
+        "count": 539
+      },
+      {
+        "name": "Other Healthcare",
+        "count": 530
+      },
+      {
+        "name": "Automobiles/Auto Component/Auto Ancillary",
+        "count": 485
+      },
+      {
+        "name": "Telecom",
+        "count": 465
+      },
+      {
+        "name": "Direct Sales Agent/Insurance Agents",
+        "count": 413
+      },
+      {
+        "name": "Clinical Research",
+        "count": 405
+      },
+      {
+        "name": "Business Mgmt./Consultants/Freelancers",
+        "count": 359
+      },
+      {
+        "name": "Admin Services/Medical Facilities",
+        "count": 354
+      },
+      {
+        "name": "Advertising/PR/Events",
+        "count": 343
+      },
+      {
+        "name": "Chairman",
+        "count": 338
+      },
+      {
         "name": "CEO",
         "count": 302
       },
       {
+        "name": "Teaching/Education",
+        "count": 300
+      },
+      {
+        "name": "Hotel/Restaurant",
+        "count": 282
+      },
+      {
+        "name": "Critical Care",
+        "count": 281
+      },
+      {
+        "name": "NGO/Social Services",
+        "count": 277
+      },
+      {
+        "name": "Medical Rep.",
+        "count": 275
+      },
+      {
+        "name": "Biotechnology/Pharmaceutical/Medicine",
+        "count": 267
+      },
+      {
+        "name": "Consumer Durables/FMCG",
+        "count": 253
+      },
+      {
+        "name": "Chairman & Managing Director",
+        "count": 245
+      },
+      {
+        "name": "Radiology",
+        "count": 244
+      },
+      {
+        "name": "Surgery",
+        "count": 243
+      },
+      {
+        "name": "Banking/Financial Services/Broking",
+        "count": 242
+      },
+      {
+        "name": "Pathology",
+        "count": 236
+      },
+      {
+        "name": "Proprietor",
+        "count": 222
+      },
+      {
+        "name": "Anaesthetist",
+        "count": 212
+      },
+      {
+        "name": "Pediatrics",
+        "count": 199
+      },
+      {
+        "name": "Partner",
+        "count": 196
+      },
+      {
+        "name": "Manager",
+        "count": 193
+      },
+      {
+        "name": "Gynaecology",
+        "count": 184
+      },
+      {
+        "name": "Assistant Manager",
+        "count": 182
+      },
+      {
+        "name": "Advertising/PR/Event Management",
+        "count": 180
+      },
+      {
+        "name": "Orthopaedics",
+        "count": 180
+      },
+      {
+        "name": "Electronics",
+        "count": 173
+      },
+      {
+        "name": "Engineering/Projects",
+        "count": 172
+      },
+      {
+        "name": "Ophthalmology",
+        "count": 167
+      },
+      {
+        "name": "Manufacturing/Industrial",
+        "count": 164
+      },
+      {
+        "name": "Internet/Dot com/ISP, Telecom, IT-Hardware/Networking",
+        "count": 163
+      },
+      {
+        "name": "Whole Time Director",
+        "count": 159
+      },
+      {
+        "name": "Apparel/Garments",
+        "count": 147
+      },
+      {
+        "name": "Insurance",
+        "count": 146
+      },
+      {
+        "name": "Professional",
+        "count": 143
+      },
+      {
         "name": "Software Engineer",
+        "count": 142
+      },
+      {
+        "name": "Paramedic",
         "count": 142
       },
       {
@@ -1009,16 +1661,344 @@
         "count": 141
       },
       {
+        "name": "Export/Import",
+        "count": 137
+      },
+      {
+        "name": "Microbiology",
+        "count": 128
+      },
+      {
+        "name": "Fresh Graduate-No Functional Area exp.",
+        "count": 125
+      },
+      {
+        "name": "Occupational Therapy",
+        "count": 121
+      },
+      {
+        "name": "Owner",
+        "count": 119
+      },
+      {
+        "name": "Rented",
+        "count": 118
+      },
+      {
+        "name": "Executive Director",
+        "count": 116
+      },
+      {
+        "name": "Service Engineers",
+        "count": 115
+      },
+      {
+        "name": "Cardiologist",
+        "count": 115
+      },
+      {
+        "name": "Healthcare",
+        "count": 109
+      },
+      {
+        "name": "Banking",
+        "count": 108
+      },
+      {
+        "name": "Executive",
+        "count": 106
+      },
+      {
+        "name": "Banks/Insurance/Financial Services, Sales/Business Development",
+        "count": 95
+      },
+      {
+        "name": "IT/Telecom - Hardware",
+        "count": 93
+      },
+      {
+        "name": "Medical Imaging",
+        "count": 90
+      },
+      {
+        "name": "Dermatologist",
+        "count": 88
+      },
+      {
+        "name": "ENT Specialist",
+        "count": 85
+      },
+      {
+        "name": "Psychiatry",
+        "count": 85
+      },
+      {
+        "name": "IT/Telecom - Software, IT/Telecom - Hardware",
+        "count": 82
+      },
+      {
+        "name": "Rental Home",
+        "count": 80
+      },
+      {
+        "name": "CRM/CallCentres/BPO/ITES/Med.Trans",
+        "count": 79
+      },
+      {
+        "name": "Team Leader",
+        "count": 78
+      },
+      {
+        "name": "Production/Manufacturing/Maintenance/Packaging",
+        "count": 78
+      },
+      {
+        "name": "Accountant",
+        "count": 73
+      },
+      {
+        "name": "Software Developer",
+        "count": 71
+      },
+      {
+        "name": "Documentation/Medical Writing",
+        "count": 69
+      },
+      {
+        "name": "General Practitioner, Medical Officer",
+        "count": 67
+      },
+      {
+        "name": "Deputy Manager",
+        "count": 64
+      },
+      {
+        "name": "Administration",
+        "count": 63
+      },
+      {
+        "name": "Doctors/Nurses/Medical Professional",
+        "count": 63
+      },
+      {
+        "name": "Printing/Packaging",
+        "count": 62
+      },
+      {
         "name": "Sales Manager",
         "count": 61
+      },
+      {
+        "name": "Platinum Cobrand 1",
+        "count": 61
+      },
+      {
+        "name": "Accounting/Tax/Company Secretary/Audit",
+        "count": 60
+      },
+      {
+        "name": "Natural Therapy",
+        "count": 60
+      },
+      {
+        "name": "IT/Telecom - Hardware, IT/Telecom - Software",
+        "count": 57
+      },
+      {
+        "name": "IT/Computers - Software, Software Services",
+        "count": 57
+      },
+      {
+        "name": "Accounting/Tax/Company Secretary/Audit, Banks/Insurance/Financial Services, Finance",
+        "count": 57
+      },
+      {
+        "name": "Area Sales Manager",
+        "count": 56
+      },
+      {
+        "name": "Human Resources",
+        "count": 55
+      },
+      {
+        "name": "Retailing",
+        "count": 55
+      },
+      {
+        "name": "Warehousing, Consumer Durables/FMCG",
+        "count": 55
+      },
+      {
+        "name": "fresher",
+        "count": 54
+      },
+      {
+        "name": "Software Services",
+        "count": 53
+      },
+      {
+        "name": "Software Services, Internet/Dot com/ISP, Telecom, IT-Hardware/Networking",
+        "count": 53
+      },
+      {
+        "name": "IT-Hardware/Networking, IT-Software",
+        "count": 52
+      },
+      {
+        "name": "Ticketing/Reservation/Travel Agent/Airlines",
+        "count": 52
+      },
+      {
+        "name": "Oncology",
+        "count": 52
+      },
+      {
+        "name": "Top Management",
+        "count": 50
+      },
+      {
+        "name": "Relationship Manager",
+        "count": 50
+      },
+      {
+        "name": "Other Healthcare, Other Medical",
+        "count": 49
+      },
+      {
+        "name": "no",
+        "count": 49
+      },
+      {
+        "name": "Accounting-Tax/Consulting",
+        "count": 47
+      },
+      {
+        "name": "Financial Services/Stockbroking",
+        "count": 47
+      },
+      {
+        "name": "Construction/Cement/Metal/Steel/Iron, Manufacturing/Industrial",
+        "count": 47
+      },
+      {
+        "name": "Advertising/PR/Events, Marketing/MR/Media Planning, Sales/Business Development",
+        "count": 47
+      },
+      {
+        "name": "FMCG/Food/Beverage",
+        "count": 46
+      },
+      {
+        "name": "Senior Manager",
+        "count": 44
+      },
+      {
+        "name": "Whole-Time Director",
+        "count": 41
+      },
+      {
+        "name": "Agriculture/Forestry/Fishing",
+        "count": 41
+      },
+      {
+        "name": "Banks/Insurance/Financial Services, Finance",
+        "count": 41
+      },
+      {
+        "name": "Critical Care, Nursing",
+        "count": 40
+      },
+      {
+        "name": "Banks/Insurance/Financial Services, Operations/Customer Service/Telecalling/Backend",
+        "count": 40
+      },
+      {
+        "name": "Company Provided",
+        "count": 38
+      },
+      {
+        "name": "Critical Care, General Practitioner, Medical Officer",
+        "count": 38
+      },
+      {
+        "name": "Branch Manager",
+        "count": 36
+      },
+      {
+        "name": "Clinical Research, Dental",
+        "count": 36
+      },
+      {
+        "name": "Accounting/Tax/Company Secretary/Audit, Banks/Insurance/Financial Services",
+        "count": 36
       },
       {
         "name": "Consultant",
         "count": 35
       },
       {
+        "name": "Senior Vice President",
+        "count": 35
+      },
+      {
+        "name": "Logistics/Freight Forward/Distribution/Courier",
+        "count": 34
+      },
+      {
+        "name": "Lecturer/Professor",
+        "count": 34
+      },
+      {
+        "name": "Managing Partner",
+        "count": 33
+      },
+      {
+        "name": "Medical Superintendent/Director",
+        "count": 33
+      },
+      {
+        "name": "Admin Services/Medical Facilities, Other Healthcare",
+        "count": 33
+      },
+      {
+        "name": "Senior Executive",
+        "count": 33
+      },
+      {
+        "name": "Associate",
+        "count": 32
+      },
+      {
+        "name": "Accounts Executive",
+        "count": 32
+      },
+      {
+        "name": "Asst. Manager",
+        "count": 31
+      },
+      {
+        "name": "Lecturer",
+        "count": 31
+      },
+      {
+        "name": "Trainee",
+        "count": 31
+      },
+      {
         "name": "General Manager",
         "count": 30
+      },
+      {
+        "name": "Neurology",
+        "count": 30
+      },
+      {
+        "name": "Engineer",
+        "count": 30
+      },
+      {
+        "name": "sales executive",
+        "count": 29
       },
       {
         "name": "Project Manager",
@@ -1115,10 +2095,6 @@
       {
         "name": "Financial Services",
         "count": 40716
-      },
-      {
-        "name": "Other",
-        "count": 37881
       },
       {
         "name": "Consumer Services",
@@ -2015,6 +2991,10 @@
         "count": 244489
       },
       {
+        "name": "Chief Executive Officer",
+        "count": 229734
+      },
+      {
         "name": "Vice President",
         "count": 185452
       },
@@ -2023,12 +3003,20 @@
         "count": 159669
       },
       {
+        "name": "Chief Operating Officer",
+        "count": 126265
+      },
+      {
         "name": "Operations Manager",
         "count": 91119
       },
       {
         "name": "Marketing Director",
         "count": 74718
+      },
+      {
+        "name": "Director of Marketing",
+        "count": 71868
       },
       {
         "name": "Marketing Executive",
@@ -2043,8 +3031,16 @@
         "count": 67004
       },
       {
+        "name": "Principal",
+        "count": 62421
+      },
+      {
         "name": "Engineer",
         "count": 57089
+      },
+      {
+        "name": "Director of Operations",
+        "count": 53113
       },
       {
         "name": "Vice President Marketing",
@@ -2059,20 +3055,68 @@
         "count": 34852
       },
       {
+        "name": "Chief Financial Officer",
+        "count": 33614
+      },
+      {
         "name": "Human Resources Executive",
         "count": 33407
+      },
+      {
+        "name": "Vice President of Marketing",
+        "count": 30430
       },
       {
         "name": "Marketing Coordinator",
         "count": 29394
       },
       {
+        "name": "Vice President of Operations",
+        "count": 29304
+      },
+      {
         "name": "Vice President Operations",
         "count": 29042
       },
       {
+        "name": "Vice President Sales and Marketing",
+        "count": 28494
+      },
+      {
+        "name": "President and Chief Executive Officer",
+        "count": 26082
+      },
+      {
+        "name": "Sales and Marketing Manager",
+        "count": 25568
+      },
+      {
+        "name": "Manager of Human Resources",
+        "count": 25481
+      },
+      {
+        "name": "Chief Marketing Officer",
+        "count": 24248
+      },
+      {
+        "name": "Director-Marketing",
+        "count": 23553
+      },
+      {
+        "name": "Associate",
+        "count": 23226
+      },
+      {
+        "name": "Director of Sales and Marketing",
+        "count": 22972
+      },
+      {
         "name": "Facilities Manager",
         "count": 21020
+      },
+      {
+        "name": "Director of Human Resources",
+        "count": 20543
       },
       {
         "name": "Operations Executive",
@@ -2091,6 +3135,10 @@
         "count": 18139
       },
       {
+        "name": "Vice President of Sales and Marketing",
+        "count": 17554
+      },
+      {
         "name": "Founder",
         "count": 16958
       },
@@ -2105,6 +3153,10 @@
       {
         "name": "Controller",
         "count": 15538
+      },
+      {
+        "name": "Director - Marketing",
+        "count": 15418
       },
       {
         "name": "Design Engineer",
@@ -2155,12 +3207,32 @@
         "count": 11875
       },
       {
+        "name": "Assistant Vice President",
+        "count": 11875
+      },
+      {
         "name": "Electrical Engineer",
         "count": 11841
       },
       {
+        "name": "President & Chief Executive Officer",
+        "count": 11675
+      },
+      {
+        "name": "Vice President, Marketing",
+        "count": 11566
+      },
+      {
+        "name": "Senior Software Engineer",
+        "count": 11504
+      },
+      {
         "name": "Human Resources Manager",
         "count": 11278
+      },
+      {
+        "name": "Marketing Assistant",
+        "count": 10710
       },
       {
         "name": "Mechanical Engineer",
@@ -2171,8 +3243,20 @@
         "count": 10702
       },
       {
+        "name": "Manager of Sales",
+        "count": 10115
+      },
+      {
         "name": "Manager Marketing",
         "count": 9865
+      },
+      {
+        "name": "Vice President, Operations",
+        "count": 9784
+      },
+      {
+        "name": "Senior Marketing Manager",
+        "count": 9554
       },
       {
         "name": "Sales Engineer",
@@ -2191,12 +3275,24 @@
         "count": 9086
       },
       {
+        "name": "Senior Engineer",
+        "count": 9022
+      },
+      {
         "name": "Sales Manager",
         "count": 8906
       },
       {
+        "name": "Director, Marketing",
+        "count": 8839
+      },
+      {
         "name": "Network Engineer",
         "count": 8781
+      },
+      {
+        "name": "Vice President, Sales and Marketing",
+        "count": 8661
       },
       {
         "name": "Marketing Communications Manager",
@@ -2211,6 +3307,14 @@
         "count": 8300
       },
       {
+        "name": "Owner, President",
+        "count": 8289
+      },
+      {
+        "name": "Marketing Associate",
+        "count": 8094
+      },
+      {
         "name": "Finance Executive",
         "count": 8005
       },
@@ -2219,8 +3323,24 @@
         "count": 7910
       },
       {
+        "name": "Engineering and Technical Executive",
+        "count": 7808
+      },
+      {
+        "name": "Vice President-Marketing",
+        "count": 7711
+      },
+      {
+        "name": "Assistant Principal",
+        "count": 7688
+      },
+      {
         "name": "Sales Representative",
         "count": 7387
+      },
+      {
+        "name": "Manager of Marketing",
+        "count": 7364
       },
       {
         "name": "Facility Manager",
@@ -2231,6 +3351,14 @@
         "count": 7329
       },
       {
+        "name": "Executive Vice President Marketing",
+        "count": 7288
+      },
+      {
+        "name": "Vice President - Marketing",
+        "count": 7261
+      },
+      {
         "name": "Account Executive",
         "count": 7185
       },
@@ -2239,8 +3367,24 @@
         "count": 7169
       },
       {
+        "name": "Director of Sales",
+        "count": 7153
+      },
+      {
         "name": "Purchasing Agent",
         "count": 7007
+      },
+      {
+        "name": "Sales and Marketing",
+        "count": 6838
+      },
+      {
+        "name": "Director of Engineering",
+        "count": 6831
+      },
+      {
+        "name": "Principal Engineer",
+        "count": 6760
       },
       {
         "name": "Recruiter",
@@ -2251,6 +3395,14 @@
         "count": 6436
       },
       {
+        "name": "Founder And Chief Executive Officer",
+        "count": 6404
+      },
+      {
+        "name": "Director-operations",
+        "count": 6339
+      },
+      {
         "name": "Safety Director",
         "count": 6228
       },
@@ -2259,8 +3411,16 @@
         "count": 6215
       },
       {
+        "name": "Director-Sales and Marketing",
+        "count": 6210
+      },
+      {
         "name": "Scientist",
         "count": 6101
+      },
+      {
+        "name": "Vice President-Sales and Marketing",
+        "count": 6053
       },
       {
         "name": "Financial Advisor",
@@ -2283,16 +3443,48 @@
         "count": 5705
       },
       {
+        "name": "Sales and Marketing Director",
+        "count": 5634
+      },
+      {
+        "name": "Vice President of Sales",
+        "count": 5633
+      },
+      {
         "name": "President/chief Executive Officer",
         "count": 5563
+      },
+      {
+        "name": "Chief Operations Officer",
+        "count": 5548
+      },
+      {
+        "name": "Director, Operations",
+        "count": 5536
+      },
+      {
+        "name": "President and Chief Operating Officer",
+        "count": 5529
+      },
+      {
+        "name": "Vice President-operations",
+        "count": 5446
       },
       {
         "name": "Microbiology Researcher",
         "count": 5393
       },
       {
+        "name": "Vice President of Sales & Marketing",
+        "count": 5354
+      },
+      {
         "name": "Marketing Consultant",
         "count": 5230
+      },
+      {
+        "name": "Director Sales and Marketing",
+        "count": 5225
       },
       {
         "name": "Staff Engineer",
@@ -2301,6 +3493,22 @@
       {
         "name": "Religious Leader",
         "count": 5026
+      },
+      {
+        "name": "Vice President - Operations",
+        "count": 5009
+      },
+      {
+        "name": "Vice President of Human Resources",
+        "count": 4963
+      },
+      {
+        "name": "Chief Engineer",
+        "count": 4944
+      },
+      {
+        "name": "Senior Systems Engineer",
+        "count": 4616
       },
       {
         "name": "Marketing Representative",
@@ -2323,20 +3531,68 @@
         "count": 4370
       },
       {
+        "name": "Director of Facilities",
+        "count": 4367
+      },
+      {
+        "name": "Senior Vice President",
+        "count": 4303
+      },
+      {
+        "name": "Marketing Executive, Sales Executive",
+        "count": 4282
+      },
+      {
+        "name": "Chief Executive Officer and President",
+        "count": 4210
+      },
+      {
         "name": "Researcher",
         "count": 4193
+      },
+      {
+        "name": "Chief Executive Officer, President",
+        "count": 4164
+      },
+      {
+        "name": "Human Resources Business Partner",
+        "count": 4162
+      },
+      {
+        "name": "Chairman and Chief Executive Officer",
+        "count": 4138
       },
       {
         "name": "Human Resources Generalist",
         "count": 4133
       },
       {
+        "name": "Director - Operations",
+        "count": 4109
+      },
+      {
         "name": "Treasurer",
         "count": 4090
       },
       {
+        "name": "Senior Scientist",
+        "count": 4084
+      },
+      {
         "name": "Purchasing Manager",
         "count": 4080
+      },
+      {
+        "name": "Information Technology Operations Manager",
+        "count": 4074
+      },
+      {
+        "name": "Partner, Attorney",
+        "count": 4031
+      },
+      {
+        "name": "Principal Software Engineer",
+        "count": 4015
       },
       {
         "name": "Architect",
@@ -2367,6 +3623,14 @@
         "count": 3815
       },
       {
+        "name": "Director of Marketing and Communications",
+        "count": 3657
+      },
+      {
+        "name": "Administrative Assistant",
+        "count": 3656
+      },
+      {
         "name": "Board Member",
         "count": 3653
       },
@@ -2383,12 +3647,20 @@
         "count": 3560
       },
       {
+        "name": "Vice President Sales & Marketing",
+        "count": 3507
+      },
+      {
         "name": "Safety Specialist/engineer",
         "count": 3437
       },
       {
         "name": "Quality Engineer",
         "count": 3437
+      },
+      {
+        "name": "Senior Vice President Marketing",
+        "count": 3433
       },
       {
         "name": "Accounting Manager",
@@ -2399,12 +3671,20 @@
         "count": 3369
       },
       {
+        "name": "Senior Vice President Operations",
+        "count": 3368
+      },
+      {
         "name": "Coordinator",
         "count": 3351
       },
       {
         "name": "Human Resources Specialist",
         "count": 3341
+      },
+      {
+        "name": "Sales and Marketing Executive",
+        "count": 3251
       },
       {
         "name": "Product Engineer",
@@ -2415,12 +3695,116 @@
         "count": 3156
       },
       {
+        "name": "Manager of Business Development",
+        "count": 3141
+      },
+      {
+        "name": "Senior Network Engineer",
+        "count": 3117
+      },
+      {
+        "name": "Vice President - Sales and Marketing",
+        "count": 3113
+      },
+      {
+        "name": "Research Associate",
+        "count": 3064
+      },
+      {
+        "name": "Senior Product Marketing Manager",
+        "count": 3009
+      },
+      {
         "name": "Vice President Engineering",
         "count": 2991
       },
       {
+        "name": "Senior Design Engineer",
+        "count": 2961
+      },
+      {
+        "name": "Safety Coordinator",
+        "count": 2895
+      },
+      {
+        "name": "Vice President of Engineering",
+        "count": 2845
+      },
+      {
+        "name": "Director of Finance",
+        "count": 2834
+      },
+      {
+        "name": "Director of Product Marketing",
+        "count": 2827
+      },
+      {
+        "name": "Director - Sales & Marketing",
+        "count": 2819
+      },
+      {
+        "name": "Senior Project Engineer",
+        "count": 2818
+      },
+      {
+        "name": "Network Operations Manager",
+        "count": 2811
+      },
+      {
+        "name": "Human Resources Coordinator",
+        "count": 2792
+      },
+      {
+        "name": "Graphic Designer",
+        "count": 2749
+      },
+      {
+        "name": "Human Resources Assistant",
+        "count": 2747
+      },
+      {
         "name": "Creative Director",
         "count": 2742
+      },
+      {
+        "name": "Sales Associate",
+        "count": 2685
+      },
+      {
+        "name": "Operations Analyst",
+        "count": 2676
+      },
+      {
+        "name": "Director of Business Development",
+        "count": 2663
+      },
+      {
+        "name": "Manager of Regional Sales",
+        "count": 2663
+      },
+      {
+        "name": "Marketing/public Relations Director",
+        "count": 2647
+      },
+      {
+        "name": "Senior Mortgage Loan Officer",
+        "count": 2611
+      },
+      {
+        "name": "Manager of Operations",
+        "count": 2597
+      },
+      {
+        "name": "Research Analyst",
+        "count": 2592
+      },
+      {
+        "name": "Marketing and Communications Manager",
+        "count": 2591
+      },
+      {
+        "name": "Director, Sales and Marketing",
+        "count": 2584
       },
       {
         "name": "Sales Operations Manager",
@@ -2431,11 +3815,35 @@
         "count": 2529
       },
       {
+        "name": "Transportation Manager",
+        "count": 2528
+      },
+      {
+        "name": "Senior Vice President of Marketing",
+        "count": 2510
+      },
+      {
+        "name": "Principal Scientist",
+        "count": 2504
+      },
+      {
+        "name": "Manager-marketing",
+        "count": 2504
+      },
+      {
         "name": "Consultant",
         "count": 2498
       },
       {
+        "name": "Operations Coordinator",
+        "count": 2493
+      },
+      {
         "name": "Application Engineer",
+        "count": 2485
+      },
+      {
+        "name": "Director - Sales and Marketing",
         "count": 2485
       },
       {
@@ -2443,8 +3851,48 @@
         "count": 2471
       },
       {
+        "name": "Founder and President",
+        "count": 2468
+      },
+      {
+        "name": "Operations Specialist",
+        "count": 2437
+      },
+      {
         "name": "Vice President Finance",
         "count": 2414
+      },
+      {
+        "name": "Senior Vice President Sales and Marketing",
+        "count": 2408
+      },
+      {
+        "name": "Sales and Marketing Coordinator",
+        "count": 2396
+      },
+      {
+        "name": "Senior Mechanical Engineer",
+        "count": 2394
+      },
+      {
+        "name": "Chief Executive Officer And Founder",
+        "count": 2390
+      },
+      {
+        "name": "Regional Sales Manager",
+        "count": 2383
+      },
+      {
+        "name": "Manager, Operations",
+        "count": 2372
+      },
+      {
+        "name": "Vice President - Sales & Marketing",
+        "count": 2357
+      },
+      {
+        "name": "Reporter",
+        "count": 2343
       },
       {
         "name": "Executive",
@@ -2455,12 +3903,108 @@
         "count": 2327
       },
       {
+        "name": "Senior Electrical Engineer",
+        "count": 2320
+      },
+      {
+        "name": "Finance Director",
+        "count": 2296
+      },
+      {
+        "name": "Engineering/Technical",
+        "count": 2291
+      },
+      {
         "name": "Transportation Department",
         "count": 2283
       },
       {
+        "name": "Human Resources Compliance and Regulatory",
+        "count": 2277
+      },
+      {
+        "name": "System Engineer",
+        "count": 2270
+      },
+      {
+        "name": "Safety Officer",
+        "count": 2246
+      },
+      {
+        "name": "Executive Assistant",
+        "count": 2245
+      },
+      {
+        "name": "Test Engineer",
+        "count": 2223
+      },
+      {
+        "name": "Agency Owner",
+        "count": 2214
+      },
+      {
+        "name": "Environmental Engineer",
+        "count": 2186
+      },
+      {
         "name": "Applications Engineer",
         "count": 2166
+      },
+      {
+        "name": "CEO/President",
+        "count": 2166
+      },
+      {
+        "name": "Channel Marketing Manager",
+        "count": 2164
+      },
+      {
+        "name": "Sales Consultant",
+        "count": 2163
+      },
+      {
+        "name": "Senior Vice President of Operations",
+        "count": 2157
+      },
+      {
+        "name": "Production Supervisor",
+        "count": 2151
+      },
+      {
+        "name": "President, Chief Executive Officer",
+        "count": 2128
+      },
+      {
+        "name": "Dentist",
+        "count": 2118
+      },
+      {
+        "name": "Plant Engineer",
+        "count": 2117
+      },
+      {
+        "name": "Director of Marketing and Sales",
+        "count": 2113
+      },
+      {
+        "name": "Senior Vice President of Sales and Marketing",
+        "count": 2102
+      },
+      {
+        "name": "General Counsel",
+        "count": 2092
+      },
+      {
+        "name": "Marketing Vice President",
+        "count": 2083
+      },
+      {
+        "name": "Senior Research Scientist",
+        "count": 2067
+      },
+      {
+        "name": "Co-Founder And Chief Executive Officer",
+        "count": 2066
       },
       {
         "name": "Executive Vice President",
@@ -2471,6 +4015,66 @@
         "count": 2040
       },
       {
+        "name": "Marketing and Sales",
+        "count": 2014
+      },
+      {
+        "name": "Facilities Engineer",
+        "count": 2004
+      },
+      {
+        "name": "Operations Engineer",
+        "count": 1997
+      },
+      {
+        "name": "Administrator",
+        "count": 1992
+      },
+      {
+        "name": "Regional Marketing Manager",
+        "count": 1984
+      },
+      {
+        "name": "Maintenance Executive",
+        "count": 1953
+      },
+      {
+        "name": "Online Marketing Manager",
+        "count": 1947
+      },
+      {
+        "name": "Owner And Operator",
+        "count": 1942
+      },
+      {
+        "name": "Senior Operations Manager",
+        "count": 1941
+      },
+      {
+        "name": "Marketing Communications Specialist",
+        "count": 1933
+      },
+      {
+        "name": "Business Operations Manager",
+        "count": 1910
+      },
+      {
+        "name": "President, Chief Executive Officer, Director",
+        "count": 1862
+      },
+      {
+        "name": "Designer",
+        "count": 1843
+      },
+      {
+        "name": "Manager Sales and Marketing",
+        "count": 1835
+      },
+      {
+        "name": "Marketing Operations Manager",
+        "count": 1818
+      },
+      {
         "name": "Director Product Marketing",
         "count": 1816
       },
@@ -2479,12 +4083,92 @@
         "count": 1810
       },
       {
+        "name": "Director of Research",
+        "count": 1802
+      },
+      {
+        "name": "President and Founder",
+        "count": 1795
+      },
+      {
+        "name": "Marketing Programs Manager",
+        "count": 1789
+      },
+      {
+        "name": "Electronics Engineer",
+        "count": 1786
+      },
+      {
+        "name": "Senior Director of Marketing",
+        "count": 1775
+      },
+      {
+        "name": "Senior Manufacturing Engineer",
+        "count": 1755
+      },
+      {
+        "name": "Technical Recruiter",
+        "count": 1741
+      },
+      {
+        "name": "Director, Product Marketing",
+        "count": 1737
+      },
+      {
+        "name": "Vice Principal",
+        "count": 1730
+      },
+      {
+        "name": "Director of Marketing and Public Relations",
+        "count": 1727
+      },
+      {
         "name": "Sales Director",
         "count": 1718
       },
       {
+        "name": "Technical Marketing Manager",
+        "count": 1708
+      },
+      {
+        "name": "Senior Vice President, Sales and Marketing",
+        "count": 1705
+      },
+      {
+        "name": "Manager, Operating Groups",
+        "count": 1703
+      },
+      {
+        "name": "Head of Marketing",
+        "count": 1697
+      },
+      {
+        "name": "Senior Vice President, Marketing",
+        "count": 1689
+      },
+      {
+        "name": "Human Resources Compliance Manager",
+        "count": 1684
+      },
+      {
+        "name": "President And Owner",
+        "count": 1669
+      },
+      {
+        "name": "Regional Operations Manager",
+        "count": 1667
+      },
+      {
+        "name": "Senior Account Executive",
+        "count": 1661
+      },
+      {
         "name": "Sales Marketing Manager",
         "count": 1597
+      },
+      {
+        "name": "Owner And President",
+        "count": 1589
       },
       {
         "name": "Director Engineering",
@@ -2521,6 +4205,10 @@
       {
         "name": "Manager Marketing Communications",
         "count": 1192
+      },
+      {
+        "name": "Broker And Owner",
+        "count": 1028
       },
       {
         "name": "Human Resources",
