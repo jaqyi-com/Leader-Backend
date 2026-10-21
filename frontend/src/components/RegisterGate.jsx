@@ -5,7 +5,7 @@ import RegisterPage from "../pages/RegisterPage";
 
 // Sign-up policy is enforced by the server (REGISTRATION_MODE / REGISTRATION_INVITE_CODE).
 // The old client-side password lived in this JavaScript bundle, so anyone could read it — and the
-// register API itself was open anyway. This gate now only asks for an invite code when needed.
+// register API itself was open anyway. This gate asks for the owner password, which the server checks when the account is created.
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
 export default function RegisterGate() {
@@ -29,7 +29,7 @@ export default function RegisterGate() {
   function handleSubmit(e) {
     e.preventDefault();
     if (!password.trim()) {
-      setError("Please enter your invite code.");
+      setError("Please enter the password.");
       return;
     }
     // The server checks the code when the account is created.
@@ -41,7 +41,7 @@ export default function RegisterGate() {
     setUnlocked(false);
     setInviteCode("");
     setPassword("");
-    setError("That invite code was not accepted. Please check it and try again.");
+    setError("Wrong password. Please try again.");
     setShaking(true);
     setTimeout(() => setShaking(false), 500);
   }
@@ -115,7 +115,7 @@ export default function RegisterGate() {
             <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 13, marginTop: 8, marginBottom: 0 }}>
               {mode === "closed"
                 ? "New registrations are currently closed."
-                : "Registration is by invitation. Enter your invite code to continue."}
+                : "This page is private. Enter the password to continue."}
             </p>
           </div>
 
@@ -124,7 +124,7 @@ export default function RegisterGate() {
             {/* Password field */}
             <div style={{ marginBottom: 16 }}>
               <label style={{ color: "rgba(255,255,255,0.6)", fontSize: 12, fontWeight: 500, display: "block", marginBottom: 8 }}>
-                INVITE CODE
+                PASSWORD
               </label>
               <div style={{ position: "relative" }}>
                 <div style={{
@@ -138,7 +138,7 @@ export default function RegisterGate() {
                   type={showPw ? "text" : "password"}
                   value={password}
                   onChange={(e) => { setPassword(e.target.value); setError(""); }}
-                  placeholder="Enter invite code"
+                  placeholder="Enter password"
                   style={{
                     width: "100%",
                     background: "rgba(255,255,255,0.06)",

@@ -108,6 +108,7 @@ async function startStack({ postgres = false, env = {} } = {}) {
       OPENAI_API_KEY: "fake", APOLLO_API_KEY: "fake", SMTP_USER: "fake", SMTP_PASS: "fake",
       // generous limits so ordinary tests are not throttled; abuse tests override these
       RATE_LIMIT_AUTH_MAX: "100000", RATE_LIMIT_LOGIN_ACCOUNT_MAX: "100000", RATE_LIMIT_DATA_MAX: "100000",
+      REGISTRATION_MODE: "open", // the default is invite-only; tests that check sign-up policy override this
       ...env,
     },
     stdio: "ignore",

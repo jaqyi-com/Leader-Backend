@@ -51,11 +51,11 @@ test("rate limit: the people search is throttled per user", { skip }, async () =
   }
 });
 
-test("signup: REGISTRATION_MODE=open (default) keeps current behaviour", { skip }, async () => {
+test("signup: REGISTRATION_MODE=open lets anyone sign up", { skip }, async () => {
   const mine = [];
   const boot = async (o) => { const x = await bootBase(o); mine.push(x); return x; };
   try {
-    const s = await boot();
+    const s = await boot({ env: { REGISTRATION_MODE: "open" } });
     assert.equal((await s.http("GET", "/api/auth/registration")).json.mode, "open");
     assert.ok(await s.newUser("walkin"));
   } finally {
@@ -79,8 +79,13 @@ test("signup: invite mode requires the server-side code; closed mode refuses eve
     const closed = await boot({ env: { REGISTRATION_MODE: "closed" } });
     assert.equal((await closed.http("POST", "/api/auth/register", { body: body({ inviteCode: "anything" }) })).status, 403);
 
-    const misconfigured = await boot({ env: { REGISTRATION_MODE: "invite" } }); // no code configured → safe default: closed
-    assert.equal((await misconfigured.http("POST", "/api/auth/register", { body: body({ inviteCode: "x" }) })).status, 403);
+    // No mode set → invite-only, checked against the bcrypt hash of the owner's password
+    const hash = require("bcryptjs").hashSync("owner-pass-2026", 4);
+    const dflt = await boot({ env: { REGISTRATION_MODE: "", REGISTRATION_INVITE_HASH: hash } });
+    assert.equal((await dflt.http("GET", "/api/auth/registration")).json.mode, "invite");
+    assert.equal((await dflt.http("POST", "/api/auth/register", { body: body() })).status, 403);
+    assert.equal((await dflt.http("POST", "/api/auth/register", { body: body({ inviteCode: "x" }) })).status, 403);
+    assert.equal((await dflt.http("POST", "/api/auth/register", { body: body({ inviteCode: "owner-pass-2026" }) })).status, 201);
   } finally {
     await release(...mine);
   }
