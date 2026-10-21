@@ -111,19 +111,23 @@ async function main() {
   const peopleSchema = { actualCols: ["geo_source", "job_title", "city", "state", "location"] };
 
   // One scan of companies, grouped two ways. ILIKE is case-insensitive, so lower() only merges groups.
+  // (People job titles stay as stored: title cards match exact spellings with "=".)
   const companiesAgg = `
     SELECT geo_source, lower(industry) AS industry, lower(city) AS city, state, GROUPING(lower(industry)) AS by_city, count(*) AS n
     FROM final.companies
     GROUP BY GROUPING SETS ((geo_source, lower(industry)), (geo_source, lower(city), state))`;
-  // People: location is only ever tested for "United States" / "USA", so it is reduced to those.
+  // People: the country filters only test location for "United States", "USA" and "India", so it is
+  // reduced to the markers it contains (each kept separately: "Indiana, USA" has both USA and India).
   const peopleAgg = `
-    SELECT geo_source, state, location, lower(job_title) AS job_title, lower(city) AS city,
-           GROUPING(lower(job_title)) AS by_city, count(*) AS n
+    SELECT geo_source, state, location, job_title, lower(city) AS city,
+           GROUPING(job_title) AS by_city, count(*) AS n
     FROM (SELECT geo_source, state, job_title, city,
-                 CASE WHEN location ILIKE '%United States%' THEN 'United States'
-                      WHEN location ILIKE '%USA%' THEN 'USA' END AS location
+                 NULLIF(concat_ws(' ',
+                   CASE WHEN location ILIKE '%United States%' THEN 'United States' END,
+                   CASE WHEN location ILIKE '%USA%' THEN 'USA' END,
+                   CASE WHEN location ILIKE '%India%' THEN 'India' END), '') AS location
           FROM final.people) p
-    GROUP BY GROUPING SETS ((geo_source, state, location, lower(job_title)), (geo_source, state, location, lower(city)))`;
+    GROUP BY GROUPING SETS ((geo_source, state, location, job_title), (geo_source, state, location, lower(city)))`;
 
   // by_city is 0 on the industry / job-title rows of the aggregate and 1 on the city rows.
   const categoryCard = (country) => (c) => ({ ...c, country, kindCond: "by_city = 0" });

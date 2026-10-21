@@ -34,6 +34,13 @@ const FP_SCHEMA  = "final";
 const FP_TABLE   = "people";
 const FULL_TABLE = `"${FP_SCHEMA}"."${FP_TABLE}"`;
 
+// Exact counts from the same generated files as the Categories / Cities pages
+// (scripts/refresh_explorer_counts.js). A live GROUP BY over the whole table is far too slow per request.
+const EXPLORER_CATEGORIES = require("../../frontend/src/categories.json");
+const EXPLORER_CITIES = require("../../frontend/src/cities.json");
+const withCountry = (list, country) => list.map((c) => ({ ...c, country }));
+const topByCount = (rows, n) => [...rows].sort((a, b) => b.count - a.count).slice(0, n);
+
 // ── Cache ──────────────────────────────────────────────────
 const STATS_KEY     = "cache:final-people-stats";
 const COUNT_CACHE_KEY = "cache:final-people-count";
@@ -224,9 +231,14 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
     const doubleQuotedCol = `"${col}"`;
 
     if (col === "job_title" && val !== "" && op === "eq") {
-      // Exact title (case-insensitive), as sent by the Categories page cards
-      conditions.push(`"job_title" ILIKE $${idx++}`);
-      values.push(escapeLike(val.trim()));
+      // Exact title, as sent by the Categories page cards. Matched in its usual spellings with "=",
+      // which the btree index on job_title answers instantly; a case-insensitive ILIKE has to recheck
+      // ~165k trigram candidates on this 45M-row table and took 20-30 s.
+      const t = val.trim();
+      const capitalised = t.toLowerCase().replace(/(^|[\s/-])(\p{L})/gu, (m, sep, ch) => sep + ch.toUpperCase());
+      const sentence = t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
+      conditions.push(`"job_title" = ANY($${idx++}::text[])`);
+      values.push([...new Set([t, t.toLowerCase(), t.toUpperCase(), capitalised, sentence])]);
       continue;
     }
 
@@ -523,37 +535,9 @@ router.post("/refresh", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GET /categories
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-router.get("/categories", async (req, res) => {
-  try {
-    const cached = await cacheGet("cache:final-people-categories-v1");
-    if (cached) return res.json(cached);
-
-    const queryRes = await pgQuery(
-      `SELECT job_title, count(*) as count 
-       FROM (
-         SELECT job_title 
-         FROM ${FULL_TABLE} 
-         WHERE job_title IS NOT NULL AND job_title != '' 
-         LIMIT 20000
-       ) AS sub 
-       GROUP BY job_title 
-       ORDER BY count DESC 
-       LIMIT 100`,
-       [],
-       10000
-    );
-
-    const payload = queryRes.rows.map(r => ({
-      name: r.job_title,
-      count: parseInt(r.count, 10)
-    }));
-
-    await cacheSet("cache:final-people-categories-v1", payload, 86400); // 24 hours
-    res.json(payload);
-  } catch (err) {
-    logger.error(`[categories] ${err.message}`);
-    res.status(500).json({ error: err.message });
-  }
+router.get("/categories", (req, res) => {
+  const { india, usa } = EXPLORER_CATEGORIES;
+  res.json(topByCount([...withCountry(india.people, "india"), ...withCountry(usa.people, "usa")], 100));
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -702,54 +686,12 @@ router.get("/", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GET /cities  — distinct cities with people counts (City Explorer)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const CITIES_CACHE_KEY = "cache:final-people-cities";
-const CITIES_CACHE_TTL = 60 * 60 * 6; // 6 hours
 
-router.get("/cities", async (req, res) => {
-  try {
-    const cached = await cacheGet(CITIES_CACHE_KEY);
-    if (cached) return res.json({ ...cached, _cache: "hit" });
-
-    const { selectCols } = await getSchema();
-    const hasCity     = selectCols.includes("city");
-    const hasState    = selectCols.includes("state");
-    const hasLocation = selectCols.includes("location");
-
-    // Prefer city column; fall back to location
-    const cityCol = hasCity ? "city" : hasLocation ? "location" : null;
-    if (!cityCol) {
-      return res.json({ cities: [], total: 0, source: "cloud_sql", note: "No city column in final.people" });
-    }
-
-    const selectPart = hasState
-      ? `"${cityCol}", "state", COUNT(*) AS count`
-      : `"${cityCol}", NULL AS state, COUNT(*) AS count`;
-    const groupPart  = hasState ? `"${cityCol}", "state"` : `"${cityCol}"`;
-
-    const sql = `
-      SELECT ${selectPart}
-      FROM ${FULL_TABLE}
-      WHERE "${cityCol}" IS NOT NULL AND "${cityCol}" != ''
-      GROUP BY ${groupPart}
-      ORDER BY count DESC
-      LIMIT 500
-    `;
-
-    const result = await pgQuery(sql, [], 120000);
-    const cities  = result.rows.map(r => ({
-      city_file: (r[cityCol] || "").trim(),
-      name:      (r[cityCol] || "").trim(),
-      state:     (r.state || "").trim(),
-      count:     parseInt(r.count, 10),
-    })).filter(c => c.name.length > 0);
-
-    const payload = { cities, total: cities.length, source: "cloud_sql" };
-    await cacheSet(CITIES_CACHE_KEY, payload, CITIES_CACHE_TTL);
-    res.json(payload);
-  } catch (err) {
-    logger.error(`[GET /cities] ${err.message}`);
-    res.status(500).json({ error: err.message });
-  }
+router.get("/cities", (req, res) => {
+  const { india, usa } = EXPLORER_CITIES;
+  const cities = topByCount([...withCountry(india.people, "india"), ...withCountry(usa.people, "usa")], 500)
+    .map((c) => ({ city_file: c.name, name: c.name, state: c.state || "", count: c.count, country: c.country }));
+  res.json({ cities, total: cities.length, source: "explorer_counts", generatedAt: EXPLORER_CITIES.generatedAt });
 });
 
 module.exports = router;

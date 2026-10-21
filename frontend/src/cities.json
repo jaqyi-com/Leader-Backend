@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-10-21T08:59:55.598Z",
+  "generatedAt": "2026-10-21T11:28:44.927Z",
   "india": {
     "companies": [
       {
@@ -234,6 +234,16 @@
         "count": 3256848
       },
       {
+        "name": "Delhi",
+        "state": "Delhi",
+        "count": 2947481
+      },
+      {
+        "name": "Bengaluru",
+        "state": "Karnataka",
+        "count": 1328447
+      },
+      {
         "name": "Pune",
         "state": "Maharashtra",
         "count": 1226144
@@ -244,14 +254,9 @@
         "count": 1042669
       },
       {
-        "name": "Delhi",
-        "state": "Delhi",
-        "count": 967840
-      },
-      {
-        "name": "Bengaluru",
-        "state": "Karnataka",
-        "count": 814000
+        "name": "Chennai",
+        "state": "Tamil Nadu",
+        "count": 733844
       },
       {
         "name": "Noida",
@@ -259,9 +264,9 @@
         "count": 637943
       },
       {
-        "name": "Chennai",
-        "state": "Tamil Nadu",
-        "count": 461919
+        "name": "Gurugram",
+        "state": "Haryana",
+        "count": 506438
       },
       {
         "name": "Jaipur",
@@ -274,14 +279,14 @@
         "count": 413270
       },
       {
+        "name": "Kolkata",
+        "state": "West Bengal",
+        "count": 387346
+      },
+      {
         "name": "Faridabad",
         "state": "Haryana",
         "count": 320101
-      },
-      {
-        "name": "Kolkata",
-        "state": "West Bengal",
-        "count": 307325
       },
       {
         "name": "Ludhiana",
@@ -308,9 +313,9 @@
         "count": 199720
       },
       {
-        "name": "Gurugram",
-        "state": "Haryana",
-        "count": 174667
+        "name": "Vadodara",
+        "state": "Gujarat",
+        "count": 178413
       },
       {
         "name": "Lucknow",
@@ -336,11 +341,6 @@
         "name": "Thane",
         "state": "MAHARASHTRA",
         "count": 103126
-      },
-      {
-        "name": "Vadodara",
-        "state": "Gujarat",
-        "count": 96182
       },
       {
         "name": "Indore",
@@ -383,6 +383,11 @@
         "count": 41585
       },
       {
+        "name": "Kochi",
+        "state": "Kerala",
+        "count": 40124
+      },
+      {
         "name": "Visakhapatnam",
         "state": "Andhra Pradesh",
         "count": 37541
@@ -393,19 +398,19 @@
         "count": 37423
       },
       {
+        "name": "Bhubaneswar",
+        "state": "Odisha",
+        "count": 37350
+      },
+      {
         "name": "Raipur",
         "state": "Chhattisgarh",
         "count": 36860
       },
       {
-        "name": "Kochi",
-        "state": "Kerala",
-        "count": 30639
-      },
-      {
-        "name": "Bhubaneswar",
-        "state": "Odisha",
-        "count": 30314
+        "name": "Nashik",
+        "state": "Maharashtra",
+        "count": 33836
       },
       {
         "name": "Ranchi",
@@ -418,9 +423,9 @@
         "count": 26500
       },
       {
-        "name": "Nashik",
-        "state": "Maharashtra",
-        "count": 25053
+        "name": "Thiruvananthapuram",
+        "state": "Kerala",
+        "count": 19629
       },
       {
         "name": "Dehradun",
@@ -428,9 +433,9 @@
         "count": 17859
       },
       {
-        "name": "Thiruvananthapuram",
-        "state": "Kerala",
-        "count": 15496
+        "name": "Tiruppur",
+        "state": "Tamil Nadu",
+        "count": 16044
       },
       {
         "name": "Moradabad",
@@ -440,17 +445,12 @@
       {
         "name": "Mangaluru",
         "state": "Karnataka",
-        "count": 9573
-      },
-      {
-        "name": "Tiruppur",
-        "state": "Tamil Nadu",
-        "count": 9187
+        "count": 13004
       },
       {
         "name": "Mysuru",
         "state": "Karnataka",
-        "count": 5013
+        "count": 8800
       }
     ]
   },
