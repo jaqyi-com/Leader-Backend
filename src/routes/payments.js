@@ -18,18 +18,22 @@ const router = express.Router();
 const PLAN_AMOUNT_PAISE = 17900; // ₹179
 const PLAN_CURRENCY     = "INR";
 
-const RAZORPAY_KEY_ID     = process.env.RAZORPAY_KEY_ID;
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET;
+// Keys are read on every request, so setting them in Vercel takes effect on the next deploy
+// without depending on module load order.
+const keyId     = () => process.env.RAZORPAY_KEY_ID;
+const keySecret = () => process.env.RAZORPAY_KEY_SECRET;
 
-// Lazy getter — Razorpay instance created AFTER env vars or fallbacks are loaded
+const NOT_CONFIGURED = { error: "Payments are temporarily unavailable. Please try again later.", code: "PAYMENTS_NOT_CONFIGURED" };
+
 function getRazorpay() {
-  if (!RAZORPAY_KEY_ID || !RAZORPAY_KEY_SECRET) {
-    throw new Error("Razorpay keys are not configured. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET.");
-  }
-  return new Razorpay({
-    key_id:     RAZORPAY_KEY_ID,
-    key_secret: RAZORPAY_KEY_SECRET,
-  });
+  return new Razorpay({ key_id: keyId(), key_secret: keySecret() });
+}
+
+/** Constant-time comparison of two hex signatures. */
+function signatureMatches(expectedHex, given) {
+  const a = Buffer.from(String(expectedHex));
+  const b = Buffer.from(String(given || ""));
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
 router.use(async (req, res, next) => {
@@ -44,6 +48,10 @@ router.post("/create-order", async (req, res) => {
       return res.status(400).json({ error: "Name, email and password are required." });
     if (password.length < 8)
       return res.status(400).json({ error: "Password must be at least 8 characters." });
+    if (!keyId() || !keySecret()) {
+      logger.error("[Payments] RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET are not set.");
+      return res.status(503).json(NOT_CONFIGURED);
+    }
 
     const existing = await User.findOne({ email: email.toLowerCase().trim() });
     if (existing)
@@ -63,12 +71,12 @@ router.post("/create-order", async (req, res) => {
       orderId:  order.id,
       amount:   order.amount,
       currency: order.currency,
-      keyId:    RAZORPAY_KEY_ID,
+      keyId:    keyId(),
       prefill:  { name, email },
     });
   } catch (err) {
     logger.error(`[Payments] create-order: ${err.message}`);
-    res.status(500).json({ error: err.message || "Failed to create payment order." });
+    res.status(500).json({ error: "Failed to create payment order. Please try again." });
   }
 });
 
@@ -82,13 +90,18 @@ router.post("/verify-and-register", async (req, res) => {
     if (!name || !email || !password)
       return res.status(400).json({ error: "Missing registration data." });
 
+    if (!keySecret()) {
+      logger.error(`[Payments] RAZORPAY_KEY_SECRET is not set — cannot verify payment ${razorpay_payment_id}.`);
+      return res.status(503).json(NOT_CONFIGURED);
+    }
+
     // HMAC verification
     const expected = crypto
-      .createHmac("sha256", RAZORPAY_KEY_SECRET)
+      .createHmac("sha256", keySecret())
       .update(`${razorpay_order_id}|${razorpay_payment_id}`)
       .digest("hex");
 
-    if (expected !== razorpay_signature) {
+    if (!signatureMatches(expected, razorpay_signature)) {
       logger.warn(`[Payments] Invalid signature for order ${razorpay_order_id}`);
       return res.status(400).json({ error: "Payment verification failed. Invalid signature." });
     }
@@ -122,7 +135,7 @@ router.post("/verify-and-register", async (req, res) => {
     res.status(201).json({ success: true, token: result.token, user: { ...result.user, plan: "lifetime" }, org: result.org });
   } catch (err) {
     logger.error(`[Payments] verify-and-register: ${err.message}`);
-    res.status(500).json({ error: err.message || "Registration failed after payment." });
+    res.status(500).json({ error: "Registration failed after payment. Please contact support with your payment ID." });
   }
 });
 
@@ -132,7 +145,7 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
     const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
     if (!webhookSecret) {
       logger.error("[Payments] RAZORPAY_WEBHOOK_SECRET is not configured.");
-      return res.status(500).json({ error: "Webhook signature verification misconfigured." });
+      return res.status(503).json({ error: "Webhook not configured." });
     }
 
     const sig = req.headers["x-razorpay-signature"];
@@ -140,12 +153,12 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
       return res.status(400).json({ error: "Missing webhook signature" });
     }
 
-    const rawBody = Buffer.isBuffer(req.body)
-      ? req.body
-      : (typeof req.body === "string" ? req.body : JSON.stringify(req.body));
+    // Razorpay signs the exact bytes it sent. server.js keeps them in req.rawBody, because the
+    // global JSON parser runs before this route's express.raw() and re-serialising can change them.
+    const rawBody = req.rawBody || (Buffer.isBuffer(req.body) ? req.body : JSON.stringify(req.body));
 
     const exp = crypto.createHmac("sha256", webhookSecret).update(rawBody).digest("hex");
-    if (sig !== exp) {
+    if (!signatureMatches(exp, sig)) {
       logger.warn("[Payments] Invalid webhook signature detected.");
       return res.status(400).json({ error: "Invalid webhook signature" });
     }

@@ -82,7 +82,10 @@ app.use(
   })
 );
 
-app.use(express.json());
+// Keep the raw bytes for the Razorpay webhook: its signature covers the exact body Razorpay sent.
+app.use(express.json({
+  verify: (req, res, buf) => { if (req.originalUrl.startsWith("/api/payments/webhook")) req.rawBody = buf; },
+}));
 app.use(passport.initialize());
 
 validateCredentials();
