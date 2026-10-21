@@ -18,7 +18,7 @@ const router  = express.Router();
 const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const {
   hasNoSearchableChars, escapeLike, resultWindowError, sendSearchError,
-  exactCappedTotal, runFilteredSearch, searchTimeoutMs, checkSortAllowed } = require("../utils/searchFilters");
+  exactCappedTotal, runFilteredSearch, searchTimeoutMs, checkSortAllowed, CITY_ALIASES } = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const logger = require("../utils/logger").forAgent("FinalCompaniesDB");
 
@@ -327,32 +327,6 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
       col = hasPhone ? "phone" : "phones";
       op = val === "true" ? "nonempty" : "empty";
     } else if (col === "city" && val !== "") {
-      const CITY_ALIASES = {
-        "bengaluru": ["Bengaluru", "Bangalore"],
-        "bangalore": ["Bangalore", "Bengaluru"],
-        "gurugram": ["Gurugram", "Gurgaon"],
-        "gurgaon": ["Gurgaon", "Gurugram"],
-        "kolkata": ["Kolkata", "Calcutta"],
-        "calcutta": ["Calcutta", "Kolkata"],
-        "chennai": ["Chennai", "Madras"],
-        "madras": ["Madras", "Chennai"],
-        "thiruvananthapuram": ["Thiruvananthapuram", "Trivandrum"],
-        "trivandrum": ["Trivandrum", "Thiruvananthapuram"],
-        "kochi": ["Kochi", "Cochin", "Ernakulam"],
-        "cochin": ["Cochin", "Kochi", "Ernakulam"],
-        "vadodara": ["Vadodara", "Baroda"],
-        "baroda": ["Baroda", "Vadodara"],
-        "nashik": ["Nashik", "Nasik"],
-        "nasik": ["Nasik", "Nashik"],
-        "puducherry": ["Puducherry", "Pondicherry"],
-        "pondicherry": ["Pondicherry", "Puducherry"],
-        "mysuru": ["Mysuru", "Mysore"],
-        "mysore": ["Mysore", "Mysuru"],
-        "mangaluru": ["Mangaluru", "Mangalore"],
-        "mangalore": ["Mangalore", "Mangaluru"],
-        "belagavi": ["Belagavi", "Belgaum"],
-        "belgaum": ["Belgaum", "Belagavi"],
-      };
       const valLower = val.toLowerCase().trim();
       const aliases = CITY_ALIASES[valLower];
       if (aliases && aliases.length > 0) {
@@ -794,4 +768,5 @@ router.get("/cities", async (req, res) => {
 });
 
 module.exports = router;
+module.exports.buildWhere = buildWhere; // used by scripts/refresh_explorer_counts.js
 

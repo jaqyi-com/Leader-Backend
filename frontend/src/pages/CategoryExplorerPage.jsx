@@ -64,13 +64,8 @@ export default function CategoryExplorerPage() {
   const quickTags = (QUICK_TAGS[country] && QUICK_TAGS[country][mode]) || QUICK_TAGS.usa[mode];
 
   // Pick base category list for country + mode
-  const baseCategories = useMemo(() => {
-    const countryData = CATEGORIES_DATA[country] || CATEGORIES_DATA;
-    if (countryData && countryData[mode]) {
-      return countryData[mode];
-    }
-    return mode === "people" ? (CATEGORIES_DATA.people || []) : (CATEGORIES_DATA.company || []);
-  }, [country, mode]);
+  // Counts come from scripts/refresh_explorer_counts.js and equal what a card's click finds.
+  const baseCategories = useMemo(() => CATEGORIES_DATA[country]?.[mode] || [], [country, mode]);
 
   // Filtered by group pill and search query
   const filtered = useMemo(() => {
@@ -346,7 +341,7 @@ export default function CategoryExplorerPage() {
                 {/* Bottom Stats & Arrow */}
                 <div className="flex items-center justify-between mt-3 pt-2 border-t border-[var(--border)]">
                   <span className="text-[10px] font-semibold text-[var(--text-3)] flex items-center gap-1">
-                    {cat.count ? cat.count.toLocaleString() : "1,000+"} {mode === "people" ? "leads" : "orgs"}
+                    {cat.count.toLocaleString()} {mode === "people" ? "leads" : "orgs"}
                   </span>
 
                   <div

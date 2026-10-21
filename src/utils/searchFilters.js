@@ -50,6 +50,20 @@ const INDIA_STATES = [
 /** SQL list literal for INDIA_STATES (constant values only — never user input). */
 const INDIA_STATES_SQL = INDIA_STATES.map((s) => `'${s.replace(/'/g, "''")}'`).join(", ");
 
+// Cities stored under more than one name. A city filter for any of the names matches all of them,
+// so "Bengaluru" also finds rows stored as "Bangalore" (and the Cities page counts agree with it).
+const CITY_ALIAS_GROUPS = [
+  ["Bengaluru", "Bangalore"], ["Gurugram", "Gurgaon"], ["Kolkata", "Calcutta"], ["Chennai", "Madras"],
+  ["Thiruvananthapuram", "Trivandrum"], ["Kochi", "Cochin", "Ernakulam"], ["Vadodara", "Baroda"],
+  ["Nashik", "Nasik"], ["Puducherry", "Pondicherry"], ["Mysuru", "Mysore"], ["Mangaluru", "Mangalore"],
+  ["Belagavi", "Belgaum"], ["Tiruppur", "Tirupur"], ["Bhubaneswar", "Bhubaneshwar"], ["Delhi", "New Delhi"],
+];
+/** lower-case name → every name of that city, the given one first. */
+const CITY_ALIASES = {};
+for (const group of CITY_ALIAS_GROUPS) {
+  for (const name of group) CITY_ALIASES[name.toLowerCase()] = [name, ...group.filter((g) => g !== name)];
+}
+
 const EXACT_COUNT_CAP = 10000;
 
 /**
@@ -194,7 +208,7 @@ const hasNoSearchableChars = (v) => typeof v === "string" && v !== "" && !/[\p{L
 
 module.exports = {
   hasNoSearchableChars,
-  escapeLike, escapeRegex, hasWord, jobTitleCondition, INDIA_STATES, INDIA_STATES_SQL,
+  escapeLike, escapeRegex, hasWord, jobTitleCondition, INDIA_STATES, INDIA_STATES_SQL, CITY_ALIASES, CITY_ALIAS_GROUPS,
   exactCappedTotal, EXACT_COUNT_CAP, searchTimeoutMs, maxResultWindow, sortRowLimit,
   resultWindowError, checkSortAllowed, sendSearchError, runFilteredSearch,
   INDEX_PLAN,

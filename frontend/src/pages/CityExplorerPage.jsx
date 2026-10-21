@@ -15,7 +15,7 @@ const COUNTRIES = [
 
 // Top Metro Quick Filters
 const TOP_METROS_INDIA = [
-  "Bengaluru", "Mumbai", "New Delhi", "Hyderabad", "Chennai",
+  "Bengaluru", "Mumbai", "Delhi", "Hyderabad", "Chennai",
   "Pune", "Kolkata", "Ahmedabad", "Gurugram", "Noida", "Jaipur", "Surat", "Indore", "Chandigarh"
 ];
 
@@ -35,12 +35,8 @@ export default function CityExplorerPage() {
   const topMetros = isIndia ? TOP_METROS_INDIA : TOP_METROS_USA;
 
   // ── Pick the right dataset ────────────────────────────────────────────────
-  const allCities = useMemo(() => {
-    if (isIndia) {
-      return CITIES_DATA.india || [];
-    }
-    return mode === "companies" ? (CITIES_DATA.companies || []) : (CITIES_DATA.people || []);
-  }, [isIndia, mode]);
+  // Counts come from scripts/refresh_explorer_counts.js and equal what a card's click finds.
+  const allCities = useMemo(() => CITIES_DATA[country]?.[mode] || [], [country, mode]);
 
   // ── Unique states for dropdown ────────────────────────────────────────────
   const stateOptions = useMemo(() => {
@@ -74,9 +70,12 @@ export default function CityExplorerPage() {
   }, [allCities, stateFilter, searchQ]);
 
   const handleClick = (city) => {
-    const cityName = city.name.trim();
     const dest = mode === "companies" ? "/app/companies" : "/app/people";
-    navigate(`${dest}?f_city=${encodeURIComponent(cityName)}`);
+    // USA cards are per city + state (there are several Columbuses); India cards cover the whole city.
+    const params = new URLSearchParams({ f_city: city.name.trim() });
+    if (isIndia) params.set("f_country", "india");
+    else if (city.state) params.set("f_state_eq", city.state);
+    navigate(`${dest}?${params}`);
   };
 
   const handleCountryChange = (newCountry) => {
@@ -308,7 +307,7 @@ export default function CityExplorerPage() {
                 {/* Bottom Stats & Arrow */}
                 <div className="flex items-center justify-between mt-3 pt-2 border-t border-[var(--border)]">
                   <span className="text-[10px] font-semibold text-[var(--text-3)]">
-                    {city.count ? city.count.toLocaleString() : "5,000+"} {mode === "companies" ? "companies" : "people"}
+                    {city.count.toLocaleString()} {mode === "companies" ? "companies" : "people"}
                   </span>
 
                   <div

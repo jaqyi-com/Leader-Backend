@@ -8,8 +8,7 @@ const DB_VALUES_MAP = (() => {
   // Job Titles from categories
   const peopleTitles = [
     ...(CATEGORIES_DATA.india?.people || []),
-    ...(CATEGORIES_DATA.usa?.people || []),
-    ...(CATEGORIES_DATA.people || [])
+    ...(CATEGORIES_DATA.usa?.people || [])
   ];
   const uniqueTitles = Array.from(
     new Map(peopleTitles.map(item => [item.name, item.count || null])).entries()
@@ -18,8 +17,7 @@ const DB_VALUES_MAP = (() => {
   // Industries from categories
   const companyIndustries = [
     ...(CATEGORIES_DATA.india?.company || []),
-    ...(CATEGORIES_DATA.usa?.company || []),
-    ...(CATEGORIES_DATA.company || [])
+    ...(CATEGORIES_DATA.usa?.company || [])
   ];
   const uniqueIndustries = Array.from(
     new Map(companyIndustries.map(item => [item.name, item.count || null])).entries()
@@ -27,9 +25,8 @@ const DB_VALUES_MAP = (() => {
 
   // Cities from cities.json
   const citiesList = [
-    ...(CITIES_DATA.india || []),
-    ...(CITIES_DATA.companies || []),
-    ...(CITIES_DATA.people || [])
+    ...(CITIES_DATA.india?.companies || []),
+    ...(CITIES_DATA.usa?.companies || [])
   ];
   const uniqueCities = Array.from(
     new Map(citiesList.map(item => [`${item.name}${item.state ? ` (${item.state})` : ""}`, item])).entries()
