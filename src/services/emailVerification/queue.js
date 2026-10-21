@@ -33,7 +33,7 @@ function pLimit(concurrency) {
   });
 }
 
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID } = require("crypto");
 const { verifyEmail } = require("./pipeline");
 
 // In-memory store for active batch verification jobs
@@ -59,7 +59,7 @@ function getDomainLimiter(domain) {
  * Creates a new batch verification job.
  */
 function createBatchJob(totalItems, metadata = {}) {
-  const jobId = uuidv4();
+  const jobId = randomUUID();
   const job = {
     jobId,
     status: "queued", // "queued" | "processing" | "completed" | "failed"
