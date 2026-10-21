@@ -50,6 +50,37 @@ const INDIA_STATES = [
 /** SQL list literal for INDIA_STATES (constant values only — never user input). */
 const INDIA_STATES_SQL = INDIA_STATES.map((s) => `'${s.replace(/'/g, "''")}'`).join(", ");
 
+const US_STATES_SQL = ["CA", "NY", "TX", "FL", "IL", "PA", "OH", "GA", "NC", "MI", "NJ", "VA", "WA", "AZ", "MA", "TN",
+  "IN", "MO", "MD", "WI", "CO", "MN", "SC", "AL", "LA", "KY", "OR", "OK", "CT", "UT", "IA", "NV", "AR", "MS", "KS",
+  "NM", "NE", "ID", "WV", "HI", "NH", "ME", "MT", "RI", "DE", "SD", "ND", "AK", "DC", "VT", "WY"].map((s) => `'${s}'`).join(", ");
+
+/**
+ * Country filter for final.people (People, Emails and Numbers searches). Returns SQL or null.
+ * India: not a US row, and an Indian state, an Indian geocoding source (pincode / state / city /
+ * csv_v2_import) or "India" in the location. Most Indian rows have no state, so the state alone
+ * missed about two thirds of them.
+ */
+function peopleCountryCondition(country) {
+  if (country === "india" || country === "in") {
+    return `(
+        ("geo_source" IS NULL OR "geo_source" NOT IN ('us_zip', 'us_city', 'us_state'))
+        AND ("state" IS NULL OR "state" NOT IN (${US_STATES_SQL}))
+        AND ("location" IS NULL OR ("location" NOT ILIKE '%United States%' AND "location" NOT ILIKE '%USA%'))
+        AND ("state" IN (${INDIA_STATES_SQL})
+             OR "geo_source" IN ('pincode', 'state', 'city', 'csv_v2_import')
+             OR "location" ILIKE '%India%')
+      )`;
+  }
+  if (country === "usa" || country === "us" || country === "united states") {
+    return `(
+        "geo_source" IN ('us_zip', 'us_city', 'us_state')
+        OR "location" ILIKE '%United States%'
+        OR "state" IN (${US_STATES_SQL})
+      )`;
+  }
+  return null;
+}
+
 // Cities stored under more than one name. A city filter for any of the names matches all of them,
 // so "Bengaluru" also finds rows stored as "Bangalore" (and the Cities page counts agree with it).
 const CITY_ALIAS_GROUPS = [
@@ -208,7 +239,7 @@ const hasNoSearchableChars = (v) => typeof v === "string" && v !== "" && !/[\p{L
 
 module.exports = {
   hasNoSearchableChars,
-  escapeLike, escapeRegex, hasWord, jobTitleCondition, INDIA_STATES, INDIA_STATES_SQL, CITY_ALIASES, CITY_ALIAS_GROUPS,
+  escapeLike, escapeRegex, hasWord, jobTitleCondition, INDIA_STATES, INDIA_STATES_SQL, peopleCountryCondition, CITY_ALIASES, CITY_ALIAS_GROUPS,
   exactCappedTotal, EXACT_COUNT_CAP, searchTimeoutMs, maxResultWindow, sortRowLimit,
   resultWindowError, checkSortAllowed, sendSearchError, runFilteredSearch,
   INDEX_PLAN,

@@ -22,7 +22,7 @@ const indexedQuery = (sql, params, ms) => directQueryWithSession(sql, params, ["
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const {
   hasNoSearchableChars,
-  escapeLike, hasWord, jobTitleCondition, INDIA_STATES_SQL, CITY_ALIASES, exactCappedTotal,
+  escapeLike, jobTitleCondition, peopleCountryCondition, CITY_ALIASES, exactCappedTotal,
   searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, runFilteredSearch,
 } = require("../utils/searchFilters");
 
@@ -223,6 +223,13 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
 
     const doubleQuotedCol = `"${col}"`;
 
+    if (col === "job_title" && val !== "" && op === "eq") {
+      // Exact title (case-insensitive), as sent by the Categories page cards
+      conditions.push(`"job_title" ILIKE $${idx++}`);
+      values.push(escapeLike(val.trim()));
+      continue;
+    }
+
     if (col === "job_title" && val !== "" && op === "contains") {
       const valLower = val.toLowerCase().trim();
 
@@ -291,33 +298,8 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         continue;
       }
 
-      // Check single role key matches (Founder, CEO, CTO, Director)
-      const titleSet = new Set();
-      if (valLower.includes("founder")) {
-        ["Founder", "Co-Founder"].forEach(v => titleSet.add(v));
-      }
-      if (hasWord(valLower, "ceo")) {
-        ["CEO", "Chief Executive Officer"].forEach(v => titleSet.add(v));
-      }
-      if (hasWord(valLower, "cto")) {
-        ["CTO", "Chief Technology Officer"].forEach(v => titleSet.add(v));
-      }
-      if (valLower.includes("director")) {
-        ["Director", "Managing Director"].forEach(v => titleSet.add(v));
-      }
-
-      if (titleSet.size > 0) {
-        const titlesArray = Array.from(titleSet);
-        const aliasConds = titlesArray.map(t => {
-          const c = jobTitleCondition(t, values, idx);
-          idx = c.nextIdx;
-          return c.sql;
-        });
-        conditions.push(`(${aliasConds.join(" OR ")})`);
-        continue;
-      }
-
-      // Multi-word / unmapped custom search: Exact phrase OR constituent words matching with OR
+      // Multi-word / unmapped custom search: exact phrase, or every word somewhere in the title
+      // ("Vice President Sales" must not match everyone with "Sales" in their title)
       const words = valLower.split(/[\s\-\/&\+]+/).filter(w => w.length > 2 && !["and", "the", "for", "with"].includes(w));
       if (words.length > 1) {
         const phraseIdx = idx++;
@@ -328,7 +310,7 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
           idx = c.nextIdx;
           return c.sql;
         });
-        conditions.push(`("job_title" ILIKE $${phraseIdx} OR (${wordConds.join(" OR ")}))`);
+        conditions.push(`("job_title" ILIKE $${phraseIdx} OR (${wordConds.join(" AND ")}))`);
       } else {
         const c = jobTitleCondition(val.trim(), values, idx);
         idx = c.nextIdx;
@@ -446,20 +428,8 @@ function buildWhere(queryParams, embedding, _schema) {
   );
 
   if (!alreadyHasExplicitCountry && countryParam) {
-    if (countryParam === "india" || countryParam === "in") {
-      conditions.push(`(
-        ("geo_source" IS NULL OR "geo_source" NOT IN ('us_zip', 'us_city', 'us_state'))
-        AND ("state" IS NULL OR "state" NOT IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY'))
-        AND ("location" IS NULL OR ("location" NOT ILIKE '%United States%' AND "location" NOT ILIKE '%USA%'))
-        AND "state" IN (${INDIA_STATES_SQL})
-      )`);
-    } else if (countryParam === "usa" || countryParam === "us" || countryParam === "united states") {
-      conditions.push(`(
-        "geo_source" IN ('us_zip', 'us_city', 'us_state')
-        OR "location" ILIKE '%United States%'
-        OR "state" IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY')
-      )`);
-    }
+    const countryCond = peopleCountryCondition(countryParam);
+    if (countryCond) conditions.push(countryCond);
   }
 
   const userHasFilters = conditions.length > 0 || (embedding && embedding.length === 384);

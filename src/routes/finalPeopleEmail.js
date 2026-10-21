@@ -13,7 +13,7 @@ const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const indexedQuery = (sql, params, ms) => directQueryWithSession(sql, params, ["SET LOCAL enable_seqscan = off;"], ms);
 const {
   hasNoSearchableChars,
-  escapeLike, INDIA_STATES_SQL, exactCappedTotal,
+  escapeLike, peopleCountryCondition, exactCappedTotal,
   searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, runFilteredSearch,
 } = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
@@ -278,20 +278,8 @@ function buildWhere(queryParams, emailCol, schemaColumns) {
   );
 
   if (!alreadyHasExplicitCountry && countryParam) {
-    if (countryParam === "india" || countryParam === "in") {
-      conditions.push(`(
-        ("geo_source" IS NULL OR "geo_source" NOT IN ('us_zip', 'us_city', 'us_state'))
-        AND ("state" IS NULL OR "state" NOT IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY'))
-        AND ("location" IS NULL OR ("location" NOT ILIKE '%United States%' AND "location" NOT ILIKE '%USA%'))
-        AND "state" IN (${INDIA_STATES_SQL})
-      )`);
-    } else if (countryParam === "usa" || countryParam === "us" || countryParam === "united states") {
-      conditions.push(`(
-        "geo_source" IN ('us_zip', 'us_city', 'us_state')
-        OR "location" ILIKE '%United States%'
-        OR "state" IN ('CA', 'NY', 'TX', 'FL', 'IL', 'PA', 'OH', 'GA', 'NC', 'MI', 'NJ', 'VA', 'WA', 'AZ', 'MA', 'TN', 'IN', 'MO', 'MD', 'WI', 'CO', 'MN', 'SC', 'AL', 'LA', 'KY', 'OR', 'OK', 'CT', 'UT', 'IA', 'NV', 'AR', 'MS', 'KS', 'NM', 'NE', 'ID', 'WV', 'HI', 'NH', 'ME', 'MT', 'RI', 'DE', 'SD', 'ND', 'AK', 'DC', 'VT', 'WY')
-      )`);
-    }
+    const countryCond = peopleCountryCondition(countryParam);
+    if (countryCond) conditions.push(countryCond);
   }
 
   return {

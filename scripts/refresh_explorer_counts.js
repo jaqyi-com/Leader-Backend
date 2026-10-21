@@ -130,8 +130,8 @@ async function main() {
   const cityCard = (country) => (c) => ({ ...c, country, kindCond: "by_city = 1" });
   const isCity = (c) => c.kindCond === "by_city = 1";
   // Same URL filters the cards send (see CategoryExplorerPage / CityExplorerPage handleClick).
-  const industryWhere = (c) => companiesWhere({ f_industry: c.name, f_country: c.country }, null, companySchema);
-  const titleWhere = (c) => peopleWhere({ f_job_title: c.name, f_country: c.country }, null, peopleSchema);
+  const industryWhere = (c) => companiesWhere({ f_industry_eq: c.name, f_country: c.country }, null, companySchema);
+  const titleWhere = (c) => peopleWhere({ f_job_title_eq: c.name, f_country: c.country }, null, peopleSchema);
   const cityParams = (c) => (c.country === "india"
     ? { f_city: c.name, f_country: "india" }
     : { f_city: c.name, f_state_eq: c.state });

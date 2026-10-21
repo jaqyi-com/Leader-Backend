@@ -94,10 +94,11 @@ export default function CategoryExplorerPage() {
   const handleClick = (cat) => {
     const enc = encodeURIComponent(cat.name);
     const countryParam = `&f_country=${country}`;
+    // Exact title / category, so the card's count is exactly what the click finds
     if (mode === "people") {
-      navigate(`/app/people?f_job_title=${enc}${countryParam}`);
+      navigate(`/app/people?f_job_title_eq=${enc}${countryParam}`);
     } else {
-      navigate(`/app/companies?f_industry=${enc}${countryParam}`);
+      navigate(`/app/companies?f_industry_eq=${enc}${countryParam}`);
     }
   };
 

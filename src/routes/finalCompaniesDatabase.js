@@ -143,6 +143,11 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         values.push(`%${escapeLike(val)}%`);
       }
       continue;
+    } else if (col === "industry" && val !== "" && op === "eq") {
+      // Exact category (case-insensitive), as sent by the Categories page cards
+      conditions.push(`"industry" ILIKE $${idx++}`);
+      values.push(escapeLike(val.trim()));
+      continue;
     } else if (col === "industry" && val !== "") {
       const valLower = val.toLowerCase().trim();
       const INDUSTRY_ALIASES = {
