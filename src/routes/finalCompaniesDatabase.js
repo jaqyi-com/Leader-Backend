@@ -30,6 +30,13 @@ const FC_SCHEMA  = "final";
 const FC_TABLE   = "companies";
 const FULL_TABLE = `"${FC_SCHEMA}"."${FC_TABLE}"`;
 
+// Exact counts from the same generated files as the Categories / Cities pages
+// (scripts/refresh_explorer_counts.js). A live GROUP BY over the whole table is far too slow per request.
+const EXPLORER_CATEGORIES = require("../../frontend/src/categories.json");
+const EXPLORER_CITIES = require("../../frontend/src/cities.json");
+const withCountry = (list, country) => list.map((c) => ({ ...c, country }));
+const topByCount = (rows, n) => [...rows].sort((a, b) => b.count - a.count).slice(0, n);
+
 // ── Cache ──────────────────────────────────────────────────
 const STATS_KEY       = "cache:final-companies-stats";
 const COUNT_CACHE_KEY = "cache:final-companies-count";
@@ -557,37 +564,9 @@ router.post("/refresh", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GET /categories
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-router.get("/categories", async (req, res) => {
-  try {
-    const cached = await cacheGet("cache:final-companies-categories-v1");
-    if (cached) return res.json(cached);
-
-    const queryRes = await pgQuery(
-      `SELECT industry, count(*) as count 
-       FROM (
-         SELECT industry 
-         FROM ${FULL_TABLE} 
-         WHERE industry IS NOT NULL AND industry != '' 
-         LIMIT 20000
-       ) AS sub 
-       GROUP BY industry 
-       ORDER BY count DESC 
-       LIMIT 100`,
-       [],
-       10000
-    );
-
-    const payload = queryRes.rows.map(r => ({
-      name: r.industry,
-      count: parseInt(r.count, 10)
-    }));
-
-    await cacheSet("cache:final-companies-categories-v1", payload, 86400); // 24 hours
-    res.json(payload);
-  } catch (err) {
-    logger.error(`[categories] ${err.message}`);
-    res.status(500).json({ error: err.message });
-  }
+router.get("/categories", (req, res) => {
+  const { india, usa } = EXPLORER_CATEGORIES;
+  res.json(topByCount([...withCountry(india.company, "india"), ...withCountry(usa.company, "usa")], 100));
 });
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -725,51 +704,12 @@ router.get("/", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // GET /cities  — distinct cities with business counts (City Explorer)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-const CITIES_CACHE_KEY = "cache:final-companies-cities";
-const CITIES_CACHE_TTL = 60 * 60 * 6; // 6 hours
 
-router.get("/cities", async (req, res) => {
-  try {
-    const cached = await cacheGet(CITIES_CACHE_KEY);
-    if (cached) return res.json({ ...cached, _cache: "hit" });
-
-    const { selectCols } = await getSchema();
-    const hasCity  = selectCols.includes("city");
-    const hasState = selectCols.includes("state");
-
-    if (!hasCity) {
-      return res.json({ cities: [], total: 0, source: "cloud_sql", note: "No city column in final.companies" });
-    }
-
-    const selectPart = hasState
-      ? `"city", "state", COUNT(*) AS count`
-      : `"city", NULL AS state, COUNT(*) AS count`;
-    const groupPart  = hasState ? `"city", "state"` : `"city"`;
-
-    const sql = `
-      SELECT ${selectPart}
-      FROM ${FULL_TABLE}
-      WHERE "city" IS NOT NULL AND "city" != ''
-      GROUP BY ${groupPart}
-      ORDER BY count DESC
-      LIMIT 500
-    `;
-
-    const result = await pgQuery(sql, [], 120000);
-    const cities  = result.rows.map(r => ({
-      city_file: (r.city || "").trim(),
-      name:      (r.city || "").trim(),
-      state:     (r.state || "").trim(),
-      count:     parseInt(r.count, 10),
-    })).filter(c => c.name.length > 0);
-
-    const payload = { cities, total: cities.length, source: "cloud_sql" };
-    await cacheSet(CITIES_CACHE_KEY, payload, CITIES_CACHE_TTL);
-    res.json(payload);
-  } catch (err) {
-    logger.error(`[GET /cities] ${err.message}`);
-    res.status(500).json({ error: err.message });
-  }
+router.get("/cities", (req, res) => {
+  const { india, usa } = EXPLORER_CITIES;
+  const cities = topByCount([...withCountry(india.companies, "india"), ...withCountry(usa.companies, "usa")], 500)
+    .map((c) => ({ city_file: c.name, name: c.name, state: c.state || "", count: c.count, country: c.country }));
+  res.json({ cities, total: cities.length, source: "explorer_counts", generatedAt: EXPLORER_CITIES.generatedAt });
 });
 
 module.exports = router;

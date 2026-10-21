@@ -106,7 +106,10 @@ function getDirectPool() {
  * @returns {Promise<import('pg').QueryResult>}
  */
 async function query(text, params = [], timeoutMs = 30000) {
-  return await getPool().query(text, params);
+  // query_timeout is enforced by the client, so a caller's shorter or longer limit is honoured
+  // (the pool default of 30s used to apply to every call). The server still stops anything over
+  // the pool's statement_timeout.
+  return await getPool().query({ text, values: params, query_timeout: timeoutMs });
 }
 
 /**
