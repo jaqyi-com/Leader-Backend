@@ -5,18 +5,21 @@ const { VERIFICATION_STATES, SMTP_RESULTS } = require("./constants");
 
 const DEFAULT_TIMEOUT_MS = 8000;
 
-function getVpsConfig() {
-  const rawUrl = process.env.DOOTT_VERIFIER_URL || process.env.VERIFIER_VPS_URL || "";
+/**
+ * Verifier servers, in the order they are tried: DOOTT_VERIFIER_URLS (comma-separated, e.g. the
+ * less loaded server first), else DOOTT_VERIFIER_URL / VERIFIER_VPS_URL. All share one API key.
+ */
+function getVpsConfigs() {
+  const raw = process.env.DOOTT_VERIFIER_URLS || process.env.DOOTT_VERIFIER_URL || process.env.VERIFIER_VPS_URL || "";
   const apiKey = process.env.DOOTT_API_KEY || process.env.VERIFIER_VPS_API_KEY || "";
-  if (!rawUrl) return null;
-
-  const baseUrl = rawUrl.replace(/\/+$/, "");
-  const endpoint = baseUrl.endsWith("/v1/verify") ? baseUrl : `${baseUrl}/v1/verify`;
-  return { endpoint, apiKey };
+  return raw.split(",").map((u) => u.trim().replace(/\/+$/, "")).filter(Boolean).map((baseUrl) => ({
+    endpoint: baseUrl.endsWith("/v1/verify") ? baseUrl : `${baseUrl}/v1/verify`,
+    apiKey,
+  }));
 }
 
 function isVpsConfigured() {
-  return getVpsConfig() !== null;
+  return getVpsConfigs().length > 0;
 }
 
 /**
@@ -130,32 +133,27 @@ function normalizeVpsResponse(email, vpsData) {
  * Returns normalized verdict object, or null if the VPS is unreachable or errors.
  */
 async function verifyViaVps(email, options = {}) {
-  const config = getVpsConfig();
-  if (!config) return null;
+  const configs = getVpsConfigs();
+  if (!configs.length) return null;
 
-  const timeout = options.timeoutMs || DEFAULT_TIMEOUT_MS;
-  const headers = {
-    "Content-Type": "application/json"
-  };
-  if (config.apiKey) {
-    headers["X-API-Key"] = config.apiKey;
-  }
-
-  try {
-    const response = await axios.post(
-      config.endpoint,
-      { email },
-      { headers, timeout }
-    );
-
-    if (response.data && (response.data.status || response.data.state)) {
-      return normalizeVpsResponse(email, response.data);
+  // One time budget for the whole call: a server that errors or times out hands the rest of it to
+  // the next one, so a busy or down server never makes the caller wait longer than before.
+  const deadline = Date.now() + (options.timeoutMs || DEFAULT_TIMEOUT_MS);
+  for (const config of configs) {
+    const timeout = deadline - Date.now();
+    if (timeout < 500) break;
+    const headers = { "Content-Type": "application/json" };
+    if (config.apiKey) headers["X-API-Key"] = config.apiKey;
+    try {
+      const response = await axios.post(config.endpoint, { email }, { headers, timeout });
+      if (response.data && (response.data.status || response.data.state)) {
+        return normalizeVpsResponse(email, response.data);
+      }
+    } catch (err) {
+      // 4xx/5xx or timeout: try the next server
     }
-    return null;
-  } catch (err) {
-    // If VPS returns 4xx/5xx or times out, return null to enable in-process fallback
-    return null;
   }
+  return null; // no server answered: the caller falls back to the in-process check
 }
 
 module.exports = {
