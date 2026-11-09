@@ -358,8 +358,8 @@ function DatabaseShowcase() {
 }
 
 /* ── Categories Showcase ───────────────────────────────────── */
-// Every industry and job title in Doott, with exact counts from scripts/refresh_explorer_counts.js
-// (the same file as the in-app Categories page). Each link opens exactly the records counted.
+// Every industry and job title in Doott, from the same generated file as the in-app Categories page
+// (scripts/refresh_explorer_counts.js). Names only; each link opens that exact filter.
 const COUNTRY_TABS = [
   { key: "india", label: "India" },
   { key: "usa", label: "USA" },
@@ -380,7 +380,6 @@ function CategoriesShowcase() {
 
   const groups = mode === "people" ? PEOPLE_ROLE_GROUPS : COMPANY_INDUSTRY_GROUPS;
   const all = CATEGORIES_DATA[country][mode];
-  const unit = MODE_TABS.find((m) => m.key === mode).unit;
 
   const list = useMemo(() => {
     let out = all;
@@ -410,15 +409,15 @@ function CategoriesShowcase() {
       <div className="mx-auto max-w-6xl px-6">
         {/* Section Header */}
         <div className="mb-12">
-          <p className="eyebrow mb-4">◆ {fmt(TOTAL_SUBCATEGORIES)} industries &amp; job titles · exact counts</p>
+          <p className="eyebrow mb-4">◆ {fmt(TOTAL_SUBCATEGORIES)} industries &amp; job titles</p>
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div>
               <h2 className="display text-3xl md:text-5xl max-w-2xl">
                 Browse every category &amp; decision-maker role.
               </h2>
               <p className="text-muted-foreground mt-4 max-w-xl text-sm leading-relaxed">
-                Every industry and job title in Doott for India and the USA. The number next to each one is
-                exactly how many records you get when you open it.
+                Every industry and job title in Doott for India and the USA. Open one to see its companies
+                or people.
               </p>
             </div>
             <Link
@@ -476,25 +475,23 @@ function CategoriesShowcase() {
 
         {/* Every subcategory */}
         <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-3">
-          {fmt(list.length)} of {fmt(all.length)} {mode === "people" ? "job titles" : "industries"} ·{" "}
-          {fmt(list.reduce((s, c) => s + c.count, 0))} {unit}
+          {fmt(list.length)} of {fmt(all.length)} {mode === "people" ? "job titles" : "industries"}
         </p>
         <div className="border border-border bg-background max-h-[600px] overflow-y-auto">
           {list.length === 0 ? (
             <p className="p-8 text-sm text-muted-foreground">Nothing matches “{query}”. Try a shorter word.</p>
           ) : (
             // Styles live on the list (child selectors) so each of the hundreds of links stays small in the pre-rendered HTML.
-            <ul className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2 lg:grid-cols-3 [&>li]:bg-background [&_a]:flex [&_a]:items-center [&_a]:justify-between [&_a]:gap-3 [&_a]:px-4 [&_a]:py-3 [&_a]:text-sm [&_a:hover]:bg-secondary/40 [&_a:hover>span:first-child]:text-primary [&_a>span:first-child]:min-w-0 [&_a>span:first-child]:truncate [&_a>span:last-child]:shrink-0 [&_a>span:last-child]:font-mono [&_a>span:last-child]:text-[11px] [&_a>span:last-child]:tabular-nums [&_a>span:last-child]:text-muted-foreground">
+            <ul className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2 lg:grid-cols-3 [&>li]:bg-background [&_a]:flex [&_a]:items-center [&_a]:justify-between [&_a]:gap-3 [&_a]:px-4 [&_a]:py-3 [&_a]:text-sm [&_a:hover]:bg-secondary/40 [&_a:hover>span:first-child]:text-primary [&_a>span:first-child]:min-w-0 [&_a>span:first-child]:truncate">
               {list.map((c) => (
                 <li key={c.name}>
-                  <Link to={hrefFor(c.name)}><span>{c.name}</span><span>{fmt(c.count)}</span></Link>
+                  <Link to={hrefFor(c.name)}><span>{c.name}</span></Link>
                 </li>
               ))}
             </ul>
           )}
         </div>
         <p className="mt-3 text-xs text-muted-foreground">
-          Counts updated {new Date(CATEGORIES_DATA.generatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}.
           Opening a category needs a Doott account.
         </p>
       </div>
