@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -6,12 +6,12 @@ import {
   Users2, Building2, Mail, Phone,
   Database, Search, Download, Filter,
   CheckCircle, Zap, Globe,
-  ShoppingBag, UtensilsCrossed, Dumbbell, Home, Car,
-  GraduationCap, Landmark, Store, Hotel, Shirt, Cpu, Compass,
-  Briefcase, UserCheck, Sparkles, ArrowRight, Tag,
-} from "lucide-react";
+  Compass,
+  Sparkles, ArrowRight, } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { MCP_URL, EXAMPLE_PROMPTS } from "../claudeConnector";
+import CATEGORIES_DATA from "../categories.json";
+import { PEOPLE_ROLE_GROUPS, COMPANY_INDUSTRY_GROUPS } from "../categoryGroups";
 import doottLogo from "../assets/doott-logo.png";
 
 const LOGOS = [
@@ -358,321 +358,145 @@ function DatabaseShowcase() {
 }
 
 /* ── Categories Showcase ───────────────────────────────────── */
+// Every industry and job title in Doott, with exact counts from scripts/refresh_explorer_counts.js
+// (the same file as the in-app Categories page). Each link opens exactly the records counted.
+const COUNTRY_TABS = [
+  { key: "india", label: "India" },
+  { key: "usa", label: "USA" },
+];
+const MODE_TABS = [
+  { key: "company", label: "Industries", unit: "companies" },
+  { key: "people", label: "Job titles", unit: "people" },
+];
+const fmt = (n) => n.toLocaleString("en-US");
+const TOTAL_SUBCATEGORIES = ["india", "usa"].reduce(
+  (sum, c) => sum + CATEGORIES_DATA[c].company.length + CATEGORIES_DATA[c].people.length, 0);
+
 function CategoriesShowcase() {
-  const [activeTab, setActiveTab] = useState("all");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [country, setCountry] = useState("india");
+  const [mode, setMode] = useState("company");
+  const [group, setGroup] = useState("all");
+  const [query, setQuery] = useState("");
 
-  const categories = [
-    // 12 Primary Industry Sectors
-    {
-      id: "fmcg",
-      name: "FMCG / Food & Beverage",
-      type: "industry",
-      icon: ShoppingBag,
-      count: "1,250,000+ Records",
-      desc: "Beverage Manufacturers, Packaged Foods, Dairy Brands, FMCG Distributors, Food Tech",
-      targetPath: "/app/companies?f_industry=Food&f_country=india",
-      color: "text-amber-400 border-amber-500/20 bg-amber-500/10"
-    },
-    {
-      id: "restaurants",
-      name: "Restaurants & Cafes",
-      type: "industry",
-      icon: UtensilsCrossed,
-      count: "850,000+ Records",
-      desc: "Fine Dining, QSR Chains, Cafes, Bakeries, Cloud Kitchens, Food Services",
-      targetPath: "/app/companies?f_industry=Restaurants&f_country=india",
-      color: "text-orange-400 border-orange-500/20 bg-orange-500/10"
-    },
-    {
-      id: "fitness",
-      name: "Fitness / Wellness",
-      type: "industry",
-      icon: Dumbbell,
-      count: "420,000+ Records",
-      desc: "Gyms, Fitness Centers, Yoga Studios, Spa & Wellness, Health & Nutrition Brands",
-      targetPath: "/app/companies?f_industry=Fitness&f_country=india",
-      color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
-    },
-    {
-      id: "realestate",
-      name: "Real Estate & Construction",
-      type: "industry",
-      icon: Home,
-      count: "1,890,000+ Records",
-      desc: "Property Developers, Real Estate Agencies, Commercial Builders, Architects, Brokers",
-      targetPath: "/app/companies?f_industry=Real+Estate&f_country=india",
-      color: "text-blue-400 border-blue-500/20 bg-blue-500/10"
-    },
-    {
-      id: "automobile",
-      name: "Automobile / Dealerships",
-      type: "industry",
-      icon: Car,
-      count: "960,000+ Records",
-      desc: "Auto Dealerships, EV Manufacturers, Auto Components, Fleet Operators, Repair Chains",
-      targetPath: "/app/companies?f_industry=Automobile&f_country=india",
-      color: "text-red-400 border-red-500/20 bg-red-500/10"
-    },
-    {
-      id: "education",
-      name: "Education / EdTech",
-      type: "industry",
-      icon: GraduationCap,
-      count: "1,420,000+ Records",
-      desc: "Universities, K-12 Schools, Online Learning Platforms, EdTech Startups, Academies",
-      targetPath: "/app/companies?f_industry=Education&f_country=india",
-      color: "text-cyan-400 border-cyan-500/20 bg-cyan-500/10"
-    },
-    {
-      id: "finance",
-      name: "Financial Services / Insurance",
-      type: "industry",
-      icon: Landmark,
-      count: "2,150,000+ Records",
-      desc: "Banks, Investment Firms, Insurance Brokers, Fintech, Accounting Partners, CAs",
-      targetPath: "/app/companies?f_industry=Financial&f_country=india",
-      color: "text-green-400 border-green-500/20 bg-green-500/10"
-    },
-    {
-      id: "retail",
-      name: "Retail / D2C / Consumer Brands",
-      type: "industry",
-      icon: Store,
-      count: "1,680,000+ Records",
-      desc: "E-commerce Brands, D2C Startups, Supermarkets, Apparel Outlets, Luxury Goods",
-      targetPath: "/app/companies?f_industry=Retail&f_country=india",
-      color: "text-indigo-400 border-indigo-500/20 bg-indigo-500/10"
-    },
-    {
-      id: "hospitality",
-      name: "Hospitality & Hotels",
-      type: "industry",
-      icon: Hotel,
-      count: "640,000+ Records",
-      desc: "Luxury Hotels, Resorts, Lodging, Boutique Stays, Event Venues, Travel Hospitality",
-      targetPath: "/app/companies?f_industry=Hospitality&f_country=india",
-      color: "text-purple-400 border-purple-500/20 bg-purple-500/10"
-    },
-    {
-      id: "fashion",
-      name: "Fashion / Lifestyle",
-      type: "industry",
-      icon: Shirt,
-      count: "780,000+ Records",
-      desc: "Garment Manufacturers, Apparel Brands, Fashion Designers, Accessories, Textile Mills",
-      targetPath: "/app/companies?f_industry=Fashion&f_country=india",
-      color: "text-pink-400 border-pink-500/20 bg-pink-500/10"
-    },
-    {
-      id: "technology",
-      name: "Technology / Startups",
-      type: "industry",
-      icon: Cpu,
-      count: "5,800,000+ Records",
-      desc: "Software / SaaS, IT Services, AI & Cloud, Hardware, Telecom, Cyber Security",
-      targetPath: "/app/companies?f_industry=Software&f_country=india",
-      color: "text-sky-400 border-sky-500/20 bg-sky-500/10"
-    },
-    {
-      id: "travel",
-      name: "Travel & Recreation",
-      type: "industry",
-      icon: Compass,
-      count: "510,000+ Records",
-      desc: "Travel Agencies, Tour Operators, Adventure Sports, Theme Parks, Aviation & Charters",
-      targetPath: "/app/companies?f_industry=Travel&f_country=india",
-      color: "text-teal-400 border-teal-500/20 bg-teal-500/10"
-    },
+  const groups = mode === "people" ? PEOPLE_ROLE_GROUPS : COMPANY_INDUSTRY_GROUPS;
+  const all = CATEGORIES_DATA[country][mode];
+  const unit = MODE_TABS.find((m) => m.key === mode).unit;
 
-    // Executive Decision Maker Roles
-    {
-      id: "founders",
-      name: "Founders & Co-Founders",
-      type: "roles",
-      icon: Sparkles,
-      count: "1,240,000+ Contacts",
-      desc: "Startup Founders, Business Owners, Co-Founders, Founding Partners, Managing Directors",
-      targetPath: "/app/people?f_job_title=Founder",
-      color: "text-amber-400 border-amber-500/20 bg-amber-500/10"
-    },
-    {
-      id: "ceos",
-      name: "CEOs & Presidents",
-      type: "roles",
-      icon: Briefcase,
-      count: "2,850,000+ Contacts",
-      desc: "Chief Executive Officers, Presidents, Managing Directors, C-Suite Leaders",
-      targetPath: "/app/people?f_job_title=CEO",
-      color: "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
-    },
-    {
-      id: "sales",
-      name: "Sales & BD Leaders",
-      type: "roles",
-      icon: UserCheck,
-      count: "3,100,000+ Contacts",
-      desc: "VP Sales, Business Development Managers, Sales Directors, Account Executives",
-      targetPath: "/app/people?f_job_title=Sales",
-      color: "text-blue-400 border-blue-500/20 bg-blue-500/10"
-    },
-    {
-      id: "tech_roles",
-      name: "Software & Engineering",
-      type: "roles",
-      icon: Cpu,
-      count: "4,900,000+ Contacts",
-      desc: "CTOs, VP Engineering, Lead Software Engineers, Product Managers, Architects",
-      targetPath: "/app/people?f_job_title=Engineer",
-      color: "text-cyan-400 border-cyan-500/20 bg-cyan-500/10"
-    },
-    {
-      id: "hr_roles",
-      name: "HR & Talent Acquisition",
-      type: "roles",
-      icon: Users2,
-      count: "1,650,000+ Contacts",
-      desc: "Chief HR Officers, HR Managers, Talent Acquisition Leads, Senior Recruiters",
-      targetPath: "/app/people?f_job_title=HR",
-      color: "text-purple-400 border-purple-500/20 bg-purple-500/10"
-    },
-    {
-      id: "marketing_roles",
-      name: "Marketing & Growth Leads",
-      type: "roles",
-      icon: Globe,
-      count: "2,300,000+ Contacts",
-      desc: "CMOs, VP Marketing, Growth Directors, Digital Marketing Heads, Brand Managers",
-      targetPath: "/app/people?f_job_title=Marketing",
-      color: "text-rose-400 border-rose-500/20 bg-rose-500/10"
-    }
-  ];
+  const list = useMemo(() => {
+    let out = all;
+    const g = groups.find((x) => x.key === group);
+    if (g?.keywords) out = out.filter((c) => g.keywords.some((kw) => c.name.toLowerCase().includes(kw)));
+    const q = query.trim().toLowerCase();
+    if (q) out = out.filter((c) => c.name.toLowerCase().includes(q));
+    return out;
+  }, [all, groups, group, query]);
 
-  const filtered = categories.filter(c => {
-    const matchesTab = activeTab === "all" || c.type === activeTab;
-    const matchesSearch = !searchQuery ||
-      c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.desc.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
+  const hrefFor = (name) => {
+    const enc = encodeURIComponent(name);
+    return mode === "people"
+      ? `/app/people?f_job_title_eq=${enc}&f_country=${country}`
+      : `/app/companies?f_industry_eq=${enc}&f_country=${country}`;
+  };
+
+  const pill = (active) =>
+    `px-4 py-2 font-mono text-[11px] uppercase tracking-[0.15em] transition border ${
+      active
+        ? "border-foreground bg-foreground text-background font-semibold"
+        : "border-border bg-background/50 text-muted-foreground hover:text-foreground"
+    }`;
 
   return (
-    <section id="categories" className="border-b border-border bg-secondary/10 py-24 md:py-32" aria-label="Browse B2B Categories">
+    <section id="categories" className="border-b border-border bg-secondary/10 py-24 md:py-32" aria-label="Browse all B2B categories">
       <div className="mx-auto max-w-6xl px-6">
         {/* Section Header */}
-        <div className="mb-14">
-          <p className="eyebrow mb-4">◆ Extensive B2B Industry &amp; Role Catalog</p>
+        <div className="mb-12">
+          <p className="eyebrow mb-4">◆ {fmt(TOTAL_SUBCATEGORIES)} industries &amp; job titles · exact counts</p>
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div>
               <h2 className="display text-3xl md:text-5xl max-w-2xl">
-                Browse by Category &amp; Decision-Maker Roles.
+                Browse every category &amp; decision-maker role.
               </h2>
               <p className="text-muted-foreground mt-4 max-w-xl text-sm leading-relaxed">
-                Filter 43.9M B2B records by specialized industry sectors, executive job titles, verified emails, and regional location data.
+                Every industry and job title in Doott for India and the USA. The number next to each one is
+                exactly how many records you get when you open it.
               </p>
             </div>
             <Link
-              to="/app/category-explorer"
+              to="/app/categories"
               className="inline-flex h-11 items-center gap-2 border border-primary bg-primary px-5 font-mono text-[11px] uppercase tracking-[0.18em] text-primary-foreground transition hover:opacity-90 self-start md:self-auto"
             >
-              Explore 4,000+ Subcategories →
+              Open category explorer →
             </Link>
           </div>
         </div>
 
-        {/* Filter controls & Search */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10 pb-6 border-b border-border">
-          {/* Tabs */}
-          <div className="flex items-center gap-2">
-            {[
-              { id: "all", label: "All Categories" },
-              { id: "industry", label: "Industry Sectors" },
-              { id: "roles", label: "Decision Maker Roles" }
-            ].map(t => (
-              <button
-                key={t.id}
-                onClick={() => setActiveTab(t.id)}
-                className={`px-4 py-2 font-mono text-[11px] uppercase tracking-[0.15em] transition border ${
-                  activeTab === t.id
-                    ? "border-foreground bg-foreground text-background font-semibold"
-                    : "border-border bg-background/50 text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t.label}
+        {/* Country, type and search */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
+          <div className="flex flex-wrap items-center gap-2">
+            {COUNTRY_TABS.map((c) => (
+              <button key={c.key} onClick={() => { setCountry(c.key); setGroup("all"); }} className={pill(country === c.key)} aria-pressed={country === c.key}>
+                {c.label}
+              </button>
+            ))}
+            <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
+            {MODE_TABS.map((m) => (
+              <button key={m.key} onClick={() => { setMode(m.key); setGroup("all"); }} className={pill(mode === m.key)} aria-pressed={mode === m.key}>
+                {m.label} <span className="opacity-60">({CATEGORIES_DATA[country][m.key].length})</span>
               </button>
             ))}
           </div>
-
-          {/* Search box */}
-          <div className="relative min-w-[260px]">
+          <div className="relative w-full lg:w-[280px]">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
-              type="text"
-              placeholder="Search category or role..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              type="search"
+              placeholder={mode === "people" ? "Search job titles…" : "Search industries…"}
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label={mode === "people" ? "Search job titles" : "Search industries"}
               className="w-full pl-9 pr-4 py-2 border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-foreground font-mono"
             />
           </div>
         </div>
 
-        {/* Categories Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filtered.map(cat => {
-            const Icon = cat.icon;
-            return (
-              <div
-                key={cat.id}
-                className="border border-border bg-background p-6 flex flex-col justify-between hover:border-foreground/40 transition-all group"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`w-10 h-10 border flex items-center justify-center ${cat.color}`}>
-                      <Icon size={18} />
-                    </div>
-                    <span className="font-mono text-[9px] uppercase tracking-[0.15em] px-2.5 py-1 border border-border text-muted-foreground">
-                      {cat.count}
-                    </span>
-                  </div>
-
-                  <h3 className="font-serif text-xl text-foreground mb-2 group-hover:text-primary transition-colors">
-                    {cat.name}
-                  </h3>
-
-                  <p className="text-muted-foreground text-xs leading-relaxed mb-6">
-                    {cat.desc}
-                  </p>
-                </div>
-
-                <Link
-                  to={cat.targetPath}
-                  className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.18em] text-foreground/80 hover:text-foreground font-semibold group-hover:translate-x-1 transition-transform"
-                >
-                  Browse leads in {cat.name.split("/")[0].trim()} <ArrowRight size={12} />
-                </Link>
-              </div>
-            );
-          })}
+        {/* Groups */}
+        <div className="flex flex-wrap gap-2 mb-6 pb-6 border-b border-border">
+          {groups.map((g) => (
+            <button
+              key={g.key}
+              onClick={() => setGroup(g.key)}
+              aria-pressed={group === g.key}
+              className={`px-3 py-1 border font-mono text-[10px] uppercase tracking-[0.12em] transition-colors ${
+                group === g.key ? "border-foreground text-foreground bg-secondary" : "border-border text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {g.label}
+            </button>
+          ))}
         </div>
 
-        {/* Quick tags bar */}
-        <div className="mt-12 p-6 border border-border bg-background/50 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Tag size={15} className="text-muted-foreground flex-shrink-0" />
-            <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">Quick Filter Tags:</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {["FMCG", "Restaurants", "Real Estate", "EdTech", "Automobile", "Financial Services", "Retail", "Hospitality", "Fashion", "Founder", "CEO", "HR Manager", "Software Engineer"].map(tag => (
-              <Link
-                key={tag}
-                to={`/app/people?f_job_title=${encodeURIComponent(tag)}`}
-                className="px-3 py-1 border border-border bg-secondary/30 font-mono text-[9px] uppercase tracking-[0.12em] text-foreground hover:bg-secondary hover:border-foreground/30 transition-colors"
-              >
-                {tag}
-              </Link>
-            ))}
-          </div>
+        {/* Every subcategory */}
+        <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-3">
+          {fmt(list.length)} of {fmt(all.length)} {mode === "people" ? "job titles" : "industries"} ·{" "}
+          {fmt(list.reduce((s, c) => s + c.count, 0))} {unit}
+        </p>
+        <div className="border border-border bg-background max-h-[600px] overflow-y-auto">
+          {list.length === 0 ? (
+            <p className="p-8 text-sm text-muted-foreground">Nothing matches “{query}”. Try a shorter word.</p>
+          ) : (
+            // Styles live on the list (child selectors) so each of the hundreds of links stays small in the pre-rendered HTML.
+            <ul className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2 lg:grid-cols-3 [&>li]:bg-background [&_a]:flex [&_a]:items-center [&_a]:justify-between [&_a]:gap-3 [&_a]:px-4 [&_a]:py-3 [&_a]:text-sm [&_a:hover]:bg-secondary/40 [&_a:hover>span:first-child]:text-primary [&_a>span:first-child]:min-w-0 [&_a>span:first-child]:truncate [&_a>span:last-child]:shrink-0 [&_a>span:last-child]:font-mono [&_a>span:last-child]:text-[11px] [&_a>span:last-child]:tabular-nums [&_a>span:last-child]:text-muted-foreground">
+              {list.map((c) => (
+                <li key={c.name}>
+                  <Link to={hrefFor(c.name)}><span>{c.name}</span><span>{fmt(c.count)}</span></Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Counts updated {new Date(CATEGORIES_DATA.generatedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}.
+          Opening a category needs a Doott account.
+        </p>
       </div>
     </section>
   );
