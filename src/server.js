@@ -173,6 +173,7 @@ User-agent: *
 # Allow public marketing pages
 Allow: /$
 Allow: /pricing
+Allow: /claude
 Allow: /login
 Allow: /register
 Allow: /api-docs
@@ -214,6 +215,14 @@ app.get("/sitemap.xml", (req, res) => {
     <lastmod>${today}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+
+  <!-- Claude connector guide -->
+  <url>
+    <loc>https://doott.jaqyi.com/claude</loc>
+    <lastmod>${today}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>
 
   <!-- API Docs -->

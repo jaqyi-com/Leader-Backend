@@ -11,6 +11,7 @@ import {
   Briefcase, UserCheck, Sparkles, ArrowRight, Tag,
 } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
+import { MCP_URL, EXAMPLE_PROMPTS } from "../claudeConnector";
 import doottLogo from "../assets/doott-logo.png";
 
 const LOGOS = [
@@ -33,6 +34,7 @@ export default function LandingPage() {
       <DatabaseShowcase />
       <CategoriesShowcase />
       <Features />
+      <ClaudeSection />
       <Metrics />
       <UseCases />
       <FAQ />
@@ -43,7 +45,7 @@ export default function LandingPage() {
 }
 
 /* ── Nav ───────────────────────────────────────────────────── */
-function Nav() {
+export function Nav() {
   const { dark, toggle } = useTheme();
   return (
     <header
@@ -59,10 +61,11 @@ function Nav() {
           aria-label="Primary navigation"
           className="hidden items-center gap-8 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground md:flex"
         >
-          <a href="#database" className="transition hover:text-foreground">Database</a>
-          <a href="#categories" className="transition hover:text-foreground">Categories</a>
-          <a href="#features" className="transition hover:text-foreground">Features</a>
-          <a href="#faq" className="transition hover:text-foreground">FAQ</a>
+          <a href="/#database" className="transition hover:text-foreground">Database</a>
+          <a href="/#categories" className="transition hover:text-foreground">Categories</a>
+          <a href="/#features" className="transition hover:text-foreground">Features</a>
+          <a href="/#faq" className="transition hover:text-foreground">FAQ</a>
+          <Link to="/claude" className="transition hover:text-foreground">Claude</Link>
           <Link to="/pricing" className="transition hover:text-foreground text-primary font-semibold">Pricing</Link>
           <Link to="/app" className="transition hover:text-foreground">Dashboard</Link>
         </nav>
@@ -166,7 +169,7 @@ function Hero() {
               Get Access — ₹179 →
             </Link>
             <a
-              href="#database"
+              href="/#database"
               className="inline-flex h-12 items-center border border-border bg-transparent px-6 font-mono text-[11px] uppercase tracking-[0.2em] text-foreground transition hover:bg-secondary"
             >
               See what's inside
@@ -738,6 +741,74 @@ function Features() {
   );
 }
 
+/* ── Claude connector ──────────────────────────────────────── */
+function ClaudeSection() {
+  const steps = [
+    ["Add the connector", <>In Claude: <b>Settings → Connectors → Add custom connector</b>, then paste the Doott URL.</>],
+    ["Sign in to Doott", <>Click <b>Connect</b>, sign in and click <b>Allow</b>. Read-only, disconnect any time.</>],
+    ["Ask for leads", <>Turn on Doott in a chat and ask in plain English. Claude does the searching.</>],
+  ];
+  return (
+    <section id="claude" className="border-b border-border bg-background" aria-label="Use Doott inside Claude">
+      <div className="mx-auto max-w-6xl px-6 py-24 md:py-32 grid gap-14 md:grid-cols-2 md:items-start">
+        <div className="min-w-0">
+          <p className="eyebrow mb-4 opacity-60 flex items-center gap-2"><Sparkles size={14} /> New · Doott × Claude</p>
+          <h2 className="display text-3xl md:text-5xl mb-6">Find leads by asking Claude.</h2>
+          <p className="text-muted-foreground leading-relaxed mb-10 max-w-lg">
+            Connect Doott to Claude and search 43.9M contacts from your chat. Claude filters by job title,
+            city, industry and verified email, and gives you a ready-to-use table.
+          </p>
+          <ol className="space-y-6 mb-10">
+            {steps.map(([title, body], i) => (
+              <li key={title} className="flex gap-4">
+                <span className="h-9 w-9 shrink-0 border border-border flex items-center justify-center font-mono text-[11px] text-muted-foreground">{`0${i + 1}`}</span>
+                <div>
+                  <h3 className="font-serif text-lg">{title}</h3>
+                  <p className="text-muted-foreground text-sm leading-relaxed">{body}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-2">Connector URL</p>
+          <code className="block overflow-x-auto whitespace-nowrap border border-border bg-secondary/20 px-4 py-3 font-mono text-sm mb-8">{MCP_URL}</code>
+          <Link
+            to="/claude"
+            className="inline-flex h-11 items-center gap-2 bg-primary px-6 font-mono text-[11px] uppercase tracking-[0.18em] text-primary-foreground transition hover:opacity-90"
+          >
+            Full setup guide <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        {/* Example chat */}
+        <div className="min-w-0 border border-border bg-secondary/10 p-6 md:p-8" aria-label="Example conversation with Claude using Doott">
+          <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-6">Example</p>
+          <div className="ml-auto mb-4 max-w-[85%] border border-border bg-background px-4 py-3 text-sm">
+            {EXAMPLE_PROMPTS[1]}
+          </div>
+          <p className="font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground mb-3">Claude · used Doott: search companies</p>
+          <div className="border border-border bg-background text-sm overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                <tr className="border-b border-border"><th className="px-3 py-2 font-normal">Company</th><th className="hidden sm:table-cell px-3 py-2 font-normal">Industry</th><th className="px-3 py-2 font-normal">Email</th></tr>
+              </thead>
+              <tbody>
+                {[["Company A", "Logistics"], ["Company B", "Software"], ["Company C", "Real estate"]].map(([c, ind]) => (
+                  <tr key={c} className="border-b border-border last:border-0">
+                    <td className="px-3 py-2 whitespace-nowrap">{c}</td>
+                    <td className="hidden sm:table-cell px-3 py-2 text-muted-foreground whitespace-nowrap">{ind}</td>
+                    <td className="px-3 py-2 whitespace-nowrap"><span className="inline-flex items-center gap-1 text-muted-foreground"><CheckCircle size={12} /> deliverable</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-muted-foreground mt-4">Illustration. Real answers list actual Doott records with emails and phone numbers.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* ── Metrics ───────────────────────────────────────────────── */
 function Metrics() {
   return (
@@ -834,6 +905,10 @@ function FAQ() {
               a: "Yes — every view (People, Email, Number, Companies) has a one-click Export CSV button. It exports the current filtered and paginated result set directly to your browser. No size limits on the export.",
             },
             {
+              q: "Can I use Doott inside Claude?",
+              a: "Yes. Add Doott as a custom connector in Claude (Settings → Connectors) with the URL " + MCP_URL + ", sign in to Doott and click Allow. Claude can then search people and companies and verify emails for you. The connector is read-only, and you can disconnect it at any time. See doott.jaqyi.com/claude for the full guide.",
+            },
+            {
               q: "Is Doott a free alternative to ZoomInfo or Apollo.io?",
               a: "Yes. Doott is free to start with no credit card required and no per-seat pricing — giving you access to a 43.9M contact B2B database similar to ZoomInfo, Apollo.io, and Hunter.io, but without the high subscription costs.",
             },
@@ -882,7 +957,7 @@ function FinalCTA() {
 }
 
 /* ── Footer ────────────────────────────────────────────────── */
-function Footer() {
+export function Footer() {
   return (
     <footer className="bg-background" role="contentinfo" aria-label="Site footer">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-10 md:flex-row">
@@ -895,11 +970,12 @@ function Footer() {
             </p>
           </div>
         </div>
-        <nav aria-label="Footer navigation" className="flex items-center gap-6 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+        <nav aria-label="Footer navigation" className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           <Link to="/login" className="hover:text-foreground transition">Sign In</Link>
-          <a href="#database" className="hover:text-foreground transition">Database</a>
-          <a href="#features" className="hover:text-foreground transition">Features</a>
-          <a href="#faq" className="hover:text-foreground transition">FAQ</a>
+          <a href="/#database" className="hover:text-foreground transition">Database</a>
+          <a href="/#features" className="hover:text-foreground transition">Features</a>
+          <a href="/#faq" className="hover:text-foreground transition">FAQ</a>
+          <Link to="/claude" className="hover:text-foreground transition">Claude</Link>
           <Link to="/app/docs" className="hover:text-foreground transition">Docs</Link>
         </nav>
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">

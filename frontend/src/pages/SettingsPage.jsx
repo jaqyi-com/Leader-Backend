@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
+import { Link } from "react-router-dom";
+import { MCP_URL, CLAUDE_CODE_COMMAND } from "../claudeConnector";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
 
@@ -143,11 +145,6 @@ function OrgTab() {
 // ══════════════════════════════════════════════════════════════════════════════
 // CLAUDE TAB — MCP connector URL, setup steps, connected apps
 // ══════════════════════════════════════════════════════════════════════════════
-// The connector lives on the API host: https://<api host>/mcp
-const MCP_URL = (() => {
-  try { return new URL("/mcp", new URL(API, window.location.origin)).toString(); } catch { return "/mcp"; }
-})();
-
 function CopyRow({ value }) {
   return (
     <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -203,8 +200,11 @@ function ClaudeTab() {
         <p style={{ fontSize: 12, color: "var(--text-3)", margin: "6px 0 0" }}>On Team and Enterprise plans an owner may need to add the connector for the organization first.</p>
 
         <p style={{ ...step, fontWeight: 600, color: "var(--text)", marginTop: 18 }}>Claude Code</p>
-        <CopyRow value={`claude mcp add --transport http doott ${MCP_URL}`} />
+        <CopyRow value={CLAUDE_CODE_COMMAND} />
         <p style={{ fontSize: 12, color: "var(--text-3)", margin: "6px 0 0" }}>Then run <code>/mcp</code> in Claude Code and choose <strong>doott → Authenticate</strong>.</p>
+        <p style={{ fontSize: 13, margin: "18px 0 0" }}>
+          <Link to="/claude" style={{ color: "var(--accent-2)" }}>Full setup guide, example questions and troubleshooting →</Link>
+        </p>
       </div>
 
       <div className="card" style={{ padding: 28 }}>

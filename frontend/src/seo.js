@@ -18,6 +18,11 @@ export const INDEXABLE_ROUTES = {
     description:
       "One price, lifetime access to Doott's B2B database: verified emails, direct phone numbers, company data and unlimited CSV exports. No per-seat fees.",
   },
+  "/claude": {
+    title: "Connect Doott to Claude – Search B2B Leads from Your Chat",
+    description:
+      "Add Doott as a connector in Claude and search 43.9M B2B contacts and companies by asking in plain English. Setup takes a minute: add the URL, sign in, click Allow.",
+  },
 };
 
 // Pages that exist for signed-in users or account flows; keep them out of search results.
@@ -29,6 +34,7 @@ const NOINDEX_TITLES = {
   "/reset-password": "Reset your password – Doott",
   "/verify-email": "Verify your email – Doott",
   "/auth/callback": "Signing in – Doott",
+  "/connect/claude": "Connect to Claude – Doott",
 };
 
 export function metaFor(pathname) {

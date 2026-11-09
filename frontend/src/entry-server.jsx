@@ -5,10 +5,12 @@ import { StaticRouter } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
 import LandingPage from "./pages/LandingPage";
 import PricingPage from "./pages/PricingPage";
+import ClaudeConnectorPage from "./pages/ClaudeConnectorPage";
 
 const PAGES = {
   "/": LandingPage,
   "/pricing": PricingPage,
+  "/claude": ClaudeConnectorPage,
 };
 
 export function render(url) {

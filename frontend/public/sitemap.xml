@@ -20,6 +20,14 @@
     <priority>0.8</priority>
   </url>
 
+  <!-- Claude connector guide -->
+  <url>
+    <loc>https://doott.jaqyi.com/claude</loc>
+    <lastmod>2026-11-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
   <!-- API Docs — public page, helps with developer SEO -->
   <url>
     <loc>https://doott.jaqyi.com/api-docs</loc>

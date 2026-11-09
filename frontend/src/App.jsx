@@ -12,6 +12,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 // Public marketing pages — loaded eagerly because they are pre-rendered (scripts/prerender.mjs)
 import LandingPage from "./pages/LandingPage";
 import PricingPage from "./pages/PricingPage";
+import ClaudeConnectorPage from "./pages/ClaudeConnectorPage";
 
 // Everything except the public marketing pages loads on demand, so the landing page stays light.
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -46,6 +47,7 @@ export default function App() {
             {/* ── Public routes ─────────────────────────────────── */}
             <Route path="/"                element={<LandingPage />} />
             <Route path="/pricing"         element={<PricingPage />} />
+            <Route path="/claude"          element={<ClaudeConnectorPage />} />
             <Route path="/join"            element={<JoinPage />} />
             <Route path="/login"           element={<LoginPage />} />
             <Route path="/register"        element={<RegisterGate />} />

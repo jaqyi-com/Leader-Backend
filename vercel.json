@@ -35,6 +35,10 @@
       "destination": "/pricing/index.html"
     },
     {
+      "source": "/claude",
+      "destination": "/claude/index.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/app-shell.html"
     }
