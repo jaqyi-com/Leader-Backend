@@ -16,7 +16,7 @@ const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
 const { StreamableHTTPServerTransport } = require("@modelcontextprotocol/sdk/server/streamableHttp.js");
 const { JWT_SECRET } = require("../config/jwtSecret");
 const { User, Member } = require("../db/mongoose");
-const { verifyAccessToken, baseUrl } = require("./oauth");
+const { verifyAccessToken, baseUrl, ensureDb } = require("./oauth");
 const logger = require("../utils/logger").forAgent("McpServer");
 
 const SERVER_INFO = { name: "doott", title: "Doott", version: "1.0.0" };
@@ -248,7 +248,7 @@ function unauthorized(req, res, description) {
   return res.status(401).json({ jsonrpc: "2.0", error: { code: -32001, message: "Sign in to Doott to use this connector." }, id: null });
 }
 
-router.all("/mcp", cors, express.json({ limit: "1mb" }), async (req, res) => {
+router.all("/mcp", cors, express.json({ limit: "1mb" }), ensureDb, async (req, res) => {
   if (req.method !== "POST") {
     // Stateless server: no standalone SSE stream and no sessions to delete.
     return res.status(405).set("Allow", "POST").json({ jsonrpc: "2.0", error: { code: -32000, message: "Method not allowed." }, id: null });

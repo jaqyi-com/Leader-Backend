@@ -31,6 +31,7 @@ const { JWT_SECRET } = require("../config/jwtSecret");
 const { auth } = require("../middleware/auth");
 const { createRateLimiter } = require("../middleware/rateLimiter");
 const { McpClient, McpAuthCode, McpGrant } = require("../db/models/mcpOAuth");
+const { connectDB } = require("../db/mongoose");
 const logger = require("../utils/logger").forAgent("McpOAuth");
 
 const MCP_KEY = crypto.createHmac("sha256", JWT_SECRET).update("doott-mcp-oauth-v1").digest();
@@ -139,6 +140,17 @@ async function authenticateClient(req) {
   return client;
 }
 
+// On Vercel the Mongo connection is opened once per instance and is not reopened if it fails or drops;
+// without this, queries wait 10 s for a connection that never comes (same guard as routes/auth.js).
+async function ensureDb(req, res, next) {
+  try { await connectDB(); } catch { /* checked below */ }
+  if (mongoose.connection.readyState === 1) return next();
+  logger.error(`MongoDB not connected (readyState ${mongoose.connection.readyState}) for ${req.method} ${req.path}`);
+  res.setHeader("Retry-After", "5");
+  if (req.path.startsWith("/oauth/authorize")) return errorPage(res.status(503), "Doott is temporarily unavailable. Please try again in a moment.");
+  return res.status(503).json({ error: "temporarily_unavailable", error_description: "Doott is temporarily unavailable. Please try again." });
+}
+
 // ── Router ────────────────────────────────────────────────────────────────────
 // publicRouter is mounted before the app-wide CORS and JWT guard (MCP clients are not the Doott
 // frontend); apiRouter holds the endpoints the Doott frontend calls with a normal login token.
@@ -192,7 +204,7 @@ publicRouter.get(["/.well-known/oauth-authorization-server", "/.well-known/oauth
 });
 
 // Dynamic client registration
-publicRouter.post("/oauth/register", openCors, oauthLimiter, json, async (req, res) => {
+publicRouter.post("/oauth/register", openCors, oauthLimiter, json, ensureDb, async (req, res) => {
   try {
     const body = req.body || {};
     const uris = body.redirect_uris;
@@ -235,7 +247,7 @@ publicRouter.post("/oauth/register", openCors, oauthLimiter, json, async (req, r
 });
 
 // Authorization request → validate, then hand off to the Doott consent page.
-publicRouter.get("/oauth/authorize", oauthLimiter, async (req, res) => {
+publicRouter.get("/oauth/authorize", oauthLimiter, ensureDb, async (req, res) => {
   try {
     const q = req.query;
     const clientId = typeof q.client_id === "string" ? q.client_id : "";
@@ -284,7 +296,7 @@ function readAuthzRequest(token) {
 }
 
 // Token endpoint
-publicRouter.post("/oauth/token", openCors, oauthLimiter, form, async (req, res) => {
+publicRouter.post("/oauth/token", openCors, oauthLimiter, form, ensureDb, async (req, res) => {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader("Pragma", "no-cache");
   try {
@@ -327,7 +339,7 @@ publicRouter.post("/oauth/token", openCors, oauthLimiter, form, async (req, res)
 });
 
 // Token revocation (always 200, per RFC 7009)
-publicRouter.post("/oauth/revoke", openCors, oauthLimiter, form, async (req, res) => {
+publicRouter.post("/oauth/revoke", openCors, oauthLimiter, form, ensureDb, async (req, res) => {
   try {
     req.body = req.body || {};
     const client = await authenticateClient(req);
@@ -354,7 +366,10 @@ publicRouter.post("/oauth/revoke", openCors, oauthLimiter, form, async (req, res
 });
 
 // ── Consent + connection management (normal Doott login) ───────────────────
-apiRouter.get("/api/mcp/consent", auth, async (req, res) => {
+apiRouter.get("/api/mcp/consent", auth, ensureDb, async (req, res, next) => {
+  try { await consent(req, res); } catch (err) { logger.error(`consent failed: ${err.message}`); next(err); }
+});
+async function consent(req, res) {
   const r = readAuthzRequest(req.query.request);
   if (!r) return res.status(400).json({ error: "This connection link has expired. Start again from Claude.", code: "REQUEST_EXPIRED" });
   const client = await McpClient.findOne({ clientId: r.cid }).lean();
@@ -362,9 +377,9 @@ apiRouter.get("/api/mcp/consent", auth, async (req, res) => {
   let redirectHost = "";
   try { redirectHost = new URL(r.ru).host; } catch { /* ignore */ }
   res.json({ clientName: client.clientName, redirectHost, email: req.user.email, scope: SCOPE });
-});
+}
 
-apiRouter.post("/api/mcp/approve", auth, async (req, res) => {
+apiRouter.post("/api/mcp/approve", auth, ensureDb, async (req, res) => {
   try {
     const r = readAuthzRequest(req.body?.request);
     if (!r) return res.status(400).json({ error: "This connection link has expired. Start again from Claude.", code: "REQUEST_EXPIRED" });
@@ -391,7 +406,7 @@ apiRouter.post("/api/mcp/approve", auth, async (req, res) => {
   }
 });
 
-apiRouter.get("/api/mcp/connections", auth, async (req, res) => {
+apiRouter.get("/api/mcp/connections", auth, ensureDb, async (req, res) => {
   const grants = await McpGrant.find({ userId: req.user.userId, revokedAt: null, refreshExpiresAt: { $gt: new Date() } })
     .select("clientName createdAt lastUsedAt").sort({ createdAt: -1 }).lean();
   res.json({
@@ -399,7 +414,7 @@ apiRouter.get("/api/mcp/connections", auth, async (req, res) => {
   });
 });
 
-apiRouter.delete("/api/mcp/connections/:id", auth, async (req, res) => {
+apiRouter.delete("/api/mcp/connections/:id", auth, ensureDb, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: "Connection not found." });
   const r = await McpGrant.updateOne({ _id: req.params.id, userId: req.user.userId, revokedAt: null }, { $set: { revokedAt: new Date() } });
   grantCache.delete(req.params.id);
@@ -407,4 +422,4 @@ apiRouter.delete("/api/mcp/connections/:id", auth, async (req, res) => {
   res.json({ ok: true });
 });
 
-module.exports = { publicRouter, apiRouter, verifyAccessToken, baseUrl };
+module.exports = { publicRouter, apiRouter, verifyAccessToken, baseUrl, ensureDb };
