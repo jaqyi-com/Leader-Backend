@@ -25,6 +25,7 @@ const INSTRUCTIONS =
   "phone numbers, job titles and locations. Use search_people for individuals (filter by job_title, city, " +
   "state, country, has_email, has_phone, email_status) and search_companies for businesses. Use " +
   "list_categories / list_cities to see which job titles, industries and cities have the most records. " +
+  "Use email_status='deliverable' to get only verified emails (both search tools support it). " +
   "Results are paginated (max 50 per call); report the total and say when it is an estimate (total_exact=false). " +
   "Email status 'deliverable' means verified; treat 'pending', 'unknown' and 'risky' as unverified.";
 
@@ -159,6 +160,10 @@ function buildServer(ctx) {
       country,
       has_email: z.boolean().optional(),
       has_phone: z.boolean().optional(),
+      email_status: z.enum(["deliverable", "undeliverable", "risky", "unknown"]).optional()
+        .describe("Email verification status; 'deliverable' = verified, use it for a clean outreach list"),
+      phone_status: z.enum(["valid", "mobile", "landline", "invalid"]).optional()
+        .describe("Phone check result; 'mobile' = valid mobile number"),
       page, limit,
     },
     annotations: { title: "Search companies", ...readOnly },
@@ -171,6 +176,8 @@ function buildServer(ctx) {
       f_domain: a.domain, f_city: a.city, f_state: a.state, f_country: a.country,
       f_has_email: a.has_email === undefined ? undefined : String(a.has_email),
       f_has_phone: a.has_phone === undefined ? undefined : String(a.has_phone),
+      f_email_status: a.email_status,
+      f_phone_status: a.phone_status,
     };
     const r = await ctx.callApi("GET", "/api/final-companies", { query });
     return r.status === 200 ? searchResult(r, p, l) : apiError(r);
