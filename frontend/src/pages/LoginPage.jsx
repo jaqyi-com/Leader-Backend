@@ -22,7 +22,14 @@ export default function LoginPage() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendDone, setResendDone] = useState(false);
 
-  const from = location.state?.from?.pathname || "/app/categories";
+  const fromLoc = location.state?.from;
+  const from = fromLoc?.pathname ? fromLoc.pathname + (fromLoc.search || "") : "/app/categories";
+  // Google sign-in leaves the page, so remember a pending "Connect to Claude" request across it.
+  useEffect(() => {
+    try {
+      if (from.startsWith("/connect/")) sessionStorage.setItem("doott_after_login", from);
+    } catch { /* storage blocked */ }
+  }, [from]);
 
   // Redirect if already logged in
   useEffect(() => {

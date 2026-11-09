@@ -380,7 +380,13 @@ export default function AuthCallbackPage() {
 
     if (token) {
       handleOAuthCallback(token);
-      navigate("/app", { replace: true });
+      let next = "/app";
+      try {
+        const saved = sessionStorage.getItem("doott_after_login");
+        sessionStorage.removeItem("doott_after_login");
+        if (saved && saved.startsWith("/connect/")) next = saved;
+      } catch { /* storage blocked */ }
+      navigate(next, { replace: true });
     } else {
       setErrorParam("google_failed");
       setStatus("error");

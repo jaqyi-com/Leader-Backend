@@ -33,6 +33,7 @@ const CategoryExplorerPage = lazy(() => import("./pages/CategoryExplorerPage"));
 const CityExplorerPage = lazy(() => import("./pages/CityExplorerPage"));
 const AdminAnalyticsPage = lazy(() => import("./pages/AdminAnalyticsPage"));
 const ApiDocsPage = lazy(() => import("./pages/ApiDocsPage"));
+const ConnectClaudePage = lazy(() => import("./pages/ConnectClaudePage"));
 
 export default function App() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
             <Route path="/reset-password"  element={<ResetPasswordPage />} />
             <Route path="/api-docs"        element={<ApiDocsPage />} />
             <Route path="/api-docs.html"   element={<ApiDocsPage />} />
+            <Route path="/connect/claude"  element={<ProtectedRoute><ConnectClaudePage /></ProtectedRoute>} />
 
             {/* ── Protected app routes ───────────────────────────── */}
             <Route

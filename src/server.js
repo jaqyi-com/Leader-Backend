@@ -64,6 +64,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// MCP connector for Claude (OAuth + /mcp). Mounted before the app-wide CORS: MCP clients are not
+// the Doott frontend. These routes do their own authentication. See src/mcp/oauth.js.
+const mcpOAuth = require("./mcp/oauth");
+app.use(mcpOAuth.publicRouter);
+app.use(require("./mcp/server").router);
+
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -111,6 +117,9 @@ const PUBLIC_PATH_PREFIXES = [
   "/doott-og.jpg",              // OG social share image (1200x630)
   "/api/payments",              // Razorpay payment endpoints (pre-auth)
   "/api/health",                // uptime / readiness probe (no sensitive data)
+  "/mcp",                       // MCP connector — checks its own OAuth access token
+  "/oauth",                     // MCP OAuth endpoints (register / authorize / token / revoke)
+  "/.well-known",               // OAuth discovery metadata for MCP clients
 ];
 
 app.use((req, res, next) => {
@@ -250,6 +259,7 @@ app.use("/api/analytics", analyticsRouter);
 app.use("/api/track",     require("./routes/tracker"));
 app.use("/api", require("./routes/featureFlags"));
 app.use("/api/payments", require("./routes/payments"));
+app.use(mcpOAuth.apiRouter);               // /api/mcp/* — consent page + connected apps (Doott login)
 
 
 

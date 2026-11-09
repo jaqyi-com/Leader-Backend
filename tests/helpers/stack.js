@@ -111,7 +111,7 @@ async function startStack({ postgres = false, env = {} } = {}) {
       REGISTRATION_MODE: "open", // the default is invite-only; tests that check sign-up policy override this
       ...env,
     },
-    stdio: "ignore",
+    stdio: process.env.TEST_SERVER_LOGS ? "inherit" : "ignore", // TEST_SERVER_LOGS=1 shows the API's logs
   });
   for (let i = 0; i < 80; i++) {
     try { if ((await fetch(base + "/", { signal: AbortSignal.timeout(500) })).ok) break; } catch { /* retry */ }
