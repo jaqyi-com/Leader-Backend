@@ -3,7 +3,7 @@
 // NEON PostgreSQL — Connection Pool
 // ============================================================
 // Used for the In-Build Database feature (companies + people).
-// MongoDB Atlas remains untouched for all other features.
+// The "app" schema (accounts, keys, flags, analytics) uses the same pool — see appDb.js.
 //
 // Neon instance  : ep-cool-shape-aik0wbtp-pooler.c-4.us-east-1.aws.neon.tech
 // Database       : neondb   |  Schema: final

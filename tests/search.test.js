@@ -1,6 +1,6 @@
 "use strict";
 // Search, pagination, filter and abuse-resistance tests for /api/final-people against a
-// synthetic local PostgreSQL (250 fake people). Skipped when mongod / PostgreSQL are missing.
+// synthetic local PostgreSQL (250 fake people). Skipped when PostgreSQL is missing.
 //
 // Abuse resistance (rate limits, access policy, signup mode, result window) lives in abuse.test.js.
 

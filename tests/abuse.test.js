@@ -8,7 +8,7 @@ const { startStack, available } = require("./helpers/stack");
 
 const skip = (!available.postgres && "PostgreSQL not installed");
 const P = "/api/final-people";
-// Each test gets its own short-lived stack and releases it immediately (a few Postgres/Mongo
+// Each test gets its own short-lived stack and releases it immediately (a few Postgres
 // servers at once is fine; nine at once exhausts macOS shared-memory limits).
 const live = new Set();
 const bootBase = async (opts) => { const s = await startStack({ postgres: true, ...opts }); live.add(s); return s; };

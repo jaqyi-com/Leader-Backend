@@ -136,7 +136,7 @@ app.use((req, res, next) => {
   return auth(req, res, next);
 });
 
-// Strip server-owned fields (orgId, _id, …) and Mongo operators from every authenticated body.
+// Strip server-owned fields (orgId, _id, …) and operator-style keys ($…) from every authenticated body.
 app.use(sanitizeBody);
 
 // ------------------------------------------------------------

@@ -1,5 +1,5 @@
 "use strict";
-// Everything that moved from MongoDB Atlas to Neon (schema "app"): feature flags, page tracking and
+// The app tables in Neon (schema "app"): feature flags, page tracking and
 // analytics, organisations and members, password reset, Google sign-in and the payment webhook.
 // Runs against the hermetic local PostgreSQL stack.
 

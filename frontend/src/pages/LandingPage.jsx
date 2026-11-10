@@ -16,7 +16,7 @@ import doottLogo from "../assets/doott-logo.png";
 
 const LOGOS = [
   "Google Cloud SQL", "PostgreSQL", "Redis", "React",
-  "Node.js", "OpenAI", "MongoDB", "Vercel", "Express",
+  "Node.js", "OpenAI", "PostgreSQL", "Vercel", "Express",
 ];
 
 export default function LandingPage() {

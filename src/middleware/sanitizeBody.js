@@ -1,7 +1,7 @@
 "use strict";
 // Mass-assignment / NoSQL-operator protection for JSON request bodies.
 //
-// Many routes pass req.body straight into Mongoose updates (findOneAndUpdate(filter, req.body)).
+// Defence in depth for routes that copy fields from req.body into database updates.
 // Without this, a client could send {"orgId": "<other tenant>"} to move a record into another
 // organisation, or {"$set": {...}} to inject update operators.
 //

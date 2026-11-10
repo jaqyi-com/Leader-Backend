@@ -3,11 +3,11 @@
 // APP DATABASE — Neon PostgreSQL, schema "app"
 // ============================================================
 // Accounts, organisations, API keys, Claude (MCP) connections, feature flags and page views.
-// These used to live in MongoDB Atlas; they now sit next to the lead data in Neon, in their own
-// schema so the "final" lead tables are never touched.
+// They sit next to the lead data in Neon, in their own schema so the "final" lead tables are never
+// touched. (Moved from MongoDB Atlas on 2026-11-10.)
 //
-// Rows are returned in the same shape the code used with Mongoose (`_id`, camelCase fields), and ids
-// keep MongoDB's 24-hex-character format, so tokens and ids issued before the move stay valid.
+// Rows are returned with `_id` and camelCase fields, and ids are 24 hex characters (the format used
+// before the move), so tokens and ids issued earlier stay valid.
 // The schema is created on first use (idempotent; see SCHEMA_SQL).
 // ============================================================
 

@@ -1,6 +1,6 @@
 "use strict";
 // Account settings: profile, password change, sign out everywhere, API keys, account deletion.
-// Runs against the hermetic local stack (throwaway mongod + PostgreSQL). Skipped when they are missing.
+// Runs against the hermetic local stack (throwaway PostgreSQL). Skipped when it is missing.
 
 const test = require("node:test");
 const assert = require("node:assert/strict");

@@ -11,7 +11,7 @@
                                             │
                               ┌─────────────┼──────────────┐
                               ▼             ▼              ▼
-                        MongoDB Atlas   Upstash Redis   OpenAI API
+                      Neon PostgreSQL   Upstash Redis   OpenAI API
 ```
 
 ---
@@ -21,7 +21,7 @@
 | Service | Purpose | Free tier? |
 |---------|---------|------------|
 | [Vercel](https://vercel.com) | Host backend + frontend | ✅ Yes |
-| [MongoDB Atlas](https://cloud.mongodb.com) | Primary database | ✅ Yes (512MB) |
+| [Neon](https://neon.tech) | PostgreSQL: lead data (schema `final`) and accounts (schema `app`) | ✅ Yes |
 | [Upstash Redis](https://upstash.com) | Cache | ✅ Yes (10K req/day) |
 | [OpenAI](https://platform.openai.com) | GPT-4o + Embeddings | 💳 Pay-per-use |
 | [Apollo.io](https://apollo.io) | Lead enrichment | Freemium |
@@ -64,7 +64,7 @@ SMTP_USER               = your@email.com
 SMTP_PASS               = your-app-password
 SMTP_FROM_NAME          = Leader
 SMTP_FROM_EMAIL         = your@email.com
-MONGO_URI               = mongodb+srv://...
+NEON_DATABASE_URL       = postgresql://...-pooler...neon.tech/neondb?sslmode=require
 UPSTASH_REDIS_REST_URL  = https://...upstash.io
 UPSTASH_REDIS_REST_TOKEN= ...
 JWT_SECRET              = <generate: openssl rand -hex 32>
@@ -133,18 +133,12 @@ VITE_CRAWLER_API_URL    = https://<your-backend>.vercel.app/api/crawler
 
 ---
 
-## Step 4 — MongoDB Atlas Setup
+## Step 4 — Database (Neon PostgreSQL)
 
-1. Create a free cluster at [cloud.mongodb.com](https://cloud.mongodb.com)
-2. Create a database user with Read/Write access
-3. Add Vercel's IP range to the Atlas IP Allowlist (or use `0.0.0.0/0` for simplicity)
-4. Copy the connection string as `MONGO_URI`
-
-The app auto-creates these collections on first run:
-- `companies`, `contacts`, `outreachlogs`, `responses`, `leadscores`
-- `autonomousleads`, `places`, `websites`, `socialposts`
-- `users`, `organizations`, `members`
-- `chatknowledgechunks`, `chatknowledgesources`, `chatconversations`, `chatmessages`
+1. Set `NEON_DATABASE_URL` to the Neon **pooled** connection string.
+2. The lead data lives in schema `final` (`final.people`, `final.companies`).
+3. Accounts, organizations, members, API keys, Claude connections, feature flags and page views live in
+   schema `app`. The backend creates these tables on first start; nothing to run by hand.
 
 ---
 

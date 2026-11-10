@@ -1,6 +1,6 @@
 "use strict";
 // MCP connector: OAuth (registration, consent, PKCE, refresh rotation, revocation) and the /mcp tools,
-// against the hermetic local stack (synthetic people only). Skipped when mongod / PostgreSQL are missing.
+// against the hermetic local stack (synthetic people only). Skipped when PostgreSQL is missing.
 
 const test = require("node:test");
 const assert = require("node:assert/strict");

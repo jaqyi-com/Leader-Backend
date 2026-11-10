@@ -1,12 +1,14 @@
 // @ts-check
 // Browser end-to-end tests. Everything runs LOCALLY and hermetically:
-//   throwaway mongod (temp dir)  →  backend (fake third-party keys)  →  Vite dev server
+//   throwaway PostgreSQL (temp dir)  →  backend (fake third-party keys)  →  Vite dev server
 // The frontend is pointed at the local backend through VITE_API_URL, never at production.
 const { defineConfig, devices } = require("@playwright/test");
 const path = require("node:path");
 
 const ROOT = path.join(__dirname, "..");
-const MONGO_PORT = 27988;
+const PG_PORT = 55988;
+const PG_BIN = ["/opt/homebrew/opt/postgresql@16/bin", "/opt/homebrew/opt/postgresql@17/bin", "/usr/lib/postgresql/16/bin", "/usr/lib/postgresql/15/bin"]
+  .find((d) => require("node:fs").existsSync(path.join(d, "initdb"))) || "";
 const API_PORT = 4888;
 const WEB_PORT = 5199;
 const SECRET = "e2e-secret-" + "z".repeat(40);
@@ -28,8 +30,9 @@ module.exports = defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      command: `sh -c 'D=$(mktemp -d) && exec mongod --dbpath "$D" --port ${MONGO_PORT} --bind_ip 127.0.0.1 --nounixsocket --quiet'`,
-      port: MONGO_PORT,
+      // Accounts live in PostgreSQL (schema "app", created by the backend on first use).
+      command: `sh -c 'D=$(mktemp -d) && "${PG_BIN}/initdb" -D "$D" -U postgres -A trust -E UTF8 --locale=C >/dev/null && exec "${PG_BIN}/postgres" -D "$D" -p ${PG_PORT} -k "$D" -c listen_addresses=127.0.0.1'`,
+      port: PG_PORT,
       reuseExistingServer: false,
       timeout: 30_000,
     },
@@ -41,8 +44,8 @@ module.exports = defineConfig({
       timeout: 60_000,
       env: {
         PATH: process.env.PATH || "", NODE_ENV: "production", PORT: String(API_PORT), JWT_SECRET: SECRET,
-        MONGO_URI: `mongodb://127.0.0.1:${MONGO_PORT}/e2e`, FRONTEND_URL: WEB, CORS_ORIGIN: WEB,
-        NEON_DATABASE_URL: "postgresql://u:p@127.0.0.1:1/x",
+        FRONTEND_URL: WEB, CORS_ORIGIN: WEB,
+        NEON_DATABASE_URL: `postgresql://postgres@127.0.0.1:${PG_PORT}/postgres`,
         OPENAI_API_KEY: "fake", APOLLO_API_KEY: "fake", SMTP_USER: "fake", SMTP_PASS: "fake",
       },
     },
