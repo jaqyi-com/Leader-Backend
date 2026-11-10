@@ -1,12 +1,13 @@
 import { useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { useOutlet, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import Sidebar from "./Sidebar";
 import Topbar from "./Topbar";
 
 export default function Layout() {
   const [collapsed, setCollapsed] = useState(false);
   const { pathname } = useLocation();
+  const outlet = useOutlet();
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg)" }}>
@@ -30,17 +31,16 @@ export default function Layout() {
           </div>
 
           <div className="relative z-10 max-w-[1600px] mx-auto">
-            <AnimatePresence mode="popLayout">
-              <motion.div
-                key={pathname}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-              >
-                <Outlet />
-              </motion.div>
-            </AnimatePresence>
+            {/* Fade the new page in; the old one is removed at once. (An exit animation here kept old
+                pages in the DOM as invisible copies on top of the current one, which swallowed clicks.) */}
+            <motion.div
+              key={pathname}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            >
+              {outlet}
+            </motion.div>
           </div>
         </main>
       </div>
