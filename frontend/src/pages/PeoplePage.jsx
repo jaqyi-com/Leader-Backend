@@ -118,7 +118,10 @@ export default function PeoplePage() {
   const [hasError, setHasError] = useState(false);
 
   // ── Load records ──────────────────────────────────────────
+  // Each load gets a number; only the newest one may update the table (older, slower answers are dropped).
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
+    const reqId = ++loadSeq.current;
     setLoading(true);
     setHasError(false);
     try {
@@ -130,6 +133,7 @@ export default function PeoplePage() {
         ...filterParams,
         ...quickFilterParams(quick),
       });
+      if (reqId !== loadSeq.current) return; // replaced by a newer request
       const recordsData = data.records || [];
       if (!sortBy) {
         recordsData.sort((a, b) => {
@@ -158,12 +162,13 @@ export default function PeoplePage() {
       setSortNotice(data.sort_applied === false ? (data.sort_notice || "Sorting skipped for this large result set.") : "");
       setHasError(false);
     } catch (err) {
+      if (reqId !== loadSeq.current) return;
       setRecords([]);
       setTotal(0);
       setHasError(true);
       toast.error(err?.userMessage || "Failed to load People data.", { id: "people-load-error" });
     } finally {
-      setLoading(false);
+      if (reqId === loadSeq.current) setLoading(false);
     }
   }, [page, limit, sortBy, sortDir, search, filters, quick]);
 
@@ -378,7 +383,7 @@ export default function PeoplePage() {
         </div>
 
         {/* Quick filters (right side) */}
-        <QuickFilters className="sm:ml-auto" value={quick} onChange={(q) => { setQuick(q); setPage(1); }} />
+        <QuickFilters busy={loading} className="sm:ml-auto" value={quick} onChange={(q) => { setQuick(q); setPage(1); }} />
       </div>
 
       {/* Supabase/Airtable style filter query builder */}

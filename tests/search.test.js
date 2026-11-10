@@ -342,3 +342,17 @@ test("quick filters: verified email and valid mobile return exactly the right ro
   }
   assert.ok(expLandline > 0);
 });
+
+test("quick filters: totals are the filtered count, not the cached total of the whole table", { skip }, async () => {
+  for (const route of ["/api/final-people-email", "/api/final-people-number"]) {
+    const base = (await stack.http("GET", `${route}?limit=5`, { token: user.token })).json.total;
+    for (const qs of ["f_email_status=deliverable", "f_phone_status=mobile"]) {
+      // limit=5 forces the "count the rest" path (more rows than one page)
+      const all = (await stack.http("GET", `${route}?${qs}&limit=500`, { token: user.token })).json.records.length;
+      const r = await stack.http("GET", `${route}?${qs}&limit=5`, { token: user.token });
+      if (all <= 5) continue;
+      assert.notEqual(r.json.total, base, `${route} ${qs} must not reuse the unfiltered total`);
+      assert.equal(r.json.total, all, `${route} ${qs} total`);
+    }
+  }
+});

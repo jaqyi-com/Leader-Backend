@@ -116,7 +116,10 @@ export default function CompaniesPage() {
   }, []);
 
   // ── Load records ──────────────────────────────────────────
+  // Each load gets a number; only the newest one may update the table (older, slower answers are dropped).
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
+    const reqId = ++loadSeq.current;
     setLoading(true);
     try {
       const filterParams = qbFiltersToParams(filters);
@@ -127,6 +130,7 @@ export default function CompaniesPage() {
         ...filterParams,
         ...quickFilterParams(quick),
       });
+      if (reqId !== loadSeq.current) return; // replaced by a newer request
       const recordsData = data.records || [];
       if (!sortBy) {
         recordsData.sort((a, b) => {
@@ -152,11 +156,12 @@ export default function CompaniesPage() {
       setTotalExact(data.total_exact !== false);
       setSortNotice(data.sort_applied === false ? (data.sort_notice || "Sorting skipped for this large result set.") : "");
     } catch (err) {
+      if (reqId !== loadSeq.current) return;
       setRecords([]);
       setTotal(0);
       toast.error(err?.userMessage || "Failed to load Companies data", { id: "companies-load-error" });
     } finally {
-      setLoading(false);
+      if (reqId === loadSeq.current) setLoading(false);
     }
   }, [page, limit, sortBy, sortDir, search, filters, quick]);
 
@@ -374,7 +379,7 @@ export default function CompaniesPage() {
         </div>
 
         {/* Quick filters (right side) */}
-        <QuickFilters className="sm:ml-auto" value={quick} onChange={(q) => { setQuick(q); setPage(1); }} />
+        <QuickFilters busy={loading} className="sm:ml-auto" value={quick} onChange={(q) => { setQuick(q); setPage(1); }} />
       </div>
 
       {/* Supabase/Airtable style filter query builder */}

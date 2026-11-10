@@ -1,10 +1,11 @@
-import { MailCheck, Smartphone, Check } from "lucide-react";
+import { MailCheck, Smartphone, Check, Loader2 } from "lucide-react";
 
 /**
  * One-click filters shown at the right end of the filter bar on Companies, People, Emails and Numbers.
  *   Verified email → only records whose email was checked and is deliverable
  *   Valid mobile   → only records whose phone number is valid and is a mobile number
  * value: { verifiedEmail: boolean, validMobile: boolean }
+ * busy:  results are loading — an active button shows a spinner (buttons stay clickable)
  */
 export const NO_QUICK_FILTERS = { verifiedEmail: false, validMobile: false };
 
@@ -23,7 +24,7 @@ const OPTIONS = [
   { key: "validMobile", label: "Valid mobile", icon: Smartphone, title: "Show only records with a valid mobile number" },
 ];
 
-export default function QuickFilters({ value, onChange, className = "" }) {
+export default function QuickFilters({ value, onChange, busy = false, className = "" }) {
   return (
     <div className={`flex items-center gap-2 flex-wrap ${className}`} role="group" aria-label="Quick filters">
       {OPTIONS.map(({ key, label, icon: Icon, title }) => {
@@ -34,6 +35,7 @@ export default function QuickFilters({ value, onChange, className = "" }) {
             type="button"
             title={title}
             aria-pressed={on}
+            aria-busy={on && busy}
             onClick={() => onChange({ ...value, [key]: !on })}
             className="btn-ghost text-xs gap-1.5 whitespace-nowrap"
             style={on ? {
@@ -48,7 +50,7 @@ export default function QuickFilters({ value, onChange, className = "" }) {
               fontWeight: 500,
             }}
           >
-            {on ? <Check size={12} /> : <Icon size={12} />}
+            {on ? (busy ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />) : <Icon size={12} />}
             {label}
           </button>
         );

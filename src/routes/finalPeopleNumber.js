@@ -425,7 +425,11 @@ router.get("/", async (req, res) => {
       total = records.length;
       totalExact = true;
     } else {
-      const isBaseQuery = !search && values.length === 0;
+      // Unfiltered = no search and no filter at all. Counting bound values is not enough: some filters
+      // (e.g. email_status=deliverable, phone_status=mobile) are fixed SQL with no parameters, and used
+      // to be answered with the cached total of the whole table.
+      const hasFilter = Object.entries(req.query).some(([k, v]) => (k.startsWith("f_") || k === "country") && String(v ?? "").trim() !== "");
+      const isBaseQuery = !search && values.length === 0 && !hasFilter;
       if (isBaseQuery) {
         const cachedTotal = await cacheGet("cache:final-people-number-total");
         if (cachedTotal) {

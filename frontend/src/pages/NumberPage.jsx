@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Phone, Search, Download, RefreshCw, Filter, X,
@@ -90,7 +90,10 @@ function TablePanel({ mode }) {
   }, [isPeople]);
 
   // ── Load records ────────────────────────────────────────────
+  // Each load gets a number; only the newest one may update the table (older, slower answers are dropped).
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
+    const reqId = ++loadSeq.current;
     setLoading(true);
     try {
       const filterParams = qbFiltersToParams(filters);
@@ -98,19 +101,22 @@ function TablePanel({ mode }) {
       if (isPeople) {
         // People tab — number endpoint with column filters
         const { data } = await fpnGetDatabase(params);
+        if (reqId !== loadSeq.current) return; // replaced by a newer request
         setRecords(data.records || []);
         setTotal(data.total || 0);
       } else {
         // Companies tab — companies endpoint with phone filter
         params.f_has_phone = "true";
         const { data } = await fcGetDatabase(params);
+        if (reqId !== loadSeq.current) return; // replaced by a newer request
         setRecords(data.records || []);
         setTotal(data.total || 0);
       }
     } catch (err) {
+      if (reqId !== loadSeq.current) return;
       toast.error(err?.userMessage || "Failed to load data");
     } finally {
-      setLoading(false);
+      if (reqId === loadSeq.current) setLoading(false);
     }
   }, [isPeople, page, limit, sortBy, sortDir, search, filters, quick]);
 
@@ -187,7 +193,7 @@ function TablePanel({ mode }) {
           </select>
         </div>
           {/* Quick filters, right of the filter controls */}
-          <QuickFilters value={quick} onChange={(q) => { setQuick(q); setPage(1); }} />
+          <QuickFilters busy={loading} value={quick} onChange={(q) => { setQuick(q); setPage(1); }} />
         {/* Actions */}
         <div className="flex gap-2">
           <button onClick={exportCSV} disabled={!records.length} className="btn-ghost text-xs gap-1.5">
