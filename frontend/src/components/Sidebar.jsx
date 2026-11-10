@@ -375,9 +375,7 @@ export default function Sidebar({ collapsed, onToggle }) {
           <NavItem to="/app/docs" label="How It Works" icon={BookMarked} collapsed={collapsed} end={false} />
         )}
 
-        {isFeatureEnabled("settings") && (
-          <NavItem to="/app/settings" label="Settings" icon={Settings} collapsed={collapsed} end={false} />
-        )}
+        <NavItem to="/app/settings" label="Settings" icon={Settings} collapsed={collapsed} end={false} />
 
         {/* Simulation Mode Indicator Pill */}
         {simulationMode && !collapsed && (

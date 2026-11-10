@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 const PAGE_META = {
   "/app":                 { title: "Overview",        sub: "Company and contact intelligence" },
-  "/app/settings":        { title: "Settings",        sub: "Manage your organization and members" },
+  "/app/settings":        { title: "Settings",        sub: "Profile, security, API keys and your team" },
   "/app/docs":            { title: "How It Works",    sub: "Complete platform documentation" },
   "/app/categories":      { title: "Categories",      sub: "Explore industries and job roles" },
   "/app/people":          { title: "People",          sub: "Browse and filter people records" },

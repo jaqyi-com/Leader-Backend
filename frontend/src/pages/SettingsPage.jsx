@@ -3,11 +3,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, Users, ShieldAlert, Mail, UserPlus, Trash2,
   AlertCircle, Save, Loader2, Crown, Shield, User,
-  CheckCircle, X, ChevronDown, Check, Plug, Copy,
+  CheckCircle, X, ChevronDown, Check, Plug, Copy, UserCircle, Lock, KeyRound,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useAuth } from "../context/AuthContext";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
+import { ProfileTab, SecurityTab, ApiKeysTab } from "./settings/AccountTabs";
 import { MCP_URL, CLAUDE_CODE_COMMAND } from "../claudeConnector";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
@@ -38,23 +39,28 @@ const ROLE_META = {
 
 // ── TABS ───────────────────────────────────────────────────────────────────
 const TABS = [
+  { id: "profile",  label: "Profile",      icon: <UserCircle size={15} /> },
+  { id: "security", label: "Security",     icon: <Lock size={15} /> },
+  { id: "api",      label: "API keys",     icon: <KeyRound size={15} /> },
   { id: "org",     label: "Organization", icon: <Building2 size={15} /> },
   { id: "members", label: "Members",      icon: <Users size={15} /> },
   { id: "claude",  label: "Claude",       icon: <Plug size={15} /> },
 ];
 
 export default function SettingsPage() {
-  const [tab, setTab] = useState("org");
+  const [params, setParams] = useSearchParams();
+  const tab = TABS.some((t) => t.id === params.get("tab")) ? params.get("tab") : "profile";
+  const setTab = (id) => setParams(id === "profile" ? {} : { tab: id }, { replace: true });
 
   return (
     <div style={{ maxWidth: 800, margin: "0 auto", paddingBottom: 60 }}>
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: "var(--text)", marginBottom: 4 }}>Settings</h1>
-        <p style={{ color: "var(--text-3)", fontSize: 13 }}>Manage your organization, team members, and the Claude connector.</p>
+        <p style={{ color: "var(--text-3)", fontSize: 13 }}>Manage your profile, password, API keys, organization, team and the Claude connector.</p>
       </div>
 
       {/* Tab bar */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "var(--surface-2)", borderRadius: 12, padding: 4, border: "1px solid var(--border)", width: "fit-content" }}>
+      <div style={{ display: "flex", gap: 4, marginBottom: 24, background: "var(--surface-2)", borderRadius: 12, padding: 4, border: "1px solid var(--border)", width: "fit-content", maxWidth: "100%", flexWrap: "wrap" }}>
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -75,6 +81,9 @@ export default function SettingsPage() {
 
       <AnimatePresence mode="wait">
         <motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.15 }}>
+          {tab === "profile"  && <ProfileTab />}
+          {tab === "security" && <SecurityTab />}
+          {tab === "api"      && <ApiKeysTab />}
           {tab === "org"     && <OrgTab />}
           {tab === "members" && <MembersTab />}
           {tab === "claude"  && <ClaudeTab />}

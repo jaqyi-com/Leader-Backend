@@ -264,6 +264,7 @@ app.get("/doott-og.jpg", (req, res) => {
 // ------------------------------------------------------------
 app.use("/api/auth", authRouter);
 app.use("/api/org", auth, orgRouter);
+app.use("/api/account", require("./routes/account")); // profile, password, sessions, API keys, delete account
 app.use("/api/analytics", analyticsRouter);
 app.use("/api/track",     require("./routes/tracker"));
 app.use("/api", require("./routes/featureFlags"));

@@ -70,7 +70,7 @@ export default function App() {
             >
               <Route index element={<Navigate to="/app/categories" replace />} />
 
-              <Route path="settings"         element={<FeatureGate featureKey="settings"><SettingsPage /></FeatureGate>} />
+              <Route path="settings"         element={<SettingsPage /> /* always on: personal account settings */} />
               {/* Documentation */}
               <Route path="docs"             element={<FeatureGate featureKey="docs"><DocumentationPage /></FeatureGate>} />
               <Route path="people"            element={<FeatureGate featureKey="people"><PeoplePage /></FeatureGate>} />

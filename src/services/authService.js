@@ -42,6 +42,7 @@ function generateToken(user, orgId, role = "member") {
       email: user.email,
       orgId: orgId ? orgId.toString() : null,
       role,
+      tv: user.tokenVersion || 0,
     },
     JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }

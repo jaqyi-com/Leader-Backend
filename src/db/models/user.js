@@ -51,6 +51,8 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Bumped on password change / "sign out everywhere"; JWTs carrying an older value are rejected.
+    tokenVersion: { type: Number, default: 0 },
     // Active org context (last used org)
     defaultOrgId: {
       type: mongoose.Schema.Types.ObjectId,

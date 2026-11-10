@@ -50,13 +50,13 @@ const failure = (message) => ({ content: [{ type: "text", text: message }], isEr
 
 /** Build the request context for one MCP call: who the user is and how to call the API as them. */
 async function userContext(req, userId) {
-  const user = await User.findById(userId).select("email defaultOrgId").lean();
+  const user = await User.findById(userId).select("email defaultOrgId tokenVersion").lean();
   if (!user) return null;
   const member = user.defaultOrgId ? null : await Member.findOne({ userId: user._id, status: "active" }).sort({ createdAt: 1 }).lean();
   const orgId = user.defaultOrgId || member?.orgId || null;
   // Short-lived app token for in-process calls only; it never leaves this function.
   const appToken = jwt.sign(
-    { userId: String(user._id), email: user.email, orgId: orgId ? String(orgId) : null, role: member?.role || "member" },
+    { userId: String(user._id), email: user.email, orgId: orgId ? String(orgId) : null, role: member?.role || "member", tv: user.tokenVersion || 0 },
     JWT_SECRET,
     { expiresIn: 120 }
   );

@@ -4,6 +4,13 @@ const logger = require("../utils/logger");
 
 const ADMIN_EMAIL = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
 
+// Features every signed-in user always gets, whatever is stored in the flag collection:
+// Settings holds personal account controls (password, API keys, sign-out, delete account).
+const ALWAYS_ON = new Set(["settings"]);
+const applyAlwaysOn = (flags) => flags.map((f) => (ALWAYS_ON.has(f.key)
+  ? { ...f, status: "enabled", alwaysOn: true, description: "Always on: every user can manage their account here." }
+  : f));
+
 // ─── Preset Configurations ───
 const PRESETS = {
   all_enabled: {
@@ -28,7 +35,7 @@ const PRESETS = {
 router.get("/features", async (req, res) => {
   try {
     await FeatureFlag.ensureDefaults();
-    const flags = await FeatureFlag.find({}).sort({ order: 1 }).lean();
+    const flags = applyAlwaysOn(await FeatureFlag.find({}).sort({ order: 1 }).lean());
 
     const featureMap = {};
     flags.forEach(f => {
@@ -52,7 +59,7 @@ router.get("/features", async (req, res) => {
     logger.error(`[FeatureFlags] Error fetching features: ${err.message}`);
     // Fallback to default in-memory definition
     const fallbackMap = {};
-    DEFAULT_FEATURE_FLAGS.forEach(f => {
+    applyAlwaysOn(DEFAULT_FEATURE_FLAGS).forEach(f => {
       fallbackMap[f.key] = {
         status: f.status,
         badge: f.badge,
@@ -63,7 +70,7 @@ router.get("/features", async (req, res) => {
         icon: f.icon,
       };
     });
-    res.json({ success: true, features: fallbackMap, raw: DEFAULT_FEATURE_FLAGS });
+    res.json({ success: true, features: fallbackMap, raw: applyAlwaysOn(DEFAULT_FEATURE_FLAGS) });
   }
 });
 
@@ -95,7 +102,7 @@ function adminGuard(req, res, next) {
 router.get("/admin/features", adminGuard, async (req, res) => {
   try {
     await FeatureFlag.ensureDefaults();
-    const flags = await FeatureFlag.find({}).sort({ order: 1 }).lean();
+    const flags = applyAlwaysOn(await FeatureFlag.find({}).sort({ order: 1 }).lean());
 
     const summary = {
       total: flags.length,
