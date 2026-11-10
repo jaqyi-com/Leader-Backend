@@ -558,7 +558,7 @@ router.get("/", async (req, res) => {
   const parsedPage  = parseInt(page, 10);
   const parsedLimit = parseInt(limit, 10);
   const pageNum  = Number.isFinite(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-  const limitNum = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(100, parsedLimit) : 50;
+  const limitNum = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(500, parsedLimit) : 50;
   const offset   = (pageNum - 1) * limitNum;
   const windowErr = resultWindowError(offset, limitNum);
   if (windowErr) return res.status(400).json(windowErr);

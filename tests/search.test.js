@@ -44,7 +44,8 @@ test("search: list returns rows without internal columns", { skip }, async () =>
 });
 
 test("pagination: limits are capped, bad values fall back, pages cover all rows exactly once", { skip }, async () => {
-  assert.equal((await get("?limit=1000")).json.records.length, 100, "limit capped at 100");
+  assert.equal((await get("?limit=200")).json.records.length, 200, "250 and 500 per page are honoured (not capped at 100)");
+  assert.equal((await get("?limit=1000")).json.records.length, 250, "limit capped at 500 (fixture has 250 rows)");
   assert.equal((await get("?limit=0")).json.records.length, 50, "limit=0 falls back to 50");
   assert.equal((await get("?page=abc&limit=10")).json.page, 1);
   assert.equal((await get("?page=-3&limit=10")).json.page, 1);
