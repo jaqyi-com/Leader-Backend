@@ -8,6 +8,7 @@ import {
 import { fcGetDatabase, fcGetStats, fcGetColumns, fcRefresh } from "../api";
 import toast from "react-hot-toast";
 import QueryBuilder, { qbFiltersToParams, paramsToQbFilters } from "../components/QueryBuilder";
+import QuickFilters, { NO_QUICK_FILTERS, quickFilterParams } from "../components/QuickFilters";
 
 // ── Parse PostgreSQL text array literal "{a,b,c}" → ["a","b","c"] ──
 const parsePgArray = (v) => {
@@ -90,6 +91,8 @@ export default function CompaniesPage() {
   const [sortDir, setSortDir] = useState("asc");
   const [search, setSearch] = useState("");
   
+  // One-click "Verified email" / "Valid mobile" filters
+  const [quick, setQuick] = useState(NO_QUICK_FILTERS);
   // Dynamic QueryBuilder Filters (initialized from URL params)
   const [filters, setFilters] = useState(() => {
     return paramsToQbFilters(searchParams);
@@ -122,6 +125,7 @@ export default function CompaniesPage() {
         sort_by: sortBy, sort_dir: sortDir,
         search,
         ...filterParams,
+        ...quickFilterParams(quick),
       });
       const recordsData = data.records || [];
       if (!sortBy) {
@@ -154,7 +158,7 @@ export default function CompaniesPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, limit, sortBy, sortDir, search, filters]);
+  }, [page, limit, sortBy, sortDir, search, filters, quick]);
 
   useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
@@ -205,6 +209,7 @@ export default function CompaniesPage() {
 
   const clearAll = () => {
     setSearch("");
+    setQuick(NO_QUICK_FILTERS);
     handleFiltersChange([]);
     setPage(1);
   };
@@ -367,6 +372,9 @@ export default function CompaniesPage() {
             <option value={500}>500</option>
           </select>
         </div>
+
+        {/* Quick filters (right side) */}
+        <QuickFilters className="sm:ml-auto" value={quick} onChange={(q) => { setQuick(q); setPage(1); }} />
       </div>
 
       {/* Supabase/Airtable style filter query builder */}

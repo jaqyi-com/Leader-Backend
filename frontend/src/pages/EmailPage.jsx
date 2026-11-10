@@ -11,6 +11,7 @@ import {
 import toast from "react-hot-toast";
 
 import QueryBuilder, { qbFiltersToParams } from "../components/QueryBuilder";
+import QuickFilters, { NO_QUICK_FILTERS, quickFilterParams } from "../components/QuickFilters";
 
 /* ──────────────────────────────────────────────────
    Smart cell renderer
@@ -72,6 +73,8 @@ function TablePanel({ mode }) {
   const [search,     setSearch]     = useState("");
   // Dynamic QueryBuilder Filters
   const [filters,    setFilters]    = useState([]);
+  // One-click "Verified email" / "Valid mobile" filters
+  const [quick,      setQuick]      = useState(NO_QUICK_FILTERS);
 
   // ── Column discovery ────────────────────────────────────────
   const loadColumns = useCallback(async () => {
@@ -93,7 +96,7 @@ function TablePanel({ mode }) {
     setLoading(true);
     try {
       const filterParams = qbFiltersToParams(filters);
-      const params = { page, limit, sort_by: sortBy, sort_dir: sortDir, search, ...filterParams };
+      const params = { page, limit, sort_by: sortBy, sort_dir: sortDir, search, ...filterParams, ...quickFilterParams(quick) };
       if (isPeople) {
         // People tab — email endpoint with column filters
         const { data } = await fpeGetDatabase(params);
@@ -111,7 +114,7 @@ function TablePanel({ mode }) {
     } finally {
       setLoading(false);
     }
-  }, [isPeople, page, limit, sortBy, sortDir, search, filters]);
+  }, [isPeople, page, limit, sortBy, sortDir, search, filters, quick]);
 
   useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
@@ -136,6 +139,7 @@ function TablePanel({ mode }) {
   const clearAll = () => {
     setSearch("");
     setFilters([]);
+    setQuick(NO_QUICK_FILTERS);
     setPage(1);
   };
 
@@ -184,6 +188,8 @@ function TablePanel({ mode }) {
             <option value={500}>500 / page</option>
           </select>
         </div>
+          {/* Quick filters, right of the filter controls */}
+          <QuickFilters value={quick} onChange={(q) => { setQuick(q); setPage(1); }} />
         {/* Actions */}
         <div className="flex gap-2">
           <button onClick={exportCSV} disabled={!records.length} className="btn-ghost text-xs gap-1.5">

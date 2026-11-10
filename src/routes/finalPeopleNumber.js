@@ -171,7 +171,13 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
         if (hasPhoneStatus) subConds.push(`"phone_status" = 'invalid'`);
         if (hasIsPhoneValid) subConds.push(`"is_phone_valid" = false`);
       } else if (valLower === "mobile" || valLower === "landline" || valLower === "toll_free") {
-        if (hasPhoneStatus) subConds.push(`"phone_status" = '${valLower}'`);
+        // phone_status only holds valid / invalid; the kind of number is in phone_line_type.
+        // "fixed_or_mobile" is what the parser returns for US/Canada numbers, where the two can't be
+        // told apart, so it counts as mobile (and not as landline).
+        const LINE_TYPES = { mobile: "'mobile', 'fixed_or_mobile'", landline: "'fixed_line'", toll_free: "'toll_free'" };
+        if (schemaColumns.includes("phone_line_type")) {
+          subConds.push(`(${hasPhoneStatus ? `"phone_status" = 'valid' AND ` : ""}"phone_line_type" IN (${LINE_TYPES[valLower]}))`);
+        } else if (hasPhoneStatus) subConds.push(`"phone_status" = '${valLower}'`);
       } else {
         if (hasPhoneStatus) {
           const sIdx = idx++;

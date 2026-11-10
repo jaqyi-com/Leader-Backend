@@ -24,6 +24,7 @@ const rand = (base, span) => {
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const LINE_TYPES = ["mobile", "fixed_or_mobile", "fixed_line", "toll_free"];
 const STATUSES = ["pending", "deliverable", "pending", "undeliverable", "pending", "risky", "unknown", "pending", "pending"];
 
 /** Deterministic synthetic people — 250 rows, no real data. */
@@ -45,6 +46,10 @@ function syntheticPeople(n = 250) {
       // non-deliverable status (undeliverable / risky / unknown) has is_email_valid FALSE.
       email_status: STATUSES[i % STATUSES.length],
       is_email_valid: { deliverable: true, undeliverable: false, risky: false, unknown: false }[STATUSES[i % STATUSES.length]] ?? null,
+      // phone checks mirror production: valid/invalid in phone_status, the kind of number in phone_line_type
+      // (period 2, so some people have both a deliverable email and a valid mobile)
+      phone_status: i % 2 === 0 ? (i % 7 === 0 ? "invalid" : "valid") : null,
+      phone_line_type: i % 2 === 0 ? LINE_TYPES[(i / 2) % LINE_TYPES.length] : null,
     });
   }
   return rows;
@@ -64,12 +69,13 @@ async function startPostgres(state) {
     uuid uuid primary key default gen_random_uuid(), company_uuid text, full_name text, first_name text, last_name text,
     job_title text, linked_url text, location text, city text, state text, pincode text, lat text, long text,
     geo_source text, emails text, phones text, created_at text, embedding text,
-    is_email_valid boolean, email_status text, email_score numeric, email_verified_at timestamptz)`);
+    is_email_valid boolean, email_status text, email_score numeric, email_verified_at timestamptz,
+    phone_status text, phone_line_type text)`);
   const rows = syntheticPeople();
   for (const r of rows) {
     await pool.query(
-      "insert into final.people (full_name, job_title, city, state, emails, phones, email_status, is_email_valid, created_at) values ($1,$2,$3,$4,$5,$6,$7,$8,'2026-01-01')",
-      [r.full_name, r.job_title, r.city, r.state, r.emails, r.phones, r.email_status, r.is_email_valid]);
+      "insert into final.people (full_name, job_title, city, state, emails, phones, email_status, is_email_valid, phone_status, phone_line_type, created_at) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'2026-01-01')",
+      [r.full_name, r.job_title, r.city, r.state, r.emails, r.phones, r.email_status, r.is_email_valid, r.phone_status, r.phone_line_type]);
   }
   await pool.query("analyze final.people");
   state.pg = { proc, dir, pool, url, rows };

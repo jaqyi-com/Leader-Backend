@@ -312,3 +312,33 @@ test("exact count: full-text predicates always get a real count (their estimate 
   assert.deepEqual(await exactCappedTotal(run, "t", `WHERE to_tsvector('simple', "job_title") @@ plainto_tsquery('simple', $1)`, []), { total: 311, exact: true });
   assert.deepEqual(seen, ["SELECT"], "no EXPLAIN shortcut for @@");
 });
+
+test("quick filters: verified email and valid mobile return exactly the right rows on every people route", { skip }, async () => {
+  const rows = stack.pg.rows;
+  const expDeliverable = rows.filter((r) => r.email_status === "deliverable").length;
+  const expMobile = rows.filter((r) => r.phone_status === "valid" && ["mobile", "fixed_or_mobile"].includes(r.phone_line_type)).length;
+  const expBoth = rows.filter((r) => r.email_status === "deliverable" && r.phone_status === "valid" && ["mobile", "fixed_or_mobile"].includes(r.phone_line_type)).length;
+  const expLandline = rows.filter((r) => r.phone_status === "valid" && r.phone_line_type === "fixed_line").length;
+  assert.ok(expDeliverable > 0 && expMobile > 0 && expBoth > 0);
+  for (const route of ["/api/final-people", "/api/final-people-email", "/api/final-people-number"]) {
+    const fetchAll = async (qs) => {
+      const out = [];
+      for (let page = 1; page <= 5; page++) {
+        const r = await stack.http("GET", `${route}?${qs}&limit=100&page=${page}`, { token: user.token });
+        assert.equal(r.status, 200, `${route} ${qs}`);
+        out.push(...r.json.records);
+        if (r.json.records.length < 100) break;
+      }
+      return out;
+    };
+    // the email / number routes only list people that have an email / a phone
+    const base = route.endsWith("email") ? rows.filter((r) => r.emails && r.emails !== "{}") : route.endsWith("number") ? rows.filter((r) => r.phones && r.phones !== "{}") : rows;
+    const count = (pred) => base.filter(pred).length;
+    assert.equal((await fetchAll("f_email_status=deliverable")).length, count((r) => r.email_status === "deliverable"), `${route} deliverable`);
+    assert.equal((await fetchAll("f_phone_status=mobile")).length, count((r) => r.phone_status === "valid" && ["mobile", "fixed_or_mobile"].includes(r.phone_line_type)), `${route} mobile`);
+    assert.equal((await fetchAll("f_email_status=deliverable&f_phone_status=mobile")).length,
+      count((r) => r.email_status === "deliverable" && r.phone_status === "valid" && ["mobile", "fixed_or_mobile"].includes(r.phone_line_type)), `${route} both`);
+    assert.equal((await fetchAll("f_phone_status=landline")).length, count((r) => r.phone_status === "valid" && r.phone_line_type === "fixed_line"), `${route} landline`);
+  }
+  assert.ok(expLandline > 0);
+});
