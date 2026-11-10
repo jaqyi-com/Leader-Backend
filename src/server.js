@@ -8,7 +8,6 @@ const cron = require("node-cron");
 const passport = require("passport");
 const logger = require("./utils/logger");
 const validateCredentials = require("./utils/validateEnv");
-const { connectDB } = require("./db/mongoose");
 const { generalLimiter, dataLimiter } = require("./middleware/rateLimiter");
 const { requirePaidAccess } = require("./middleware/entitlement");
 const { auth } = require("./middleware/auth");
@@ -18,8 +17,9 @@ const orgRouter = require("./routes/org");
 const analyticsRouter = require("./routes/analytics");
 const { configurePassport } = require("./config/passport");
 
-connectDB();
 configurePassport();
+// App tables (accounts, keys, flags, …) live in Neon; create them on startup if they are missing.
+require("./db/appDb").ready().catch((e) => console.error("[AppDB] schema check failed:", e.message));
 
 // Register weekly disposable email domains sync (Every Sunday at 03:00 UTC) - Only in long-running environments
 if (!process.env.VERCEL) {
@@ -291,15 +291,13 @@ app.get("/api/health", generalLimiter, async (req, res) => {
     Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
   const checks = {};
   try {
-    // On a cold start the connection is still opening; give it a few seconds before calling it down.
-    const conn = require("mongoose").connection;
-    for (let i = 0; i < 20 && conn.readyState !== 1; i++) await new Promise((r) => setTimeout(r, 200));
-    checks.mongo = conn.readyState === 1 ? "up" : "down";
-  } catch { checks.mongo = "down"; }
-  try {
     await withTimeout(require("./db/cloudSql").query("SELECT 1"));
     checks.postgres = "up";
   } catch { checks.postgres = "down"; }
+  try {
+    await withTimeout(require("./db/appDb").one("SELECT 1 AS ok FROM app.users LIMIT 1").then(() => true), 4000);
+    checks.app_db = "up";
+  } catch { checks.app_db = "down"; }
   const ok = Object.values(checks).every((v) => v === "up");
   res.status(ok ? 200 : 503).json({ status: ok ? "ok" : "degraded", checks });
 });

@@ -1,4 +1,3 @@
-const mongoose = require("mongoose");
 
 const DEFAULT_FEATURE_FLAGS = [
   // ── 1. DATA ──
@@ -115,96 +114,40 @@ const DEFAULT_FEATURE_FLAGS = [
 
 ];
 
-const featureFlagSchema = new mongoose.Schema(
-  {
-    key: {
-      type: String,
-      required: true,
-      unique: true,
-      trim: true,
-      lowercase: true,
-      index: true,
-    },
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    category: {
-      type: String,
-      required: true,
-      enum: ["lead_gen", "system"],
-      index: true,
-    },
-    categoryLabel: {
-      type: String,
-      default: "General",
-    },
-    description: {
-      type: String,
-      default: "",
-    },
-    path: {
-      type: String,
-      required: true,
-    },
-    icon: {
-      type: String,
-      default: "Layers",
-    },
-    status: {
-      type: String,
-      enum: ["enabled", "disabled", "admin_only"],
-      default: "enabled",
-      index: true,
-    },
-    badge: {
-      type: String,
-      default: "",
-      trim: true,
-    },
-    order: {
-      type: Number,
-      default: 100,
-    },
-    updatedBy: {
-      type: String,
-      default: "system",
-    },
-  },
-  {
-    timestamps: true,
-    versionKey: false,
-  }
-);
+// Flags live in Neon (app.feature_flags). ensureDefaults() adds new defaults and drops removed ones,
+// leaving every existing flag's status as the admin set it.
+const db = require("../appDb");
 
-// Helper static method to initialize defaults if missing
-featureFlagSchema.statics.ensureDefaults = async function () {
-  const count = await this.countDocuments();
-  if (count === 0) {
-    await this.insertMany(DEFAULT_FEATURE_FLAGS);
-    return;
-  }
-  
-  // Drop flags for features that no longer exist
-  await this.deleteMany({ key: { $nin: DEFAULT_FEATURE_FLAGS.map(f => f.key) } });
-
-  // Upsert any newly defined default flags that might not exist yet
-  const ops = DEFAULT_FEATURE_FLAGS.map(flag => ({
-    updateOne: {
-      filter: { key: flag.key },
-      update: { $setOnInsert: flag },
-      upsert: true,
+const FeatureFlag = {
+  async ensureDefaults() {
+    const keys = DEFAULT_FEATURE_FLAGS.map((f) => f.key);
+    await db.exec("DELETE FROM app.feature_flags WHERE NOT (key = ANY($1::text[]))", [keys]);
+    for (const f of DEFAULT_FEATURE_FLAGS) {
+      await db.exec(
+        `INSERT INTO app.feature_flags (key, id, title, category, category_label, description, path, icon, status, badge, sort_order)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) ON CONFLICT (key) DO NOTHING`,
+        [f.key, db.newId(), f.title, f.category, f.categoryLabel || "General", f.description || "", f.path, f.icon || "Layers", f.status, f.badge || "", f.order ?? 100]
+      );
     }
-  }));
-  if (ops.length > 0) {
-    await this.bulkWrite(ops);
-  }
+  },
+  all() {
+    return db.many("SELECT * FROM app.feature_flags ORDER BY sort_order ASC, key ASC");
+  },
+  /** Update one flag; creates it from the defaults when it does not exist yet. Returns the row or null. */
+  async set(key, fields) {
+    const [row] = await db.update("feature_flags", { key }, fields);
+    if (row) return row;
+    const def = DEFAULT_FEATURE_FLAGS.find((f) => f.key === key);
+    if (!def) return null;
+    await this.ensureDefaults();
+    const [created] = await db.update("feature_flags", { key }, fields);
+    return created || null;
+  },
+  async reset(updatedBy) {
+    await db.exec("DELETE FROM app.feature_flags");
+    await this.ensureDefaults();
+    if (updatedBy) await db.exec("UPDATE app.feature_flags SET updated_by = $1", [updatedBy]);
+  },
 };
 
-const FeatureFlag = mongoose.models.FeatureFlag || mongoose.model("FeatureFlag", featureFlagSchema);
-
-module.exports = {
-  FeatureFlag,
-  DEFAULT_FEATURE_FLAGS,
-};
+module.exports = { FeatureFlag, DEFAULT_FEATURE_FLAGS };

@@ -9,7 +9,7 @@
  */
 
 const router = require("express").Router();
-const db     = require("../db/mongoose");
+const db     = require("../db/appDb");
 
 // ─── Owner guard ─────────────────────────────────────────────────────────────
 // Must come before every handler on this router.
@@ -39,207 +39,117 @@ router.use((req, res, next) => {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-/** Count documents in a model, catching errors gracefully */
-async function safeCount(Model, filter = {}) {
-  try {
-    return await Model.countDocuments(filter);
-  } catch {
-    return 0;
-  }
+/** Run a query, returning [] on error (a broken widget must not take the whole dashboard down). */
+async function safe(text, params = []) {
+  try { return await db.many(text, params); } catch { return []; }
 }
-
-/** Run an aggregation, returning [] on error */
-async function safeAggregate(Model, pipeline) {
-  try {
-    return await Model.aggregate(pipeline);
-  } catch {
-    return [];
-  }
-}
+const count = async (where = "TRUE", params = []) =>
+  (await safe(`SELECT count(*)::int AS n FROM app.page_views WHERE ${where}`, params))[0]?.n ?? 0;
+const liveCount = async () =>
+  (await safe("SELECT count(DISTINCT session_id)::int AS n FROM app.page_views WHERE created_at >= now() - interval '5 minutes' AND session_id <> ''"))[0]?.n ?? 0;
+/** Top values of one column in the last 7 days. */
+const topBy = (col, where, limit) => safe(
+  `SELECT ${col} AS k, count(*)::int AS count FROM app.page_views
+    WHERE created_at >= now() - interval '7 days' AND ${where}
+    GROUP BY ${col} ORDER BY count DESC LIMIT ${Number(limit) || 10}`
+);
 
 // ─── GET /api/analytics/live — lightweight, pollable ─────────────────────────
 router.get("/live", async (req, res) => {
-  try {
-    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const result = await safeAggregate(db.PageView, [
-      { $match: { createdAt: { $gte: fiveMinAgo }, sessionId: { $ne: "" } } },
-      { $group: { _id: "$sessionId" } },
-      { $count: "total" },
-    ]);
-    res.json({ live: result[0]?.total ?? 0, ts: new Date().toISOString() });
-  } catch {
-    res.json({ live: 0, ts: new Date().toISOString() });
-  }
+  res.json({ live: await liveCount(), ts: new Date().toISOString() });
 });
 
 // ─── GET /api/analytics/traffic ──────────────────────────────────────────────
 router.get("/traffic", async (req, res) => {
   try {
-    const { PageView } = db;
-    const now          = new Date();
-    const todayStart   = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const weekStart    = new Date(Date.now() -  7 * 24 * 60 * 60 * 1000);
-    const dayStart     = new Date(Date.now() -      24 * 60 * 60 * 1000);
-    const thirtyStart  = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const now        = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
     // ── Basic KPI counts ──────────────────────────────────────────────────────
-    const [totalViews, todayViews, weekViews] = await Promise.all([
-      safeCount(PageView),
-      safeCount(PageView, { createdAt: { $gte: todayStart } }),
-      safeCount(PageView, { createdAt: { $gte: weekStart } }),
+    const [totalViews, todayViews, weekViews, uniqueRow, liveVisitors] = await Promise.all([
+      count(),
+      count("created_at >= $1", [todayStart]),
+      count("created_at >= now() - interval '7 days'"),
+      safe("SELECT count(DISTINCT session_id)::int AS n FROM app.page_views WHERE created_at >= now() - interval '7 days' AND session_id <> ''"),
+      liveCount(),
     ]);
-
-    // ── Unique visitors (distinct sessionIds, 7 days) ─────────────────────────
-    const uniqueResult = await safeAggregate(PageView, [
-      { $match: { createdAt: { $gte: weekStart }, sessionId: { $ne: "" } } },
-      { $group: { _id: "$sessionId" } },
-      { $count: "total" },
-    ]);
-    const uniqueVisitors = uniqueResult[0]?.total ?? 0;
-
-    // ── Live visitors (last 5 min) ────────────────────────────────────────────
-    const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const liveResult = await safeAggregate(PageView, [
-      { $match: { createdAt: { $gte: fiveMinAgo }, sessionId: { $ne: "" } } },
-      { $group: { _id: "$sessionId" } },
-      { $count: "total" },
-    ]);
-    const liveVisitors = liveResult[0]?.total ?? 0;
+    const uniqueVisitors = uniqueRow[0]?.n ?? 0;
 
     // ── Session intelligence (bounce rate, pages/session, avg duration) ───────
-    const sessionAgg = await safeAggregate(PageView, [
-      { $match: { createdAt: { $gte: weekStart }, sessionId: { $ne: "" } } },
-      { $group: { _id: "$sessionId", pageCount: { $sum: 1 }, totalDuration: { $sum: "$duration" } } },
-      { $group: {
-        _id: null,
-        totalSessions: { $sum: 1 },
-        bouncedSessions: { $sum: { $cond: [{ $eq: ["$pageCount", 1] }, 1, 0] } },
-        totalPageViews: { $sum: "$pageCount" },
-        totalDuration:  { $sum: "$totalDuration" },
-      }},
-    ]);
-    const sess = sessionAgg[0] ?? { totalSessions: 0, bouncedSessions: 0, totalPageViews: 0, totalDuration: 0 };
+    const [sess = { totalSessions: 0, bouncedSessions: 0, totalPageViews: 0, totalDuration: 0 }] = await safe(
+      `SELECT count(*)::int AS total_sessions,
+              count(*) FILTER (WHERE page_count = 1)::int AS bounced_sessions,
+              COALESCE(sum(page_count), 0)::int AS total_page_views,
+              COALESCE(sum(total_duration), 0)::bigint AS total_duration
+         FROM (SELECT session_id, count(*) AS page_count, sum(duration) AS total_duration
+                 FROM app.page_views
+                WHERE created_at >= now() - interval '7 days' AND session_id <> ''
+                GROUP BY session_id) s`
+    );
+    const totalDuration     = Number(sess.totalDuration) || 0;
     const bounceRate        = sess.totalSessions > 0 ? Math.round((sess.bouncedSessions / sess.totalSessions) * 100) : 0;
     const avgPagesPerSession= sess.totalSessions > 0 ? Math.round((sess.totalPageViews  / sess.totalSessions) * 10) / 10 : 0;
-    const avgDurationSecs   = sess.totalSessions > 0 ? Math.round(sess.totalDuration / Math.max(sess.totalPageViews, 1)) : 0;
+    const avgDurationSecs   = sess.totalSessions > 0 ? Math.round(totalDuration / Math.max(sess.totalPageViews, 1)) : 0;
 
-    // ── Hourly views — last 24 h ──────────────────────────────────────────────
-    const hourlyRaw = await safeAggregate(PageView, [
-      { $match: { createdAt: { $gte: dayStart } } },
-      { $group: { _id: { $hour: "$createdAt" }, count: { $sum: 1 } } },
-    ]);
+    // ── Hourly views — last 24 h (UTC hours, as before) ───────────────────────
+    const hourlyRaw = await safe(
+      `SELECT extract(hour FROM created_at AT TIME ZONE 'UTC')::int AS hour, count(*)::int AS count
+         FROM app.page_views WHERE created_at >= now() - interval '24 hours' GROUP BY 1`
+    );
     const hourlyMap = {};
-    hourlyRaw.forEach(h => { hourlyMap[h._id] = h.count; });
-    const currentHour = now.getHours();
+    hourlyRaw.forEach(h => { hourlyMap[h.hour] = h.count; });
+    const currentHour = now.getUTCHours();
     const hourlyViews = Array.from({ length: 24 }, (_, i) => {
       const hour = (currentHour + 1 + i) % 24;
       return { hour, count: hourlyMap[hour] ?? 0 };
     });
 
     // ── 30-day daily trend ────────────────────────────────────────────────────
-    const daily30Raw = await safeAggregate(PageView, [
-      { $match: { createdAt: { $gte: thirtyStart } } },
-      { $group: { _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } }, count: { $sum: 1 } } },
-      { $sort: { _id: 1 } },
-    ]);
+    const thirtyStart = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const daily30Raw = await safe(
+      `SELECT to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS day, count(*)::int AS count
+         FROM app.page_views WHERE created_at >= $1 GROUP BY 1`,
+      [thirtyStart]
+    );
     const dailyMap = {};
-    daily30Raw.forEach(d => { dailyMap[d._id] = d.count; });
+    daily30Raw.forEach(d => { dailyMap[d.day] = d.count; });
     const daily30 = Array.from({ length: 30 }, (_, i) => {
-      const d = new Date(thirtyStart.getTime() + i * 24 * 60 * 60 * 1000);
-      const dateStr = d.toISOString().slice(0, 10);
+      const dateStr = new Date(thirtyStart.getTime() + i * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
       return { date: dateStr, count: dailyMap[dateStr] ?? 0 };
     });
 
-    // ── Traffic heatmap (day × hour, last 30 days) ────────────────────────────
-    // MongoDB dayOfWeek: 1=Sun, 2=Mon … 7=Sat → we remap to 0=Sun…6=Sat
-    const heatRaw = await safeAggregate(PageView, [
-      { $match: { createdAt: { $gte: thirtyStart } } },
-      { $group: {
-        _id: {
-          day:  { $dayOfWeek: "$createdAt" },
-          hour: { $hour: "$createdAt" },
-        },
-        count: { $sum: 1 },
-      }},
+    // ── Traffic heatmap (day × hour, last 30 days; row 0 = Sunday) ────────────
+    const heatRaw = await safe(
+      `SELECT extract(dow FROM created_at AT TIME ZONE 'UTC')::int AS day,
+              extract(hour FROM created_at AT TIME ZONE 'UTC')::int AS hour, count(*)::int AS count
+         FROM app.page_views WHERE created_at >= $1 GROUP BY 1, 2`,
+      [thirtyStart]
+    );
+    const heatmap = Array.from({ length: 7 }, () => Array(24).fill(0));
+    heatRaw.forEach(r => { heatmap[r.day][r.hour] = r.count; });
+
+    // ── Top lists (last 7 days) ───────────────────────────────────────────────
+    const [topPages, topReferrers, entryPages, devicesRaw, browsersRaw, countries] = await Promise.all([
+      topBy("path", "TRUE", 10),
+      topBy("referrer", "referrer NOT IN ('Direct', '')", 8),
+      topBy("path", "is_entry", 8),
+      topBy("device", "TRUE", 50),
+      topBy("browser", "TRUE", 50),
+      topBy("country", "country <> 'Unknown'", 8),
     ]);
-    // Build 7×24 matrix (row=day 0-6, col=hour 0-23)
-    const heatmap = Array.from({ length: 7 }, (_, day) =>
-      Array.from({ length: 24 }, (_, hour) => {
-        const mongoDow = day + 1;
-        const entry = heatRaw.find(r => r._id.day === mongoDow && r._id.hour === hour);
-        return entry?.count ?? 0;
-      })
+    const utmCampaigns = await safe(
+      `SELECT utm_source AS source, utm_medium AS medium, utm_campaign AS campaign, count(*)::int AS count
+         FROM app.page_views WHERE created_at >= now() - interval '7 days' AND utm_campaign <> ''
+        GROUP BY 1, 2, 3 ORDER BY count DESC LIMIT 10`
     );
 
-    // ── Top pages ─────────────────────────────────────────────────────────────
-    const topPages = await safeAggregate(PageView, [
-      { $match: { createdAt: { $gte: weekStart } } },
-      { $group: { _id: "$path", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-    ]);
-
-    // ── Top referrers ─────────────────────────────────────────────────────────
-    const topReferrers = await safeAggregate(PageView, [
-      { $match: { createdAt: { $gte: weekStart }, referrer: { $nin: ["Direct", "", null] } } },
-      { $group: { _id: "$referrer", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 8 },
-    ]);
-
-    // ── Entry pages (first page of each session) ──────────────────────────────
-    const entryPages = await safeAggregate(PageView, [
-      { $match: { createdAt: { $gte: weekStart }, isEntry: true } },
-      { $group: { _id: "$path", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 8 },
-    ]);
-
-    // ── UTM campaigns ─────────────────────────────────────────────────────────
-    const utmCampaigns = await safeAggregate(PageView, [
-      { $match: { createdAt: { $gte: weekStart }, utmCampaign: { $nin: ["", null] } } },
-      { $group: {
-        _id: { source: "$utmSource", medium: "$utmMedium", campaign: "$utmCampaign" },
-        count: { $sum: 1 },
-      }},
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-    ]);
-
-    // ── Devices & Browsers ────────────────────────────────────────────────────
-    const devicesRaw = await safeAggregate(PageView, [
-      { $match: { createdAt: { $gte: weekStart } } },
-      { $group: { _id: "$device", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-    ]);
     const deviceTotal = devicesRaw.reduce((s, d) => s + d.count, 0) || 1;
-    const devices = devicesRaw.map(d => ({
-      device: d._id || "Unknown", count: d.count,
-      pct: Math.round((d.count / deviceTotal) * 100),
-    }));
-
-    const browsersRaw = await safeAggregate(PageView, [
-      { $match: { createdAt: { $gte: weekStart } } },
-      { $group: { _id: "$browser", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-    ]);
+    const devices = devicesRaw.map(d => ({ device: d.k || "Unknown", count: d.count, pct: Math.round((d.count / deviceTotal) * 100) }));
     const browserTotal = browsersRaw.reduce((s, d) => s + d.count, 0) || 1;
-    const browsers = browsersRaw.map(b => ({
-      browser: b._id || "Unknown", count: b.count,
-      pct: Math.round((b.count / browserTotal) * 100),
-    }));
-
-    // ── Top countries ─────────────────────────────────────────────────────────
-    const countries = await safeAggregate(PageView, [
-      { $match: { createdAt: { $gte: weekStart }, country: { $nin: ["Unknown", null] } } },
-      { $group: { _id: "$country", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 8 },
-    ]);
+    const browsers = browsersRaw.map(b => ({ browser: b.k || "Unknown", count: b.count, pct: Math.round((b.count / browserTotal) * 100) }));
 
     // ── Recent visits ─────────────────────────────────────────────────────────
-    const recentVisits = await PageView.find()
-      .sort({ createdAt: -1 }).limit(25).lean();
+    const recentVisits = await safe("SELECT * FROM app.page_views ORDER BY created_at DESC LIMIT 25");
 
     res.json({
       generatedAt: now.toISOString(),
@@ -250,16 +160,13 @@ router.get("/traffic", async (req, res) => {
       hourlyViews,
       daily30,
       heatmap,
-      topPages:     topPages.map(p    => ({ path: p._id || "/",         count: p.count })),
-      topReferrers: topReferrers.map(r => ({ referrer: r._id || "?",    count: r.count })),
-      entryPages:   entryPages.map(e   => ({ path: e._id || "/",        count: e.count })),
-      utmCampaigns: utmCampaigns.map(u => ({
-        source: u._id.source, medium: u._id.medium,
-        campaign: u._id.campaign, count: u.count,
-      })),
+      topPages:     topPages.map(p     => ({ path: p.k || "/",      count: p.count })),
+      topReferrers: topReferrers.map(r => ({ referrer: r.k || "?",  count: r.count })),
+      entryPages:   entryPages.map(e   => ({ path: e.k || "/",      count: e.count })),
+      utmCampaigns: utmCampaigns.map(u => ({ source: u.source, medium: u.medium, campaign: u.campaign, count: u.count })),
       devices,
       browsers,
-      countries: countries.map(c => ({ country: c._id, count: c.count })),
+      countries: countries.map(c => ({ country: c.k, count: c.count })),
       recentVisits: recentVisits.map(v => ({
         path: v.path, device: v.device, browser: v.browser,
         country: v.country, city: v.city, referrer: v.referrer,
@@ -276,11 +183,9 @@ router.get("/traffic", async (req, res) => {
 // ─── GET /api/analytics/users ───────────────────────────────────────────────
 router.get("/users", async (req, res) => {
   try {
-    const User = require("../db/models/user");
-    const users = await User.find()
-      .select("-passwordHash -emailVerifyToken -passwordResetToken -passwordResetExpires -emailVerifyTokenExpires")
-      .sort({ createdAt: -1 })
-      .lean();
+    const users = await db.many(
+      "SELECT id, name, email, avatar, is_email_verified, google_id, plan, paid_at, created_at FROM app.users ORDER BY created_at DESC"
+    );
 
     const stats = {
       total: users.length,
@@ -293,7 +198,7 @@ router.get("/users", async (req, res) => {
       success: true,
       stats,
       users: users.map(u => ({
-        id: u._id.toString(),
+        id: u._id,
         name: u.name || "Unnamed",
         email: u.email,
         avatar: u.avatar || null,

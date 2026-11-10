@@ -35,7 +35,7 @@ const PRESETS = {
 router.get("/features", async (req, res) => {
   try {
     await FeatureFlag.ensureDefaults();
-    const flags = applyAlwaysOn(await FeatureFlag.find({}).sort({ order: 1 }).lean());
+    const flags = applyAlwaysOn(await FeatureFlag.all());
 
     const featureMap = {};
     flags.forEach(f => {
@@ -102,7 +102,7 @@ function adminGuard(req, res, next) {
 router.get("/admin/features", adminGuard, async (req, res) => {
   try {
     await FeatureFlag.ensureDefaults();
-    const flags = applyAlwaysOn(await FeatureFlag.find({}).sort({ order: 1 }).lean());
+    const flags = applyAlwaysOn(await FeatureFlag.all());
 
     const summary = {
       total: flags.length,
@@ -140,11 +140,8 @@ router.put("/admin/features/:key", adminGuard, async (req, res) => {
     if (title) updateFields.title = title;
     if (description) updateFields.description = description;
 
-    const updated = await FeatureFlag.findOneAndUpdate(
-      { key },
-      { $set: updateFields },
-      { new: true, upsert: true }
-    );
+    const updated = await FeatureFlag.set(key, updateFields);
+    if (!updated) return res.status(404).json({ error: `Unknown feature '${key}'.` });
 
     logger.info(`[AdminFeatureFlags] Updated feature '${key}' -> status: ${updated.status} by ${req.user.email}`);
 
@@ -167,28 +164,19 @@ router.put("/admin/features", adminGuard, async (req, res) => {
       return res.status(400).json({ error: "Expected 'flags' array." });
     }
 
-    const ops = flags.map(f => ({
-      updateOne: {
-        filter: { key: f.key },
-        update: {
-          $set: {
-            status: f.status,
-            badge: f.badge || "",
-            order: f.order != null ? f.order : 100,
-            updatedBy: req.user.email,
-          }
-        },
-        upsert: true
-      }
-    }));
-
-    if (ops.length > 0) {
-      await FeatureFlag.bulkWrite(ops);
+    for (const f of flags) {
+      if (!f || typeof f.key !== "string") continue;
+      await FeatureFlag.set(f.key, {
+        status: ["enabled", "disabled", "admin_only"].includes(f.status) ? f.status : undefined,
+        badge: f.badge || "",
+        order: f.order != null ? Number(f.order) : 100,
+        updatedBy: req.user.email,
+      });
     }
 
     logger.info(`[AdminFeatureFlags] Bulk updated ${flags.length} features by ${req.user.email}`);
 
-    const allFlags = await FeatureFlag.find({}).sort({ order: 1 }).lean();
+    const allFlags = applyAlwaysOn(await FeatureFlag.all());
     res.json({
       success: true,
       message: `Successfully updated ${flags.length} features.`,
@@ -209,28 +197,14 @@ router.post("/admin/features/preset", adminGuard, async (req, res) => {
       return res.status(400).json({ error: `Unknown preset '${presetKey}'. Available: ${Object.keys(PRESETS).join(", ")}` });
     }
 
-    const currentFlags = await FeatureFlag.find({}).lean();
-    const updatedFlags = preset.apply(currentFlags);
-
-    const ops = updatedFlags.map(f => ({
-      updateOne: {
-        filter: { key: f.key },
-        update: {
-          $set: {
-            status: f.status,
-            updatedBy: req.user.email,
-          }
-        }
-      }
-    }));
-
-    if (ops.length > 0) {
-      await FeatureFlag.bulkWrite(ops);
+    const currentFlags = await FeatureFlag.all();
+    for (const f of preset.apply(currentFlags)) {
+      await FeatureFlag.set(f.key, { status: f.status, updatedBy: req.user.email });
     }
 
     logger.info(`[AdminFeatureFlags] Applied preset '${preset.name}' by ${req.user.email}`);
 
-    const allFlags = await FeatureFlag.find({}).sort({ order: 1 }).lean();
+    const allFlags = applyAlwaysOn(await FeatureFlag.all());
     res.json({
       success: true,
       message: `Preset '${preset.name}' applied successfully.`,
@@ -246,12 +220,11 @@ router.post("/admin/features/preset", adminGuard, async (req, res) => {
 // POST /api/admin/features/reset (Reset to defaults)
 router.post("/admin/features/reset", adminGuard, async (req, res) => {
   try {
-    await FeatureFlag.deleteMany({});
-    await FeatureFlag.insertMany(DEFAULT_FEATURE_FLAGS);
+    await FeatureFlag.reset(req.user.email);
 
     logger.info(`[AdminFeatureFlags] Reset all features to factory defaults by ${req.user.email}`);
 
-    const allFlags = await FeatureFlag.find({}).sort({ order: 1 }).lean();
+    const allFlags = applyAlwaysOn(await FeatureFlag.all());
     res.json({
       success: true,
       message: "Reset all feature flags to factory default settings.",

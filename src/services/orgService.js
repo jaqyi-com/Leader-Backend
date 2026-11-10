@@ -1,62 +1,54 @@
-const { User, Organization, Member } = require("../db/mongoose");
+const crypto = require("crypto");
+const db = require("../db/appDb");
 
-// Older documents may still hold credentials from the removed outreach integrations — never return them.
-function publicOrg(org) {
-  if (org) {
-    delete org.smtpCredentials;
-    delete org.gmailIntegration;
-  }
-  return org;
-}
+const notFound = (msg) => Object.assign(new Error(msg), { statusCode: 404 });
 
 // ── Get org by ID ────────────────────────────────────────────────────────────
 async function getOrgById(orgId) {
-  const org = await Organization.findById(orgId).lean();
-  if (!org) {
-    const err = new Error("Organization not found.");
-    err.statusCode = 404;
-    throw err;
-  }
-  return publicOrg(org);
+  const org = await db.findOrgById(orgId);
+  if (!org) throw notFound("Organization not found.");
+  return org;
 }
 
-// ── Get all members of an org (populated) ───────────────────────────────────
-async function getOrgMembers(orgId) {
-  const members = await Member.find({ orgId })
-    .populate("userId", "name email avatar isEmailVerified createdAt")
-    .populate("invitedBy", "name email")
-    .lean();
+const userBrief = (prefix, row) => (row[prefix + "Id"] ? {
+  _id: row[prefix + "Id"], name: row[prefix + "Name"], email: row[prefix + "Email"],
+  ...(prefix === "u" ? { avatar: row.uAvatar, isEmailVerified: row.uIsEmailVerified, createdAt: row.uCreatedAt } : {}),
+} : null);
 
-  return members.map((m) => ({
+// ── Get all members of an org (with user details) ───────────────────────────
+async function getOrgMembers(orgId) {
+  const rows = await db.many(
+    `SELECT m.*, u.id AS u_id, u.name AS u_name, u.email AS u_email, u.avatar AS u_avatar,
+            u.is_email_verified AS u_is_email_verified, u.created_at AS u_created_at,
+            i.id AS i_id, i.name AS i_name, i.email AS i_email
+       FROM app.members m
+       LEFT JOIN app.users u ON u.id = m.user_id
+       LEFT JOIN app.users i ON i.id = m.invited_by
+      WHERE m.org_id = $1
+      ORDER BY m.created_at ASC`,
+    [String(orgId)]
+  );
+  return rows.map((m) => ({
     _id: m._id,
     role: m.role,
     status: m.status,
     joinedAt: m.joinedAt,
     invitedAt: m.createdAt,
     inviteEmail: m.inviteEmail,
-    invitedBy: m.invitedBy,
-    user: m.userId, // populated user doc
+    invitedBy: userBrief("i", m),
+    user: userBrief("u", m),
   }));
 }
 
 // ── Invite member by email ───────────────────────────────────────────────────
 async function inviteMember({ orgId, email, role = "member", invitedByUserId }) {
-  const org = await Organization.findById(orgId).lean();
-  if (!org) {
-    const err = new Error("Organization not found.");
-    err.statusCode = 404;
-    throw err;
-  }
+  const org = await db.findOrgById(orgId);
+  if (!org) throw notFound("Organization not found.");
 
-  const crypto = require("crypto");
-  const nodemailer = require("nodemailer");
+  const existingUser = await db.findUserByEmail(email);
 
-  // Check if there's already an existing user with this email
-  const existingUser = await User.findOne({ email: email.toLowerCase() }).lean();
-
-  // Check if already a member
   if (existingUser) {
-    const alreadyMember = await Member.findOne({ orgId, userId: existingUser._id }).lean();
+    const alreadyMember = await db.one("SELECT * FROM app.members WHERE org_id = $1 AND user_id = $2", [String(orgId), existingUser._id]);
     if (alreadyMember && alreadyMember.status === "active") {
       const err = new Error("This user is already a member of the organization.");
       err.statusCode = 409;
@@ -64,29 +56,25 @@ async function inviteMember({ orgId, email, role = "member", invitedByUserId }) 
     }
     if (alreadyMember) {
       // Re-send invite
-      alreadyMember.inviteToken = crypto.randomBytes(32).toString("hex");
-      alreadyMember.inviteTokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-      await Member.findByIdAndUpdate(alreadyMember._id, {
-        inviteToken: alreadyMember.inviteToken,
-        inviteTokenExpires: alreadyMember.inviteTokenExpires,
+      const inviteToken = crypto.randomBytes(32).toString("hex");
+      await db.update("members", { _id: alreadyMember._id }, {
+        inviteToken, inviteTokenExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
-      await sendInviteEmail({ email, org, inviteToken: alreadyMember.inviteToken });
+      await sendInviteEmail({ email, org, inviteToken });
       return { message: "Invite re-sent." };
     }
   }
 
   const inviteToken = crypto.randomBytes(32).toString("hex");
-  const inviteTokenExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
-
-  await Member.create({
-    orgId,
-    userId: existingUser?._id || undefined,
+  await db.insert("members", {
+    orgId: String(orgId),
+    userId: existingUser?._id || null,
     role,
     status: "invited",
-    invitedBy: invitedByUserId,
+    invitedBy: invitedByUserId ? String(invitedByUserId) : null,
     inviteEmail: email.toLowerCase(),
     inviteToken,
-    inviteTokenExpires,
+    inviteTokenExpires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
   });
 
   await sendInviteEmail({ email, org, inviteToken });
@@ -95,56 +83,33 @@ async function inviteMember({ orgId, email, role = "member", invitedByUserId }) 
 
 // ── Accept invite (join org) ─────────────────────────────────────────────────
 async function acceptInvite({ inviteToken, userId }) {
-  const member = await Member.findOne({
-    inviteToken,
-    inviteTokenExpires: { $gt: new Date() },
-  });
-
+  const member = await db.one("SELECT * FROM app.members WHERE invite_token = $1 AND invite_token_expires > now()", [String(inviteToken)]);
   if (!member) {
     const err = new Error("Invite link is invalid or has expired.");
     err.statusCode = 400;
     throw err;
   }
-
-  member.userId = userId;
-  member.status = "active";
-  member.joinedAt = new Date();
-  member.inviteToken = null;
-  member.inviteTokenExpires = null;
-  await member.save();
-
-  // Update user's defaultOrgId if not set
-  await User.findByIdAndUpdate(userId, {
-    $setOnInsert: { defaultOrgId: member.orgId },
+  const [updated] = await db.update("members", { _id: member._id }, {
+    userId: String(userId), status: "active", joinedAt: new Date(), inviteToken: null, inviteTokenExpires: null,
   });
-
-  return member;
+  // Give the user a default org if they have none
+  await db.exec("UPDATE app.users SET default_org_id = $2, updated_at = now() WHERE id = $1 AND default_org_id IS NULL", [String(userId), member.orgId]);
+  return updated;
 }
 
 // ── Update member role ───────────────────────────────────────────────────────
 async function updateMemberRole({ orgId, targetUserId, newRole, requestingUserId }) {
   // Prevent self-demotion if last admin
   if (targetUserId.toString() === requestingUserId.toString() && newRole !== "admin") {
-    const adminCount = await Member.countDocuments({ orgId, role: "admin", status: "active" });
-    if (adminCount <= 1) {
+    const r = await db.one("SELECT count(*)::int AS n FROM app.members WHERE org_id = $1 AND role = 'admin' AND status = 'active'", [String(orgId)]);
+    if (r.n <= 1) {
       const err = new Error("You are the last admin. Transfer ownership before changing your role.");
       err.statusCode = 400;
       throw err;
     }
   }
-
-  const member = await Member.findOneAndUpdate(
-    { orgId, userId: targetUserId },
-    { role: newRole },
-    { new: true }
-  );
-
-  if (!member) {
-    const err = new Error("Member not found.");
-    err.statusCode = 404;
-    throw err;
-  }
-
+  const [member] = await db.update("members", { orgId: String(orgId), userId: String(targetUserId) }, { role: newRole });
+  if (!member) throw notFound("Member not found.");
   return member;
 }
 
@@ -155,33 +120,23 @@ async function removeMember({ orgId, targetUserId, requestingUserId }) {
     err.statusCode = 400;
     throw err;
   }
-
-  const deleted = await Member.findOneAndDelete({ orgId, userId: targetUserId });
-  if (!deleted) {
-    const err = new Error("Member not found.");
-    err.statusCode = 404;
-    throw err;
-  }
-
+  const n = await db.exec("DELETE FROM app.members WHERE org_id = $1 AND user_id = $2", [String(orgId), String(targetUserId)]);
+  if (!n) throw notFound("Member not found.");
   return { message: "Member removed." };
 }
 
 // ── Switch active org (returns a new token) ──────────────────────────────────
 async function switchOrg({ userId, newOrgId }) {
-  const member = await Member.findOne({ orgId: newOrgId, userId, status: "active" }).lean();
+  const member = await db.one("SELECT * FROM app.members WHERE org_id = $1 AND user_id = $2 AND status = 'active'", [String(newOrgId), String(userId)]);
   if (!member) {
     const err = new Error("You are not a member of this organization.");
     err.statusCode = 403;
     throw err;
   }
-
-  await User.findByIdAndUpdate(userId, { defaultOrgId: newOrgId });
-
+  const [user] = await db.update("users", { _id: String(userId) }, { defaultOrgId: String(newOrgId) });
   const { generateToken } = require("./authService");
-  const user = await User.findById(userId).lean();
   const token = generateToken(user, newOrgId, member.role);
-  const org = publicOrg(await Organization.findById(newOrgId).lean());
-
+  const org = await db.findOrgById(newOrgId);
   return { token, org };
 }
 
@@ -192,21 +147,21 @@ async function updateOrg({ orgId, updates }) {
   for (const key of allowed) {
     if (updates[key] !== undefined) clean[key] = updates[key];
   }
-  const org = await Organization.findByIdAndUpdate(orgId, clean, { new: true }).lean();
-  return publicOrg(org);
+  if (!Object.keys(clean).length) return db.findOrgById(orgId);
+  const [org] = await db.update("organizations", { _id: String(orgId) }, clean);
+  return org || null;
 }
 
 // ── Get user's orgs ──────────────────────────────────────────────────────────
 async function getUserOrgs(userId) {
-  const memberships = await Member.find({ userId, status: "active" })
-    .populate("orgId")
-    .lean();
-
-  return memberships.map((m) => ({
-    org: m.orgId,
-    role: m.role,
-    joinedAt: m.joinedAt,
-  }));
+  const rows = await db.many(
+    `SELECT m.role AS m_role, m.joined_at AS m_joined_at, o.*
+       FROM app.members m JOIN app.organizations o ON o.id = m.org_id
+      WHERE m.user_id = $1 AND m.status = 'active'
+      ORDER BY m.created_at ASC`,
+    [String(userId)]
+  );
+  return rows.map(({ mRole, mJoinedAt, ...org }) => ({ org, role: mRole, joinedAt: mJoinedAt }));
 }
 
 // ── Helper: Send invite email ────────────────────────────────────────────────

@@ -6,7 +6,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { startStack, available } = require("./helpers/stack");
 
-const skip = (!available.mongod && "mongod not installed") || (!available.postgres && "PostgreSQL not installed");
+const skip = (!available.postgres && "PostgreSQL not installed");
 let stack;
 
 test.before(async () => { if (!skip) stack = await startStack({ postgres: true }); });

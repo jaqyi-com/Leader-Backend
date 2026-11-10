@@ -7,7 +7,7 @@
 //
 // The frontend FeatureGate only hides menu items; this is the check that actually protects the data.
 
-const { User } = require("../db/mongoose");
+const db = require("../db/appDb");
 
 const CACHE_TTL_MS = 60 * 1000;
 const cache = new Map(); // userId -> { plan, at }
@@ -18,7 +18,7 @@ const adminEmails = () =>
 async function planOf(userId) {
   const hit = cache.get(userId);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.plan;
-  const u = await User.findById(userId).select("plan").lean();
+  const u = await db.findUserById(userId);
   const plan = u ? u.plan : null;
   cache.set(userId, { plan, at: Date.now() });
   return plan;

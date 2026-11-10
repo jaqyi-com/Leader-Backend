@@ -1,8 +1,6 @@
 const crypto = require("crypto");
 const jwt = require("jsonwebtoken");
-const mongoose = require("mongoose");
-const { User, Organization, Member, connectDB } = require("../db/mongoose");
-const ApiKey = require("../db/models/apiKey");
+const db = require("../db/appDb");
 
 const { JWT_SECRET, JWT_ALGORITHMS } = require("../config/jwtSecret");
 
@@ -15,18 +13,6 @@ const hashApiKey = (key) => crypto.createHash("sha256").update(key).digest("hex"
 const CACHE_TTL_MS = 30 * 1000;
 const keyCache = new Map();     // keyHash -> { ctx|null, at }
 const sessionCache = new Map(); // userId  -> { exists, tv, at }
-let lastDbFailure = 0;
-
-/** Mongo usable right now? Tries to (re)connect briefly, without stalling every request when it is down. */
-async function dbReady() {
-  if (mongoose.connection.readyState === 1) return true;
-  if (Date.now() - lastDbFailure < 10 * 1000) return false;
-  await Promise.race([Promise.resolve(connectDB()).catch(() => {}), new Promise((r) => setTimeout(r, 1500))]);
-  if (mongoose.connection.readyState === 1) return true;
-  lastDbFailure = Date.now();
-  return false;
-}
-
 function clearAuthCache(userId) {
   if (userId) sessionCache.delete(String(userId));
   keyCache.clear();
@@ -36,16 +22,20 @@ async function apiKeyContext(key) {
   const keyHash = hashApiKey(key);
   const hit = keyCache.get(keyHash);
   if (hit && Date.now() - hit.at < CACHE_TTL_MS) return hit.ctx;
-  if (!(await dbReady())) throw Object.assign(new Error("Service temporarily unavailable."), { statusCode: 503 });
-  const doc = await ApiKey.findOne({ keyHash, revokedAt: null }).lean();
+  let doc;
+  try {
+    doc = await db.one("SELECT id, user_id FROM app.api_keys WHERE key_hash = $1 AND revoked_at IS NULL", [keyHash]);
+  } catch {
+    throw Object.assign(new Error("Service temporarily unavailable."), { statusCode: 503 });
+  }
   let ctx = null;
   if (doc) {
-    const user = await User.findById(doc.userId).select("email defaultOrgId").lean();
+    const user = await db.findUserById(doc.userId);
     if (user) {
-      const member = await Member.findOne({ userId: user._id, status: "active" }).sort({ createdAt: 1 }).lean();
+      const member = await db.firstMembership(user._id);
       const orgId = user.defaultOrgId || member?.orgId || null;
       ctx = { userId: String(user._id), email: user.email, orgId: orgId ? String(orgId) : null, role: member?.role || "member", via: "api_key", keyId: String(doc._id) };
-      ApiKey.updateOne({ _id: doc._id }, { lastUsedAt: new Date() }).catch(() => {});
+      db.exec("UPDATE app.api_keys SET last_used_at = now() WHERE id = $1", [doc._id]).catch(() => {});
     }
   }
   keyCache.set(keyHash, { ctx, at: Date.now() });
@@ -54,16 +44,15 @@ async function apiKeyContext(key) {
 
 /**
  * Is this JWT still current? Rejects tokens of deleted accounts and tokens issued before a password
- * change / "sign out everywhere". Fails open when MongoDB is unreachable (signature already checked).
+ * change / "sign out everywhere". Fails open when the database is unreachable (signature already checked).
  */
 async function sessionValid(decoded) {
   const userId = String(decoded.userId || "");
-  if (!mongoose.isValidObjectId(userId)) return true;
+  if (!db.isId(userId)) return true;
   let state = sessionCache.get(userId);
   if (!state || Date.now() - state.at >= CACHE_TTL_MS) {
-    if (!(await dbReady())) return true;
     try {
-      const u = await User.findById(userId).select("tokenVersion").lean();
+      const u = await db.one("SELECT token_version FROM app.users WHERE id = $1", [userId]);
       state = { exists: Boolean(u), tv: u?.tokenVersion || 0, at: Date.now() };
       sessionCache.set(userId, state);
     } catch {
@@ -103,8 +92,8 @@ async function auth(req, res, next) {
       try { ctx = await apiKeyContext(token); } catch (e) { return res.status(e.statusCode || 500).json({ error: e.message }); }
       if (!ctx) return res.status(401).json({ error: "Invalid or revoked API key.", code: "INVALID_API_KEY" });
       req.user = ctx;
-      req.getUser = async () => User.findById(ctx.userId).lean();
-      req.getOrg = async () => ctx.orgId ? Organization.findById(ctx.orgId).lean() : null;
+      req.getUser = async () => db.findUserById(ctx.userId);
+      req.getOrg = async () => ctx.orgId ? db.findOrgById(ctx.orgId) : null;
       return next();
     }
 
@@ -129,8 +118,8 @@ async function auth(req, res, next) {
 
     // Optionally fetch full user and org for routes that need it
     // (done lazily — only controllers that need it will call req.getUser())
-    req.getUser = async () => User.findById(userId).lean();
-    req.getOrg = async () => orgId ? Organization.findById(orgId).lean() : null;
+    req.getUser = async () => db.findUserById(userId);
+    req.getOrg = async () => orgId ? db.findOrgById(orgId) : null;
 
     next();
   } catch (err) {

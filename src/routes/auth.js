@@ -5,19 +5,9 @@ const { auth } = require("../middleware/auth");
 const { authLimiter, loginAccountLimiter } = require("../middleware/rateLimiter");
 const { checkRegistration, registrationMode } = require("../config/registration");
 
-const { connectDB } = require("../db/mongoose");
+const db = require("../db/appDb");
 
 const router = express.Router();
-
-// Ensure MongoDB is connected before auth routes run on serverless cold starts
-router.use(async (req, res, next) => {
-  try {
-    await connectDB();
-    next();
-  } catch (err) {
-    next();
-  }
-});
 
 // ── Which sign-up mode is active (open | invite | closed) — lets the UI show the right form ──
 // GET /api/auth/registration
@@ -147,7 +137,7 @@ router.get("/me", auth, async (req, res) => {
     const user = await req.getUser();
     const org = await req.getOrg();
     if (!user) return res.status(404).json({ error: "User not found." });
-    res.json({ success: true, user, org });
+    res.json({ success: true, user: db.publicUser(user), org });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

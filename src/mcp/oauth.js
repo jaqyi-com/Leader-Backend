@@ -26,12 +26,12 @@
 const crypto = require("crypto");
 const express = require("express");
 const jwt = require("jsonwebtoken");
-const mongoose = require("mongoose");
 const { JWT_SECRET } = require("../config/jwtSecret");
 const { auth } = require("../middleware/auth");
 const { createRateLimiter } = require("../middleware/rateLimiter");
-const { McpClient, McpAuthCode, McpGrant } = require("../db/models/mcpOAuth");
-const { connectDB } = require("../db/mongoose");
+const db = require("../db/appDb");
+
+const findClient = (clientId) => db.one("SELECT * FROM app.mcp_clients WHERE client_id = $1", [String(clientId)]);
 const logger = require("../utils/logger").forAgent("McpOAuth");
 
 const MCP_KEY = crypto.createHmac("sha256", JWT_SECRET).update("doott-mcp-oauth-v1").digest();
@@ -98,20 +98,21 @@ async function verifyAccessToken(token) {
   let ok;
   if (hit && Date.now() - hit.at < 30_000) ok = hit.ok;
   else {
-    if (!mongoose.isValidObjectId(p.gid)) return null;
-    const g = await McpGrant.findById(p.gid).select("revokedAt userId").lean();
+    if (!db.isId(p.gid)) return null;
+    const g = await db.one("SELECT revoked_at, user_id FROM app.mcp_grants WHERE id = $1", [p.gid]);
     ok = Boolean(g && !g.revokedAt && String(g.userId) === p.sub);
     grantCache.set(p.gid, { ok, at: Date.now() });
-    if (ok) McpGrant.updateOne({ _id: p.gid }, { $set: { lastUsedAt: new Date() } }).catch(() => {});
+    if (ok) db.exec("UPDATE app.mcp_grants SET last_used_at = now() WHERE id = $1", [p.gid]).catch(() => {});
   }
   return ok ? { userId: p.sub, grantId: p.gid, clientId: p.cid } : null;
 }
 
+/** Rotate the grant's refresh token (or create the grant when it has no _id yet) and issue tokens. */
 async function newGrantTokens(grant) {
   const refreshToken = randomToken();
-  grant.refreshTokenHash = sha256(refreshToken);
-  grant.refreshExpiresAt = new Date(Date.now() + REFRESH_TTL_MS);
-  await grant.save();
+  const fields = { refreshTokenHash: sha256(refreshToken), refreshExpiresAt: new Date(Date.now() + REFRESH_TTL_MS) };
+  if (grant._id) [grant] = await db.update("mcp_grants", { _id: grant._id }, fields);
+  else grant = await db.insert("mcp_grants", { ...grant, ...fields });
   return {
     access_token: issueAccessToken(grant),
     token_type: "Bearer",
@@ -132,7 +133,7 @@ async function authenticateClient(req) {
     secret = decodeURIComponent(sec || "");
   }
   if (!clientId || typeof clientId !== "string") return null;
-  const client = await McpClient.findOne({ clientId }).lean();
+  const client = await findClient(clientId);
   if (!client) return null;
   if (client.clientSecretHash) {
     if (!secret || !safeEqual(sha256(secret), client.clientSecretHash)) return null;
@@ -140,12 +141,15 @@ async function authenticateClient(req) {
   return client;
 }
 
-// On Vercel the Mongo connection is opened once per instance and is not reopened if it fails or drops;
-// without this, queries wait 10 s for a connection that never comes (same guard as routes/auth.js).
+// Make sure the app tables are reachable before handling a connector request, so a database hiccup
+// answers quickly with "temporarily unavailable" instead of failing half-way.
 async function ensureDb(req, res, next) {
-  try { await connectDB(); } catch { /* checked below */ }
-  if (mongoose.connection.readyState === 1) return next();
-  logger.error(`MongoDB not connected (readyState ${mongoose.connection.readyState}) for ${req.method} ${req.path}`);
+  try {
+    await db.ready();
+    return next();
+  } catch (err) {
+    logger.error(`database not reachable for ${req.method} ${req.path}: ${err.message}`);
+  }
   res.setHeader("Retry-After", "5");
   if (req.path.startsWith("/oauth/authorize")) return errorPage(res.status(503), "Doott is temporarily unavailable. Please try again in a moment.");
   return res.status(503).json({ error: "temporarily_unavailable", error_description: "Doott is temporarily unavailable. Please try again." });
@@ -225,7 +229,7 @@ publicRouter.post("/oauth/register", openCors, oauthLimiter, json, ensureDb, asy
     const clientName = String(body.client_name || "MCP client").replace(/[\u0000-\u001f]/g, "").trim().slice(0, 100) || "MCP client";
     const clientId = `doott_${randomToken(18)}`;
     const clientSecret = method === "none" ? null : randomToken(32);
-    await McpClient.create({
+    await db.insert("mcp_clients", {
       clientId, clientName, redirectUris: uris, authMethod: method,
       clientSecretHash: clientSecret ? sha256(clientSecret) : null,
     });
@@ -252,7 +256,7 @@ publicRouter.get("/oauth/authorize", oauthLimiter, ensureDb, async (req, res) =>
     const q = req.query;
     const clientId = typeof q.client_id === "string" ? q.client_id : "";
     const redirectUri = typeof q.redirect_uri === "string" ? q.redirect_uri : "";
-    const client = clientId ? await McpClient.findOne({ clientId }).lean() : null;
+    const client = clientId ? await findClient(clientId) : null;
     if (!client) return errorPage(res, "This app is not registered with Doott. Remove the connector and add it again.");
     // Exact match against what the client registered: never redirect anywhere else.
     if (!redirectUri || !client.redirectUris.includes(redirectUri)) {
@@ -309,22 +313,18 @@ publicRouter.post("/oauth/token", openCors, oauthLimiter, form, ensureDb, async 
       const { code, redirect_uri: redirectUri, code_verifier: verifier } = req.body;
       if (typeof code !== "string" || typeof verifier !== "string") return oauthError(res, 400, "invalid_request");
       // Single use: the code is deleted as it is read.
-      const rec = await McpAuthCode.findOneAndDelete({ codeHash: sha256(code) }).lean();
+      const [rec] = await db.many("DELETE FROM app.mcp_auth_codes WHERE code_hash = $1 RETURNING *", [sha256(code)]);
       if (!rec || rec.expiresAt < new Date() || rec.clientId !== client.clientId) return oauthError(res, 400, "invalid_grant");
       if (redirectUri !== rec.redirectUri) return oauthError(res, 400, "invalid_grant", "redirect_uri mismatch");
       const challenge = crypto.createHash("sha256").update(verifier).digest("base64url");
       if (!safeEqual(challenge, rec.codeChallenge)) return oauthError(res, 400, "invalid_grant", "PKCE verification failed");
-      const grant = new McpGrant({
-        clientId: client.clientId, clientName: client.clientName, userId: rec.userId,
-        refreshTokenHash: "pending-" + randomToken(), refreshExpiresAt: new Date(),
-      });
-      return res.json(await newGrantTokens(grant));
+      return res.json(await newGrantTokens({ clientId: client.clientId, clientName: client.clientName, userId: rec.userId }));
     }
 
     if (grantType === "refresh_token") {
       const rt = req.body.refresh_token;
       if (typeof rt !== "string") return oauthError(res, 400, "invalid_request");
-      const grant = await McpGrant.findOne({ refreshTokenHash: sha256(rt) });
+      const grant = await db.one("SELECT * FROM app.mcp_grants WHERE refresh_token_hash = $1", [sha256(rt)]);
       if (!grant || grant.revokedAt || grant.refreshExpiresAt < new Date() || grant.clientId !== client.clientId) {
         return oauthError(res, 400, "invalid_grant");
       }
@@ -346,16 +346,16 @@ publicRouter.post("/oauth/revoke", openCors, oauthLimiter, form, ensureDb, async
     if (!client) return oauthError(res, 401, "invalid_client");
     const token = typeof req.body.token === "string" ? req.body.token : "";
     let grantId = null;
-    const byRefresh = token ? await McpGrant.findOne({ refreshTokenHash: sha256(token) }).select("_id clientId").lean() : null;
+    const byRefresh = token ? await db.one("SELECT id, client_id FROM app.mcp_grants WHERE refresh_token_hash = $1", [sha256(token)]) : null;
     if (byRefresh && byRefresh.clientId === client.clientId) grantId = byRefresh._id;
     if (!grantId) {
       try {
         const p = jwt.verify(token, MCP_KEY, { algorithms: ["HS256"], audience: AUDIENCE });
-        if (p.cid === client.clientId && mongoose.isValidObjectId(p.gid)) grantId = p.gid;
+        if (p.cid === client.clientId && db.isId(p.gid)) grantId = p.gid;
       } catch { /* not ours */ }
     }
     if (grantId) {
-      await McpGrant.updateOne({ _id: grantId }, { $set: { revokedAt: new Date() } });
+      await db.exec("UPDATE app.mcp_grants SET revoked_at = now(), updated_at = now() WHERE id = $1", [String(grantId)]);
       grantCache.delete(String(grantId));
     }
     res.sendStatus(200);
@@ -372,7 +372,7 @@ apiRouter.get("/api/mcp/consent", auth, ensureDb, async (req, res, next) => {
 async function consent(req, res) {
   const r = readAuthzRequest(req.query.request);
   if (!r) return res.status(400).json({ error: "This connection link has expired. Start again from Claude.", code: "REQUEST_EXPIRED" });
-  const client = await McpClient.findOne({ clientId: r.cid }).lean();
+  const client = await findClient(r.cid);
   if (!client) return res.status(400).json({ error: "This app is no longer registered. Start again from Claude.", code: "UNKNOWN_CLIENT" });
   let redirectHost = "";
   try { redirectHost = new URL(r.ru).host; } catch { /* ignore */ }
@@ -383,7 +383,7 @@ apiRouter.post("/api/mcp/approve", auth, ensureDb, async (req, res) => {
   try {
     const r = readAuthzRequest(req.body?.request);
     if (!r) return res.status(400).json({ error: "This connection link has expired. Start again from Claude.", code: "REQUEST_EXPIRED" });
-    const client = await McpClient.findOne({ clientId: r.cid }).lean();
+    const client = await findClient(r.cid);
     if (!client || !client.redirectUris.includes(r.ru)) {
       return res.status(400).json({ error: "This app is no longer registered. Start again from Claude.", code: "UNKNOWN_CLIENT" });
     }
@@ -394,7 +394,8 @@ apiRouter.post("/api/mcp/approve", auth, ensureDb, async (req, res) => {
       return res.json({ redirect: u.toString() });
     }
     const code = randomToken();
-    await McpAuthCode.create({
+    db.exec("DELETE FROM app.mcp_auth_codes WHERE expires_at < now()").catch(() => {}); // expired codes
+    await db.insert("mcp_auth_codes", {
       codeHash: sha256(code), clientId: r.cid, userId: req.user.userId, redirectUri: r.ru,
       codeChallenge: r.cc, resource: r.rs, expiresAt: new Date(Date.now() + CODE_TTL_MS),
     });
@@ -407,18 +408,21 @@ apiRouter.post("/api/mcp/approve", auth, ensureDb, async (req, res) => {
 });
 
 apiRouter.get("/api/mcp/connections", auth, ensureDb, async (req, res) => {
-  const grants = await McpGrant.find({ userId: req.user.userId, revokedAt: null, refreshExpiresAt: { $gt: new Date() } })
-    .select("clientName createdAt lastUsedAt").sort({ createdAt: -1 }).lean();
+  const grants = await db.many(
+    `SELECT id, client_name, created_at, last_used_at FROM app.mcp_grants
+      WHERE user_id = $1 AND revoked_at IS NULL AND refresh_expires_at > now() ORDER BY created_at DESC`,
+    [req.user.userId]
+  );
   res.json({
     connections: grants.map((g) => ({ id: String(g._id), clientName: g.clientName, connectedAt: g.createdAt, lastUsedAt: g.lastUsedAt })),
   });
 });
 
 apiRouter.delete("/api/mcp/connections/:id", auth, ensureDb, async (req, res) => {
-  if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: "Connection not found." });
-  const r = await McpGrant.updateOne({ _id: req.params.id, userId: req.user.userId, revokedAt: null }, { $set: { revokedAt: new Date() } });
+  if (!db.isId(req.params.id)) return res.status(404).json({ error: "Connection not found." });
+  const r = await db.update("mcp_grants", { _id: req.params.id, userId: req.user.userId, revokedAt: null }, { revokedAt: new Date() });
   grantCache.delete(req.params.id);
-  if (!r.matchedCount) return res.status(404).json({ error: "Connection not found." });
+  if (!r.length) return res.status(404).json({ error: "Connection not found." });
   res.json({ ok: true });
 });
 

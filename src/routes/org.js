@@ -64,17 +64,11 @@ router.get("/all", async (req, res) => {
       return res.status(403).json({ error: "Access denied. Owner only." });
     }
 
-    const { Organization, Member } = require("../db/mongoose");
-
-    const allOrgs = await Organization.find().select("-smtpCredentials -gmailIntegration").sort({ createdAt: -1 }).lean();
-
-    const orgsWithStats = await Promise.all(
-      allOrgs.map(async (org) => {
-        const memberCount = await Member.countDocuments({ orgId: org._id, status: "active" });
-        return { ...org, memberCount };
-      })
+    const db = require("../db/appDb");
+    const orgsWithStats = await db.many(
+      `SELECT o.*, (SELECT count(*)::int FROM app.members m WHERE m.org_id = o.id AND m.status = 'active') AS member_count
+         FROM app.organizations o ORDER BY o.created_at DESC`
     );
-
     res.json(orgsWithStats);
   } catch (err) {
     res.status(500).json({ error: err.message });

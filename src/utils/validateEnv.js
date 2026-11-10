@@ -17,14 +17,11 @@ function validateCredentials() {
     missing.push("JWT_SECRET (Needed to sign login tokens — generate with `openssl rand -hex 32`)");
   }
   if (!process.env.NEON_DATABASE_URL) {
-    missing.push("NEON_DATABASE_URL (Needed for the lead database)");
+    missing.push("NEON_DATABASE_URL (Needed for the lead database and for accounts, in the app schema)");
   }
 
   // Optional but recommended
   const warnings = [];
-  if (!process.env.MONGO_URI) {
-    missing.push("MONGO_URI (Needed for Database Persistence)");
-  }
 
   if (warnings.length > 0) {
     logger.warn(chalk.yellow("⚠ Configuration warnings:"));

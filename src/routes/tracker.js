@@ -8,7 +8,7 @@
 
 const router = require("express").Router();
 const fetch  = require("node-fetch");
-const { PageView } = require("../db/mongoose");
+const db     = require("../db/appDb");
 
 // ── UA helpers ────────────────────────────────────────────────────────────────
 function parseDevice(ua = "") {
@@ -80,7 +80,7 @@ router.post("/", async (req, res) => {
     const browser = parseBrowser(ua);
 
     // Save immediately — respond fast, geo-resolve async
-    const pv = await PageView.create({
+    const pv = await db.insert("page_views", {
       path:        (path      || "/").slice(0, 300),
       referrer:    (referrer  || "Direct").slice(0, 300),
       device,
@@ -101,7 +101,7 @@ router.post("/", async (req, res) => {
 
     // Async geo update (fire-and-forget)
     geoLookup(ip).then(({ country, city }) =>
-      PageView.findByIdAndUpdate(pv._id, { country, city }).catch(() => {})
+      db.update("page_views", { _id: pv._id }, { country, city }).catch(() => {})
     ).catch(() => {});
 
   } catch {

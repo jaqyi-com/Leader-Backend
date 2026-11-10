@@ -8,9 +8,8 @@
 const express  = require("express");
 const crypto   = require("crypto");
 const Razorpay = require("razorpay");
-const { connectDB } = require("../db/mongoose");
 const authService   = require("../services/authService");
-const User          = require("../db/models/user");
+const db            = require("../db/appDb");
 const logger        = require("../utils/logger");
 
 const router = express.Router();
@@ -36,10 +35,6 @@ function signatureMatches(expectedHex, given) {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-router.use(async (req, res, next) => {
-  try { await connectDB(); next(); } catch { next(); }
-});
-
 // ── 1. Create Razorpay Order ─────────────────────────────────────────────────
 router.post("/create-order", async (req, res) => {
   try {
@@ -53,7 +48,7 @@ router.post("/create-order", async (req, res) => {
       return res.status(503).json(NOT_CONFIGURED);
     }
 
-    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    const existing = await db.findUserByEmail(email);
     if (existing)
       return res.status(409).json({ error: "An account with this email already exists. Please sign in." });
 
@@ -107,7 +102,7 @@ router.post("/verify-and-register", async (req, res) => {
     }
 
     // Race condition guard
-    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    const existing = await db.findUserByEmail(email);
     if (existing && existing.plan === "lifetime") {
       const result = await authService.loginWithEmail({ email, password }).catch(() => null);
       if (result) return res.json({ success: true, ...result, alreadyExists: true });
@@ -123,7 +118,7 @@ router.post("/verify-and-register", async (req, res) => {
     });
 
     // Mark as lifetime
-    await User.findByIdAndUpdate(result.user._id, {
+    await db.update("users", { _id: result.user._id }, {
       plan: "lifetime",
       razorpayPaymentId: razorpay_payment_id,
       razorpayOrderId:   razorpay_order_id,
@@ -173,9 +168,11 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
       const payment = event.payload?.payment?.entity;
       const email   = payment?.notes?.email;
       if (email) {
-        await User.findOneAndUpdate(
-          { email: email.toLowerCase() },
-          { plan: "lifetime", razorpayPaymentId: payment.id, razorpayOrderId: payment.order_id, paidAt: new Date(), isEmailVerified: true }
+        await db.exec(
+          `UPDATE app.users SET plan = 'lifetime', razorpay_payment_id = $2, razorpay_order_id = $3,
+                  paid_at = now(), is_email_verified = true, updated_at = now()
+            WHERE lower(email) = lower($1)`,
+          [email.trim(), payment.id, payment.order_id]
         );
         logger.info(`[Payments] Webhook: lifetime plan set for ${email}`);
       }

@@ -15,7 +15,7 @@ const { z } = require("zod");
 const { McpServer } = require("@modelcontextprotocol/sdk/server/mcp.js");
 const { StreamableHTTPServerTransport } = require("@modelcontextprotocol/sdk/server/streamableHttp.js");
 const { JWT_SECRET } = require("../config/jwtSecret");
-const { User, Member } = require("../db/mongoose");
+const db = require("../db/appDb");
 const { verifyAccessToken, baseUrl, ensureDb } = require("./oauth");
 const logger = require("../utils/logger").forAgent("McpServer");
 
@@ -50,9 +50,9 @@ const failure = (message) => ({ content: [{ type: "text", text: message }], isEr
 
 /** Build the request context for one MCP call: who the user is and how to call the API as them. */
 async function userContext(req, userId) {
-  const user = await User.findById(userId).select("email defaultOrgId tokenVersion").lean();
+  const user = await db.findUserById(userId);
   if (!user) return null;
-  const member = user.defaultOrgId ? null : await Member.findOne({ userId: user._id, status: "active" }).sort({ createdAt: 1 }).lean();
+  const member = user.defaultOrgId ? null : await db.firstMembership(user._id);
   const orgId = user.defaultOrgId || member?.orgId || null;
   // Short-lived app token for in-process calls only; it never leaves this function.
   const appToken = jwt.sign(

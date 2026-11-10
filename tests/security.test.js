@@ -64,7 +64,7 @@ test("CSV helpers neutralise formulas and sanitise filenames", () => {
 
 // ── Mass assignment ──────────────────────────────────────────────────────────
 test("pickModelFields strips tenant/identity fields and operators", () => {
-  const { Organization } = require("../src/db/mongoose");
+  const Organization = ["name", "slug", "logo", "plan", "ownerId", "website", "industry", "orgId", "createdAt"];
   const { pickModelFields, escapeRegex } = require("../src/utils/tenant");
   const out = pickModelFields({
     name: "Acme", orgId: "attacker-org", _id: "x", createdAt: "2000-01-01",
@@ -99,7 +99,6 @@ test.before(async () => {
     env: {
       PATH: process.env.PATH, NODE_ENV: "production", PORT: String(PORT), JWT_SECRET: TEST_SECRET,
       ADMIN_EMAIL: "owner@example.test",
-      MONGO_URI: "mongodb://127.0.0.1:1/test?serverSelectionTimeoutMS=500",
       NEON_DATABASE_URL: "postgresql://u:p@127.0.0.1:1/x",
       OPENAI_API_KEY: "fake", APOLLO_API_KEY: "fake", SMTP_USER: "fake", SMTP_PASS: "fake",
     },
@@ -175,6 +174,6 @@ test("errors: malformed JSON returns a JSON 400 with no stack trace", async () =
 test("health endpoint is public and reveals only up/down states", async () => {
   const r = await call("GET", "/api/health");
   assert.ok([200, 503].includes(r.status));
-  assert.deepEqual(Object.keys(r.json.checks).sort(), ["mongo", "postgres"]);
+  assert.deepEqual(Object.keys(r.json.checks).sort(), ["app_db", "postgres"]);
   assert.ok(!JSON.stringify(r.json).includes("127.0.0.1"));
 });

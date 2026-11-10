@@ -1,7 +1,7 @@
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
-const { User, Organization, Member } = require("../db/mongoose");
+const db = require("../db/appDb");
 
 const { JWT_SECRET } = require("../config/jwtSecret");
 const { registrationMode } = require("../config/registration");
@@ -27,7 +27,7 @@ async function generateUniqueSlug(name) {
   
   let slug = baseSlug;
   let counter = 1;
-  while (await Organization.exists({ slug })) {
+  while (await db.one("SELECT 1 AS x FROM app.organizations WHERE slug = $1", [slug])) {
     slug = `${baseSlug}-${counter}`;
     counter++;
   }
@@ -52,7 +52,7 @@ function generateToken(user, orgId, role = "member") {
 // ── Email / Password Registration ────────────────────────────────────────────
 async function registerWithEmail({ name, email, password, orgName }) {
   // Check if user already exists
-  const existing = await User.findOne({ email: email.toLowerCase() });
+  const existing = await db.findUserByEmail(email);
   if (existing) {
     const err = new Error("An account with this email already exists.");
     err.statusCode = 409;
@@ -63,76 +63,66 @@ async function registerWithEmail({ name, email, password, orgName }) {
   const slug = await generateUniqueSlug(orgName || name + "'s Org");
 
   // Create user — mark as verified immediately (no email verification required)
-  const user = new User({
-    name,
-    email: email.toLowerCase(),
-    passwordHash: password,
-    isEmailVerified: true,
-  });
-  await user.save();
+  let user;
+  try {
+    user = await db.insert("users", {
+      name,
+      email: email.toLowerCase().trim(),
+      passwordHash: await db.hashPassword(password),
+      isEmailVerified: true,
+    });
+  } catch (e) {
+    if (e.code === "23505") { // unique email, lost a race with a parallel sign-up
+      const err = new Error("An account with this email already exists.");
+      err.statusCode = 409;
+      throw err;
+    }
+    throw e;
+  }
 
-  // Create org
-  const org = await Organization.create({
+  // Create org, make the user its admin, and set it as their default
+  const org = await db.insert("organizations", {
     name: orgName || `${name}'s Organization`,
     slug,
     ownerId: user._id,
   });
-
-  // Make user admin member of org
-  await Member.create({
-    orgId: org._id,
-    userId: user._id,
-    role: "admin",
-    status: "active",
-    joinedAt: new Date(),
-  });
-
-  // Set default org
-  user.defaultOrgId = org._id;
-  await user.save();
+  await db.insert("members", { orgId: org._id, userId: user._id, role: "admin", status: "active", joinedAt: new Date() });
+  [user] = await db.update("users", { _id: user._id }, { defaultOrgId: org._id });
 
   // Auto-login: return a token so the user is signed in immediately
   const token = generateToken(user, org._id, "admin");
 
-  return { token, user: user.toPublicProfile(), org };
+  return { token, user: db.publicUser(user), org };
+}
+
+/** Token + public profile + org for a signed-in user (their default org, else their first one). */
+async function sessionFor(user) {
+  const member = await db.firstMembership(user._id);
+  const orgId = user.defaultOrgId || member?.orgId || null;
+  const role = member?.role || "member";
+  const token = generateToken(user, orgId, role);
+  const org = orgId ? await db.findOrgById(orgId) : null;
+  return { token, user: db.publicUser(user), org };
 }
 
 // ── Email / Password Login ───────────────────────────────────────────────────
 async function loginWithEmail({ email, password }) {
-  const user = await User.findOne({ email: email.toLowerCase() });
-  if (!user) {
+  const user = await db.findUserByEmail(email);
+  if (!user || !(await db.checkPassword(user, password))) {
     const err = new Error("Invalid email or password.");
     err.statusCode = 401;
     throw err;
   }
-
-
-  const isMatch = await user.comparePassword(password);
-  if (!isMatch) {
-    const err = new Error("Invalid email or password.");
-    err.statusCode = 401;
-    throw err;
-  }
-
-  // Get the user's active org membership
-  const member = await Member.findOne({ userId: user._id, status: "active" })
-    .sort({ createdAt: 1 }) // oldest = their first/default org
-    .lean();
-
-  const orgId = user.defaultOrgId || member?.orgId || null;
-  const role = member?.role || "member";
-
-  const token = generateToken(user, orgId, role);
-
-  const org = orgId ? await Organization.findById(orgId).select("-smtpCredentials -gmailIntegration").lean() : null;
-
-  return { token, user: user.toPublicProfile(), org };
+  return sessionFor(user);
 }
 
 // ── Google OAuth ─────────────────────────────────────────────────────────────
 async function handleGoogleOAuth({ googleId, email, name, avatar }) {
   // Try to find existing user by googleId or email
-  let user = await User.findOne({ $or: [{ googleId }, { email: email.toLowerCase() }] });
+  let user = await db.one(
+    "SELECT * FROM app.users WHERE google_id = $1 OR lower(email) = lower($2) ORDER BY (google_id = $1) DESC NULLS LAST LIMIT 1",
+    [googleId, email]
+  );
 
   if (!user) {
     // New Google user — only if sign-up is open (REGISTRATION_MODE)
@@ -141,98 +131,58 @@ async function handleGoogleOAuth({ googleId, email, name, avatar }) {
       err.statusCode = 403;
       throw err;
     }
-    // create user + org
     const slug = await generateUniqueSlug(name + "'s Org");
-
-    user = new User({
+    user = await db.insert("users", {
       name,
-      email: email.toLowerCase(),
+      email: email.toLowerCase().trim(),
       googleId,
       avatar,
       isEmailVerified: true, // Google-verified
     });
-    await user.save();
-
-    const org = await Organization.create({
-      name: `${name}'s Organization`,
-      slug,
-      ownerId: user._id,
-    });
-
-    await Member.create({
-      orgId: org._id,
-      userId: user._id,
-      role: "admin",
-      status: "active",
-      joinedAt: new Date(),
-    });
-
-    user.defaultOrgId = org._id;
-    await user.save();
-  } else {
+    const org = await db.insert("organizations", { name: `${name}'s Organization`, slug, ownerId: user._id });
+    await db.insert("members", { orgId: org._id, userId: user._id, role: "admin", status: "active", joinedAt: new Date() });
+    [user] = await db.update("users", { _id: user._id }, { defaultOrgId: org._id });
+  } else if (!user.googleId) {
     // Link googleId if missing (user registered via email first)
-    if (!user.googleId) {
-      user.googleId = googleId;
-      if (avatar) user.avatar = avatar;
-      user.isEmailVerified = true;
-      await user.save();
-    }
+    [user] = await db.update("users", { _id: user._id }, {
+      googleId,
+      avatar: avatar || user.avatar,
+      isEmailVerified: true,
+    });
   }
 
-  const member = await Member.findOne({ userId: user._id, status: "active" })
-    .sort({ createdAt: 1 })
-    .lean();
-
-  const orgId = user.defaultOrgId || member?.orgId || null;
-  const role = member?.role || "member";
-
-  const token = generateToken(user, orgId, role);
-  const org = orgId ? await Organization.findById(orgId).select("-smtpCredentials -gmailIntegration").lean() : null;
-
-  return { token, user: user.toPublicProfile(), org };
+  return sessionFor(user);
 }
 
 // ── Email Verification ───────────────────────────────────────────────────────
 async function verifyEmail(token) {
-  const user = await User.findOne({
-    emailVerifyToken: token,
-    emailVerifyTokenExpires: { $gt: new Date() },
-  });
-
-  if (!user) {
+  const found = await db.one(
+    "SELECT * FROM app.users WHERE email_verify_token = $1 AND email_verify_token_expires > now()",
+    [String(token)]
+  );
+  if (!found) {
     const err = new Error("Verification link is invalid or has expired.");
     err.statusCode = 400;
     throw err;
   }
-
-  user.isEmailVerified = true;
-  user.emailVerifyToken = null;
-  user.emailVerifyTokenExpires = null;
-  await user.save();
-
+  const [user] = await db.update("users", { _id: found._id }, {
+    isEmailVerified: true, emailVerifyToken: null, emailVerifyTokenExpires: null,
+  });
   // Auto-login after verification
-  const member = await Member.findOne({ userId: user._id, status: "active" })
-    .sort({ createdAt: 1 })
-    .lean();
-
-  const orgId = user.defaultOrgId || member?.orgId || null;
-  const role = member?.role || "member";
-  const authToken = generateToken(user, orgId, role);
-  const org = orgId ? await Organization.findById(orgId).select("-smtpCredentials -gmailIntegration").lean() : null;
-
-  return { token: authToken, user: user.toPublicProfile(), org };
+  return sessionFor(user);
 }
 
 // ── Resend Verification Email ────────────────────────────────────────────────
 async function resendVerificationEmail(email) {
-  const user = await User.findOne({ email: email.toLowerCase() });
+  const user = await db.findUserByEmail(email);
   if (!user) return; // Silent fail (don't leak user existence)
   if (user.isEmailVerified) return;
 
   const verifyToken = crypto.randomBytes(32).toString("hex");
-  user.emailVerifyToken = verifyToken;
-  user.emailVerifyTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  await user.save();
+  await db.update("users", { _id: user._id }, {
+    emailVerifyToken: verifyToken,
+    emailVerifyTokenExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  });
 
   await sendVerificationEmail(user, verifyToken);
 }
@@ -264,14 +214,15 @@ async function sendVerificationEmail(user, token) {
 
 // ── Forgot Password ──────────────────────────────────────────────────────────
 async function forgotPassword(email) {
-  const user = await User.findOne({ email: email.toLowerCase() });
+  const user = await db.findUserByEmail(email);
   // Always return success — never reveal if email exists
   if (!user) return;
 
   const resetToken = crypto.randomBytes(32).toString("hex");
-  user.passwordResetToken = resetToken;
-  user.passwordResetExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-  await user.save();
+  await db.update("users", { _id: user._id }, {
+    passwordResetToken: resetToken,
+    passwordResetExpires: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+  });
 
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5174";
   const link = `${frontendUrl}/reset-password?token=${resetToken}`;
@@ -298,29 +249,27 @@ async function forgotPassword(email) {
 
 // ── Reset Password ───────────────────────────────────────────────────────────
 async function resetPassword(token, newPassword) {
-  const user = await User.findOne({
-    passwordResetToken: token,
-    passwordResetExpires: { $gt: new Date() },
-  });
-
+  const user = await db.one(
+    "SELECT * FROM app.users WHERE password_reset_token = $1 AND password_reset_expires > now()",
+    [String(token)]
+  );
   if (!user) {
     const err = new Error("Reset link is invalid or has expired.");
     err.statusCode = 400;
     throw err;
   }
-
   if (newPassword.length < 8) {
     const err = new Error("Password must be at least 8 characters.");
     err.statusCode = 400;
     throw err;
   }
-
-  user.passwordHash = newPassword; // pre-save hook will bcrypt this
-  user.passwordResetToken = null;
-  user.passwordResetExpires = null;
-  user.isEmailVerified = true; // resetting password implicitly verifies the email
-  await user.save();
-
+  await db.update("users", { _id: user._id }, {
+    passwordHash: await db.hashPassword(newPassword),
+    passwordResetToken: null,
+    passwordResetExpires: null,
+    isEmailVerified: true, // resetting password implicitly verifies the email
+    tokenVersion: (user.tokenVersion || 0) + 1, // a reset signs out every existing session
+  });
   return { message: "Password reset successfully. You can now log in." };
 }
 
@@ -333,4 +282,5 @@ module.exports = {
   forgotPassword,
   resetPassword,
   generateToken,
+  sessionFor,
 };

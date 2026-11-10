@@ -7,7 +7,7 @@ const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const { startStack, available } = require("./helpers/stack");
 
-const skip = (!available.mongod && "mongod not installed") || (!available.postgres && "PostgreSQL not installed");
+const skip = (!available.postgres && "PostgreSQL not installed");
 const FRONTEND = "https://frontend.example.test";
 const REDIRECT = "http://localhost:53682/callback";
 let stack, user;

@@ -1,17 +1,16 @@
 "use strict";
-// Hermetic local stack for integration tests: throwaway mongod + throwaway PostgreSQL
+// Hermetic local stack for integration tests: throwaway PostgreSQL
 // (synthetic rows only) + the real backend. Nothing here touches Neon, Atlas or any real data.
 
 const path = require("node:path");
 const os = require("node:os");
 const fs = require("node:fs");
-const { spawn, spawnSync, execFileSync } = require("node:child_process");
+const { spawn, execFileSync } = require("node:child_process");
 
 const ROOT = path.join(__dirname, "..", "..");
 const PG_BIN = ["/opt/homebrew/opt/postgresql@16/bin", "/opt/homebrew/opt/postgresql@17/bin", "/usr/lib/postgresql/16/bin", "/usr/lib/postgresql/15/bin"]
   .find((d) => fs.existsSync(path.join(d, "initdb")));
-const hasMongod = spawnSync("mongod", ["--version"]).status === 0;
-const available = { mongod: hasMongod, postgres: Boolean(PG_BIN) };
+const available = { postgres: Boolean(PG_BIN) };
 
 // Ports that fetch()/undici refuses to connect to ("bad port") — never hand these out.
 const BAD_PORTS = new Set([4045, 4190, 5060, 5061, 6000, 6566, 6665, 6666, 6667, 6668, 6669, 6679, 6697, 10080]);
@@ -77,26 +76,14 @@ async function startPostgres(state) {
   return state.pg;
 }
 
-async function startMongo(state) {
-  const mongoose = require("mongoose");
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "doott-mongo-"));
-  const port = rand(27100, 800);
-  const proc = spawn("mongod", ["--dbpath", dir, "--port", String(port), "--bind_ip", "127.0.0.1", "--nounixsocket", "--quiet"], { stdio: "ignore" });
-  const uri = `mongodb://127.0.0.1:${port}/integration_test`;
-  const conn = mongoose.createConnection();
-  for (let i = 0; i < 60; i++) { try { await conn.openUri(uri, { serverSelectionTimeoutMS: 500 }); break; } catch { await sleep(250); } }
-  await conn.close();
-  state.mongo = { proc, dir, uri };
-  return state.mongo;
-}
-
 /**
- * @param {{postgres?: boolean}} opts
+ * Starts a throwaway PostgreSQL (lead data + app tables) and the real backend.
+ * `postgres` is accepted for older callers; PostgreSQL is always started now that accounts live there.
+ * @param {{postgres?: boolean, env?: object}} opts
  */
-async function startStack({ postgres = false, env = {} } = {}) {
+async function startStack({ env = {} } = {}) {
   const state = {};
-  const mongo = await startMongo(state);
-  const pg = postgres ? await startPostgres(state) : null;
+  const pg = await startPostgres(state);
   const apiPort = rand(4300, 700);
   const secret = "integration-secret-" + "q".repeat(40);
   const base = `http://127.0.0.1:${apiPort}`;
@@ -104,7 +91,7 @@ async function startStack({ postgres = false, env = {} } = {}) {
     cwd: os.tmpdir(),
     env: {
       PATH: process.env.PATH, NODE_ENV: "production", PORT: String(apiPort), JWT_SECRET: secret,
-      MONGO_URI: mongo.uri, NEON_DATABASE_URL: pg ? pg.url : "postgresql://u:p@127.0.0.1:1/x",
+      NEON_DATABASE_URL: pg.url,
       OPENAI_API_KEY: "fake", APOLLO_API_KEY: "fake", SMTP_USER: "fake", SMTP_PASS: "fake",
       // generous limits so ordinary tests are not throttled; abuse tests override these
       RATE_LIMIT_AUTH_MAX: "100000", RATE_LIMIT_LOGIN_ACCOUNT_MAX: "100000", RATE_LIMIT_DATA_MAX: "100000",
@@ -141,11 +128,7 @@ async function startStack({ postgres = false, env = {} } = {}) {
 
   /** Set a user's plan directly in the test database ("free" | "lifetime"). */
   const setPlan = async (email, plan) => {
-    const mongoose = require("mongoose");
-    const conn = mongoose.createConnection();
-    await conn.openUri(mongo.uri, { serverSelectionTimeoutMS: 3000 });
-    await conn.collection("users").updateOne({ email: email.toLowerCase() }, { $set: { plan } });
-    await conn.close();
+    await pg.pool.query("UPDATE app.users SET plan = $2 WHERE lower(email) = lower($1)", [email, plan]);
   };
 
   // PostgreSQL must be stopped with SIGINT ("fast shutdown"): a SIGKILL leaks its System V
@@ -160,16 +143,15 @@ async function startStack({ postgres = false, env = {} } = {}) {
 
   const stop = async () => {
     try { await state.pg?.pool.end(); } catch { /* ignore */ }
-    await Promise.all([stopProc(state.server, "SIGTERM"), stopProc(state.mongo?.proc, "SIGTERM"), stopProc(state.pg?.proc, "SIGINT")]);
-    for (const d of [state.mongo?.dir, state.pg?.dir]) { try { d && fs.rmSync(d, { recursive: true, force: true }); } catch { /* ignore */ } }
+    await Promise.all([stopProc(state.server, "SIGTERM"), stopProc(state.pg?.proc, "SIGINT")]);
+    for (const d of [state.pg?.dir]) { try { d && fs.rmSync(d, { recursive: true, force: true }); } catch { /* ignore */ } }
   };
   process.on("exit", () => {
     try { state.server && state.server.kill("SIGTERM"); } catch { /* ignore */ }
-    try { state.mongo?.proc && state.mongo.proc.kill("SIGTERM"); } catch { /* ignore */ }
     try { state.pg?.proc && state.pg.proc.kill("SIGINT"); } catch { /* ignore */ }
   });
 
-  return { base, secret, http, newUser, setPlan, stop, pg, mongo };
+  return { base, secret, http, newUser, setPlan, stop, pg };
 }
 
 module.exports = { startStack, available, syntheticPeople };

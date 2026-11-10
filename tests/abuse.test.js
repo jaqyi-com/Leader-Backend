@@ -6,7 +6,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { startStack, available } = require("./helpers/stack");
 
-const skip = (!available.mongod && "mongod not installed") || (!available.postgres && "PostgreSQL not installed");
+const skip = (!available.postgres && "PostgreSQL not installed");
 const P = "/api/final-people";
 // Each test gets its own short-lived stack and releases it immediately (a few Postgres/Mongo
 // servers at once is fine; nine at once exhausts macOS shared-memory limits).
