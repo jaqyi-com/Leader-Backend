@@ -38,10 +38,15 @@ export default function QuickFilters({ value, onChange, className = "" }) {
             className="btn-ghost text-xs gap-1.5 whitespace-nowrap"
             style={on ? {
               background: "rgba(16,185,129,0.12)",
-              borderColor: "rgba(16,185,129,0.45)",
+              border: "1.5px solid rgba(16,185,129,0.8)",
               color: "#059669",
               fontWeight: 600,
-            } : undefined}
+            } : {
+              background: "var(--surface)",
+              border: "1.5px solid rgba(100,116,139,0.55)", // slate outline, visible in light and dark
+              color: "var(--text)",
+              fontWeight: 500,
+            }}
           >
             {on ? <Check size={12} /> : <Icon size={12} />}
             {label}
