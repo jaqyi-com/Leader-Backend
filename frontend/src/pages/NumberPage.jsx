@@ -11,6 +11,11 @@ import {
 import toast from "react-hot-toast";
 import QueryBuilder, { qbFiltersToParams } from "../components/QueryBuilder";
 import QuickFilters, { NO_QUICK_FILTERS, quickFilterParams } from "../components/QuickFilters";
+import CountryPicker from "../components/CountryPicker";
+import CountryNote from "../components/CountryNote";
+import { useSearchParams } from "react-router-dom";
+import { countryFromUrl, rememberCountry, rememberedCountry } from "../countryState";
+import { countryByCode } from "../countries";
 
 /* ──────────────────────────────────────────────────
    Smart cell renderer
@@ -73,6 +78,15 @@ function TablePanel({ mode }) {
   const [filters,    setFilters]    = useState([]);
   // One-click "Verified email" / "Valid mobile" filters
   const [quick,      setQuick]      = useState(NO_QUICK_FILTERS);
+  // Country picker: from ?country= in the URL, else the last one used
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [country,    setCountry]    = useState(() => countryFromUrl(searchParams) ?? rememberedCountry());
+  const changeCountry = (code) => {
+    setCountry(code);
+    setPage(1);
+    rememberCountry(code);
+    setSearchParams(code ? { country: code } : {}, { replace: true });
+  };
 
   // ── Column discovery ────────────────────────────────────────
   const loadColumns = useCallback(async () => {
@@ -97,7 +111,7 @@ function TablePanel({ mode }) {
     setLoading(true);
     try {
       const filterParams = qbFiltersToParams(filters);
-      const params = { page, limit, sort_by: sortBy, sort_dir: sortDir, search, ...filterParams, ...quickFilterParams(quick) };
+      const params = { page, limit, sort_by: sortBy, sort_dir: sortDir, search, ...filterParams, ...quickFilterParams(quick), ...(country ? { country } : {}) };
       if (isPeople) {
         // People tab — number endpoint with column filters
         const { data } = await fpnGetDatabase(params);
@@ -118,7 +132,7 @@ function TablePanel({ mode }) {
     } finally {
       if (reqId === loadSeq.current) setLoading(false);
     }
-  }, [isPeople, page, limit, sortBy, sortDir, search, filters, quick]);
+  }, [isPeople, page, limit, sortBy, sortDir, search, filters, quick, country]);
 
   useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
@@ -144,10 +158,11 @@ function TablePanel({ mode }) {
     setSearch("");
     setFilters([]);
     setQuick(NO_QUICK_FILTERS);
+    changeCountry("");
     setPage(1);
   };
 
-  const hasFilters = search || filters.length > 0;
+  const hasFilters = search || filters.length > 0 || country || quick.verifiedEmail || quick.validMobile;
 
   const exportCSV = () => {
     if (!cols.length || !records.length) return;
@@ -169,6 +184,8 @@ function TablePanel({ mode }) {
       {/* ── Toolbar ─────────────────────────────────────────── */}
       <div className="flex items-center gap-2 flex-wrap justify-between">
         <div className="flex items-center gap-2 flex-wrap flex-1">
+          {/* Country */}
+          <CountryPicker kind={isPeople ? "people" : "companies"} value={country} onChange={changeCountry} />
           {/* Search */}
           <div className="relative min-w-[220px] max-w-sm flex-1">
             <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
@@ -250,8 +267,9 @@ function TablePanel({ mode }) {
       {/* ── Count badge ──────────────────────────────────────── */}
       <p className="text-xs text-[var(--text-3)]">
         <span className="font-semibold text-[var(--text)]">{total.toLocaleString()}</span>{" "}
-        {isPeople ? "people" : "companies"} with phone number
+        {isPeople ? "people" : "companies"} with phone number{countryByCode(country) ? ` in ${countryByCode(country).name}` : ""}
       </p>
+      <CountryNote country={country} kind={isPeople ? "people" : "companies"} showCount={false} />
 
       {/* ── Table ────────────────────────────────────────────── */}
       <div className="card overflow-hidden">

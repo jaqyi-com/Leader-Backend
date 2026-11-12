@@ -1,0 +1,107 @@
+"use strict";
+// Country filter: one set of rules for every search route (src/utils/countries.js).
+// India / USA: address rules + phone-country fallback. Other countries: the phone number's country.
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const { startStack, available } = require("./helpers/stack");
+
+const skip = !available.postgres && "PostgreSQL not installed";
+let stack, user;
+
+test.before(async () => {
+  if (skip) return;
+  stack = await startStack();
+  user = await stack.newUser("countries");
+});
+test.after(async () => { if (stack) await stack.stop(); });
+
+async function all(route, qs) {
+  const out = [];
+  for (let page = 1; page <= 10; page++) {
+    const r = await stack.http("GET", `${route}?${qs}&limit=100&page=${page}`, { token: user.token });
+    assert.equal(r.status, 200, `${route}?${qs}: ${JSON.stringify(r.json)}`);
+    out.push(...r.json.records);
+    if (r.json.records.length < 100) break;
+  }
+  return out;
+}
+
+test("normalizeCountry: names, codes and aliases; unknown input means no filter", () => {
+  process.env.NEON_DATABASE_URL = process.env.NEON_DATABASE_URL || "postgresql://u@127.0.0.1:1/x";
+  const { normalizeCountry, countryName } = require("../src/utils/countries");
+  const cases = { india: "IN", IN: "IN", in: "IN", usa: "US", "United States": "US", us: "US", canada: "CA", CA: "CA",
+    germany: "DE", de: "DE", uk: "GB", "United Kingdom": "GB", uae: "AE" };
+  for (const [input, code] of Object.entries(cases)) assert.equal(normalizeCountry(input), code, input);
+  for (const input of ["", "all", "xx", "EU", "Narnia", "'; drop table x; --", undefined]) assert.equal(normalizeCountry(input), null, String(input));
+  assert.equal(countryName("DE"), "Germany");
+});
+
+test("companies: India and USA include phone-only rows; other countries use the phone country", { skip }, async () => {
+  const C = stack.pg.companies;
+  const R = "/api/final-companies";
+  const expect = {
+    US: C.filter((c) => ["us_zip", "us_city", "us_state"].includes(c.geo_source) || (c.phone_country === "US" && !["pincode", "csv_v2_import"].includes(c.geo_source))),
+    IN: C.filter((c) => ["pincode", "csv_v2_import"].includes(c.geo_source) || (c.phone_country === "IN" && !["us_zip", "us_city", "us_state"].includes(c.geo_source))),
+    CA: C.filter((c) => c.phone_country === "CA"),
+    DE: C.filter((c) => c.phone_country === "DE"),
+    GB: C.filter((c) => c.phone_country === "GB"),
+  };
+  assert.ok(expect.US.some((c) => c.geo_source === null), "fixture has a USA-by-phone company");
+  for (const [code, rows] of Object.entries(expect)) {
+    const got = await all(R, `country=${code}`);
+    assert.deepEqual(got.map((r) => r.business_name).sort(), rows.map((r) => r.business_name).sort(), `country=${code}`);
+  }
+  // names and the f_country= form give the same rows
+  assert.equal((await all(R, "f_country=germany")).length, expect.DE.length);
+  assert.equal((await all(R, "f_country=India")).length, expect.IN.length);
+  assert.equal((await all(R, "country=usa")).length, expect.US.length);
+  // combines with other filters
+  const deSoftware = await all(R, "country=DE&f_industry=Software");
+  assert.equal(deSoftware.length, expect.DE.filter((c) => c.industry === "Software").length);
+  // a country with no data returns nothing, and garbage is ignored instead of breaking the query
+  assert.equal((await all(R, "country=FR")).length, 0);
+  assert.equal((await stack.http("GET", `${R}?country=${encodeURIComponent("x' OR 1=1 --")}&limit=5`, { token: user.token })).status, 200);
+});
+
+test("people, emails and numbers: country codes and names on every route", { skip }, async () => {
+  const P = stack.pg.rows;
+  const hasEmail = (r) => r.emails && r.emails !== "{}";
+  const hasPhone = (r) => r.phones && r.phones !== "{}";
+  for (const [route, base] of [["/api/final-people", P], ["/api/final-people-email", P.filter(hasEmail)], ["/api/final-people-number", P.filter(hasPhone)]]) {
+    for (const code of ["DE", "CA"]) {
+      const want = base.filter((r) => r.phone_country === code).map((r) => r.full_name).sort();
+      const got = (await all(route, `country=${code}`)).map((r) => r.full_name).sort();
+      assert.deepEqual(got, want, `${route} country=${code}`);
+    }
+    // USA = the Texas rows (address rule); India = the rest (Indian states)
+    const usa = base.filter((r) => r.state === "TX").length;
+    assert.equal((await all(route, "country=US")).length, usa, `${route} US`);
+    assert.equal((await all(route, "country=india")).length, base.length - usa, `${route} India`);
+  }
+  // with a quick filter
+  const deMobile = await all("/api/final-people", "country=CA&f_phone_status=mobile");
+  assert.equal(deMobile.length, P.filter((r) => r.phone_country === "CA" && r.phone_status === "valid" && ["mobile", "fixed_or_mobile"].includes(r.phone_line_type)).length);
+});
+
+test("country totals are exact for small countries", { skip }, async () => {
+  const r = await stack.http("GET", "/api/final-companies?country=DE&limit=5", { token: user.token });
+  assert.equal(r.json.total, stack.pg.companies.filter((c) => c.phone_country === "DE").length);
+  assert.equal(r.json.total_exact, true);
+});
+
+test("countryOnlyTotal: used only when country is the only filter", () => {
+  const fs = require("node:fs"); const os = require("node:os"); const path = require("node:path");
+  const file = path.join(os.tmpdir(), `doott-country-counts-${process.pid}.json`);
+  fs.writeFileSync(file, JSON.stringify({ countries: [{ code: "DE", name: "Germany", people: 781, companies: 4092 }] }));
+  process.env.COUNTRY_COUNTS_FILE = file;
+  delete require.cache[require.resolve("../src/utils/countries")];
+  const { countryOnlyTotal } = require("../src/utils/countries");
+  assert.equal(countryOnlyTotal("companies", { country: "DE", page: "2", limit: "50" }), 4092);
+  assert.equal(countryOnlyTotal("people", { f_country: "germany" }), 781);
+  assert.equal(countryOnlyTotal("companies", { country: "DE", f_industry: "Software" }), null, "another filter → no shortcut");
+  assert.equal(countryOnlyTotal("companies", { country: "DE", search: "acme" }), null);
+  assert.equal(countryOnlyTotal("companies", { country: "FR" }), null, "unknown in the file → normal count");
+  assert.equal(countryOnlyTotal("companies", {}), null);
+  fs.rmSync(file, { force: true });
+});

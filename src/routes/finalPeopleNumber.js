@@ -13,12 +13,13 @@ const { query: pgQuery, directQueryWithSession } = require("../db/cloudSql");
 const indexedQuery = (sql, params, ms) => directQueryWithSession(sql, params, ["SET LOCAL enable_seqscan = off;"], ms);
 const {
   hasNoSearchableChars,
-  escapeLike, peopleCountryCondition, exactCappedTotal,
+  escapeLike, exactCappedTotal,
   searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, runFilteredSearch,
 } = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 
 
+const { peopleCountryWhere } = require("../utils/countries");
 const logger = require("../utils/logger").forAgent("FinalPeopleNumberDB");
 
 const FP_SCHEMA  = "final";
@@ -284,7 +285,7 @@ function buildWhere(queryParams, phoneCol, schemaColumns) {
   );
 
   if (!alreadyHasExplicitCountry && countryParam) {
-    const countryCond = peopleCountryCondition(countryParam);
+    const countryCond = peopleCountryWhere(countryParam, { hasPhoneCountry: (schemaColumns || []).includes("phone_country") });
     if (countryCond) conditions.push(countryCond);
   }
 

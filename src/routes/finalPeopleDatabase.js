@@ -22,11 +22,12 @@ const indexedQuery = (sql, params, ms) => directQueryWithSession(sql, params, ["
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 const {
   hasNoSearchableChars,
-  escapeLike, jobTitleCondition, peopleCountryCondition, CITY_ALIASES, exactCappedTotal,
+  escapeLike, jobTitleCondition, CITY_ALIASES, exactCappedTotal,
   searchTimeoutMs, resultWindowError, checkSortAllowed, sendSearchError, runFilteredSearch,
 } = require("../utils/searchFilters");
 
 
+const { peopleCountryWhere, countryOnlyTotal } = require("../utils/countries");
 const logger = require("../utils/logger").forAgent("FinalPeopleDB");
 
 // ── Table config ───────────────────────────────────────────
@@ -51,7 +52,7 @@ const COUNT_TTL     = 120; // 2 min
 const SKIP_IN_SELECT = new Set(["_row_hash", "embedding", "uuid", "company_uuid", "id", "_id"]);
 
 // Columns that can be filtered on (quick toggles: "valid mobile") but are not shown in results.
-const FILTER_ONLY_COLS = ["phone_status", "phone_line_type"];
+const FILTER_ONLY_COLS = ["phone_status", "phone_line_type", "phone_country"];
 
 // ── In-memory schema cache ─────────────────────────────────
 const KNOWN_PEOPLE_COLS = [
@@ -449,7 +450,8 @@ function buildWhere(queryParams, embedding, _schema) {
   );
 
   if (!alreadyHasExplicitCountry && countryParam) {
-    const countryCond = peopleCountryCondition(countryParam);
+    const knownCols = [...(_schema?.actualCols || []), ...FILTER_ONLY_COLS];
+    const countryCond = peopleCountryWhere(countryParam, { hasPhoneCountry: knownCols.includes("phone_country") });
     if (countryCond) conditions.push(countryCond);
   }
 
@@ -630,7 +632,12 @@ router.get("/", async (req, res) => {
 
     let total;
     let totalExact = false;
-    if (!userHasFilters) {
+    // Country is the only filter: use the exact generated count (the planner estimate is unreliable).
+    const countryTotal = (records.length < limitNum && pageNum === 1) ? null : countryOnlyTotal("people", req.query);
+    if (countryTotal !== null) {
+      total = countryTotal;
+      totalExact = true;
+    } else if (!userHasFilters) {
       const cachedCount = await cacheGet(COUNT_CACHE_KEY);
       if (cachedCount !== null && cachedCount !== undefined) {
         total = cachedCount;

@@ -20,6 +20,7 @@ const {
   hasNoSearchableChars, escapeLike, resultWindowError, sendSearchError,
   exactCappedTotal, runFilteredSearch, searchTimeoutMs, checkSortAllowed, CITY_ALIASES } = require("../utils/searchFilters");
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
+const { companiesCountryWhere, countryOnlyTotal } = require("../utils/countries");
 const logger = require("../utils/logger").forAgent("FinalCompaniesDB");
 
 // Index-forced variant for counts (a narrow filter counts quickly through its index).
@@ -140,11 +141,10 @@ function parseQueryParamsToSQL(queryParams, schemaColumns, values, startIdx) {
 
     // Special compatibility mapping for legacy filters
     if (col === "country" && val !== "") {
-      const countryLower = val.toLowerCase().trim();
-      if (countryLower === "india" || countryLower === "in") {
-        conditions.push(`("geo_source" IN ('csv_v2_import', 'pincode'))`);
-      } else if (countryLower === "usa" || countryLower === "us" || countryLower === "united states") {
-        conditions.push(`("geo_source" IN ('us_zip', 'us_city', 'us_state'))`);
+      // A known country (code or name) uses the shared country rules; anything else is an address search.
+      const countryCond = companiesCountryWhere(val, { hasPhoneCountry: (schemaColumns || []).includes("phone_country") });
+      if (countryCond) {
+        conditions.push(countryCond);
       } else {
         conditions.push(`"address" ILIKE $${idx++}`);
         values.push(`%${escapeLike(val)}%`);
@@ -461,13 +461,10 @@ function buildWhere(queryParams, embedding, _schema) {
 
   // Handle explicit country filter (e.g. from Category Explorer)
   const countryParam = (queryParams.f_country || queryParams.f_country_contains || queryParams.f_country_eq || queryParams.country || "").toLowerCase();
-  const alreadyHasCountry = dynamicConditions.some(c => c.includes("geo_source") || c.includes("us_zip"));
-  if (!alreadyHasCountry && countryParam) {
-    if (countryParam === "india" || countryParam === "in") {
-      conditions.push(`("geo_source" IN ('csv_v2_import', 'pincode'))`);
-    } else if (countryParam === "usa" || countryParam === "us" || countryParam === "united states") {
-      conditions.push(`("geo_source" IN ('us_zip', 'us_city', 'us_state'))`);
-    }
+  // f_country=… is already applied by parseQueryParamsToSQL above; only the plain ?country= param is left.
+  if (queryParams.country && !Object.keys(queryParams).some((k) => k.startsWith("f_country"))) {
+    const countryCond = companiesCountryWhere(queryParams.country, { hasPhoneCountry: (_schema?.actualCols || []).includes("phone_country") });
+    if (countryCond) conditions.push(countryCond);
   }
 
   const hasFilters = dynamicConditions.length > 0 || countryParam !== "";
@@ -656,7 +653,12 @@ router.get("/", async (req, res) => {
 
     let total = null;
     let totalExact = false;
-    if (!userHasFilters) {
+    // Country is the only filter: use the exact generated count (the planner estimate is unreliable).
+    const countryTotal = (records.length < limitNum && pageNum === 1) ? null : countryOnlyTotal("companies", req.query);
+    if (countryTotal !== null) {
+      total = countryTotal;
+      totalExact = true;
+    } else if (!userHasFilters) {
       const cachedCount = await cacheGet(COUNT_CACHE_KEY);
       if (cachedCount !== null && cachedCount !== undefined) {
         total = cachedCount;

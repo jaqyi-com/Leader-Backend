@@ -1,0 +1,1301 @@
+{
+ "generatedAt": "2026-11-12T09:22:01.481Z",
+ "countries": [
+  {
+   "code": "IN",
+   "name": "India",
+   "people": 21788231,
+   "companies": 305005
+  },
+  {
+   "code": "US",
+   "name": "United States",
+   "people": 8985420,
+   "companies": 1190048
+  },
+  {
+   "code": "CA",
+   "name": "Canada",
+   "people": 157047,
+   "companies": 16736
+  },
+  {
+   "code": "GB",
+   "name": "United Kingdom",
+   "people": 1899,
+   "companies": 4158
+  },
+  {
+   "code": "DE",
+   "name": "Germany",
+   "people": 781,
+   "companies": 4092
+  },
+  {
+   "code": "IR",
+   "name": "Iran",
+   "people": 2515,
+   "companies": 40
+  },
+  {
+   "code": "AU",
+   "name": "Australia",
+   "people": 940,
+   "companies": 1418
+  },
+  {
+   "code": "PR",
+   "name": "Puerto Rico",
+   "people": 1865,
+   "companies": 426
+  },
+  {
+   "code": "ZA",
+   "name": "South Africa",
+   "people": 1934,
+   "companies": 229
+  },
+  {
+   "code": "FR",
+   "name": "France",
+   "people": 261,
+   "companies": 1609
+  },
+  {
+   "code": "JP",
+   "name": "Japan",
+   "people": 290,
+   "companies": 1533
+  },
+  {
+   "code": "AE",
+   "name": "United Arab Emirates",
+   "people": 1475,
+   "companies": 301
+  },
+  {
+   "code": "NL",
+   "name": "Netherlands",
+   "people": 303,
+   "companies": 1348
+  },
+  {
+   "code": "RU",
+   "name": "Russia",
+   "people": 71,
+   "companies": 1434
+  },
+  {
+   "code": "AT",
+   "name": "Austria",
+   "people": 891,
+   "companies": 564
+  },
+  {
+   "code": "IT",
+   "name": "Italy",
+   "people": 166,
+   "companies": 1216
+  },
+  {
+   "code": "ES",
+   "name": "Spain",
+   "people": 155,
+   "companies": 1091
+  },
+  {
+   "code": "SE",
+   "name": "Sweden",
+   "people": 239,
+   "companies": 757
+  },
+  {
+   "code": "BR",
+   "name": "Brazil",
+   "people": 79,
+   "companies": 868
+  },
+  {
+   "code": "CH",
+   "name": "Switzerland",
+   "people": 167,
+   "companies": 720
+  },
+  {
+   "code": "VN",
+   "name": "Vietnam",
+   "people": 58,
+   "companies": 768
+  },
+  {
+   "code": "SA",
+   "name": "Saudi Arabia",
+   "people": 687,
+   "companies": 129
+  },
+  {
+   "code": "FI",
+   "name": "Finland",
+   "people": 334,
+   "companies": 470
+  },
+  {
+   "code": "PL",
+   "name": "Poland",
+   "people": 87,
+   "companies": 705
+  },
+  {
+   "code": "PK",
+   "name": "Pakistan",
+   "people": 503,
+   "companies": 191
+  },
+  {
+   "code": "BE",
+   "name": "Belgium",
+   "people": 59,
+   "companies": 513
+  },
+  {
+   "code": "ID",
+   "name": "Indonesia",
+   "people": 163,
+   "companies": 408
+  },
+  {
+   "code": "NO",
+   "name": "Norway",
+   "people": 90,
+   "companies": 406
+  },
+  {
+   "code": "TR",
+   "name": "Türkiye",
+   "people": 68,
+   "companies": 428
+  },
+  {
+   "code": "DK",
+   "name": "Denmark",
+   "people": 27,
+   "companies": 461
+  },
+  {
+   "code": "CN",
+   "name": "China",
+   "people": 105,
+   "companies": 341
+  },
+  {
+   "code": "CZ",
+   "name": "Czechia",
+   "people": 42,
+   "companies": 395
+  },
+  {
+   "code": "RO",
+   "name": "Romania",
+   "people": 168,
+   "companies": 243
+  },
+  {
+   "code": "HK",
+   "name": "Hong Kong SAR China",
+   "people": 200,
+   "companies": 184
+  },
+  {
+   "code": "MY",
+   "name": "Malaysia",
+   "people": 180,
+   "companies": 200
+  },
+  {
+   "code": "OM",
+   "name": "Oman",
+   "people": 365,
+   "companies": 15
+  },
+  {
+   "code": "KR",
+   "name": "South Korea",
+   "people": 119,
+   "companies": 256
+  },
+  {
+   "code": "UA",
+   "name": "Ukraine",
+   "people": 23,
+   "companies": 348
+  },
+  {
+   "code": "NZ",
+   "name": "New Zealand",
+   "people": 135,
+   "companies": 227
+  },
+  {
+   "code": "IE",
+   "name": "Ireland",
+   "people": 77,
+   "companies": 261
+  },
+  {
+   "code": "TH",
+   "name": "Thailand",
+   "people": 179,
+   "companies": 149
+  },
+  {
+   "code": "GR",
+   "name": "Greece",
+   "people": 21,
+   "companies": 302
+  },
+  {
+   "code": "VI",
+   "name": "U.S. Virgin Islands",
+   "people": 282,
+   "companies": 38
+  },
+  {
+   "code": "IL",
+   "name": "Israel",
+   "people": 94,
+   "companies": 222
+  },
+  {
+   "code": "NP",
+   "name": "Nepal",
+   "people": 183,
+   "companies": 119
+  },
+  {
+   "code": "TW",
+   "name": "Taiwan",
+   "people": 45,
+   "companies": 236
+  },
+  {
+   "code": "HU",
+   "name": "Hungary",
+   "people": 15,
+   "companies": 241
+  },
+  {
+   "code": "EG",
+   "name": "Egypt",
+   "people": 161,
+   "companies": 93
+  },
+  {
+   "code": "MX",
+   "name": "Mexico",
+   "people": 27,
+   "companies": 221
+  },
+  {
+   "code": "PT",
+   "name": "Portugal",
+   "people": 15,
+   "companies": 226
+  },
+  {
+   "code": "NG",
+   "name": "Nigeria",
+   "people": 108,
+   "companies": 120
+  },
+  {
+   "code": "PH",
+   "name": "Philippines",
+   "people": 106,
+   "companies": 117
+  },
+  {
+   "code": "SG",
+   "name": "Singapore",
+   "people": 7,
+   "companies": 209
+  },
+  {
+   "code": "BD",
+   "name": "Bangladesh",
+   "people": 66,
+   "companies": 130
+  },
+  {
+   "code": "AR",
+   "name": "Argentina",
+   "people": 13,
+   "companies": 181
+  },
+  {
+   "code": "BH",
+   "name": "Bahrain",
+   "people": 159,
+   "companies": 19
+  },
+  {
+   "code": "KW",
+   "name": "Kuwait",
+   "people": 138,
+   "companies": 21
+  },
+  {
+   "code": "EE",
+   "name": "Estonia",
+   "people": 30,
+   "companies": 127
+  },
+  {
+   "code": "CL",
+   "name": "Chile",
+   "people": 54,
+   "companies": 100
+  },
+  {
+   "code": "SK",
+   "name": "Slovakia",
+   "people": 5,
+   "companies": 149
+  },
+  {
+   "code": "LU",
+   "name": "Luxembourg",
+   "people": 82,
+   "companies": 63
+  },
+  {
+   "code": "MM",
+   "name": "Myanmar (Burma)",
+   "people": 121,
+   "companies": 11
+  },
+  {
+   "code": "MA",
+   "name": "Morocco",
+   "people": 82,
+   "companies": 48
+  },
+  {
+   "code": "LK",
+   "name": "Sri Lanka",
+   "people": 83,
+   "companies": 45
+  },
+  {
+   "code": "GU",
+   "name": "Guam",
+   "people": 94,
+   "companies": 31
+  },
+  {
+   "code": "KE",
+   "name": "Kenya",
+   "people": 36,
+   "companies": 87
+  },
+  {
+   "code": "LT",
+   "name": "Lithuania",
+   "people": 37,
+   "companies": 86
+  },
+  {
+   "code": "BM",
+   "name": "Bermuda",
+   "people": 108,
+   "companies": 13
+  },
+  {
+   "code": "RS",
+   "name": "Serbia",
+   "people": 6,
+   "companies": 113
+  },
+  {
+   "code": "HR",
+   "name": "Croatia",
+   "people": 10,
+   "companies": 101
+  },
+  {
+   "code": "BG",
+   "name": "Bulgaria",
+   "people": 11,
+   "companies": 96
+  },
+  {
+   "code": "LV",
+   "name": "Latvia",
+   "people": 31,
+   "companies": 73
+  },
+  {
+   "code": "SI",
+   "name": "Slovenia",
+   "people": 10,
+   "companies": 77
+  },
+  {
+   "code": "CO",
+   "name": "Colombia",
+   "people": 10,
+   "companies": 76
+  },
+  {
+   "code": "KZ",
+   "name": "Kazakhstan",
+   "people": 21,
+   "companies": 56
+  },
+  {
+   "code": "AF",
+   "name": "Afghanistan",
+   "people": 69,
+   "companies": 7
+  },
+  {
+   "code": "PE",
+   "name": "Peru",
+   "people": 11,
+   "companies": 63
+  },
+  {
+   "code": "QA",
+   "name": "Qatar",
+   "people": 37,
+   "companies": 33
+  },
+  {
+   "code": "UG",
+   "name": "Uganda",
+   "people": 44,
+   "companies": 26
+  },
+  {
+   "code": "IS",
+   "name": "Iceland",
+   "people": 1,
+   "companies": 66
+  },
+  {
+   "code": "CY",
+   "name": "Cyprus",
+   "people": 14,
+   "companies": 51
+  },
+  {
+   "code": "GH",
+   "name": "Ghana",
+   "people": 25,
+   "companies": 40
+  },
+  {
+   "code": "TZ",
+   "name": "Tanzania",
+   "people": 43,
+   "companies": 22
+  },
+  {
+   "code": "DO",
+   "name": "Dominican Republic",
+   "people": 16,
+   "companies": 42
+  },
+  {
+   "code": "BY",
+   "name": "Belarus",
+   "people": 2,
+   "companies": 55
+  },
+  {
+   "code": "AM",
+   "name": "Armenia",
+   "people": 6,
+   "companies": 49
+  },
+  {
+   "code": "JO",
+   "name": "Jordan",
+   "people": 32,
+   "companies": 23
+  },
+  {
+   "code": "KH",
+   "name": "Cambodia",
+   "people": 16,
+   "companies": 37
+  },
+  {
+   "code": "AZ",
+   "name": "Azerbaijan",
+   "people": 8,
+   "companies": 43
+  },
+  {
+   "code": "CR",
+   "name": "Costa Rica",
+   "people": 23,
+   "companies": 28
+  },
+  {
+   "code": "JM",
+   "name": "Jamaica",
+   "people": 32,
+   "companies": 19
+  },
+  {
+   "code": "LB",
+   "name": "Lebanon",
+   "people": 13,
+   "companies": 35
+  },
+  {
+   "code": "TN",
+   "name": "Tunisia",
+   "people": 28,
+   "companies": 16
+  },
+  {
+   "code": "GE",
+   "name": "Georgia",
+   "people": 7,
+   "companies": 36
+  },
+  {
+   "code": "TT",
+   "name": "Trinidad & Tobago",
+   "people": 20,
+   "companies": 22
+  },
+  {
+   "code": "MT",
+   "name": "Malta",
+   "people": 9,
+   "companies": 32
+  },
+  {
+   "code": "BA",
+   "name": "Bosnia & Herzegovina",
+   "people": 2,
+   "companies": 38
+  },
+  {
+   "code": "CU",
+   "name": "Cuba",
+   "people": 29,
+   "companies": 10
+  },
+  {
+   "code": "UY",
+   "name": "Uruguay",
+   "people": 9,
+   "companies": 30
+  },
+  {
+   "code": "UZ",
+   "name": "Uzbekistan",
+   "people": 5,
+   "companies": 30
+  },
+  {
+   "code": "BB",
+   "name": "Barbados",
+   "people": 28,
+   "companies": 5
+  },
+  {
+   "code": "EC",
+   "name": "Ecuador",
+   "people": 1,
+   "companies": 32
+  },
+  {
+   "code": "MK",
+   "name": "North Macedonia",
+   "people": 4,
+   "companies": 24
+  },
+  {
+   "code": "SO",
+   "name": "Somalia",
+   "people": 22,
+   "companies": 6
+  },
+  {
+   "code": "LY",
+   "name": "Libya",
+   "people": 25,
+   "companies": 2
+  },
+  {
+   "code": "IQ",
+   "name": "Iraq",
+   "people": 6,
+   "companies": 20
+  },
+  {
+   "code": "KG",
+   "name": "Kyrgyzstan",
+   "people": 1,
+   "companies": 25
+  },
+  {
+   "code": "MU",
+   "name": "Mauritius",
+   "people": 14,
+   "companies": 12
+  },
+  {
+   "code": "PY",
+   "name": "Paraguay",
+   "people": 15,
+   "companies": 11
+  },
+  {
+   "code": "MD",
+   "name": "Moldova",
+   "people": 2,
+   "companies": 23
+  },
+  {
+   "code": "AL",
+   "name": "Albania",
+   "people": 7,
+   "companies": 17
+  },
+  {
+   "code": "DZ",
+   "name": "Algeria",
+   "people": 8,
+   "companies": 16
+  },
+  {
+   "code": "CD",
+   "name": "Congo - Kinshasa",
+   "people": 15,
+   "companies": 7
+  },
+  {
+   "code": "SV",
+   "name": "El Salvador",
+   "people": 9,
+   "companies": 13
+  },
+  {
+   "code": "GT",
+   "name": "Guatemala",
+   "people": 0,
+   "companies": 21
+  },
+  {
+   "code": "VE",
+   "name": "Venezuela",
+   "people": 6,
+   "companies": 15
+  },
+  {
+   "code": "TC",
+   "name": "Turks & Caicos Islands",
+   "people": 12,
+   "companies": 7
+  },
+  {
+   "code": "YE",
+   "name": "Yemen",
+   "people": 15,
+   "companies": 3
+  },
+  {
+   "code": "MN",
+   "name": "Mongolia",
+   "people": 0,
+   "companies": 17
+  },
+  {
+   "code": "XK",
+   "name": "Kosovo",
+   "people": 2,
+   "companies": 14
+  },
+  {
+   "code": "PS",
+   "name": "Palestinian Territories",
+   "people": 7,
+   "companies": 9
+  },
+  {
+   "code": "SD",
+   "name": "Sudan",
+   "people": 15,
+   "companies": 1
+  },
+  {
+   "code": "BW",
+   "name": "Botswana",
+   "people": 13,
+   "companies": 2
+  },
+  {
+   "code": "NA",
+   "name": "Namibia",
+   "people": 7,
+   "companies": 8
+  },
+  {
+   "code": "SN",
+   "name": "Senegal",
+   "people": 5,
+   "companies": 10
+  },
+  {
+   "code": "BO",
+   "name": "Bolivia",
+   "people": 2,
+   "companies": 12
+  },
+  {
+   "code": "ET",
+   "name": "Ethiopia",
+   "people": 4,
+   "companies": 10
+  },
+  {
+   "code": "MO",
+   "name": "Macao SAR China",
+   "people": 2,
+   "companies": 12
+  },
+  {
+   "code": "ZM",
+   "name": "Zambia",
+   "people": 12,
+   "companies": 2
+  },
+  {
+   "code": "MV",
+   "name": "Maldives",
+   "people": 0,
+   "companies": 13
+  },
+  {
+   "code": "MC",
+   "name": "Monaco",
+   "people": 4,
+   "companies": 9
+  },
+  {
+   "code": "NI",
+   "name": "Nicaragua",
+   "people": 9,
+   "companies": 4
+  },
+  {
+   "code": "MG",
+   "name": "Madagascar",
+   "people": 9,
+   "companies": 3
+  },
+  {
+   "code": "PA",
+   "name": "Panama",
+   "people": 3,
+   "companies": 9
+  },
+  {
+   "code": "AO",
+   "name": "Angola",
+   "people": 4,
+   "companies": 7
+  },
+  {
+   "code": "CM",
+   "name": "Cameroon",
+   "people": 1,
+   "companies": 10
+  },
+  {
+   "code": "MR",
+   "name": "Mauritania",
+   "people": 8,
+   "companies": 3
+  },
+  {
+   "code": "ZW",
+   "name": "Zimbabwe",
+   "people": 4,
+   "companies": 7
+  },
+  {
+   "code": "BT",
+   "name": "Bhutan",
+   "people": 4,
+   "companies": 6
+  },
+  {
+   "code": "BF",
+   "name": "Burkina Faso",
+   "people": 7,
+   "companies": 3
+  },
+  {
+   "code": "HT",
+   "name": "Haiti",
+   "people": 5,
+   "companies": 5
+  },
+  {
+   "code": "MW",
+   "name": "Malawi",
+   "people": 5,
+   "companies": 5
+  },
+  {
+   "code": "RE",
+   "name": "Réunion",
+   "people": 1,
+   "companies": 9
+  },
+  {
+   "code": "VA",
+   "name": "Vatican City",
+   "people": 0,
+   "companies": 10
+  },
+  {
+   "code": "BS",
+   "name": "Bahamas",
+   "people": 2,
+   "companies": 7
+  },
+  {
+   "code": "KY",
+   "name": "Cayman Islands",
+   "people": 5,
+   "companies": 4
+  },
+  {
+   "code": "MZ",
+   "name": "Mozambique",
+   "people": 6,
+   "companies": 3
+  },
+  {
+   "code": "RW",
+   "name": "Rwanda",
+   "people": 3,
+   "companies": 6
+  },
+  {
+   "code": "CI",
+   "name": "Côte d’Ivoire",
+   "people": 0,
+   "companies": 8
+  },
+  {
+   "code": "FO",
+   "name": "Faroe Islands",
+   "people": 4,
+   "companies": 4
+  },
+  {
+   "code": "GN",
+   "name": "Guinea",
+   "people": 2,
+   "companies": 6
+  },
+  {
+   "code": "ME",
+   "name": "Montenegro",
+   "people": 0,
+   "companies": 8
+  },
+  {
+   "code": "LC",
+   "name": "St. Lucia",
+   "people": 8,
+   "companies": 0
+  },
+  {
+   "code": "SY",
+   "name": "Syria",
+   "people": 6,
+   "companies": 2
+  },
+  {
+   "code": "DM",
+   "name": "Dominica",
+   "people": 6,
+   "companies": 1
+  },
+  {
+   "code": "LS",
+   "name": "Lesotho",
+   "people": 6,
+   "companies": 1
+  },
+  {
+   "code": "WS",
+   "name": "Samoa",
+   "people": 6,
+   "companies": 1
+  },
+  {
+   "code": "KN",
+   "name": "St. Kitts & Nevis",
+   "people": 0,
+   "companies": 7
+  },
+  {
+   "code": "TJ",
+   "name": "Tajikistan",
+   "people": 2,
+   "companies": 5
+  },
+  {
+   "code": "CW",
+   "name": "Curaçao",
+   "people": 2,
+   "companies": 4
+  },
+  {
+   "code": "IM",
+   "name": "Isle of Man",
+   "people": 4,
+   "companies": 2
+  },
+  {
+   "code": "JE",
+   "name": "Jersey",
+   "people": 2,
+   "companies": 4
+  },
+  {
+   "code": "LI",
+   "name": "Liechtenstein",
+   "people": 0,
+   "companies": 6
+  },
+  {
+   "code": "ML",
+   "name": "Mali",
+   "people": 4,
+   "companies": 2
+  },
+  {
+   "code": "PG",
+   "name": "Papua New Guinea",
+   "people": 0,
+   "companies": 6
+  },
+  {
+   "code": "TG",
+   "name": "Togo",
+   "people": 0,
+   "companies": 6
+  },
+  {
+   "code": "AS",
+   "name": "American Samoa",
+   "people": 2,
+   "companies": 3
+  },
+  {
+   "code": "VG",
+   "name": "British Virgin Islands",
+   "people": 1,
+   "companies": 4
+  },
+  {
+   "code": "BQ",
+   "name": "Caribbean Netherlands",
+   "people": 0,
+   "companies": 5
+  },
+  {
+   "code": "GM",
+   "name": "Gambia",
+   "people": 1,
+   "companies": 4
+  },
+  {
+   "code": "HN",
+   "name": "Honduras",
+   "people": 0,
+   "companies": 5
+  },
+  {
+   "code": "NC",
+   "name": "New Caledonia",
+   "people": 3,
+   "companies": 2
+  },
+  {
+   "code": "MP",
+   "name": "Northern Mariana Islands",
+   "people": 3,
+   "companies": 2
+  },
+  {
+   "code": "SC",
+   "name": "Seychelles",
+   "people": 2,
+   "companies": 3
+  },
+  {
+   "code": "SL",
+   "name": "Sierra Leone",
+   "people": 3,
+   "companies": 2
+  },
+  {
+   "code": "VC",
+   "name": "St. Vincent & Grenadines",
+   "people": 3,
+   "companies": 2
+  },
+  {
+   "code": "VU",
+   "name": "Vanuatu",
+   "people": 3,
+   "companies": 2
+  },
+  {
+   "code": "AI",
+   "name": "Anguilla",
+   "people": 1,
+   "companies": 3
+  },
+  {
+   "code": "BZ",
+   "name": "Belize",
+   "people": 0,
+   "companies": 4
+  },
+  {
+   "code": "CF",
+   "name": "Central African Republic",
+   "people": 3,
+   "companies": 1
+  },
+  {
+   "code": "CG",
+   "name": "Congo - Brazzaville",
+   "people": 2,
+   "companies": 2
+  },
+  {
+   "code": "GI",
+   "name": "Gibraltar",
+   "people": 1,
+   "companies": 3
+  },
+  {
+   "code": "GG",
+   "name": "Guernsey",
+   "people": 1,
+   "companies": 3
+  },
+  {
+   "code": "LA",
+   "name": "Laos",
+   "people": 3,
+   "companies": 1
+  },
+  {
+   "code": "NE",
+   "name": "Niger",
+   "people": 1,
+   "companies": 3
+  },
+  {
+   "code": "SX",
+   "name": "Sint Maarten",
+   "people": 2,
+   "companies": 2
+  },
+  {
+   "code": "SR",
+   "name": "Suriname",
+   "people": 2,
+   "companies": 2
+  },
+  {
+   "code": "AD",
+   "name": "Andorra",
+   "people": 2,
+   "companies": 1
+  },
+  {
+   "code": "AG",
+   "name": "Antigua & Barbuda",
+   "people": 2,
+   "companies": 1
+  },
+  {
+   "code": "BN",
+   "name": "Brunei",
+   "people": 0,
+   "companies": 3
+  },
+  {
+   "code": "BI",
+   "name": "Burundi",
+   "people": 2,
+   "companies": 1
+  },
+  {
+   "code": "FJ",
+   "name": "Fiji",
+   "people": 0,
+   "companies": 3
+  },
+  {
+   "code": "GA",
+   "name": "Gabon",
+   "people": 0,
+   "companies": 3
+  },
+  {
+   "code": "GL",
+   "name": "Greenland",
+   "people": 0,
+   "companies": 3
+  },
+  {
+   "code": "MQ",
+   "name": "Martinique",
+   "people": 0,
+   "companies": 3
+  },
+  {
+   "code": "SM",
+   "name": "San Marino",
+   "people": 0,
+   "companies": 3
+  },
+  {
+   "code": "AX",
+   "name": "Åland Islands",
+   "people": 0,
+   "companies": 2
+  },
+  {
+   "code": "AW",
+   "name": "Aruba",
+   "people": 0,
+   "companies": 2
+  },
+  {
+   "code": "KM",
+   "name": "Comoros",
+   "people": 0,
+   "companies": 2
+  },
+  {
+   "code": "CK",
+   "name": "Cook Islands",
+   "people": 1,
+   "companies": 1
+  },
+  {
+   "code": "SZ",
+   "name": "Eswatini",
+   "people": 1,
+   "companies": 1
+  },
+  {
+   "code": "GF",
+   "name": "French Guiana",
+   "people": 0,
+   "companies": 2
+  },
+  {
+   "code": "PF",
+   "name": "French Polynesia",
+   "people": 0,
+   "companies": 2
+  },
+  {
+   "code": "GD",
+   "name": "Grenada",
+   "people": 1,
+   "companies": 1
+  },
+  {
+   "code": "GP",
+   "name": "Guadeloupe",
+   "people": 0,
+   "companies": 2
+  },
+  {
+   "code": "ST",
+   "name": "São Tomé & Príncipe",
+   "people": 0,
+   "companies": 2
+  },
+  {
+   "code": "TM",
+   "name": "Turkmenistan",
+   "people": 1,
+   "companies": 1
+  },
+  {
+   "code": "BJ",
+   "name": "Benin",
+   "people": 0,
+   "companies": 1
+  },
+  {
+   "code": "TD",
+   "name": "Chad",
+   "people": 1,
+   "companies": 0
+  },
+  {
+   "code": "GQ",
+   "name": "Equatorial Guinea",
+   "people": 0,
+   "companies": 1
+  },
+  {
+   "code": "GY",
+   "name": "Guyana",
+   "people": 0,
+   "companies": 1
+  },
+  {
+   "code": "LR",
+   "name": "Liberia",
+   "people": 0,
+   "companies": 1
+  },
+  {
+   "code": "PW",
+   "name": "Palau",
+   "people": 0,
+   "companies": 1
+  },
+  {
+   "code": "SS",
+   "name": "South Sudan",
+   "people": 0,
+   "companies": 1
+  },
+  {
+   "code": "SJ",
+   "name": "Svalbard & Jan Mayen",
+   "people": 0,
+   "companies": 1
+  },
+  {
+   "code": "TL",
+   "name": "Timor-Leste",
+   "people": 0,
+   "companies": 1
+  }
+ ]
+}

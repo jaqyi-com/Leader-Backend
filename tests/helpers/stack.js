@@ -24,6 +24,14 @@ const rand = (base, span) => {
 };
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+/** Phone-number country for synthetic person i (mirrors production: mostly IN/US, a few others). */
+function phoneCountryFor(i, state) {
+  if (i % 50 === 7) return "CA";            // Canada (5 people)
+  if (i % 50 === 17) return "DE";           // Germany (5 people)
+  if (i % 50 === 27) return "AC";           // mis-parsed number (never offered)
+  if (i % 2 !== 0) return null;             // half the people have no phone country
+  return state === "TX" ? "US" : "IN";
+}
 const LINE_TYPES = ["mobile", "fixed_or_mobile", "fixed_line", "toll_free"];
 const STATUSES = ["pending", "deliverable", "pending", "undeliverable", "pending", "risky", "unknown", "pending", "pending"];
 
@@ -50,9 +58,33 @@ function syntheticPeople(n = 250) {
       // (period 2, so some people have both a deliverable email and a valid mobile)
       phone_status: i % 2 === 0 ? (i % 7 === 0 ? "invalid" : "valid") : null,
       phone_line_type: i % 2 === 0 ? LINE_TYPES[(i / 2) % LINE_TYPES.length] : null,
+      // phone country: matches the address for most rows; a few have a foreign or no-address country
+      phone_country: phoneCountryFor(i, state),
     });
   }
   return rows;
+}
+
+/** 120 synthetic companies. India and the USA by geo source; some have only a phone country. */
+function syntheticCompanies() {
+  const kinds = [
+    { geo: "pincode", pc: "IN", city: "Mumbai", state: "Maharashtra" },       // India (address)
+    { geo: "us_zip", pc: "US", city: "Austin", state: "TX" },                 // USA (address)
+    { geo: null, pc: "US", city: "Dallas", state: null },                     // USA by phone only
+    { geo: null, pc: "IN", city: "Pune", state: null },                       // India by phone only
+    { geo: null, pc: "CA", city: "Toronto", state: "ON" },                    // Canada
+    { geo: null, pc: "DE", city: "Berlin", state: null },                     // Germany
+    { geo: "us_zip", pc: "GB", city: "New York", state: "NY" },              // US address, UK head-office number
+    { geo: null, pc: null, city: "Unknown", state: null },                    // no country at all
+  ];
+  return Array.from({ length: 120 }, (_, i) => {
+    const k = kinds[i % kinds.length];
+    return {
+      business_name: `Company ${String(i).padStart(3, "0")}`, industry: i % 3 === 0 ? "Software" : "Retail",
+      phone: `+1000${String(i).padStart(7, "0")}`, emails: `info${i}@example.test`, website: `https://c${i}.example.test`,
+      address: `${k.city} address`, city: k.city, state: k.state, geo_source: k.geo, phone_country: k.pc,
+    };
+  });
 }
 
 async function startPostgres(state) {
@@ -70,15 +102,28 @@ async function startPostgres(state) {
     job_title text, linked_url text, location text, city text, state text, pincode text, lat text, long text,
     geo_source text, emails text, phones text, created_at text, embedding text,
     is_email_valid boolean, email_status text, email_score numeric, email_verified_at timestamptz,
-    phone_status text, phone_line_type text)`);
+    phone_status text, phone_line_type text, phone_country text)`);
   const rows = syntheticPeople();
   for (const r of rows) {
     await pool.query(
-      "insert into final.people (full_name, job_title, city, state, emails, phones, email_status, is_email_valid, phone_status, phone_line_type, created_at) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'2026-01-01')",
-      [r.full_name, r.job_title, r.city, r.state, r.emails, r.phones, r.email_status, r.is_email_valid, r.phone_status, r.phone_line_type]);
+      "insert into final.people (full_name, job_title, city, state, emails, phones, email_status, is_email_valid, phone_status, phone_line_type, phone_country, created_at) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'2026-01-01')",
+      [r.full_name, r.job_title, r.city, r.state, r.emails, r.phones, r.email_status, r.is_email_valid, r.phone_status, r.phone_line_type, r.phone_country]);
   }
   await pool.query("analyze final.people");
-  state.pg = { proc, dir, pool, url, rows };
+  // Companies: 120 synthetic rows across India / USA / Canada / Germany / UK.
+  await pool.query(`create table final.companies (
+    uuid uuid primary key default gen_random_uuid(), business_name text, industry text, phone text, phones text, emails text,
+    website text, address text, city text, state text, pincode text, geo_source text, rating text, reviews text,
+    email_status text, is_email_valid boolean, phone_status text, phone_line_type text, phone_country text, created_at text, embedding text)`);
+  const companies = syntheticCompanies();
+  for (const r of companies) {
+    await pool.query(
+      `insert into final.companies (business_name, industry, phone, emails, website, address, city, state, geo_source, phone_country, phone_status, phone_line_type, email_status, created_at)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,'valid','mobile','pending','2026-01-01')`,
+      [r.business_name, r.industry, r.phone, r.emails, r.website, r.address, r.city, r.state, r.geo_source, r.phone_country]);
+  }
+  await pool.query("analyze final.companies");
+  state.pg = { proc, dir, pool, url, rows, companies };
   return state.pg;
 }
 
@@ -102,6 +147,7 @@ async function startStack({ env = {} } = {}) {
       // generous limits so ordinary tests are not throttled; abuse tests override these
       RATE_LIMIT_AUTH_MAX: "100000", RATE_LIMIT_LOGIN_ACCOUNT_MAX: "100000", RATE_LIMIT_DATA_MAX: "100000",
       REGISTRATION_MODE: "open", // the default is invite-only; tests that check sign-up policy override this
+      COUNTRY_COUNTS_FILE: path.join(os.tmpdir(), "doott-no-country-counts.json"), // production counts don't apply to fixtures
       ...env,
     },
     stdio: process.env.TEST_SERVER_LOGS ? "inherit" : "ignore", // TEST_SERVER_LOGS=1 shows the API's logs

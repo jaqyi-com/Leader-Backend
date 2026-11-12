@@ -21,11 +21,13 @@ const logger = require("../utils/logger").forAgent("McpServer");
 
 const SERVER_INFO = { name: "doott", title: "Doott", version: "1.0.0" };
 const INSTRUCTIONS =
-  "Doott is a B2B contact database for India and the USA: ~45M people and ~1.5M companies with emails, " +
+  "Doott is a B2B contact database, mainly India and the USA (plus Canada and smaller coverage of 200+ other " +
+  "countries): ~45M people and ~1.7M companies with emails, " +
   "phone numbers, job titles and locations. Use search_people for individuals (filter by job_title, city, " +
   "state, country, has_email, has_phone, email_status) and search_companies for businesses. Use " +
   "list_categories / list_cities to see which job titles, industries and cities have the most records. " +
   "Use email_status='deliverable' to get only verified emails (both search tools support it). " +
+  "The country filter accepts a name or ISO code; outside India, the USA and Canada counts are small. " +
   "Results are paginated (max 50 per call); report the total and say when it is an estimate (total_exact=false). " +
   "Email status 'deliverable' means verified; treat 'pending', 'unknown' and 'risky' as unverified.";
 
@@ -104,7 +106,10 @@ function searchResult(r, page, limit) {
   });
 }
 
-const country = z.enum(["india", "usa"]).optional().describe("Limit to India or the USA");
+// Searches take any country (name or ISO code); the category / city lists only exist for India and the USA.
+const country = z.string().trim().min(2).max(60).optional()
+  .describe("Country name or ISO code, e.g. 'India', 'USA', 'Canada', 'GB', 'Germany'. India and the USA have by far the most data");
+const listCountry = z.enum(["india", "usa"]).optional().describe("Limit to India or the USA");
 const page = z.number().int().min(1).max(200).optional().describe("Page number, starting at 1");
 const limit = z.number().int().min(1).max(50).optional().describe("Results per page (default 25, max 50)");
 const readOnly = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
@@ -190,7 +195,7 @@ function buildServer(ctx) {
       "Use the names as job_title / industry filters with exact_job_title / exact_industry = true.",
     inputSchema: {
       kind: z.enum(["people", "companies"]).describe("people = job titles, companies = industries"),
-      country,
+      country: listCountry,
     },
     annotations: { title: "List categories", ...readOnly },
   }, async (a) => {
@@ -206,7 +211,7 @@ function buildServer(ctx) {
     description: "Cities with the most Doott records (people or companies), with exact counts.",
     inputSchema: {
       kind: z.enum(["people", "companies"]),
-      country,
+      country: listCountry,
     },
     annotations: { title: "List cities", ...readOnly },
   }, async (a) => {

@@ -9,6 +9,9 @@ import { fcGetDatabase, fcGetStats, fcGetColumns, fcRefresh } from "../api";
 import toast from "react-hot-toast";
 import QueryBuilder, { qbFiltersToParams, paramsToQbFilters } from "../components/QueryBuilder";
 import QuickFilters, { NO_QUICK_FILTERS, quickFilterParams } from "../components/QuickFilters";
+import CountryPicker from "../components/CountryPicker";
+import CountryNote from "../components/CountryNote";
+import { countryFromUrl, withoutCountryFilters, rememberCountry, rememberedCountry } from "../countryState";
 
 // ── Parse PostgreSQL text array literal "{a,b,c}" → ["a","b","c"] ──
 const parsePgArray = (v) => {
@@ -93,9 +96,11 @@ export default function CompaniesPage() {
   
   // One-click "Verified email" / "Valid mobile" filters
   const [quick, setQuick] = useState(NO_QUICK_FILTERS);
-  // Dynamic QueryBuilder Filters (initialized from URL params)
+  // Country picker: from the URL (?country=, or f_country= from category links), else the last one used
+  const [country, setCountry] = useState(() => countryFromUrl(searchParams) ?? rememberedCountry());
+  // Dynamic QueryBuilder Filters (initialized from URL params; country is handled by the picker)
   const [filters, setFilters] = useState(() => {
-    return paramsToQbFilters(searchParams);
+    return withoutCountryFilters(paramsToQbFilters(searchParams));
   });
 
   // ── Column discovery ────
@@ -129,6 +134,7 @@ export default function CompaniesPage() {
         search,
         ...filterParams,
         ...quickFilterParams(quick),
+        ...(country ? { country } : {}),
       });
       if (reqId !== loadSeq.current) return; // replaced by a newer request
       const recordsData = data.records || [];
@@ -163,7 +169,7 @@ export default function CompaniesPage() {
     } finally {
       if (reqId === loadSeq.current) setLoading(false);
     }
-  }, [page, limit, sortBy, sortDir, search, filters, quick]);
+  }, [page, limit, sortBy, sortDir, search, filters, quick, country]);
 
   useEffect(() => { loadColumns(); }, [loadColumns]);
   useEffect(() => { load(); }, [load]);
@@ -176,21 +182,36 @@ export default function CompaniesPage() {
     const currentSearch = searchParams.toString();
     if (currentSearch !== lastUrlSearchRef.current) {
       lastUrlSearchRef.current = currentSearch;
-      const parsedFilters = paramsToQbFilters(searchParams);
+      const parsedFilters = withoutCountryFilters(paramsToQbFilters(searchParams));
       setFilters(parsedFilters);
+      const urlCountry = countryFromUrl(searchParams);
+      if (urlCountry !== null) setCountry(urlCountry);
       setPage(1);
     }
   }, [searchParams]);
 
   // Handle QueryBuilder filter edits (updates state and URL)
+  const syncUrl = useCallback((newFilters, newCountry) => {
+    const params = { ...qbFiltersToParams(newFilters), ...(newCountry ? { country: newCountry } : {}) };
+    lastUrlSearchRef.current = new URLSearchParams(params).toString();
+    setSearchParams(params, { replace: true });
+  }, [setSearchParams]);
+
+  const handleCountryChange = useCallback((code) => {
+    setCountry(code);
+    setPage(1);
+    rememberCountry(code);
+    syncUrl(filters, code);
+  }, [filters, syncUrl]);
+
   const handleFiltersChange = useCallback((newFilters) => {
     setFilters(newFilters);
     setPage(1);
-    const params = qbFiltersToParams(newFilters);
+    const params = { ...qbFiltersToParams(newFilters), ...(country ? { country } : {}) };
     const newSearchStr = new URLSearchParams(params).toString();
     lastUrlSearchRef.current = newSearchStr;
     setSearchParams(params, { replace: true });
-  }, [setSearchParams]);
+  }, [setSearchParams, country]);
 
   const handleSort = col => {
     if (sortBy === col) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -215,7 +236,10 @@ export default function CompaniesPage() {
   const clearAll = () => {
     setSearch("");
     setQuick(NO_QUICK_FILTERS);
-    handleFiltersChange([]);
+    setCountry("");
+    rememberCountry("");
+    setFilters([]);
+    syncUrl([], "");
     setPage(1);
   };
 
@@ -355,7 +379,13 @@ export default function CompaniesPage() {
       )}
 
       {/* Controls: Search & Rows per page */}
-      <div className="flex flex-col sm:flex-row gap-3 items-end">
+      <div className="flex flex-col sm:flex-row gap-3 items-end flex-wrap">
+        {/* Country */}
+        <div>
+          <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Country</label>
+          <CountryPicker kind="companies" value={country} onChange={handleCountryChange} />
+        </div>
+
         {/* Name search */}
         <div className="relative w-full sm:w-72">
           <label className="text-[9px] font-semibold uppercase tracking-widest text-[var(--text-3)] mb-1 block">Business Name Search</label>
@@ -381,6 +411,8 @@ export default function CompaniesPage() {
         {/* Quick filters (right side) */}
         <QuickFilters busy={loading} className="sm:ml-auto" value={quick} onChange={(q) => { setQuick(q); setPage(1); }} />
       </div>
+
+      <CountryNote country={country} kind="companies" total={total} totalExact={totalExact} loading={loading} noun="companies" />
 
       {/* Supabase/Airtable style filter query builder */}
       <QueryBuilder

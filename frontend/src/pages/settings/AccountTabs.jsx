@@ -469,7 +469,8 @@ export function ApiKeysTab() {
       <Card icon={ExternalLink} title="Quick start" desc="Send the key in the Authorization header (or as X-API-Key). Keys work only with the data API, never with account settings.">
         <CopyBox value={curl} mono={false} />
         <ul style={{ fontSize: 13, color: "var(--text-2)", margin: "14px 0 0", paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4 }}>
-          <li><code>GET /final-people</code>: people, with filters such as <code>f_city</code>, <code>f_job_title</code>, <code>f_country</code></li>
+          <li><code>GET /final-people</code>: people, with filters such as <code>f_city</code>, <code>f_job_title</code></li>
+          <li><code>country</code>: any country name or ISO code, e.g. <code>country=IN</code>, <code>country=US</code>, <code>country=CA</code>, <code>country=GB</code></li>
           <li><code>GET /final-companies</code>: companies, with <code>f_city</code>, <code>f_industry</code>, <code>f_country</code></li>
           <li><code>GET /final-people-email</code> and <code>/final-people-number</code>: only people with an email or a phone number</li>
           <li><code>POST /verify-email</code> with <code>{"{"}"email": "…"{"}"}</code>: check whether an address is deliverable</li>

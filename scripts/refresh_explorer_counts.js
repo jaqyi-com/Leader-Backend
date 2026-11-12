@@ -26,7 +26,8 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const { Client } = require("pg");
-const { CITY_ALIASES, CITY_ALIAS_GROUPS, peopleCountryCondition } = require("../src/utils/searchFilters");
+const { CITY_ALIASES, CITY_ALIAS_GROUPS } = require("../src/utils/searchFilters");
+const { peopleCountryWhere, companiesCountryWhere } = require("../src/utils/countries");
 const { buildWhere: companiesWhere } = require("../src/routes/finalCompaniesDatabase");
 const { buildWhere: peopleWhere } = require("../src/routes/finalPeopleDatabase");
 
@@ -137,27 +138,30 @@ async function main() {
   await db.connect();
   await db.query("SET default_transaction_read_only = on; SET statement_timeout = 0");
 
-  const companySchema = { actualCols: ["geo_source", "industry", "city", "state"] };
-  const peopleSchema = { actualCols: ["geo_source", "job_title", "city", "state", "location"] };
+  const companySchema = { actualCols: ["geo_source", "industry", "city", "state", "phone_country"] };
+  const peopleSchema = { actualCols: ["geo_source", "job_title", "city", "state", "location", "phone_country"] };
+  // The India / USA rules fall back to the phone number's country, and only ever test it for 'IN' / 'US',
+  // so the aggregates keep just those two values (anything else becomes NULL) to stay small.
+  const phoneCountry = `CASE WHEN phone_country IN ('IN', 'US') THEN phone_country END`;
 
   // One scan of companies, grouped two ways. ILIKE is case-insensitive, so lower() only merges groups.
   // (People job titles stay as stored: title cards match exact spellings with "=".)
   const companiesAgg = `
-    SELECT geo_source, lower(industry) AS industry, lower(city) AS city, state, GROUPING(lower(industry)) AS by_city, count(*) AS n
-    FROM final.companies
-    GROUP BY GROUPING SETS ((geo_source, lower(industry)), (geo_source, lower(city), state))`;
+    SELECT geo_source, phone_country, lower(industry) AS industry, lower(city) AS city, state, GROUPING(lower(industry)) AS by_city, count(*) AS n
+    FROM (SELECT geo_source, ${phoneCountry} AS phone_country, industry, city, state FROM final.companies) c
+    GROUP BY GROUPING SETS ((geo_source, phone_country, lower(industry)), (geo_source, phone_country, lower(city), state))`;
   // People: the country filters only test location for "United States", "USA" and "India", so it is
   // reduced to the markers it contains (each kept separately: "Indiana, USA" has both USA and India).
   const peopleAgg = `
-    SELECT geo_source, state, location, job_title, lower(city) AS city,
+    SELECT geo_source, phone_country, state, location, job_title, lower(city) AS city,
            GROUPING(job_title) AS by_city, count(*) AS n
-    FROM (SELECT geo_source, state, job_title, city,
+    FROM (SELECT geo_source, ${phoneCountry} AS phone_country, state, job_title, city,
                  NULLIF(concat_ws(' ',
                    CASE WHEN location ILIKE '%United States%' THEN 'United States' END,
                    CASE WHEN location ILIKE '%USA%' THEN 'USA' END,
                    CASE WHEN location ILIKE '%India%' THEN 'India' END), '') AS location
           FROM final.people) p
-    GROUP BY GROUPING SETS ((geo_source, state, location, job_title), (geo_source, state, location, lower(city)))`;
+    GROUP BY GROUPING SETS ((geo_source, phone_country, state, location, job_title), (geo_source, phone_country, state, location, lower(city)))`;
 
   // by_city is 0 on the industry / job-title rows of the aggregate and 1 on the city rows.
   const categoryCard = (country) => (c) => ({ ...c, country, kindCond: "by_city = 0" });
@@ -177,8 +181,8 @@ async function main() {
 
   console.log("Finding the largest industries…");
   let t = Date.now();
-  const companyBucket = `CASE WHEN geo_source IN ('csv_v2_import', 'pincode') THEN 'india'
-                              WHEN geo_source IN ('us_zip', 'us_city', 'us_state') THEN 'usa' ELSE 'other' END`;
+  const companyBucket = `CASE WHEN ${companiesCountryWhere("US")} THEN 'usa'
+                              WHEN ${companiesCountryWhere("IN")} THEN 'india' ELSE 'other' END`;
   const topIndustries = await discover(db, "final.companies", "industry", companyBucket,
     { india: { min: 50, max: 400 }, usa: { min: 100, max: 300 } });
   console.log(`  done in ${Math.round((Date.now() - t) / 1000)}s`);
@@ -211,8 +215,8 @@ async function main() {
   if (!COMPANIES_ONLY) {
     console.log("Finding the largest job titles (one scan of ~45M rows)…");
     t = Date.now();
-    const peopleBucket = `CASE WHEN ${peopleCountryCondition("usa")} THEN 'usa'
-                               WHEN ${peopleCountryCondition("india")} THEN 'india' ELSE 'other' END`;
+    const peopleBucket = `CASE WHEN ${peopleCountryWhere("US")} THEN 'usa'
+                               WHEN ${peopleCountryWhere("IN")} THEN 'india' ELSE 'other' END`;
     const topTitles = await discover(db, "final.people", "job_title", peopleBucket,
       { india: { min: 20, max: 150 }, usa: { min: 1000, max: 300 } });
     console.log(`  done in ${Math.round((Date.now() - t) / 1000)}s`);

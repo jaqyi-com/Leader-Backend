@@ -2,9 +2,10 @@ import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Check, Zap, Database, Mail, Phone, Download, Users, Globe, Shield, Lock, ArrowRight } from "lucide-react";
 import doottLogo from "../assets/doott-logo.png";
+import { COVERED_COUNTRIES } from "../countries";
 
 const FEATURES = [
-  { icon: Database, title: "43.9M+ Verified Contacts", desc: "Complete B2B database across India & global markets" },
+  { icon: Database, title: "43.9M+ Verified Contacts", desc: `India, the USA, Canada and ${COVERED_COUNTRIES.length - 3} more countries` },
   { icon: Mail,     title: "Verified Email Addresses", desc: "Direct work emails with deliverability verification" },
   { icon: Phone,    title: "Direct Phone Numbers", desc: "Mobile & direct dial numbers for decision makers" },
   { icon: Download, title: "Unlimited CSV Exports", desc: "Export unlimited leads with zero row limits" },

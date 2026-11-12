@@ -13,6 +13,7 @@ import { MCP_URL, EXAMPLE_PROMPTS } from "../claudeConnector";
 import CATEGORIES_DATA from "../categories.json";
 import { PEOPLE_ROLE_GROUPS, COMPANY_INDUSTRY_GROUPS } from "../categoryGroups";
 import doottLogo from "../assets/doott-logo.png";
+import { COVERED_COUNTRIES } from "../countries";
 
 const LOGOS = [
   "Google Cloud SQL", "PostgreSQL", "Redis", "React",
@@ -639,7 +640,7 @@ function Metrics() {
           {[
             { stat: "43.9M+", label: "People Records" },
             { stat: "17",     label: "Data Columns" },
-            { stat: "Live",   label: "Cloud SQL" },
+            { stat: String(COVERED_COUNTRIES.length), label: "Countries" },
             { stat: "100%",   label: "Exportable" },
           ].map((m, i) => (
             <div

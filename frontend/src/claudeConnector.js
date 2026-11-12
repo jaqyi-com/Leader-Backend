@@ -17,7 +17,7 @@ export const MCP_URL = (() => {
 export const CLAUDE_CODE_COMMAND = `claude mcp add --transport http doott ${MCP_URL}`;
 
 export const CLAUDE_TOOLS = [
-  { name: "Search people", desc: "Find people by job title, city, state or country, with emails, phone numbers and LinkedIn URLs." },
+  { name: "Search people", desc: "Find people by job title, city, state or country (India, the USA, Canada and more), with emails, phone numbers and LinkedIn URLs." },
   { name: "Search companies", desc: "Find companies by name, industry, domain or location, and keep only verified emails or mobile numbers." },
   { name: "Verify an email", desc: "Check whether an address is deliverable before you send to it." },
   { name: "Browse categories and cities", desc: "See the largest job titles, industries and cities in Doott, with exact counts." },
