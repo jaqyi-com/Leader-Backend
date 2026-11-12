@@ -106,4 +106,31 @@ router.get("/refresh-counts/status", guard, async (req, res) => {
   }
 });
 
+/**
+ * Watchdog on our own API traffic: if a run is still "running" but no slice has worked on it for a
+ * few minutes (a hand-over call was lost, or an instance was stopped), the next API request restarts
+ * it. Checked at most every 2 minutes per instance; costs one small query and never delays a request.
+ */
+let lastWatch = 0;
+const WATCH_EVERY_MS = Number(process.env.COUNT_JOB_WATCH_MS || 120000);
+function watchdog(req, res, next) {
+  next();
+  if (!process.env.CRON_SECRET || Date.now() - lastWatch < WATCH_EVERY_MS) return;
+  if (req.path.startsWith("/api/cron")) return;
+  lastWatch = Date.now();
+  const proto = String(req.headers["x-forwarded-proto"] || req.protocol || "http").split(",")[0];
+  const url = `${proto}://${req.headers.host}/api/cron/refresh-counts`;
+  waitUntil((async () => {
+    const { rows } = await getPool().query(
+      `SELECT id FROM app.count_jobs
+        WHERE status = 'running' AND (lease_until IS NULL OR lease_until < now())
+          AND updated_at < now() - interval '2 minutes'
+        ORDER BY id DESC LIMIT 1`);
+    if (!rows[0]) return;
+    logger.warn(`[cron] count job ${rows[0].id} stalled — restarting it`);
+    await fetch(url, { headers: { authorization: `Bearer ${process.env.CRON_SECRET}` }, signal: AbortSignal.timeout(20000) });
+  })().catch(() => { /* no job table yet, or the database is busy: try again later */ }));
+}
+
 module.exports = router;
+module.exports.watchdog = watchdog;

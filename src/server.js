@@ -139,6 +139,8 @@ app.use((req, res, next) => {
 
 // Strip server-owned fields (orgId, _id, …) and operator-style keys ($…) from every authenticated body.
 app.use(sanitizeBody);
+// Restarts a stalled daily count job on ordinary API traffic (see routes/cron.js).
+app.use(require("./routes/cron").watchdog);
 
 // ------------------------------------------------------------
 // PUBLIC DOCS PAGE — /api-docs (no auth, no React Router)

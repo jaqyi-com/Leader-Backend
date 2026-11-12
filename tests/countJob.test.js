@@ -13,7 +13,7 @@ let stack, user;
 
 test.before(async () => {
   if (skip) return;
-  stack = await startStack({ env: { CRON_SECRET: SECRET, COUNT_JOB_BUDGET_MS: "1", EXPLORER_COUNTS_TTL_MS: "0", COUNTRY_COUNTS_FILE: "" } });
+  stack = await startStack({ env: { CRON_SECRET: SECRET, COUNT_JOB_BUDGET_MS: "1", COUNT_JOB_WATCH_MS: "0", EXPLORER_COUNTS_TTL_MS: "0", COUNTRY_COUNTS_FILE: "" } });
   user = await stack.newUser("cronjob");
 });
 test.after(async () => { if (stack) await stack.stop(); });
@@ -73,6 +73,22 @@ test("each card's number is what its search finds", { skip }, async () => {
   // and the app serves the new numbers without a deploy
   const served = await stack.http("GET", "/api/explorer-counts?keys=categories", { token: user.token });
   assert.equal(served.json.categories.india.company.find((c) => c.name === "Software").count, software.count);
+});
+
+test("a stalled run is restarted by ordinary API traffic", { skip }, async () => {
+  const job = require("../src/counts/job");
+  // a run that nobody is working on: no lease, last touched 10 minutes ago
+  const { job: row } = await job.startOrResume(stack.pg.pool, { force: true, steps: ["world:companies", "world:people", "world:publish"] });
+  await q("UPDATE app.count_jobs SET updated_at = now() - interval '10 minutes', lease_until = NULL WHERE id = $1", [row.id]);
+  await stack.http("GET", "/api/health");   // any request
+  const until = Date.now() + 60000;
+  let status;
+  while (Date.now() < until) {
+    status = (await q("SELECT status FROM app.count_jobs WHERE id = $1", [row.id])).rows[0].status;
+    if (status !== "running") break;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  assert.equal(status, "done");
 });
 
 test("block ranges cover the table exactly once", () => {
