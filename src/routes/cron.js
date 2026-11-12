@@ -12,6 +12,7 @@
 
 const crypto = require("crypto");
 const express = require("express");
+const { Client } = require("pg");
 const { waitUntil } = require("@vercel/functions");
 const { getPool } = require("../db/cloudSql");
 const job = require("../counts/job");
@@ -19,6 +20,20 @@ const logger = require("../utils/logger");
 
 const router = express.Router();
 const BUDGET_MS = Number(process.env.COUNT_JOB_BUDGET_MS || 200000);
+
+/**
+ * The job's own connection: one block range takes up to about a minute on the full tables, longer
+ * than the app pool's 30 s query limit. Its limit stays below the function's 5 minutes.
+ */
+async function jobConnection() {
+  const db = new Client({
+    connectionString: process.env.NEON_DATABASE_URL,
+    statement_timeout: 240000, query_timeout: 245000, connectionTimeoutMillis: 15000,
+    application_name: "leader-backend-count-job",
+  });
+  await db.connect();
+  return db;
+}
 
 function authorized(req) {
   const secret = process.env.CRON_SECRET;
@@ -53,25 +68,31 @@ const summary = (row) => row && ({
 });
 
 router.get("/refresh-counts", guard, async (req, res) => {
-  const db = getPool();
+  let db;
   let started;
   try {
+    db = await jobConnection();
     started = await job.startOrResume(db, {
       force: req.query.force === "1",
       full: req.query.full === "1" ? true : req.query.full === "0" ? false : null,
     });
   } catch (err) {
     logger.error(`[cron] refresh-counts: ${err.message}`);
+    if (db) db.end().catch(() => {});
     return res.status(500).json({ error: "Could not start the count job" });
   }
   const { job: row, created } = started;
-  if (row.status !== "running") return res.json({ status: "up_to_date", job: summary(row) });
+  if (row.status !== "running") {
+    db.end().catch(() => {});
+    return res.json({ status: "up_to_date", job: summary(row) });
+  }
   res.status(202).json({ status: created ? "started" : "continuing", job: summary(row) });
 
   const work = (async () => {
     const r = await job.runSlice(db, row.id, { budgetMs: BUDGET_MS, log: (l) => logger.info(`[cron] ${l}`) });
+    await db.end().catch(() => {});
     if (!r.done && !r.busy) await continueLater(req);
-  })().catch((err) => logger.error(`[cron] slice failed: ${err.message}`));
+  })().catch((err) => { db.end().catch(() => {}); logger.error(`[cron] slice failed: ${err.message}`); });
   waitUntil(work);
 });
 
