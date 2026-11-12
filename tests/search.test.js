@@ -189,7 +189,8 @@ test("wildcards: % and _ typed by the user are matched literally", { skip }, asy
 test("country filter: India includes every Indian state (Tamil Nadu was missing), USA unchanged", { skip }, async () => {
   const rows = stack.pg.rows;
   const india = await all("?country=india");
-  assert.equal(india.length, rows.filter((r) => r.state !== "TX").length);
+  // every row with an Indian state (the fixture's few Toronto / Berlin rows are not in India)
+  assert.equal(india.length, rows.filter((r) => ["Maharashtra", "Delhi", "Tamil Nadu"].includes(r.state)).length);
   assert.ok(india.some((r) => r.state === "Tamil Nadu"), "Chennai / Tamil Nadu must be included");
   assert.equal((await all("?country=usa")).length, rows.filter((r) => r.state === "TX").length);
 });

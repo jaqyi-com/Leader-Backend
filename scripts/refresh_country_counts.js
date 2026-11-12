@@ -6,7 +6,7 @@
  *
  * Each number is what selecting that country in the app returns: the counts use the same country
  * rules as the search (src/utils/countries.js). India / USA use the address rules plus the phone
- * country; every other country uses the phone number's country. Codes that are usually mis-parsed
+ * country; every other country uses the phone number's country unless the address says India / USA. Codes that are usually mis-parsed
  * numbers (SUSPECT_CODES) are left out.
  *
  * Read-only. Scans final.companies (~1.7M rows, seconds) and final.people (~45M rows, ~6 minutes).
@@ -34,7 +34,8 @@ async function countTable(client, table, where) {
     const n = Number(r.n);
     if (r.is_us) add("US", n);
     if (r.is_in) add("IN", n);
-    if (r.phone_country && r.phone_country !== "US" && r.phone_country !== "IN") add(r.phone_country, n);
+    // Other countries: the phone country, unless the address already says India or the USA.
+    if (!r.is_us && !r.is_in && r.phone_country && r.phone_country !== "US" && r.phone_country !== "IN") add(r.phone_country, n);
   }
   return counts;
 }

@@ -27,7 +27,7 @@ const {
 } = require("../utils/searchFilters");
 
 
-const { peopleCountryWhere, countryOnlyTotal } = require("../utils/countries");
+const { peopleCountryWhere, countryOnlyTotal, countryNeedsOwnFilter } = require("../utils/countries");
 const logger = require("../utils/logger").forAgent("FinalPeopleDB");
 
 // ── Table config ───────────────────────────────────────────
@@ -449,7 +449,7 @@ function buildWhere(queryParams, embedding, _schema) {
     c.includes('"location" ILIKE \'%United States%\'')
   );
 
-  if (!alreadyHasExplicitCountry && countryParam) {
+  if (countryParam && (!alreadyHasExplicitCountry || countryNeedsOwnFilter(countryParam))) {
     const knownCols = [...(_schema?.actualCols || []), ...FILTER_ONLY_COLS];
     const countryCond = peopleCountryWhere(countryParam, { hasPhoneCountry: knownCols.includes("phone_country") });
     if (countryCond) conditions.push(countryCond);

@@ -88,6 +88,9 @@ const CITY_ALIAS_GROUPS = [
   ["Thiruvananthapuram", "Trivandrum"], ["Kochi", "Cochin", "Ernakulam"], ["Vadodara", "Baroda"],
   ["Nashik", "Nasik"], ["Puducherry", "Pondicherry"], ["Mysuru", "Mysore"], ["Mangaluru", "Mangalore"],
   ["Belagavi", "Belgaum"], ["Tiruppur", "Tirupur"], ["Bhubaneswar", "Bhubaneshwar"], ["Delhi", "New Delhi"],
+  // Canada: Montréal is also stored with its accent lost or mangled ("Montral", "Montr", "MontrÃ©al")
+  ["Montreal", "Montréal", "Montral", "Montr", "MontrÃ©al"],
+  ["Ho Chi Minh City", "Hồ Chí Minh", "Thành Phố Hồ Chí Minh", "Ho Chi Minh"],
 ];
 /** lower-case name → every name of that city, the given one first. */
 const CITY_ALIASES = {};

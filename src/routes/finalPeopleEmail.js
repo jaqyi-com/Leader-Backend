@@ -19,7 +19,7 @@ const {
 const { cacheGet, cacheSet, cacheDel } = require("../db/redis");
 
 
-const { peopleCountryWhere } = require("../utils/countries");
+const { peopleCountryWhere, countryNeedsOwnFilter } = require("../utils/countries");
 const logger = require("../utils/logger").forAgent("FinalPeopleEmailDB");
 
 const FP_SCHEMA  = "final";
@@ -284,7 +284,7 @@ function buildWhere(queryParams, emailCol, schemaColumns) {
     c.includes('"location" ILIKE \'%United States%\'')
   );
 
-  if (!alreadyHasExplicitCountry && countryParam) {
+  if (countryParam && (!alreadyHasExplicitCountry || countryNeedsOwnFilter(countryParam))) {
     const countryCond = peopleCountryWhere(countryParam, { hasPhoneCountry: (schemaColumns || []).includes("phone_country") });
     if (countryCond) conditions.push(countryCond);
   }

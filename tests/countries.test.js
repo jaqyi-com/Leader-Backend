@@ -1,6 +1,7 @@
 "use strict";
 // Country filter: one set of rules for every search route (src/utils/countries.js).
-// India / USA: address rules + phone-country fallback. Other countries: the phone number's country.
+// India / USA: address rules + phone-country fallback. Other countries: the phone number's country,
+// unless the address says India / USA (the address wins).
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
@@ -43,10 +44,11 @@ test("companies: India and USA include phone-only rows; other countries use the 
   const expect = {
     US: C.filter((c) => ["us_zip", "us_city", "us_state"].includes(c.geo_source) || (c.phone_country === "US" && !["pincode", "csv_v2_import"].includes(c.geo_source))),
     IN: C.filter((c) => ["pincode", "csv_v2_import"].includes(c.geo_source) || (c.phone_country === "IN" && !["us_zip", "us_city", "us_state"].includes(c.geo_source))),
-    CA: C.filter((c) => c.phone_country === "CA"),
-    DE: C.filter((c) => c.phone_country === "DE"),
-    GB: C.filter((c) => c.phone_country === "GB"),
+    CA: C.filter((c) => c.phone_country === "CA" && !c.geo_source),
+    DE: C.filter((c) => c.phone_country === "DE" && !c.geo_source),
+    GB: [], // its only company has a US address: it is a USA company, not a UK one
   };
+  assert.ok(C.some((c) => c.phone_country === "GB"), "fixture has a GB number with a US address");
   assert.ok(expect.US.some((c) => c.geo_source === null), "fixture has a USA-by-phone company");
   for (const [code, rows] of Object.entries(expect)) {
     const got = await all(R, `country=${code}`);
@@ -66,18 +68,24 @@ test("companies: India and USA include phone-only rows; other countries use the 
 
 test("people, emails and numbers: country codes and names on every route", { skip }, async () => {
   const P = stack.pg.rows;
+  const INDIAN_STATES = ["Maharashtra", "Delhi", "Tamil Nadu"];
+  const abroad = (r) => !INDIAN_STATES.includes(r.state) && r.state !== "TX";
+  assert.ok(P.some((r) => r.phone_country === "CA" && INDIAN_STATES.includes(r.state)), "fixture has a CA number with an Indian address");
   const hasEmail = (r) => r.emails && r.emails !== "{}";
   const hasPhone = (r) => r.phones && r.phones !== "{}";
   for (const [route, base] of [["/api/final-people", P], ["/api/final-people-email", P.filter(hasEmail)], ["/api/final-people-number", P.filter(hasPhone)]]) {
     for (const code of ["DE", "CA"]) {
-      const want = base.filter((r) => r.phone_country === code).map((r) => r.full_name).sort();
+      const want = base.filter((r) => r.phone_country === code && abroad(r)).map((r) => r.full_name).sort();
       const got = (await all(route, `country=${code}`)).map((r) => r.full_name).sort();
       assert.deepEqual(got, want, `${route} country=${code}`);
     }
-    // USA = the Texas rows (address rule); India = the rest (Indian states)
-    const usa = base.filter((r) => r.state === "TX").length;
-    assert.equal((await all(route, "country=US")).length, usa, `${route} US`);
-    assert.equal((await all(route, "country=india")).length, base.length - usa, `${route} India`);
+    // USA = the Texas rows (address rule); India = the Indian states, including foreign-number rows there
+    assert.equal((await all(route, "country=US")).length, base.filter((r) => r.state === "TX").length, `${route} US`);
+    assert.equal((await all(route, "country=india")).length, base.filter((r) => INDIAN_STATES.includes(r.state)).length, `${route} India`);
+    // a city in another country keeps the country filter: country=CA&f_city=Toronto finds only Canadians
+    const toronto = (await all(route, "country=CA&f_city=Toronto&f_state_eq=ON")).map((r) => r.full_name).sort();
+    assert.deepEqual(toronto, base.filter((r) => r.phone_country === "CA" && r.city === "Toronto").map((r) => r.full_name).sort(), `${route} Toronto`);
+    assert.equal((await all(route, "country=DE&f_city=Delhi")).length, 0, `${route} Delhi is not in Germany`);
   }
   // with a quick filter
   const deMobile = await all("/api/final-people", "country=CA&f_phone_status=mobile");
@@ -104,4 +112,24 @@ test("countryOnlyTotal: used only when country is the only filter", () => {
   assert.equal(countryOnlyTotal("companies", { country: "FR" }), null, "unknown in the file → normal count");
   assert.equal(countryOnlyTotal("companies", {}), null);
   fs.rmSync(file, { force: true });
+});
+
+test("world city cards: Canadian province, Montréal spellings, and the card's URL filters", () => {
+  process.env.NEON_DATABASE_URL = process.env.NEON_DATABASE_URL || "postgresql://u@127.0.0.1:1/x";
+  const { cityCardParams, canonicalCity, candidates } = require("../scripts/refresh_world_cities");
+  for (const raw of ["Montral", "Montréal", "Montr", "MontrÃ©al", "MONTREAL"]) assert.equal(canonicalCity(raw), "Montreal", raw);
+  assert.equal(canonicalCity("TORONTO"), "Toronto");
+  assert.deepEqual(cityCardParams("CA", { name: "Toronto", state: "ON" }), { country: "CA", f_city: "Toronto", f_state_eq: "ON" });
+  assert.deepEqual(cityCardParams("DE", { name: "Berlin" }), { country: "DE", f_city: "Berlin" });
+  const cards = candidates("CA", [
+    { city: "Toronto", state: "ON", n: 30 }, { city: "TORONTO", state: "ON", n: 5 },
+    { city: "Research Triangle Park", state: "NC", n: 99 }, // a US place: not a Canadian province
+    { city: "Montral", state: "QC", n: 12 }, { city: "Montreal", state: "QC", n: 20 },
+  ]);
+  assert.deepEqual(cards.map((c) => [c.name, c.state, c.n]), [["Toronto", "ON", 35], ["Montreal", "QC", 32]]);
+  // Indian / US city names and junk under another country are not offered as that country's cities
+  const ae = candidates("AE", [{ city: "Dubai", n: 40 }, { city: "Delhi", n: 300 }, { city: "Hyd", n: 50 }, { city: "Kerala", n: 80 }, { city: "Other Than India", n: 30 }]);
+  assert.deepEqual(ae.map((c) => c.name), ["Dubai"]);
+  // non-Latin city names are real cities
+  assert.deepEqual(candidates("RU", [{ city: "г. Москва", n: 40 }, { city: "--", n: 40 }]).map((c) => c.name), ["г. Москва"]);
 });

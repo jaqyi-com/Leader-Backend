@@ -1,0 +1,2077 @@
+{
+  "generatedAt": "2026-11-12T15:09:23.314Z",
+  "countries": {
+    "CA": {
+      "name": "Canada",
+      "companies": [
+        {
+          "name": "Toronto",
+          "state": "ON",
+          "count": 2032
+        },
+        {
+          "name": "Vancouver",
+          "state": "BC",
+          "count": 1038
+        },
+        {
+          "name": "Calgary",
+          "state": "AB",
+          "count": 954
+        },
+        {
+          "name": "Montreal",
+          "state": "QC",
+          "count": 776
+        },
+        {
+          "name": "Ottawa",
+          "state": "ON",
+          "count": 668
+        },
+        {
+          "name": "Mississauga",
+          "state": "ON",
+          "count": 624
+        },
+        {
+          "name": "Edmonton",
+          "state": "AB",
+          "count": 468
+        },
+        {
+          "name": "Winnipeg",
+          "state": "MB",
+          "count": 334
+        },
+        {
+          "name": "Markham",
+          "state": "ON",
+          "count": 250
+        },
+        {
+          "name": "London",
+          "state": "ON",
+          "count": 207
+        },
+        {
+          "name": "Victoria",
+          "state": "BC",
+          "count": 193
+        },
+        {
+          "name": "Burnaby",
+          "state": "BC",
+          "count": 178
+        },
+        {
+          "name": "Burlington",
+          "state": "ON",
+          "count": 157
+        },
+        {
+          "name": "Richmond",
+          "state": "BC",
+          "count": 146
+        },
+        {
+          "name": "Brampton",
+          "state": "ON",
+          "count": 142
+        },
+        {
+          "name": "Kitchener",
+          "state": "ON",
+          "count": 138
+        },
+        {
+          "name": "Oakville",
+          "state": "ON",
+          "count": 131
+        },
+        {
+          "name": "Guelph",
+          "state": "ON",
+          "count": 130
+        },
+        {
+          "name": "Surrey",
+          "state": "BC",
+          "count": 130
+        },
+        {
+          "name": "Milton",
+          "state": "ON",
+          "count": 130
+        },
+        {
+          "name": "Windsor",
+          "state": "ON",
+          "count": 126
+        },
+        {
+          "name": "Halifax",
+          "state": "NS",
+          "count": 123
+        },
+        {
+          "name": "North York",
+          "state": "ON",
+          "count": 114
+        },
+        {
+          "name": "Richmond Hill",
+          "state": "ON",
+          "count": 113
+        },
+        {
+          "name": "Waterloo",
+          "state": "ON",
+          "count": 112
+        },
+        {
+          "name": "Hamilton",
+          "state": "ON",
+          "count": 104
+        },
+        {
+          "name": "Etobicoke",
+          "state": "ON",
+          "count": 99
+        },
+        {
+          "name": "Laval",
+          "state": "QC",
+          "count": 95
+        },
+        {
+          "name": "Saskatoon",
+          "state": "SK",
+          "count": 92
+        },
+        {
+          "name": "Saint-Laurent",
+          "state": "QC",
+          "count": 87
+        },
+        {
+          "name": "Quebec",
+          "state": "QC",
+          "count": 87
+        },
+        {
+          "name": "Concord",
+          "state": "ON",
+          "count": 86
+        },
+        {
+          "name": "Scarborough",
+          "state": "ON",
+          "count": 82
+        },
+        {
+          "name": "Regina",
+          "state": "SK",
+          "count": 79
+        },
+        {
+          "name": "Cambridge",
+          "state": "ON",
+          "count": 79
+        },
+        {
+          "name": "Kelowna",
+          "state": "BC",
+          "count": 79
+        },
+        {
+          "name": "North Vancouver",
+          "state": "BC",
+          "count": 78
+        },
+        {
+          "name": "Dartmouth",
+          "state": "NS",
+          "count": 76
+        },
+        {
+          "name": "Brantford",
+          "state": "ON",
+          "count": 65
+        },
+        {
+          "name": "Delta",
+          "state": "BC",
+          "count": 64
+        },
+        {
+          "name": "Barrie",
+          "state": "ON",
+          "count": 60
+        },
+        {
+          "name": "Woodbridge",
+          "state": "ON",
+          "count": 60
+        },
+        {
+          "name": "St Catharines",
+          "state": "ON",
+          "count": 55
+        },
+        {
+          "name": "Vaughan",
+          "state": "ON",
+          "count": 54
+        },
+        {
+          "name": "Coquitlam",
+          "state": "BC",
+          "count": 53
+        },
+        {
+          "name": "Kingston",
+          "state": "ON",
+          "count": 50
+        },
+        {
+          "name": "Langley",
+          "state": "BC",
+          "count": 49
+        },
+        {
+          "name": "Newmarket",
+          "state": "ON",
+          "count": 47
+        },
+        {
+          "name": "Sudbury",
+          "state": "ON",
+          "count": 45
+        },
+        {
+          "name": "St-Laurent",
+          "state": "QC",
+          "count": 44
+        },
+        {
+          "name": "Fredericton",
+          "state": "NB",
+          "count": 43
+        },
+        {
+          "name": "Gatineau",
+          "state": "QC",
+          "count": 42
+        },
+        {
+          "name": "Kanata",
+          "state": "ON",
+          "count": 42
+        },
+        {
+          "name": "Longueuil",
+          "state": "QC",
+          "count": 41
+        },
+        {
+          "name": "Niagara Falls",
+          "state": "ON",
+          "count": 41
+        },
+        {
+          "name": "Pickering",
+          "state": "ON",
+          "count": 40
+        },
+        {
+          "name": "St. John'S",
+          "state": "NL",
+          "count": 37
+        },
+        {
+          "name": "Dorval",
+          "state": "QC",
+          "count": 36
+        },
+        {
+          "name": "Boucherville",
+          "state": "QC",
+          "count": 35
+        },
+        {
+          "name": "Whitby",
+          "state": "ON",
+          "count": 35
+        },
+        {
+          "name": "Lethbridge",
+          "state": "AB",
+          "count": 35
+        },
+        {
+          "name": "Peterborough",
+          "state": "ON",
+          "count": 34
+        },
+        {
+          "name": "Nanaimo",
+          "state": "BC",
+          "count": 33
+        },
+        {
+          "name": "Pointe-Claire",
+          "state": "QC",
+          "count": 33
+        },
+        {
+          "name": "Red Deer",
+          "state": "AB",
+          "count": 33
+        },
+        {
+          "name": "Charlottetown",
+          "state": "PE",
+          "count": 32
+        },
+        {
+          "name": "New Westminster",
+          "state": "BC",
+          "count": 32
+        },
+        {
+          "name": "Abbotsford",
+          "state": "BC",
+          "count": 31
+        },
+        {
+          "name": "Oshawa",
+          "state": "ON",
+          "count": 31
+        },
+        {
+          "name": "Prince George",
+          "state": "BC",
+          "count": 31
+        },
+        {
+          "name": "St. Catharines",
+          "state": "ON",
+          "count": 30
+        },
+        {
+          "name": "Belleville",
+          "state": "ON",
+          "count": 29
+        },
+        {
+          "name": "Moncton",
+          "state": "NB",
+          "count": 28
+        },
+        {
+          "name": "Nepean",
+          "state": "ON",
+          "count": 28
+        },
+        {
+          "name": "Sherwood Park",
+          "state": "AB",
+          "count": 28
+        },
+        {
+          "name": "Thunder Bay",
+          "state": "ON",
+          "count": 28
+        },
+        {
+          "name": "Kamloops",
+          "state": "BC",
+          "count": 26
+        },
+        {
+          "name": "Aurora",
+          "state": "ON",
+          "count": 26
+        },
+        {
+          "name": "Grande Prairie",
+          "state": "AB",
+          "count": 25
+        },
+        {
+          "name": "Port Coquitlam",
+          "state": "BC",
+          "count": 25
+        },
+        {
+          "name": "Quebec City",
+          "state": "QC",
+          "count": 25
+        },
+        {
+          "name": "Saint John",
+          "state": "NB",
+          "count": 25
+        },
+        {
+          "name": "North Bay",
+          "state": "ON",
+          "count": 23
+        },
+        {
+          "name": "Thornhill",
+          "state": "ON",
+          "count": 23
+        },
+        {
+          "name": "West Vancouver",
+          "state": "BC",
+          "count": 23
+        },
+        {
+          "name": "Vernon",
+          "state": "BC",
+          "count": 22
+        },
+        {
+          "name": "Ajax",
+          "state": "ON",
+          "count": 21
+        },
+        {
+          "name": "Anjou",
+          "state": "QC",
+          "count": 21
+        },
+        {
+          "name": "Stoney Creek",
+          "state": "ON",
+          "count": 20
+        }
+      ],
+      "people": [
+        {
+          "name": "Toronto",
+          "state": "ON",
+          "count": 30425
+        },
+        {
+          "name": "Ottawa",
+          "state": "ON",
+          "count": 9788
+        },
+        {
+          "name": "Montreal",
+          "state": "QC",
+          "count": 9622
+        },
+        {
+          "name": "Vancouver",
+          "state": "BC",
+          "count": 9505
+        },
+        {
+          "name": "Calgary",
+          "state": "AB",
+          "count": 9300
+        },
+        {
+          "name": "Mississauga",
+          "state": "ON",
+          "count": 6660
+        },
+        {
+          "name": "Edmonton",
+          "state": "AB",
+          "count": 4461
+        },
+        {
+          "name": "Winnipeg",
+          "state": "MB",
+          "count": 3252
+        },
+        {
+          "name": "Markham",
+          "state": "ON",
+          "count": 2941
+        },
+        {
+          "name": "Burnaby",
+          "state": "BC",
+          "count": 2200
+        },
+        {
+          "name": "Waterloo",
+          "state": "ON",
+          "count": 2184
+        },
+        {
+          "name": "Richmond",
+          "state": "BC",
+          "count": 1814
+        },
+        {
+          "name": "Victoria",
+          "state": "BC",
+          "count": 1694
+        },
+        {
+          "name": "London",
+          "state": "ON",
+          "count": 1505
+        },
+        {
+          "name": "Halifax",
+          "state": "NS",
+          "count": 1440
+        },
+        {
+          "name": "Burlington",
+          "state": "ON",
+          "count": 1334
+        },
+        {
+          "name": "Brampton",
+          "state": "ON",
+          "count": 1328
+        },
+        {
+          "name": "Oakville",
+          "state": "ON",
+          "count": 1193
+        },
+        {
+          "name": "Kitchener",
+          "state": "ON",
+          "count": 1152
+        },
+        {
+          "name": "Richmond Hill",
+          "state": "ON",
+          "count": 1152
+        },
+        {
+          "name": "Guelph",
+          "state": "ON",
+          "count": 1089
+        },
+        {
+          "name": "Milton",
+          "state": "ON",
+          "count": 1084
+        },
+        {
+          "name": "Etobicoke",
+          "state": "ON",
+          "count": 1073
+        },
+        {
+          "name": "Concord",
+          "state": "ON",
+          "count": 974
+        },
+        {
+          "name": "Saint-Laurent",
+          "state": "QC",
+          "count": 919
+        },
+        {
+          "name": "Saint Laurent",
+          "state": "QC",
+          "count": 919
+        },
+        {
+          "name": "Hamilton",
+          "state": "ON",
+          "count": 902
+        },
+        {
+          "name": "Surrey",
+          "state": "BC",
+          "count": 891
+        },
+        {
+          "name": "Saskatoon",
+          "state": "SK",
+          "count": 858
+        },
+        {
+          "name": "Regina",
+          "state": "SK",
+          "count": 834
+        },
+        {
+          "name": "Quebec",
+          "state": "QC",
+          "count": 778
+        },
+        {
+          "name": "North York",
+          "state": "ON",
+          "count": 777
+        },
+        {
+          "name": "Windsor",
+          "state": "ON",
+          "count": 694
+        },
+        {
+          "name": "Laval",
+          "state": "QC",
+          "count": 694
+        },
+        {
+          "name": "St-Laurent",
+          "state": "QC",
+          "count": 680
+        },
+        {
+          "name": "Gatineau",
+          "state": "QC",
+          "count": 670
+        },
+        {
+          "name": "Kelowna",
+          "state": "BC",
+          "count": 619
+        },
+        {
+          "name": "Cambridge",
+          "state": "ON",
+          "count": 598
+        },
+        {
+          "name": "Vaughan",
+          "state": "ON",
+          "count": 569
+        },
+        {
+          "name": "Hull",
+          "state": "QC",
+          "count": 555
+        },
+        {
+          "name": "Dartmouth",
+          "state": "NS",
+          "count": 515
+        },
+        {
+          "name": "St. John S",
+          "state": "NL",
+          "count": 505
+        },
+        {
+          "name": "Pointe-Claire",
+          "state": "QC",
+          "count": 493
+        },
+        {
+          "name": "Scarborough",
+          "state": "ON",
+          "count": 487
+        },
+        {
+          "name": "North Vancouver",
+          "state": "BC",
+          "count": 481
+        },
+        {
+          "name": "Fredericton",
+          "state": "NB",
+          "count": 470
+        },
+        {
+          "name": "Coquitlam",
+          "state": "BC",
+          "count": 466
+        },
+        {
+          "name": "Delta",
+          "state": "BC",
+          "count": 461
+        },
+        {
+          "name": "Moncton",
+          "state": "NB",
+          "count": 459
+        },
+        {
+          "name": "Sherwood Park",
+          "state": "AB",
+          "count": 452
+        },
+        {
+          "name": "Lethbridge",
+          "state": "AB",
+          "count": 451
+        },
+        {
+          "name": "Brantford",
+          "state": "ON",
+          "count": 448
+        },
+        {
+          "name": "Longueuil",
+          "state": "QC",
+          "count": 440
+        },
+        {
+          "name": "Woodbridge",
+          "state": "ON",
+          "count": 431
+        },
+        {
+          "name": "St. John'S",
+          "state": "NL",
+          "count": 417
+        },
+        {
+          "name": "St Catharines",
+          "state": "ON",
+          "count": 405
+        },
+        {
+          "name": "Barrie",
+          "state": "ON",
+          "count": 396
+        },
+        {
+          "name": "Kingston",
+          "state": "ON",
+          "count": 369
+        },
+        {
+          "name": "Langley",
+          "state": "BC",
+          "count": 367
+        },
+        {
+          "name": "Oshawa",
+          "state": "ON",
+          "count": 364
+        },
+        {
+          "name": "Boucherville",
+          "state": "QC",
+          "count": 352
+        },
+        {
+          "name": "Pickering",
+          "state": "ON",
+          "count": 351
+        },
+        {
+          "name": "Dorval",
+          "state": "QC",
+          "count": 339
+        },
+        {
+          "name": "Kanata",
+          "state": "ON",
+          "count": 339
+        },
+        {
+          "name": "Nanaimo",
+          "state": "BC",
+          "count": 327
+        },
+        {
+          "name": "Aurora",
+          "state": "ON",
+          "count": 326
+        },
+        {
+          "name": "New Westminster",
+          "state": "BC",
+          "count": 308
+        },
+        {
+          "name": "Newmarket",
+          "state": "ON",
+          "count": 299
+        },
+        {
+          "name": "Sudbury",
+          "state": "ON",
+          "count": 289
+        },
+        {
+          "name": "Saint John",
+          "state": "NB",
+          "count": 287
+        },
+        {
+          "name": "Niagara Falls",
+          "state": "ON",
+          "count": 278
+        },
+        {
+          "name": "St. Catharines",
+          "state": "ON",
+          "count": 278
+        },
+        {
+          "name": "Yellowknife",
+          "state": "NT",
+          "count": 277
+        },
+        {
+          "name": "Peterborough",
+          "state": "ON",
+          "count": 255
+        },
+        {
+          "name": "Quebec City",
+          "state": "QC",
+          "count": 253
+        },
+        {
+          "name": "Prince George",
+          "state": "BC",
+          "count": 247
+        },
+        {
+          "name": "Whitby",
+          "state": "ON",
+          "count": 244
+        },
+        {
+          "name": "Red Deer",
+          "state": "AB",
+          "count": 243
+        },
+        {
+          "name": "Sellarton",
+          "state": "NS",
+          "count": 239
+        },
+        {
+          "name": "Thunder Bay",
+          "state": "ON",
+          "count": 238
+        },
+        {
+          "name": "Abbotsford",
+          "state": "BC",
+          "count": 235
+        },
+        {
+          "name": "Thornhill",
+          "state": "ON",
+          "count": 230
+        },
+        {
+          "name": "Charlottetown",
+          "state": "PE",
+          "count": 224
+        },
+        {
+          "name": "Nepean",
+          "state": "ON",
+          "count": 223
+        },
+        {
+          "name": "West Saint-Laurent",
+          "state": "QC",
+          "count": 221
+        },
+        {
+          "name": "Vernon",
+          "state": "BC",
+          "count": 214
+        },
+        {
+          "name": "Kamloops",
+          "state": "BC",
+          "count": 195
+        },
+        {
+          "name": "Port Coquitlam",
+          "state": "BC",
+          "count": 192
+        },
+        {
+          "name": "Dollard-D-Ormeaux",
+          "state": "QC",
+          "count": 192
+        },
+        {
+          "name": "Banff",
+          "state": "AB",
+          "count": 176
+        },
+        {
+          "name": "Brockville",
+          "state": "ON",
+          "count": 176
+        },
+        {
+          "name": "St. John",
+          "state": "NB",
+          "count": 176
+        },
+        {
+          "name": "Sarnia",
+          "state": "ON",
+          "count": 173
+        },
+        {
+          "name": "Gander",
+          "state": "NL",
+          "count": 171
+        },
+        {
+          "name": "Belleville",
+          "state": "ON",
+          "count": 168
+        },
+        {
+          "name": "Lachine",
+          "state": "QC",
+          "count": 168
+        },
+        {
+          "name": "Woodstock",
+          "state": "ON",
+          "count": 168
+        },
+        {
+          "name": "Saint-Leonard",
+          "state": "QC",
+          "count": 167
+        },
+        {
+          "name": "Ajax",
+          "state": "ON",
+          "count": 165
+        },
+        {
+          "name": "Bolton",
+          "state": "ON",
+          "count": 165
+        },
+        {
+          "name": "Campbell River",
+          "state": "BC",
+          "count": 164
+        },
+        {
+          "name": "Mont-Royal",
+          "state": "QC",
+          "count": 162
+        },
+        {
+          "name": "Lasalle",
+          "state": "QC",
+          "count": 161
+        },
+        {
+          "name": "Sydney",
+          "state": "NS",
+          "count": 160
+        },
+        {
+          "name": "Stoney Creek",
+          "state": "ON",
+          "count": 159
+        },
+        {
+          "name": "St Thomas",
+          "state": "ON",
+          "count": 156
+        },
+        {
+          "name": "St. Laurent",
+          "state": "QC",
+          "count": 153
+        },
+        {
+          "name": "Drummondville",
+          "state": "QC",
+          "count": 150
+        },
+        {
+          "name": "Welland",
+          "state": "ON",
+          "count": 145
+        },
+        {
+          "name": "Anjou",
+          "state": "QC",
+          "count": 142
+        },
+        {
+          "name": "Sault Ste Marie",
+          "state": "ON",
+          "count": 141
+        },
+        {
+          "name": "Grande Prairie",
+          "state": "AB",
+          "count": 140
+        },
+        {
+          "name": "Westmount",
+          "state": "QC",
+          "count": 137
+        },
+        {
+          "name": "North Bay",
+          "state": "ON",
+          "count": 136
+        },
+        {
+          "name": "West Vancouver",
+          "state": "BC",
+          "count": 131
+        },
+        {
+          "name": "Sherbrooke",
+          "state": "QC",
+          "count": 127
+        },
+        {
+          "name": "Niagara-On-The-Lake",
+          "state": "ON",
+          "count": 120
+        },
+        {
+          "name": "Niagara On The Lake",
+          "state": "ON",
+          "count": 120
+        },
+        {
+          "name": "Trois-Rivires",
+          "state": "QC",
+          "count": 119
+        },
+        {
+          "name": "QuÃ©bec",
+          "state": "QC",
+          "count": 117
+        },
+        {
+          "name": "Georgetown",
+          "state": "ON",
+          "count": 115
+        },
+        {
+          "name": "Saint-Hyacinthe",
+          "state": "QC",
+          "count": 113
+        },
+        {
+          "name": "Whistler",
+          "state": "BC",
+          "count": 111
+        },
+        {
+          "name": "Sault Ste. Marie",
+          "state": "ON",
+          "count": 110
+        },
+        {
+          "name": "Mirabel",
+          "state": "QC",
+          "count": 109
+        },
+        {
+          "name": "Ontario",
+          "state": "ON",
+          "count": 109
+        },
+        {
+          "name": "Boisbriand",
+          "state": "QC",
+          "count": 107
+        },
+        {
+          "name": "Brossard",
+          "state": "QC",
+          "count": 107
+        },
+        {
+          "name": "Rougemont",
+          "state": "QC",
+          "count": 107
+        },
+        {
+          "name": "Bedford",
+          "state": "NS",
+          "count": 104
+        },
+        {
+          "name": "Kirkland",
+          "state": "QC",
+          "count": 104
+        },
+        {
+          "name": "Gloucester",
+          "state": "ON",
+          "count": 103
+        },
+        {
+          "name": "Brandon",
+          "state": "MB",
+          "count": 101
+        },
+        {
+          "name": "Nisku",
+          "state": "AB",
+          "count": 101
+        },
+        {
+          "name": "Ottowa",
+          "state": "ON",
+          "count": 100
+        },
+        {
+          "name": "Collingwood",
+          "state": "ON",
+          "count": 98
+        },
+        {
+          "name": "Stellarton",
+          "state": "NS",
+          "count": 98
+        },
+        {
+          "name": "Verdun",
+          "state": "QC",
+          "count": 98
+        },
+        {
+          "name": "Chatham",
+          "state": "ON",
+          "count": 92
+        },
+        {
+          "name": "Cornwall",
+          "state": "ON",
+          "count": 91
+        },
+        {
+          "name": "Levis",
+          "state": "QC",
+          "count": 88
+        },
+        {
+          "name": "Stonewall",
+          "state": "MB",
+          "count": 88
+        },
+        {
+          "name": "Dollard Des Ormeaux",
+          "state": "QC",
+          "count": 88
+        },
+        {
+          "name": "Dollard-Des-Ormeaux",
+          "state": "QC",
+          "count": 88
+        },
+        {
+          "name": "Fort Erie",
+          "state": "ON",
+          "count": 86
+        },
+        {
+          "name": "Sainte-Foy",
+          "state": "QC",
+          "count": 85
+        },
+        {
+          "name": "Ancaster",
+          "state": "ON",
+          "count": 83
+        },
+        {
+          "name": "New Hamburg",
+          "state": "ON",
+          "count": 83
+        },
+        {
+          "name": "Sidney",
+          "state": "BC",
+          "count": 83
+        },
+        {
+          "name": "Castlegar",
+          "state": "BC",
+          "count": 82
+        }
+      ]
+    },
+    "DE": {
+      "name": "Germany",
+      "companies": [
+        {
+          "name": "Berlin",
+          "count": 462
+        },
+        {
+          "name": "München",
+          "count": 218
+        },
+        {
+          "name": "Hamburg",
+          "count": 167
+        },
+        {
+          "name": "Köln",
+          "count": 89
+        },
+        {
+          "name": "Stuttgart",
+          "count": 88
+        },
+        {
+          "name": "Frankfurt am Main",
+          "count": 86
+        },
+        {
+          "name": "Düsseldorf",
+          "count": 76
+        },
+        {
+          "name": "Bonn",
+          "count": 76
+        },
+        {
+          "name": "Dresden",
+          "count": 47
+        },
+        {
+          "name": "Hannover",
+          "count": 44
+        },
+        {
+          "name": "Nürnberg",
+          "count": 44
+        },
+        {
+          "name": "Leipzig",
+          "count": 36
+        },
+        {
+          "name": "Bremen",
+          "count": 35
+        },
+        {
+          "name": "Karlsruhe",
+          "count": 33
+        },
+        {
+          "name": "Heidelberg",
+          "count": 32
+        },
+        {
+          "name": "Kiel",
+          "count": 27
+        },
+        {
+          "name": "Münster",
+          "count": 27
+        },
+        {
+          "name": "Aachen",
+          "count": 23
+        },
+        {
+          "name": "Dortmund",
+          "count": 23
+        },
+        {
+          "name": "Freiburg im Breisgau",
+          "count": 23
+        },
+        {
+          "name": "Osnabrück",
+          "count": 22
+        },
+        {
+          "name": "Mannheim",
+          "count": 22
+        },
+        {
+          "name": "Essen",
+          "count": 21
+        }
+      ],
+      "people": [
+        {
+          "name": "Köln",
+          "count": 38
+        },
+        {
+          "name": "Berlin",
+          "count": 25
+        },
+        {
+          "name": "München",
+          "count": 25
+        }
+      ]
+    },
+    "GB": {
+      "name": "United Kingdom",
+      "companies": [
+        {
+          "name": "London",
+          "count": 988
+        },
+        {
+          "name": "Manchester",
+          "count": 73
+        },
+        {
+          "name": "Birmingham",
+          "count": 49
+        },
+        {
+          "name": "Edinburgh",
+          "count": 46
+        },
+        {
+          "name": "Bristol",
+          "count": 44
+        },
+        {
+          "name": "Glasgow",
+          "count": 44
+        },
+        {
+          "name": "Cambridge",
+          "count": 40
+        },
+        {
+          "name": "Liverpool",
+          "count": 30
+        },
+        {
+          "name": "Oxford",
+          "count": 26
+        },
+        {
+          "name": "Sheffield",
+          "count": 24
+        },
+        {
+          "name": "Bedford",
+          "count": 24
+        },
+        {
+          "name": "Norwich",
+          "count": 22
+        },
+        {
+          "name": "Reading",
+          "count": 22
+        },
+        {
+          "name": "Nottingham",
+          "count": 22
+        },
+        {
+          "name": "Belfast",
+          "count": 21
+        },
+        {
+          "name": "Bath",
+          "count": 20
+        },
+        {
+          "name": "Brighton",
+          "count": 20
+        }
+      ],
+      "people": [
+        {
+          "name": "London",
+          "count": 348
+        },
+        {
+          "name": "Manchester",
+          "count": 29
+        }
+      ]
+    },
+    "PR": {
+      "name": "Puerto Rico",
+      "companies": [
+        {
+          "name": "San Juan",
+          "count": 205
+        },
+        {
+          "name": "Guaynabo",
+          "count": 29
+        },
+        {
+          "name": "Caguas",
+          "count": 20
+        }
+      ],
+      "people": [
+        {
+          "name": "San Juan",
+          "count": 1096
+        },
+        {
+          "name": "Hato Rey",
+          "count": 150
+        },
+        {
+          "name": "Guaynabo",
+          "count": 121
+        },
+        {
+          "name": "Caguas",
+          "count": 99
+        },
+        {
+          "name": "Bayamon",
+          "count": 33
+        },
+        {
+          "name": "Mayaguez",
+          "count": 33
+        },
+        {
+          "name": "Dorado",
+          "count": 28
+        },
+        {
+          "name": "Catano",
+          "count": 27
+        },
+        {
+          "name": "Ponce",
+          "count": 27
+        }
+      ]
+    },
+    "CH": {
+      "name": "Switzerland",
+      "companies": [
+        {
+          "name": "Zürich",
+          "count": 110
+        },
+        {
+          "name": "Geneva",
+          "count": 68
+        },
+        {
+          "name": "Bern",
+          "count": 49
+        },
+        {
+          "name": "Lausanne",
+          "count": 37
+        },
+        {
+          "name": "Basel",
+          "count": 35
+        },
+        {
+          "name": "Luzern",
+          "count": 27
+        },
+        {
+          "name": "Bellinzona",
+          "count": 23
+        }
+      ],
+      "people": []
+    },
+    "NL": {
+      "name": "Netherlands",
+      "companies": [
+        {
+          "name": "Amsterdam",
+          "count": 144
+        },
+        {
+          "name": "Utrecht",
+          "count": 64
+        },
+        {
+          "name": "Rotterdam",
+          "count": 47
+        },
+        {
+          "name": "Den Haag",
+          "count": 43
+        },
+        {
+          "name": "Leiden",
+          "count": 24
+        },
+        {
+          "name": "Amersfoort",
+          "count": 21
+        }
+      ],
+      "people": [
+        {
+          "name": "Amsterdam",
+          "count": 31
+        }
+      ]
+    },
+    "AU": {
+      "name": "Australia",
+      "companies": [
+        {
+          "name": "Sydney",
+          "count": 144
+        },
+        {
+          "name": "Melbourne",
+          "count": 80
+        },
+        {
+          "name": "Brisbane",
+          "count": 22
+        },
+        {
+          "name": "Adelaide",
+          "count": 21
+        }
+      ],
+      "people": [
+        {
+          "name": "Sydney",
+          "count": 25
+        }
+      ]
+    },
+    "ES": {
+      "name": "Spain",
+      "companies": [
+        {
+          "name": "Madrid",
+          "count": 234
+        },
+        {
+          "name": "Barcelona",
+          "count": 146
+        },
+        {
+          "name": "València",
+          "count": 25
+        },
+        {
+          "name": "Alicante",
+          "count": 24
+        },
+        {
+          "name": "A Coruña",
+          "count": 20
+        }
+      ],
+      "people": []
+    },
+    "IT": {
+      "name": "Italy",
+      "companies": [
+        {
+          "name": "Roma",
+          "count": 137
+        },
+        {
+          "name": "Milano",
+          "count": 108
+        },
+        {
+          "name": "Torino",
+          "count": 35
+        },
+        {
+          "name": "Firenze",
+          "count": 30
+        },
+        {
+          "name": "Bologna",
+          "count": 27
+        }
+      ],
+      "people": []
+    },
+    "BR": {
+      "name": "Brazil",
+      "companies": [
+        {
+          "name": "São Paulo",
+          "count": 283
+        },
+        {
+          "name": "Rio de Janeiro",
+          "count": 58
+        },
+        {
+          "name": "Brasília",
+          "count": 20
+        }
+      ],
+      "people": [
+        {
+          "name": "São Paulo",
+          "count": 22
+        }
+      ]
+    },
+    "RU": {
+      "name": "Russia",
+      "companies": [
+        {
+          "name": "Москва",
+          "count": 567
+        },
+        {
+          "name": "г. Москва",
+          "count": 477
+        },
+        {
+          "name": "Санкт-Петербург",
+          "count": 82
+        },
+        {
+          "name": "г. Санкт-Петербург",
+          "count": 64
+        }
+      ],
+      "people": []
+    },
+    "BE": {
+      "name": "Belgium",
+      "companies": [
+        {
+          "name": "Bruxelles",
+          "count": 130
+        },
+        {
+          "name": "Antwerp",
+          "count": 30
+        }
+      ],
+      "people": [
+        {
+          "name": "Leuven",
+          "count": 28
+        }
+      ]
+    },
+    "SE": {
+      "name": "Sweden",
+      "companies": [
+        {
+          "name": "Stockholm",
+          "count": 143
+        },
+        {
+          "name": "Gothenburg",
+          "count": 23
+        }
+      ],
+      "people": [
+        {
+          "name": "Stockholm",
+          "count": 40
+        }
+      ]
+    },
+    "VN": {
+      "name": "Vietnam",
+      "companies": [
+        {
+          "name": "Ho Chi Minh City",
+          "count": 134
+        },
+        {
+          "name": "Hà Nội",
+          "count": 36
+        },
+        {
+          "name": "Tân Bình",
+          "count": 24
+        }
+      ],
+      "people": []
+    },
+    "AE": {
+      "name": "United Arab Emirates",
+      "companies": [
+        {
+          "name": "Dubai",
+          "count": 108
+        }
+      ],
+      "people": [
+        {
+          "name": "Dubai",
+          "count": 53
+        }
+      ]
+    },
+    "AT": {
+      "name": "Austria",
+      "companies": [
+        {
+          "name": "Wien",
+          "count": 119
+        }
+      ],
+      "people": [
+        {
+          "name": "Wien",
+          "count": 181
+        }
+      ]
+    },
+    "FR": {
+      "name": "France",
+      "companies": [
+        {
+          "name": "Paris",
+          "count": 287
+        }
+      ],
+      "people": [
+        {
+          "name": "Paris",
+          "count": 23
+        }
+      ]
+    },
+    "MY": {
+      "name": "Malaysia",
+      "companies": [
+        {
+          "name": "Kuala Lumpur",
+          "count": 56
+        }
+      ],
+      "people": [
+        {
+          "name": "Kuala Lumpur",
+          "count": 33
+        }
+      ]
+    },
+    "NZ": {
+      "name": "New Zealand",
+      "companies": [
+        {
+          "name": "Auckland",
+          "count": 30
+        },
+        {
+          "name": "Wellington",
+          "count": 22
+        }
+      ],
+      "people": []
+    },
+    "TR": {
+      "name": "Türkiye",
+      "companies": [
+        {
+          "name": "İstanbul",
+          "count": 107
+        },
+        {
+          "name": "Ankara",
+          "count": 34
+        }
+      ],
+      "people": []
+    },
+    "VI": {
+      "name": "U.S. Virgin Islands",
+      "companies": [],
+      "people": [
+        {
+          "name": "St Thomas",
+          "count": 162
+        },
+        {
+          "name": "Christiansted",
+          "count": 74
+        }
+      ]
+    },
+    "AR": {
+      "name": "Argentina",
+      "companies": [
+        {
+          "name": "Buenos Aires",
+          "count": 90
+        }
+      ],
+      "people": []
+    },
+    "BD": {
+      "name": "Bangladesh",
+      "companies": [
+        {
+          "name": "Dhaka",
+          "count": 24
+        }
+      ],
+      "people": []
+    },
+    "BG": {
+      "name": "Bulgaria",
+      "companies": [
+        {
+          "name": "Sofia",
+          "count": 22
+        }
+      ],
+      "people": []
+    },
+    "CL": {
+      "name": "Chile",
+      "companies": [
+        {
+          "name": "Santiago",
+          "count": 48
+        }
+      ],
+      "people": []
+    },
+    "CN": {
+      "name": "China",
+      "companies": [
+        {
+          "name": "Shenzhen",
+          "count": 42
+        }
+      ],
+      "people": []
+    },
+    "CZ": {
+      "name": "Czechia",
+      "companies": [
+        {
+          "name": "Prague",
+          "count": 70
+        }
+      ],
+      "people": []
+    },
+    "FI": {
+      "name": "Finland",
+      "companies": [
+        {
+          "name": "Helsinki",
+          "count": 44
+        }
+      ],
+      "people": []
+    },
+    "GR": {
+      "name": "Greece",
+      "companies": [
+        {
+          "name": "Θεσσαλονίκη",
+          "count": 25
+        }
+      ],
+      "people": []
+    },
+    "HR": {
+      "name": "Croatia",
+      "companies": [
+        {
+          "name": "Zagreb",
+          "count": 39
+        }
+      ],
+      "people": []
+    },
+    "HU": {
+      "name": "Hungary",
+      "companies": [
+        {
+          "name": "Budapest",
+          "count": 74
+        }
+      ],
+      "people": []
+    },
+    "IE": {
+      "name": "Ireland",
+      "companies": [
+        {
+          "name": "Dublin",
+          "count": 105
+        }
+      ],
+      "people": []
+    },
+    "IS": {
+      "name": "Iceland",
+      "companies": [
+        {
+          "name": "Reykjavík",
+          "count": 35
+        }
+      ],
+      "people": []
+    },
+    "KE": {
+      "name": "Kenya",
+      "companies": [
+        {
+          "name": "Nairobi",
+          "count": 20
+        }
+      ],
+      "people": []
+    },
+    "KR": {
+      "name": "South Korea",
+      "companies": [
+        {
+          "name": "Seoul",
+          "count": 92
+        }
+      ],
+      "people": []
+    },
+    "LV": {
+      "name": "Latvia",
+      "companies": [
+        {
+          "name": "Riga",
+          "count": 21
+        }
+      ],
+      "people": []
+    },
+    "MX": {
+      "name": "Mexico",
+      "companies": [
+        {
+          "name": "Ciudad de México",
+          "count": 82
+        }
+      ],
+      "people": []
+    },
+    "NO": {
+      "name": "Norway",
+      "companies": [
+        {
+          "name": "Oslo",
+          "count": 87
+        }
+      ],
+      "people": []
+    },
+    "PL": {
+      "name": "Poland",
+      "companies": [
+        {
+          "name": "Warszawa",
+          "count": 114
+        }
+      ],
+      "people": []
+    },
+    "PT": {
+      "name": "Portugal",
+      "companies": [
+        {
+          "name": "Lisboa",
+          "count": 72
+        }
+      ],
+      "people": []
+    },
+    "RS": {
+      "name": "Serbia",
+      "companies": [
+        {
+          "name": "Belgrade",
+          "count": 41
+        }
+      ],
+      "people": []
+    },
+    "SG": {
+      "name": "Singapore",
+      "companies": [
+        {
+          "name": "Singapore",
+          "count": 25
+        }
+      ],
+      "people": []
+    },
+    "SI": {
+      "name": "Slovenia",
+      "companies": [
+        {
+          "name": "Ljubljana",
+          "count": 20
+        }
+      ],
+      "people": []
+    },
+    "SK": {
+      "name": "Slovakia",
+      "companies": [
+        {
+          "name": "Bratislava",
+          "count": 35
+        }
+      ],
+      "people": []
+    },
+    "TW": {
+      "name": "Taiwan",
+      "companies": [
+        {
+          "name": "Taipei",
+          "count": 142
+        }
+      ],
+      "people": []
+    },
+    "UA": {
+      "name": "Ukraine",
+      "companies": [
+        {
+          "name": "Київ",
+          "count": 28
+        }
+      ],
+      "people": []
+    },
+    "ZA": {
+      "name": "South Africa",
+      "companies": [
+        {
+          "name": "Johannesburg",
+          "count": 35
+        }
+      ],
+      "people": []
+    },
+    "ID": {
+      "name": "Indonesia",
+      "companies": [],
+      "people": [
+        {
+          "name": "Denpasar",
+          "count": 23
+        }
+      ]
+    }
+  }
+}

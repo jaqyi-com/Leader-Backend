@@ -6,7 +6,8 @@
 //   India / USA : the address-based rules used since launch (state, location, geo source), plus the
 //                 phone number's country as a fallback (finds ~5M Indian people and ~73K US companies
 //                 that have no address marker).
-//   all others  : the phone number's country (phone_country, ISO 3166 alpha-2).
+//   all others  : the phone number's country (phone_country, ISO 3166 alpha-2), unless the address
+//                 says India or the USA (an Indian address with a UAE number is India; the address wins).
 // Country codes are validated to two letters A–Z before they reach SQL, so they are inlined as literals.
 // "Other country" conditions repeat the partial-index predicate (phone_country NOT IN ('IN', 'US'))
 // so PostgreSQL can use idx_*_phone_country_other (scripts/create_country_indexes.sql).
@@ -73,7 +74,7 @@ function peopleCountryWhere(input, { hasPhoneCountry = true } = {}) {
   if (!hasPhoneCountry) return code === "IN" ? india : code === "US" ? usa : "FALSE";
   if (code === "IN") return `(${india} OR ("phone_country" = 'IN' AND NOT ${nz(usa)}))`;
   if (code === "US") return `(${usa} OR ("phone_country" = 'US' AND NOT ${nz(india)}))`;
-  return otherCountry(code);
+  return `(${otherCountry(code)} AND NOT ${nz(india)} AND NOT ${nz(usa)})`;
 }
 
 const COMPANY_INDIA = `"geo_source" IN ('csv_v2_import', 'pincode')`;
@@ -86,7 +87,17 @@ function companiesCountryWhere(input, { hasPhoneCountry = true } = {}) {
   if (!hasPhoneCountry) return code === "IN" ? `(${COMPANY_INDIA})` : code === "US" ? `(${COMPANY_USA})` : "FALSE";
   if (code === "IN") return `((${COMPANY_INDIA}) OR ("phone_country" = 'IN' AND NOT ${nz(COMPANY_USA)}))`;
   if (code === "US") return `((${COMPANY_USA}) OR ("phone_country" = 'US' AND NOT ${nz(COMPANY_INDIA)}))`;
-  return otherCountry(code);
+  return `(${otherCountry(code)} AND NOT ${nz(COMPANY_INDIA)} AND NOT ${nz(COMPANY_USA)})`;
+}
+
+/**
+ * True when the country filter must be applied even though the request also filters by city / state.
+ * An Indian or US city implies its country (the old India / USA city cards rely on that); any other
+ * country's city name is not unique ("London" is in the UK and in Canada), so the country stays.
+ */
+function countryNeedsOwnFilter(input) {
+  const code = normalizeCountry(input);
+  return !!code && code !== "IN" && code !== "US";
 }
 
 /** The country value a request asked for (country=, f_country=, f_country_eq=, f_country_contains=). */
@@ -119,5 +130,5 @@ function countryOnlyTotal(table, query) {
 }
 
 module.exports = {
-  SUSPECT_CODES, countryOnlyTotal, countryName, normalizeCountry, peopleCountryWhere, companiesCountryWhere, requestedCountry,
+  SUSPECT_CODES, countryNeedsOwnFilter, countryOnlyTotal, countryName, normalizeCountry, peopleCountryWhere, companiesCountryWhere, requestedCountry,
 };

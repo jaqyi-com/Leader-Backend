@@ -43,7 +43,10 @@ function syntheticPeople(n = 250) {
   const titles = ["Software Engineer", "Sales Manager", "CTO", "Designer", "Factory Manager", "Director", "Recruiter", "Doctor"];
   const rows = [];
   for (let i = 0; i < n; i++) {
-    const [city, state] = cities[i % cities.length];
+    let [city, state] = cities[i % cities.length];
+    // Most people with a foreign number live there; i = 7 keeps an Indian address (counts as India).
+    if (i % 50 === 7 && i !== 7) [city, state] = ["Toronto", "ON"];
+    if (i % 50 === 17) [city, state] = ["Berlin", null];
     rows.push({
       full_name: `Person ${String(i).padStart(3, "0")}`,
       job_title: titles[i % titles.length],

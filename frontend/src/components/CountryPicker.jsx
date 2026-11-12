@@ -5,8 +5,9 @@ import { COUNTRIES, MAIN_MARKETS, SMALL_COUNTRY, countryByCode, flag, fmtCount }
 /**
  * Country filter for Companies / People / Emails / Numbers.
  * value: ISO code ("IN", "DE") or "" for all countries. kind: "people" | "companies" (which count to show).
+ * codes: only offer these countries (default: every country). allowAll: offer "All countries".
  */
-export default function CountryPicker({ value, onChange, kind = "people" }) {
+export default function CountryPicker({ value, onChange, kind = "people", codes = null, allowAll = true }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [showSmall, setShowSmall] = useState(false);
@@ -27,13 +28,15 @@ export default function CountryPicker({ value, onChange, kind = "people" }) {
   const { main, others, small } = useMemo(() => {
     const q = query.trim().toLowerCase();
     const match = (c) => !q || c.name.toLowerCase().includes(q) || c.code.toLowerCase() === q;
-    const withCount = COUNTRIES.filter((c) => c[kind] > 0 && match(c)).sort((a, b) => b[kind] - a[kind]);
+    const allowed = codes ? new Set(codes) : null;
+    const withCount = COUNTRIES.filter((c) => (allowed ? allowed.has(c.code) : c[kind] > 0) && match(c)).sort((a, b) => b[kind] - a[kind]);
     return {
       main: withCount.filter((c) => MAIN_MARKETS.includes(c.code)),
-      others: withCount.filter((c) => !MAIN_MARKETS.includes(c.code) && (q || c[kind] >= SMALL_COUNTRY)),
-      small: q ? [] : withCount.filter((c) => !MAIN_MARKETS.includes(c.code) && c[kind] < SMALL_COUNTRY),
+      // A short fixed list (codes) is shown whole; the full list tucks tiny countries away.
+      others: withCount.filter((c) => !MAIN_MARKETS.includes(c.code) && (q || allowed || c[kind] >= SMALL_COUNTRY)),
+      small: q || allowed ? [] : withCount.filter((c) => !MAIN_MARKETS.includes(c.code) && c[kind] < SMALL_COUNTRY),
     };
-  }, [query, kind]);
+  }, [query, kind, codes]);
 
   const pick = (code) => { onChange(code); setOpen(false); setQuery(""); };
 
@@ -72,7 +75,7 @@ export default function CountryPicker({ value, onChange, kind = "people" }) {
         {selected && <span className="text-[var(--text-3)] tabular-nums">{fmtCount(selected[kind])}</span>}
         <ChevronDown size={11} />
       </button>
-      {selected && (
+      {selected && allowAll && (
         <button
           type="button"
           onClick={() => onChange("")}
@@ -102,7 +105,7 @@ export default function CountryPicker({ value, onChange, kind = "people" }) {
             />
           </div>
           <div role="listbox" aria-label="Countries" className="max-h-80 overflow-y-auto">
-            {!query && (
+            {!query && allowAll && (
               <button
                 type="button"
                 role="option"
