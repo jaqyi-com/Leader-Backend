@@ -168,7 +168,7 @@ async function startStack({ env = {} } = {}) {
       signal: AbortSignal.timeout(20000),
     });
     let json = null; try { json = await res.json(); } catch { /* not json */ }
-    return { status: res.status, json };
+    return { status: res.status, json, headers: res.headers };
   };
 
   let n = 0;

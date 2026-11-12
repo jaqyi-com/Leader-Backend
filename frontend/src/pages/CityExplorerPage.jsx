@@ -9,14 +9,19 @@ import CITIES_DATA from "../cities.json";
 import WORLD_CITIES from "../worldCities.json";
 import CountryPicker from "../components/CountryPicker";
 import { countryByCode, toCountryCode, fmtCount } from "../countries";
+import { initCounts, getCounts, useLiveCounts } from "../liveCounts";
+
+initCounts("cities", CITIES_DATA);
+initCounts("world_cities", WORLD_CITIES);
 
 // ── Countries with city cards ─────────────────────────────────────────────
-// India / USA: cities.json (scripts/refresh_explorer_counts.js). Every other country:
-// worldCities.json (scripts/refresh_world_cities.js). Counts equal what a card's click finds.
-const CITY_COUNTRIES = ["IN", "US", ...Object.keys(WORLD_CITIES.countries)];
+// India / USA: "cities" (src/counts/explorerCards.js). Every other country: "world_cities"
+// (src/counts/worldCities.js). Counts equal what a card's click finds.
+// Both are served live (liveCounts.js); the JSON files are the built-in copy.
+const cityCountries = () => ["IN", "US", ...Object.keys(getCounts("world_cities").countries)];
 const LEGACY_KEY = { IN: "india", US: "usa" };
 const citiesFor = (code, mode) =>
-  (LEGACY_KEY[code] ? CITIES_DATA[LEGACY_KEY[code]]?.[mode] : WORLD_CITIES.countries[code]?.[mode]) || [];
+  (LEGACY_KEY[code] ? getCounts("cities")[LEGACY_KEY[code]]?.[mode] : getCounts("world_cities").countries[code]?.[mode]) || [];
 
 // Top Metro Quick Filters
 const TOP_METROS_INDIA = [
@@ -31,10 +36,11 @@ const TOP_METROS_USA = [
 
 export default function CityExplorerPage() {
   const navigate = useNavigate();
+  const countsVersion = useLiveCounts("countries", "world_cities", "cities");
   const [searchParams, setSearchParams] = useSearchParams();
   const [country,     setCountry]     = useState(() => {
     const fromUrl = toCountryCode(searchParams.get("country"));
-    return CITY_COUNTRIES.includes(fromUrl) ? fromUrl : "IN";
+    return cityCountries().includes(fromUrl) ? fromUrl : "IN";
   });
   const [mode,        setMode]        = useState("companies"); // "companies" or "people"
   const [searchQ,     setSearchQ]     = useState("");
@@ -47,7 +53,8 @@ export default function CityExplorerPage() {
   const noun = mode === "companies" ? "companies" : "people";
 
   // ── Pick the right dataset ────────────────────────────────────────────────
-  const allCities = useMemo(() => citiesFor(country, mode), [country, mode]);
+  const allCities = useMemo(() => citiesFor(country, mode), [country, mode, countsVersion]);
+  const CITY_COUNTRIES = useMemo(() => cityCountries(), [countsVersion]);
   const topMetros = country === "IN" ? TOP_METROS_INDIA
     : country === "US" ? TOP_METROS_USA
     : allCities.length > 6 ? allCities.slice(0, 12).map((c) => c.name) : [];
@@ -91,7 +98,7 @@ export default function CityExplorerPage() {
   const handleClick = (city) => {
     const dest = mode === "companies" ? "/app/companies" : "/app/people";
     // USA cards are per city + state (there are several Columbuses); India cards cover the whole city.
-    // Other countries: country + city (+ province for Canada), as in scripts/refresh_world_cities.js.
+    // Other countries: country + city (+ province for Canada), as in src/counts/worldCities.js.
     const params = new URLSearchParams({ f_city: city.name.trim() });
     if (isIndia) params.set("f_country", "india");
     else if (country === "US") { if (city.state) params.set("f_state_eq", city.state); }

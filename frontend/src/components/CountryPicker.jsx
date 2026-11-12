@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Globe, ChevronDown, Search, Check, X } from "lucide-react";
-import { COUNTRIES, MAIN_MARKETS, SMALL_COUNTRY, countryByCode, flag, fmtCount } from "../countries";
+import { countryList, MAIN_MARKETS, SMALL_COUNTRY, countryByCode, flag, fmtCount } from "../countries";
+import { useLiveCounts } from "../liveCounts";
 
 /**
  * Country filter for Companies / People / Emails / Numbers.
@@ -11,6 +12,7 @@ export default function CountryPicker({ value, onChange, kind = "people", codes 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [showSmall, setShowSmall] = useState(false);
+  const countsVersion = useLiveCounts("countries");
   const wrap = useRef(null);
   const input = useRef(null);
   const selected = countryByCode(value);
@@ -29,14 +31,14 @@ export default function CountryPicker({ value, onChange, kind = "people", codes 
     const q = query.trim().toLowerCase();
     const match = (c) => !q || c.name.toLowerCase().includes(q) || c.code.toLowerCase() === q;
     const allowed = codes ? new Set(codes) : null;
-    const withCount = COUNTRIES.filter((c) => (allowed ? allowed.has(c.code) : c[kind] > 0) && match(c)).sort((a, b) => b[kind] - a[kind]);
+    const withCount = countryList().filter((c) => (allowed ? allowed.has(c.code) : c[kind] > 0) && match(c)).sort((a, b) => b[kind] - a[kind]);
     return {
       main: withCount.filter((c) => MAIN_MARKETS.includes(c.code)),
       // A short fixed list (codes) is shown whole; the full list tucks tiny countries away.
       others: withCount.filter((c) => !MAIN_MARKETS.includes(c.code) && (q || allowed || c[kind] >= SMALL_COUNTRY)),
       small: q || allowed ? [] : withCount.filter((c) => !MAIN_MARKETS.includes(c.code) && c[kind] < SMALL_COUNTRY),
     };
-  }, [query, kind, codes]);
+  }, [query, kind, codes, countsVersion]);
 
   const pick = (code) => { onChange(code); setOpen(false); setQuery(""); };
 

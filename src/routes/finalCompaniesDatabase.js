@@ -32,9 +32,8 @@ const FC_TABLE   = "companies";
 const FULL_TABLE = `"${FC_SCHEMA}"."${FC_TABLE}"`;
 
 // Exact counts from the same generated files as the Categories / Cities pages
-// (scripts/refresh_explorer_counts.js). A live GROUP BY over the whole table is far too slow per request.
-const EXPLORER_CATEGORIES = require("../../frontend/src/categories.json");
-const EXPLORER_CITIES = require("../../frontend/src/cities.json");
+// (the count job, src/counts/). A live GROUP BY over the whole table is far too slow per request.
+const explorerCounts = require("../utils/explorerCounts");
 const withCountry = (list, country) => list.map((c) => ({ ...c, country }));
 const topByCount = (rows, n) => [...rows].sort((a, b) => b.count - a.count).slice(0, n);
 
@@ -568,7 +567,7 @@ router.post("/refresh", async (req, res) => {
 // GET /categories
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 router.get("/categories", (req, res) => {
-  const { india, usa } = EXPLORER_CATEGORIES;
+  const { india, usa } = explorerCounts.get("categories");
   res.json(topByCount([...withCountry(india.company, "india"), ...withCountry(usa.company, "usa")], 100));
 });
 
@@ -714,6 +713,7 @@ router.get("/", async (req, res) => {
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 router.get("/cities", (req, res) => {
+  const EXPLORER_CITIES = explorerCounts.get("cities");
   const { india, usa } = EXPLORER_CITIES;
   const cities = topByCount([...withCountry(india.companies, "india"), ...withCountry(usa.companies, "usa")], 500)
     .map((c) => ({ city_file: c.name, name: c.name, state: c.state || "", count: c.count, country: c.country }));
@@ -721,5 +721,5 @@ router.get("/cities", (req, res) => {
 });
 
 module.exports = router;
-module.exports.buildWhere = buildWhere; // used by scripts/refresh_explorer_counts.js
+module.exports.buildWhere = buildWhere; // used by the count job (src/counts/)
 

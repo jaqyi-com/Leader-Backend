@@ -6,6 +6,9 @@ import {
   Users2, Building2, Briefcase, Zap, X, Filter, Globe2
 } from "lucide-react";
 import CATEGORIES_DATA from "../categories.json";
+import { initCounts, getCounts, useLiveCounts } from "../liveCounts";
+
+initCounts("categories", CATEGORIES_DATA);
 
 // ── Country config ─────────────────────────────────────────────────────────
 const COUNTRIES = [
@@ -40,8 +43,9 @@ export default function CategoryExplorerPage() {
   const quickTags = (QUICK_TAGS[country] && QUICK_TAGS[country][mode]) || QUICK_TAGS.usa[mode];
 
   // Pick base category list for country + mode
-  // Counts come from scripts/refresh_explorer_counts.js and equal what a card's click finds.
-  const baseCategories = useMemo(() => CATEGORIES_DATA[country]?.[mode] || [], [country, mode]);
+  // Counts come from the count job (src/counts/explorerCards.js) and equal what a card's click finds.
+  const countsVersion = useLiveCounts("categories");
+  const baseCategories = useMemo(() => getCounts("categories")[country]?.[mode] || [], [country, mode, countsVersion]);
 
   // Filtered by group pill and search query
   const filtered = useMemo(() => {

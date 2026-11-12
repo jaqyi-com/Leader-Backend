@@ -1,16 +1,29 @@
 // Countries in Doott and how many people / companies each has.
-// Counts come from countries.json, written by scripts/refresh_country_counts.js — never typed by hand.
+// Counts come from the daily count job (src/counts/countryCounts.js) — never typed by hand. They are served live
+// (liveCounts.js); countries.json is the built-in copy used until the live one arrives.
 import COUNTRY_DATA from "./countries.json";
+import { initCounts, getCounts } from "./liveCounts";
 
+initCounts("countries", COUNTRY_DATA);
+
+/** Built-in list (pre-rendered pages); components should call countryList() for live numbers. */
 export const COUNTRIES = COUNTRY_DATA.countries;
+/** Current list: live when loaded (useLiveCounts("countries") re-renders on arrival). */
+export const countryList = () => getCounts("countries").countries;
 export const MAIN_MARKETS = ["IN", "US", "CA"];
 /** Countries below this many records (for the kind shown) are listed under "Show all". */
 export const SMALL_COUNTRY = 100;
 /** A selected country below this many records gets a "limited coverage" note. */
 export const LIMITED_COVERAGE = 1000;
 
-const BY_CODE = new Map(COUNTRIES.map((c) => [c.code, c]));
-export const countryByCode = (code) => BY_CODE.get(String(code || "").toUpperCase()) || null;
+let byCodeFor = null;
+let BY_CODE = new Map();
+function byCode() {
+  const list = countryList();
+  if (byCodeFor !== list) { BY_CODE = new Map(list.map((c) => [c.code, c])); byCodeFor = list; }
+  return BY_CODE;
+}
+export const countryByCode = (code) => byCode().get(String(code || "").toUpperCase()) || null;
 
 /** Flag emoji for an ISO alpha-2 code ("DE" → 🇩🇪). */
 export const flag = (code) =>
@@ -25,7 +38,7 @@ export function toCountryCode(value) {
   if (!v) return "";
   const legacy = { india: "IN", usa: "US", us: "US", canada: "CA" }[v.toLowerCase()];
   const code = legacy || v.toUpperCase();
-  return BY_CODE.has(code) ? code : "";
+  return byCode().has(code) ? code : "";
 }
 
 export const fmtCount = (n) => Number(n || 0).toLocaleString("en-US");

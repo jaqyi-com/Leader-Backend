@@ -105,16 +105,9 @@ function requestedCountry(q) {
   return q.country || q.f_country || q.f_country_eq || q.f_country_contains || "";
 }
 
-// Exact per-country totals from frontend/src/countries.json (scripts/refresh_country_counts.js).
-// COUNTRY_COUNTS_FILE points elsewhere (tests use their own file).
-let COUNTS = null;
-function countryCounts() {
-  if (!COUNTS) {
-    const file = process.env.COUNTRY_COUNTS_FILE || require("path").join(__dirname, "../../frontend/src/countries.json");
-    try { COUNTS = JSON.parse(require("fs").readFileSync(file, "utf8")); } catch { COUNTS = { countries: [] }; }
-  }
-  return COUNTS;
-}
+// Exact per-country totals (count job, src/counts/countryCounts.js → app.explorer_counts, with
+// frontend/src/countries.json as the fallback; COUNTRY_COUNTS_FILE points tests at their own file).
+const countryCounts = () => require("./explorerCounts").get("countries") || { countries: [] };
 const NOT_A_FILTER = new Set(["page", "limit", "sort_by", "sort_dir", "country", "f_country", "f_country_eq", "f_country_contains"]);
 /**
  * When a search filters by country and nothing else, its exact total from countries.json

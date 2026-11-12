@@ -1,19 +1,22 @@
 "use strict";
-// scripts/fill_city_from_phone.py: fills empty cities outside India / USA from landline area codes,
-// logs every fill, and --revert undoes them exactly. Runs against the throwaway PostgreSQL.
+// src/counts/fillCities.js (run by the daily count job; by hand: scripts/fill_city_from_phone.js):
+// fills empty cities outside India / USA from landline area codes, logs every fill, and revert()
+// undoes them exactly. Runs against the throwaway PostgreSQL.
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const path = require("node:path");
-const { execFileSync, spawnSync } = require("node:child_process");
 const { startStack, available } = require("./helpers/stack");
 
-const SCRIPT = path.join(__dirname, "..", "scripts", "fill_city_from_phone.py");
-const pythonReady = spawnSync("python3", ["-c", "import phonenumbers, psycopg2"]).status === 0;
-const skip = (!available.postgres && "PostgreSQL not installed") || (!pythonReady && "python3 with phonenumbers + psycopg2 not installed");
+const skip = !available.postgres && "PostgreSQL not installed";
 let stack, user;
 
-const run = (mode) => execFileSync("python3", [SCRIPT, mode], { env: { ...process.env, NEON_DATABASE_URL: stack.pg.url }, encoding: "utf8" });
+async function run(mode) {
+  process.env.NEON_DATABASE_URL = process.env.NEON_DATABASE_URL || stack.pg.url;
+  const fill = require("../src/counts/fillCities");
+  if (mode === "--revert") return fill.revert(stack.pg.pool);
+  const { fills } = await fill.plan(stack.pg.pool);
+  return mode === "--apply" ? fill.apply(stack.pg.pool, fills) : fills;
+}
 const company = async (name) => (await stack.pg.pool.query("select city, state from final.companies where business_name = $1", [name])).rows[0];
 const person = async (name) => (await stack.pg.pool.query("select city, state from final.people where full_name = $1", [name])).rows[0];
 
@@ -45,13 +48,13 @@ test.before(async () => {
 test.after(async () => { if (stack) await stack.stop(); });
 
 test("dry run writes nothing", { skip }, async () => {
-  const out = run("--dry-run");
-  assert.match(out, /dry run: nothing written/);
+  const fills = await run("--dry-run");
+  assert.equal(fills.companies.length, 4, "4 companies would be filled");
   assert.equal((await company("UK landline")).city, null);
 });
 
 test("--apply fills only safe cities, in the stored spelling, and logs them", { skip }, async () => {
-  run("--apply");
+  await run("--apply");
   assert.equal((await company("UK landline")).city, "London");
   assert.equal((await company("DE landline")).city, "München", "Munich written as the stored German spelling");
   assert.equal((await company("DE berlin")).city, "Berlin", "fixture Germany companies already have Berlin");
@@ -69,12 +72,12 @@ test("--apply fills only safe cities, in the stored spelling, and logs them", { 
   const r = await stack.http("GET", "/api/final-companies?country=GB&f_city=London&limit=50", { token: user.token });
   assert.deepEqual(r.json.records.map((x) => x.business_name).sort(), ["UK known", "UK landline"]);
   // running again changes nothing
-  run("--apply");
+  await run("--apply");
   assert.equal((await stack.pg.pool.query("select count(*)::int n from final.city_phone_fills")).rows[0].n, 5);
 });
 
 test("--revert restores the previous values exactly", { skip }, async () => {
-  run("--revert");
+  await run("--revert");
   assert.equal((await company("UK landline")).city, null);
   assert.deepEqual(await company("CA landline"), { city: null, state: null });
   assert.equal((await person("Dubai landline")).city, null);

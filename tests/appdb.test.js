@@ -27,7 +27,7 @@ const q = (text, params) => stack.pg.pool.query(text, params);
 test("app schema: tables exist in schema app, lead tables untouched", { skip }, async () => {
   const { rows } = await q("SELECT table_name FROM information_schema.tables WHERE table_schema = 'app' ORDER BY 1");
   assert.deepEqual(rows.map((r) => r.table_name), [
-    "api_keys", "feature_flags", "mcp_auth_codes", "mcp_clients", "mcp_grants", "members", "organizations", "page_views", "schema_meta", "users",
+    "api_keys", "explorer_counts", "feature_flags", "mcp_auth_codes", "mcp_clients", "mcp_grants", "members", "organizations", "page_views", "schema_meta", "users",
   ]);
   assert.equal((await q("SELECT count(*)::int AS n FROM final.people")).rows[0].n, 250);
 });

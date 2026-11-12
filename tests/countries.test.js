@@ -116,7 +116,7 @@ test("countryOnlyTotal: used only when country is the only filter", () => {
 
 test("world city cards: Canadian province, Montréal spellings, and the card's URL filters", () => {
   process.env.NEON_DATABASE_URL = process.env.NEON_DATABASE_URL || "postgresql://u@127.0.0.1:1/x";
-  const { cityCardParams, canonicalCity, candidates } = require("../scripts/refresh_world_cities");
+  const { cityCardParams, canonicalCity, candidates } = require("../src/counts/worldCities");
   for (const raw of ["Montral", "Montréal", "Montr", "MontrÃ©al", "MONTREAL"]) assert.equal(canonicalCity(raw), "Montreal", raw);
   assert.equal(canonicalCity("TORONTO"), "Toronto");
   assert.deepEqual(cityCardParams("CA", { name: "Toronto", state: "ON" }), { country: "CA", f_city: "Toronto", f_state_eq: "ON" });

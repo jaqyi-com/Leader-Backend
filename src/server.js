@@ -120,6 +120,7 @@ const PUBLIC_PATH_PREFIXES = [
   "/mcp",                       // MCP connector — checks its own OAuth access token
   "/oauth",                     // MCP OAuth endpoints (register / authorize / token / revoke)
   "/.well-known",               // OAuth discovery metadata for MCP clients
+  "/api/cron",                  // scheduled jobs — check their own CRON_SECRET (routes/cron.js)
 ];
 
 app.use((req, res, next) => {
@@ -310,11 +311,28 @@ const finalPeopleEmailRouter   = require("./routes/finalPeopleEmail");
 const finalPeopleNumberRouter  = require("./routes/finalPeopleNumber");
 const finalCompaniesRouter     = require("./routes/finalCompaniesDatabase");
 const emailVerificationRouter  = require("./routes/emailVerification");
-app.use("/api/final-people",         dataLimiter, requirePaidAccess, finalPeopleRouter);
-app.use("/api/final-people-email",   dataLimiter, requirePaidAccess, finalPeopleEmailRouter);
-app.use("/api/final-people-number",  dataLimiter, requirePaidAccess, finalPeopleNumberRouter);
-app.use("/api/final-companies",      dataLimiter, requirePaidAccess, finalCompaniesRouter);
+const explorerCounts           = require("./utils/explorerCounts");
+
+// Counts behind the country picker and the city / category cards (app.explorer_counts, refreshed
+// nightly; see src/utils/explorerCounts.js). Signed-in users only (the public pages show no counts).
+//   GET /api/explorer-counts?keys=countries,world_cities  → { countries: {...}, world_cities: {...} }
+app.get("/api/explorer-counts", explorerCounts.fresh, (req, res) => {
+  const asked = String(req.query.keys || "").split(",").map((k) => k.trim()).filter(Boolean);
+  const keys = asked.length ? asked : explorerCounts.KEYS;
+  if (keys.some((k) => !explorerCounts.KEYS.includes(k))) {
+    return res.status(400).json({ error: `keys must be among: ${explorerCounts.KEYS.join(", ")}` });
+  }
+  // Browsers revalidate each time (Express ETag → 304 when unchanged); the server caches for 5 minutes.
+  res.set("Cache-Control", "private, no-cache");
+  res.json(Object.fromEntries(keys.map((k) => [k, explorerCounts.get(k)])));
+});
+
+app.use("/api/final-people",         dataLimiter, explorerCounts.fresh, requirePaidAccess, finalPeopleRouter);
+app.use("/api/final-people-email",   dataLimiter, explorerCounts.fresh, requirePaidAccess, finalPeopleEmailRouter);
+app.use("/api/final-people-number",  dataLimiter, explorerCounts.fresh, requirePaidAccess, finalPeopleNumberRouter);
+app.use("/api/final-companies",      dataLimiter, explorerCounts.fresh, requirePaidAccess, finalCompaniesRouter);
 app.use("/api/verify-email",         emailVerificationRouter);
+app.use("/api/cron",                 require("./routes/cron")); // daily count job (Vercel Cron)
 
 
 

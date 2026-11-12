@@ -1,8 +1,10 @@
 import { Info } from "lucide-react";
 import { countryByCode, flag, fmtCount, LIMITED_COVERAGE } from "../countries";
+import { useLiveCounts } from "../liveCounts";
 
 /** Line under the filters when a country is chosen: how many results, and a note when coverage is thin. */
 export default function CountryNote({ country, kind, total, totalExact = true, loading, noun, showCount = true }) {
+  useLiveCounts("countries");
   const c = countryByCode(country);
   if (!c) return null;
   const inCountry = c[kind];

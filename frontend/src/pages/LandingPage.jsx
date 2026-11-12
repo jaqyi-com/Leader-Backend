@@ -360,7 +360,7 @@ function DatabaseShowcase() {
 
 /* ── Categories Showcase ───────────────────────────────────── */
 // Every industry and job title in Doott, from the same generated file as the in-app Categories page
-// (scripts/refresh_explorer_counts.js). Names only; each link opens that exact filter.
+// (src/counts/explorerCards.js). Names only; each link opens that exact filter.
 const COUNTRY_TABS = [
   { key: "india", label: "India" },
   { key: "usa", label: "USA" },

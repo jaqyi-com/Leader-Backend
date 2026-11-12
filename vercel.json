@@ -2,7 +2,7 @@
   "version": 2,
   "functions": {
     "api/index.js": {
-      "includeFiles": "src/public/**"
+      "includeFiles": "{src/public/**,src/counts/phoneGeo.json.gz}"
     }
   },
   "rewrites": [
@@ -41,6 +41,12 @@
     {
       "source": "/(.*)",
       "destination": "/app-shell.html"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/refresh-counts",
+      "schedule": "30 20 * * *"
     }
   ]
 }

@@ -15,7 +15,7 @@ const crypto = require("crypto");
 const bcrypt = require("bcryptjs");
 const { getPool } = require("./cloudSql");
 
-const SCHEMA_VERSION = 1;
+const SCHEMA_VERSION = 2;
 
 const SCHEMA_SQL = `
 CREATE SCHEMA IF NOT EXISTS app;
@@ -133,6 +133,14 @@ CREATE TABLE IF NOT EXISTS app.mcp_grants (
 );
 CREATE INDEX IF NOT EXISTS mcp_grants_user_idx ON app.mcp_grants (user_id);
 CREATE INDEX IF NOT EXISTS mcp_grants_client_idx ON app.mcp_grants (client_id);
+
+-- v2: counts behind the country picker and the city / category cards (src/utils/explorerCounts.js)
+CREATE TABLE IF NOT EXISTS app.explorer_counts (
+  key          text PRIMARY KEY,
+  data         jsonb NOT NULL,
+  generated_at timestamptz,
+  updated_at   timestamptz NOT NULL DEFAULT now()
+);
 
 CREATE TABLE IF NOT EXISTS app.feature_flags (
   key             text PRIMARY KEY,
