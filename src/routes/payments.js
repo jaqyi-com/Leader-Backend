@@ -11,6 +11,7 @@ const Razorpay = require("razorpay");
 const authService   = require("../services/authService");
 const db            = require("../db/appDb");
 const logger        = require("../utils/logger");
+const mailer = require("../services/mailer");
 
 const router = express.Router();
 
@@ -115,7 +116,7 @@ router.post("/verify-and-register", async (req, res) => {
       email: email.toLowerCase().trim(),
       password,
       orgName: `${name.trim()}'s Workspace`,
-    });
+    }, { sendWelcome: false });
 
     // Mark as lifetime
     await db.update("users", { _id: result.user._id }, {
@@ -127,6 +128,7 @@ router.post("/verify-and-register", async (req, res) => {
     });
 
     logger.info(`[Payments] ✅ Lifetime account: ${email} | ${razorpay_payment_id}`);
+    mailer.send(result.user.email, "welcome", { name: result.user.name, email: result.user.email, paymentId: razorpay_payment_id });
     res.status(201).json({ success: true, token: result.token, user: { ...result.user, plan: "lifetime" }, org: result.org });
   } catch (err) {
     logger.error(`[Payments] verify-and-register: ${err.message}`);

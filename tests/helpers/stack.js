@@ -151,6 +151,7 @@ async function startStack({ env = {} } = {}) {
       RATE_LIMIT_AUTH_MAX: "100000", RATE_LIMIT_LOGIN_ACCOUNT_MAX: "100000", RATE_LIMIT_DATA_MAX: "100000",
       REGISTRATION_MODE: "open", // the default is invite-only; tests that check sign-up policy override this
       COUNTRY_COUNTS_FILE: path.join(os.tmpdir(), "doott-no-country-counts.json"), // production counts don't apply to fixtures
+      MAIL_OUTBOX_FILE: path.join(os.tmpdir(), `doott-test-outbox-${process.pid}.jsonl`), // never send real email from tests
       ...env,
     },
     stdio: process.env.TEST_SERVER_LOGS ? "inherit" : "ignore", // TEST_SERVER_LOGS=1 shows the API's logs

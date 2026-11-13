@@ -33,6 +33,7 @@ const db = require("../db/appDb");
 
 const findClient = (clientId) => db.one("SELECT * FROM app.mcp_clients WHERE client_id = $1", [String(clientId)]);
 const logger = require("../utils/logger").forAgent("McpOAuth");
+const mailer = require("../services/mailer");
 
 const MCP_KEY = crypto.createHmac("sha256", JWT_SECRET).update("doott-mcp-oauth-v1").digest();
 const ACCESS_TTL_S = 60 * 60;                  // 1 hour
@@ -112,7 +113,13 @@ async function newGrantTokens(grant) {
   const refreshToken = randomToken();
   const fields = { refreshTokenHash: sha256(refreshToken), refreshExpiresAt: new Date(Date.now() + REFRESH_TTL_MS) };
   if (grant._id) [grant] = await db.update("mcp_grants", { _id: grant._id }, fields);
-  else grant = await db.insert("mcp_grants", { ...grant, ...fields });
+  else {
+    grant = await db.insert("mcp_grants", { ...grant, ...fields });
+    // A new connection (not a token refresh): tell the account owner.
+    db.one("SELECT name, email FROM app.users WHERE id = $1", [String(grant.userId)])
+      .then((u) => u && mailer.send(u.email, "claudeConnected", { name: u.name, clientName: grant.clientName }))
+      .catch(() => {});
+  }
   return {
     access_token: issueAccessToken(grant),
     token_type: "Bearer",

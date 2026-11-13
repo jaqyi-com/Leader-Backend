@@ -167,29 +167,7 @@ async function getUserOrgs(userId) {
 // ── Helper: Send invite email ────────────────────────────────────────────────
 async function sendInviteEmail({ email, org, inviteToken }) {
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5173";
-  const link = `${frontendUrl}/invite?token=${inviteToken}`;
-
-    const nodemailer = require("nodemailer");
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || "587"),
-      secure: process.env.SMTP_SECURE === "true",
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    });
-
-    await transporter.sendMail({
-      from: `"${process.env.SMTP_FROM_NAME || "Leader"}" <${process.env.SMTP_FROM_EMAIL}>`,
-      to: email,
-      subject: `You've been invited to ${org.name} on Leader`,
-      html: `
-        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f8;padding:40px;border-radius:16px;border:1px solid rgba(255,255,255,0.07)">
-          <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">You're invited to <span style="color:#6c63ff">${org.name}</span></h2>
-          <p style="color:#8888a8;margin:0 0 28px;font-size:14px;">You've been added to the Leader workspace for <strong>${org.name}</strong>. Click below to accept your invitation.</p>
-          <a href="${link}" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6c63ff,#8b5cf6);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;">Accept Invitation</a>
-          <p style="color:#55556a;font-size:12px;margin-top:28px;">This link expires in 7 days.</p>
-        </div>
-      `,
-    });
+  await require("./mailer").sendNow(email, "orgInvite", { orgName: org.name, link: `${frontendUrl}/invite?token=${inviteToken}` });
 }
 
 module.exports = {

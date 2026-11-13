@@ -1,24 +1,11 @@
 const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
-const nodemailer = require("nodemailer");
+const mailer = require("./mailer");
 const db = require("../db/appDb");
 
 const { JWT_SECRET } = require("../config/jwtSecret");
 const { registrationMode } = require("../config/registration");
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
-
-// ── Email transporter (reuses existing SMTP config) ─────────────────────────
-function getTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || "587"),
-    secure: process.env.SMTP_SECURE === "true",
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-}
 
 // ── Helper: Unique Slug Generation ───────────────────────────────────────────
 async function generateUniqueSlug(name) {
@@ -50,7 +37,7 @@ function generateToken(user, orgId, role = "member") {
 }
 
 // ── Email / Password Registration ────────────────────────────────────────────
-async function registerWithEmail({ name, email, password, orgName }) {
+async function registerWithEmail({ name, email, password, orgName }, { sendWelcome = true } = {}) {
   // Check if user already exists
   const existing = await db.findUserByEmail(email);
   if (existing) {
@@ -91,6 +78,7 @@ async function registerWithEmail({ name, email, password, orgName }) {
 
   // Auto-login: return a token so the user is signed in immediately
   const token = generateToken(user, org._id, "admin");
+  if (sendWelcome) mailer.send(user.email, "welcome", { name: user.name, email: user.email });
 
   return { token, user: db.publicUser(user), org };
 }
@@ -142,6 +130,7 @@ async function handleGoogleOAuth({ googleId, email, name, avatar }) {
     const org = await db.insert("organizations", { name: `${name}'s Organization`, slug, ownerId: user._id });
     await db.insert("members", { orgId: org._id, userId: user._id, role: "admin", status: "active", joinedAt: new Date() });
     [user] = await db.update("users", { _id: user._id }, { defaultOrgId: org._id });
+    mailer.send(user.email, "welcome", { name: user.name, email: user.email, viaGoogle: true });
   } else if (!user.googleId) {
     // Link googleId if missing (user registered via email first)
     [user] = await db.update("users", { _id: user._id }, {
@@ -190,26 +179,7 @@ async function resendVerificationEmail(email) {
 // ── Helper: Send Verification Email ─────────────────────────────────────────
 async function sendVerificationEmail(user, token) {
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5174";
-  const link = `${frontendUrl}/verify-email?token=${token}`;
-
-  try {
-    const transporter = getTransporter();
-    await transporter.sendMail({
-      from: `"${process.env.SMTP_FROM_NAME || "Leader"}" <${process.env.SMTP_FROM_EMAIL}>`,
-      to: user.email,
-      subject: "Verify your Leader account",
-      html: `
-        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f8;padding:40px;border-radius:16px;border:1px solid rgba(255,255,255,0.07)">
-          <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Welcome to Leader, ${user.name}! 🚀</h2>
-          <p style="color:#8888a8;margin:0 0 28px;font-size:14px;">Click the button below to verify your email address and activate your account.</p>
-          <a href="${link}" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6c63ff,#8b5cf6);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;">Verify Email</a>
-          <p style="color:#55556a;font-size:12px;margin-top:28px;">This link expires in 24 hours. If you didn't create an account, ignore this email.</p>
-        </div>
-      `,
-    });
-  } catch (e) {
-    console.error("[AuthService] Failed to send verification email:", e.message);
-  }
+  await mailer.sendNow(user.email, "verifyEmail", { name: user.name, link: `${frontendUrl}/verify-email?token=${token}` });
 }
 
 // ── Forgot Password ──────────────────────────────────────────────────────────
@@ -227,24 +197,8 @@ async function forgotPassword(email) {
   const frontendUrl = process.env.FRONTEND_URL || "http://localhost:5174";
   const link = `${frontendUrl}/reset-password?token=${resetToken}`;
 
-  try {
-    const transporter = getTransporter();
-    await transporter.sendMail({
-      from: `"${process.env.SMTP_FROM_NAME || "Leader"}" <${process.env.SMTP_FROM_EMAIL}>`,
-      to: user.email,
-      subject: "Reset your Leader password",
-      html: `
-        <div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;background:#0a0a0f;color:#f0f0f8;padding:40px;border-radius:16px;border:1px solid rgba(255,255,255,0.07)">
-          <h2 style="margin:0 0 8px;font-size:22px;font-weight:700;">Reset your password 🔐</h2>
-          <p style="color:#8888a8;margin:0 0 28px;font-size:14px;">We received a request to reset your password for <strong style="color:#f0f0f8">${user.email}</strong>. Click below to create a new one.</p>
-          <a href="${link}" style="display:inline-block;padding:12px 28px;background:linear-gradient(135deg,#6c63ff,#8b5cf6);color:#fff;border-radius:12px;text-decoration:none;font-weight:600;font-size:14px;">Reset Password</a>
-          <p style="color:#55556a;font-size:12px;margin-top:28px;">This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
-        </div>
-      `,
-    });
-  } catch (e) {
-    console.error("[AuthService] Failed to send password reset email:", e.message);
-  }
+  // Awaited: the caller tells the user the email is on its way.
+  await mailer.sendNow(user.email, "passwordReset", { name: user.name, email: user.email, link });
 }
 
 // ── Reset Password ───────────────────────────────────────────────────────────
@@ -270,6 +224,7 @@ async function resetPassword(token, newPassword) {
     isEmailVerified: true, // resetting password implicitly verifies the email
     tokenVersion: (user.tokenVersion || 0) + 1, // a reset signs out every existing session
   });
+  mailer.send(user.email, "passwordChanged", { name: user.name, email: user.email, how: "reset" });
   return { message: "Password reset successfully. You can now log in." };
 }
 

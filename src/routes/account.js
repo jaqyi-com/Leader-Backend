@@ -9,6 +9,7 @@ const db = require("../db/appDb");
 const { hashApiKey, clearAuthCache, API_KEY_PREFIX } = require("../middleware/auth");
 const { authLimiter } = require("../middleware/rateLimiter");
 const authService = require("../services/authService");
+const mailer = require("../services/mailer");
 
 const router = express.Router();
 const MAX_KEYS = 10;
@@ -93,6 +94,7 @@ router.post("/password", authLimiter, express.json(), wrap(async (req, res) => {
     passwordResetToken: null,
     passwordResetExpires: null,
   });
+  mailer.send(user.email, "passwordChanged", { name: user.name, email: user.email, how: hadPassword ? "changed" : "set" });
   res.json({ success: true, token, message: hadPassword ? "Password changed. Other devices were signed out." : "Password set. You can now also sign in with your email and password." });
 }));
 
@@ -127,6 +129,8 @@ router.post("/api-keys", express.json(), wrap(async (req, res) => {
   if (count >= MAX_KEYS) return fail(res, 400, `You can have up to ${MAX_KEYS} keys. Revoke one you no longer use first.`);
   const key = API_KEY_PREFIX + crypto.randomBytes(24).toString("base64url");
   const doc = await db.insert("api_keys", { userId: req.user.userId, name, prefix: key.slice(0, 12), keyHash: hashApiKey(key) });
+  const owner = await me(req);
+  if (owner) mailer.send(owner.email, "apiKeyCreated", { name: owner.name, keyName: name, prefix: doc.prefix });
   res.status(201).json({ success: true, key, apiKey: publicKey(doc) });
 }));
 
@@ -170,6 +174,7 @@ router.delete("/", authLimiter, express.json(), wrap(async (req, res) => {
   });
   clearAuthCache(user._id);
   console.log(`[account] deleted user ${user._id}`);
+  mailer.send(user.email, "accountDeleted", { name: user.name, email: user.email });
   res.json({ success: true });
 }));
 
