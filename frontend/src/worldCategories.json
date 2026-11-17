@@ -1,0 +1,2640 @@
+{
+  "generatedAt": "2026-11-17T10:55:35.948Z",
+  "countries": {
+    "CA": {
+      "name": "Canada",
+      "companies": [
+        {
+          "name": "Business Services",
+          "count": 3069
+        },
+        {
+          "name": "Manufacturing",
+          "count": 1273
+        },
+        {
+          "name": "Software & Internet",
+          "count": 729
+        },
+        {
+          "name": "Financial Services",
+          "count": 688
+        },
+        {
+          "name": "Computers & Electronics",
+          "count": 661
+        },
+        {
+          "name": "Real Estate & Construction",
+          "count": 594
+        },
+        {
+          "name": "Consumer Services",
+          "count": 529
+        },
+        {
+          "name": "Healthcare",
+          "count": 522
+        },
+        {
+          "name": "Retail",
+          "count": 520
+        },
+        {
+          "name": "Media & Entertainment",
+          "count": 476
+        },
+        {
+          "name": "Energy & Utilities",
+          "count": 467
+        },
+        {
+          "name": "Travel, Recreation, and Leisure",
+          "count": 460
+        },
+        {
+          "name": "Education",
+          "count": 403
+        },
+        {
+          "name": "Non-Profit",
+          "count": 329
+        },
+        {
+          "name": "Agriculture & Mining",
+          "count": 281
+        },
+        {
+          "name": "Telecommunications",
+          "count": 275
+        },
+        {
+          "name": "Government",
+          "count": 239
+        },
+        {
+          "name": "technology",
+          "count": 225
+        },
+        {
+          "name": "ecommerce",
+          "count": 219
+        },
+        {
+          "name": "Transportation & Storage",
+          "count": 202
+        },
+        {
+          "name": "Restaurants",
+          "count": 190
+        },
+        {
+          "name": "Wholesale & Distribution",
+          "count": 156
+        },
+        {
+          "name": "Real Estate",
+          "count": 129
+        },
+        {
+          "name": "Construction",
+          "count": 91
+        },
+        {
+          "name": "agency",
+          "count": 52
+        },
+        {
+          "name": "Food & Beverage",
+          "count": 46
+        },
+        {
+          "name": "Services (Miscellaneous)",
+          "count": 41
+        },
+        {
+          "name": "Health, Wellness And Fitness",
+          "count": 41
+        },
+        {
+          "name": "Marketing And Advertising",
+          "count": 37
+        },
+        {
+          "name": "Travel & Accommodation",
+          "count": 35
+        },
+        {
+          "name": "Banking",
+          "count": 28
+        },
+        {
+          "name": "Law Practice",
+          "count": 27
+        },
+        {
+          "name": "Computer Software",
+          "count": 22
+        },
+        {
+          "name": "Flower shops",
+          "count": 17
+        },
+        {
+          "name": "Staffing And Recruiting",
+          "count": 15
+        },
+        {
+          "name": "Information Technology And Services",
+          "count": 13
+        },
+        {
+          "name": "finance",
+          "count": 13
+        },
+        {
+          "name": "legal",
+          "count": 13
+        },
+        {
+          "name": "Insurance",
+          "count": 12
+        },
+        {
+          "name": "Retail & Wholesale",
+          "count": 11
+        },
+        {
+          "name": "Internet",
+          "count": 10
+        },
+        {
+          "name": "real_estate",
+          "count": 10
+        },
+        {
+          "name": "Design",
+          "count": 9
+        },
+        {
+          "name": "Property management",
+          "count": 9
+        },
+        {
+          "name": "Food Production",
+          "count": 8
+        },
+        {
+          "name": "Cafes",
+          "count": 8
+        },
+        {
+          "name": "Automotive",
+          "count": 7
+        },
+        {
+          "name": "Chiropractors",
+          "count": 7
+        },
+        {
+          "name": "Professional Training & Coaching",
+          "count": 7
+        },
+        {
+          "name": "Consumer Goods",
+          "count": 6
+        },
+        {
+          "name": "Education Management",
+          "count": 6
+        },
+        {
+          "name": "Entertainment",
+          "count": 6
+        },
+        {
+          "name": "Hardware stores",
+          "count": 6
+        },
+        {
+          "name": "Transportation/Trucking/Railroad",
+          "count": 6
+        },
+        {
+          "name": "Martial arts schools",
+          "count": 5
+        },
+        {
+          "name": "Oil & Energy",
+          "count": 5
+        },
+        {
+          "name": "Event Planners",
+          "count": 5
+        },
+        {
+          "name": "Facilities Services",
+          "count": 5
+        },
+        {
+          "name": "Government Administration",
+          "count": 5
+        },
+        {
+          "name": "Hospitality",
+          "count": 5
+        },
+        {
+          "name": "Photography",
+          "count": 5
+        },
+        {
+          "name": "Plumbers",
+          "count": 5
+        }
+      ],
+      "people": [
+        {
+          "name": "Owner",
+          "count": 21088
+        },
+        {
+          "name": "President",
+          "count": 19959
+        },
+        {
+          "name": "Marketing Manager",
+          "count": 6897
+        },
+        {
+          "name": "Chief Executive Officer",
+          "count": 4235
+        },
+        {
+          "name": "Marketing Director",
+          "count": 3191
+        },
+        {
+          "name": "Chief Operating Officer",
+          "count": 3119
+        },
+        {
+          "name": "Marketing Executive",
+          "count": 2920
+        },
+        {
+          "name": "Director of Marketing",
+          "count": 2715
+        },
+        {
+          "name": "Vice President Marketing",
+          "count": 2202
+        },
+        {
+          "name": "Operations Manager",
+          "count": 1565
+        },
+        {
+          "name": "Marketing Coordinator",
+          "count": 1293
+        },
+        {
+          "name": "Vice President of Marketing",
+          "count": 1243
+        },
+        {
+          "name": "Vice President Sales and Marketing",
+          "count": 1180
+        },
+        {
+          "name": "Sales and Marketing Manager",
+          "count": 1034
+        },
+        {
+          "name": "Director-Marketing",
+          "count": 1027
+        },
+        {
+          "name": "Chief Marketing Officer",
+          "count": 982
+        },
+        {
+          "name": "President and Chief Executive Officer",
+          "count": 866
+        },
+        {
+          "name": "Director Of Operations",
+          "count": 805
+        },
+        {
+          "name": "Director of Sales and Marketing",
+          "count": 805
+        },
+        {
+          "name": "Director - Marketing",
+          "count": 737
+        },
+        {
+          "name": "Vice President Operations",
+          "count": 736
+        },
+        {
+          "name": "Director Marketing",
+          "count": 724
+        },
+        {
+          "name": "CEO",
+          "count": 619
+        },
+        {
+          "name": "Product Marketing Manager",
+          "count": 534
+        },
+        {
+          "name": "President & Chief Executive Officer",
+          "count": 520
+        },
+        {
+          "name": "Vice President of Sales and Marketing",
+          "count": 511
+        },
+        {
+          "name": "Vice President, Marketing",
+          "count": 504
+        },
+        {
+          "name": "Marketing Specialist",
+          "count": 449
+        },
+        {
+          "name": "Marketing Assistant",
+          "count": 405
+        },
+        {
+          "name": "Director, Marketing",
+          "count": 402
+        },
+        {
+          "name": "Senior Marketing Manager",
+          "count": 396
+        },
+        {
+          "name": "Manager Marketing",
+          "count": 386
+        },
+        {
+          "name": "Marketing Communications Manager",
+          "count": 366
+        },
+        {
+          "name": "Owner, President",
+          "count": 363
+        },
+        {
+          "name": "Vice President, Sales and Marketing",
+          "count": 346
+        },
+        {
+          "name": "Operations Executive",
+          "count": 342
+        },
+        {
+          "name": "Vice President - Marketing",
+          "count": 339
+        },
+        {
+          "name": "President/CEO",
+          "count": 332
+        },
+        {
+          "name": "Vice President-Marketing",
+          "count": 330
+        },
+        {
+          "name": "Executive Vice President Marketing",
+          "count": 326
+        },
+        {
+          "name": "Vice President Of Operations",
+          "count": 307
+        },
+        {
+          "name": "Marketing Associate",
+          "count": 292
+        },
+        {
+          "name": "Sales and Marketing",
+          "count": 284
+        },
+        {
+          "name": "Director-Sales and Marketing",
+          "count": 280
+        },
+        {
+          "name": "Director-operations",
+          "count": 263
+        },
+        {
+          "name": "Operations Director",
+          "count": 249
+        },
+        {
+          "name": "Vice President, Operations",
+          "count": 245
+        },
+        {
+          "name": "Vice President-Sales and Marketing",
+          "count": 242
+        },
+        {
+          "name": "Vice President of Sales & Marketing",
+          "count": 236
+        },
+        {
+          "name": "Director Sales and Marketing",
+          "count": 217
+        },
+        {
+          "name": "Marketing",
+          "count": 216
+        },
+        {
+          "name": "Director Operations",
+          "count": 215
+        },
+        {
+          "name": "Vice President - Operations",
+          "count": 211
+        },
+        {
+          "name": "President and Chief Operating Officer",
+          "count": 205
+        },
+        {
+          "name": "Sales and Marketing Director",
+          "count": 202
+        },
+        {
+          "name": "Vice President-operations",
+          "count": 199
+        },
+        {
+          "name": "Marketing Executive, Sales Executive",
+          "count": 198
+        },
+        {
+          "name": "Marketing Consultant",
+          "count": 195
+        },
+        {
+          "name": "VP Marketing",
+          "count": 194
+        },
+        {
+          "name": "Chief Operations Officer",
+          "count": 191
+        },
+        {
+          "name": "Marketing Representative",
+          "count": 186
+        },
+        {
+          "name": "Chief Executive Officer, President",
+          "count": 180
+        },
+        {
+          "name": "Director - Operations",
+          "count": 180
+        },
+        {
+          "name": "Director, Operations",
+          "count": 178
+        },
+        {
+          "name": "Co-Owner",
+          "count": 175
+        },
+        {
+          "name": "Marketing Analyst",
+          "count": 173
+        },
+        {
+          "name": "Chief Executive Officer and President",
+          "count": 167
+        },
+        {
+          "name": "Vice President Sales & Marketing",
+          "count": 165
+        },
+        {
+          "name": "Director of Marketing and Communications",
+          "count": 153
+        },
+        {
+          "name": "Senior Vice President Marketing",
+          "count": 142
+        },
+        {
+          "name": "Vice President - Sales and Marketing",
+          "count": 140
+        },
+        {
+          "name": "Chairman and Chief Executive Officer",
+          "count": 137
+        },
+        {
+          "name": "President/Chief Executive Officer",
+          "count": 133
+        },
+        {
+          "name": "Marketing Staff",
+          "count": 120
+        },
+        {
+          "name": "Director - Sales & Marketing",
+          "count": 119
+        },
+        {
+          "name": "Vice President - Sales & Marketing",
+          "count": 117
+        },
+        {
+          "name": "Marketing and Communications Manager",
+          "count": 114
+        },
+        {
+          "name": "Director of Product Marketing",
+          "count": 110
+        },
+        {
+          "name": "Marketing/public Relations Director",
+          "count": 105
+        },
+        {
+          "name": "Information Technology Operations Manager",
+          "count": 105
+        },
+        {
+          "name": "Senior Product Marketing Manager",
+          "count": 103
+        },
+        {
+          "name": "Vice President Sales Marketing",
+          "count": 103
+        },
+        {
+          "name": "Director, Sales and Marketing",
+          "count": 100
+        },
+        {
+          "name": "Manager-marketing",
+          "count": 100
+        },
+        {
+          "name": "Senior Vice President of Marketing",
+          "count": 95
+        },
+        {
+          "name": "Sales and Marketing Coordinator",
+          "count": 95
+        },
+        {
+          "name": "CEO/President",
+          "count": 93
+        },
+        {
+          "name": "Online Marketing Manager",
+          "count": 90
+        },
+        {
+          "name": "Network Operations Manager",
+          "count": 90
+        },
+        {
+          "name": "President, Chief Executive Officer, Director",
+          "count": 90
+        },
+        {
+          "name": "Director - Sales and Marketing",
+          "count": 89
+        },
+        {
+          "name": "Technical Marketing Manager",
+          "count": 88
+        },
+        {
+          "name": "Marketing and Sales",
+          "count": 86
+        },
+        {
+          "name": "Senior Vice President of Sales and Marketing",
+          "count": 86
+        },
+        {
+          "name": "Marketing Programs Manager",
+          "count": 84
+        },
+        {
+          "name": "Senior Vice President Operations",
+          "count": 84
+        },
+        {
+          "name": "Manager, Operations",
+          "count": 80
+        },
+        {
+          "name": "Marketing Communications Specialist",
+          "count": 79
+        },
+        {
+          "name": "Senior Vice President, Sales and Marketing",
+          "count": 79
+        },
+        {
+          "name": "Senior Director of Marketing",
+          "count": 78
+        },
+        {
+          "name": "Senior Vice President Sales and Marketing",
+          "count": 78
+        },
+        {
+          "name": "Director of Marketing and Sales",
+          "count": 78
+        },
+        {
+          "name": "Manager Sales and Marketing",
+          "count": 78
+        },
+        {
+          "name": "Director Product Marketing",
+          "count": 78
+        },
+        {
+          "name": "Channel Marketing Manager",
+          "count": 77
+        },
+        {
+          "name": "Director, Product Marketing",
+          "count": 77
+        },
+        {
+          "name": "President & Chief Operating Officer",
+          "count": 74
+        },
+        {
+          "name": "Sales Marketing Manager",
+          "count": 73
+        },
+        {
+          "name": "Regional Marketing Manager",
+          "count": 71
+        },
+        {
+          "name": "Senior Vice President, Marketing",
+          "count": 70
+        },
+        {
+          "name": "President & CEO",
+          "count": 70
+        },
+        {
+          "name": "Vice President Sales, Marketing",
+          "count": 70
+        },
+        {
+          "name": "COO",
+          "count": 69
+        },
+        {
+          "name": "Marketing Services Manager",
+          "count": 68
+        },
+        {
+          "name": "Founder and President",
+          "count": 68
+        },
+        {
+          "name": "Sales/Marketing",
+          "count": 66
+        },
+        {
+          "name": "Director of Marketing and Public Relations",
+          "count": 65
+        },
+        {
+          "name": "Founder and Chief Executive Officer",
+          "count": 65
+        },
+        {
+          "name": "Manager, Operating Groups",
+          "count": 64
+        },
+        {
+          "name": "Vice President Marketing and Business Development",
+          "count": 63
+        }
+      ]
+    },
+    "GB": {
+      "name": "United Kingdom",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 502
+        },
+        {
+          "name": "technology",
+          "count": 433
+        },
+        {
+          "name": "education",
+          "count": 267
+        },
+        {
+          "name": "Marketing And Advertising",
+          "count": 120
+        },
+        {
+          "name": "agency",
+          "count": 100
+        },
+        {
+          "name": "Staffing And Recruiting",
+          "count": 94
+        },
+        {
+          "name": "finance",
+          "count": 63
+        },
+        {
+          "name": "Information Technology And Services",
+          "count": 43
+        },
+        {
+          "name": "healthcare",
+          "count": 42
+        },
+        {
+          "name": "Law Practice",
+          "count": 41
+        },
+        {
+          "name": "Non-Profit Organization Management",
+          "count": 32
+        },
+        {
+          "name": "Real Estate",
+          "count": 27
+        },
+        {
+          "name": "legal",
+          "count": 27
+        },
+        {
+          "name": "real_estate",
+          "count": 27
+        },
+        {
+          "name": "Health, Wellness And Fitness",
+          "count": 25
+        },
+        {
+          "name": "Internet",
+          "count": 23
+        },
+        {
+          "name": "Construction",
+          "count": 18
+        },
+        {
+          "name": "Financial Services",
+          "count": 14
+        },
+        {
+          "name": "Design",
+          "count": 13
+        },
+        {
+          "name": "Computer Software",
+          "count": 12
+        },
+        {
+          "name": "Management Consulting",
+          "count": 12
+        },
+        {
+          "name": "Public Relations And Communications",
+          "count": 11
+        },
+        {
+          "name": "Hospital & Health Care",
+          "count": 8
+        },
+        {
+          "name": "Retail",
+          "count": 8
+        },
+        {
+          "name": "Legal Services",
+          "count": 7
+        },
+        {
+          "name": "Venture Capital & Private Equity",
+          "count": 7
+        },
+        {
+          "name": "Food Production",
+          "count": 6
+        },
+        {
+          "name": "Higher Education",
+          "count": 6
+        },
+        {
+          "name": "Online Media",
+          "count": 6
+        },
+        {
+          "name": "Photography",
+          "count": 6
+        },
+        {
+          "name": "Leisure, Travel, & Tourism",
+          "count": 5
+        },
+        {
+          "name": "Professional Training & Coaching",
+          "count": 5
+        },
+        {
+          "name": "Restaurants",
+          "count": 5
+        },
+        {
+          "name": "Sports",
+          "count": 5
+        }
+      ],
+      "people": [
+        {
+          "name": "Owner",
+          "count": 103
+        },
+        {
+          "name": "Chief Executive Officer",
+          "count": 41
+        },
+        {
+          "name": "Founder And Chief Executive Officer",
+          "count": 34
+        },
+        {
+          "name": "Managing Director",
+          "count": 34
+        },
+        {
+          "name": "Partner",
+          "count": 32
+        },
+        {
+          "name": "Director",
+          "count": 31
+        },
+        {
+          "name": "Founder",
+          "count": 29
+        },
+        {
+          "name": "Recruitment Consultant",
+          "count": 14
+        },
+        {
+          "name": "Senior Associate",
+          "count": 11
+        },
+        {
+          "name": "Co-Founder And Chief Executive Officer",
+          "count": 10
+        },
+        {
+          "name": "Founder & Ceo",
+          "count": 10
+        },
+        {
+          "name": "Marketing Manager",
+          "count": 10
+        },
+        {
+          "name": "Co-Founder",
+          "count": 9
+        },
+        {
+          "name": "Consultant",
+          "count": 9
+        },
+        {
+          "name": "Trainee Patent Attorney",
+          "count": 9
+        },
+        {
+          "name": "Business Development Manager",
+          "count": 8
+        },
+        {
+          "name": "Associate",
+          "count": 8
+        },
+        {
+          "name": "Patent Attorney",
+          "count": 7
+        },
+        {
+          "name": "Chiropractor",
+          "count": 6
+        },
+        {
+          "name": "Marketing Director",
+          "count": 6
+        },
+        {
+          "name": "Head Of Marketing",
+          "count": 5
+        },
+        {
+          "name": "Digital Marketing Specialist",
+          "count": 5
+        },
+        {
+          "name": "Manager",
+          "count": 5
+        },
+        {
+          "name": "Marketing Consultant",
+          "count": 5
+        },
+        {
+          "name": "Quantity Surveyor",
+          "count": 5
+        }
+      ]
+    },
+    "PR": {
+      "name": "Puerto Rico",
+      "companies": [
+        {
+          "name": "Business Services",
+          "count": 104
+        },
+        {
+          "name": "Real Estate & Construction",
+          "count": 29
+        },
+        {
+          "name": "Retail",
+          "count": 28
+        },
+        {
+          "name": "Manufacturing",
+          "count": 27
+        },
+        {
+          "name": "Financial Services",
+          "count": 20
+        },
+        {
+          "name": "Healthcare",
+          "count": 19
+        },
+        {
+          "name": "Computers & Electronics",
+          "count": 17
+        },
+        {
+          "name": "Travel, Recreation, and Leisure",
+          "count": 17
+        },
+        {
+          "name": "Education",
+          "count": 16
+        },
+        {
+          "name": "Media & Entertainment",
+          "count": 16
+        },
+        {
+          "name": "Consumer Services",
+          "count": 12
+        },
+        {
+          "name": "Telecommunications",
+          "count": 10
+        },
+        {
+          "name": "Software & Internet",
+          "count": 6
+        },
+        {
+          "name": "Transportation & Storage",
+          "count": 6
+        },
+        {
+          "name": "Wholesale & Distribution",
+          "count": 5
+        },
+        {
+          "name": "ecommerce",
+          "count": 5
+        }
+      ],
+      "people": [
+        {
+          "name": "Owner",
+          "count": 220
+        },
+        {
+          "name": "President",
+          "count": 183
+        },
+        {
+          "name": "Chief Executive Officer",
+          "count": 61
+        },
+        {
+          "name": "Manager",
+          "count": 49
+        },
+        {
+          "name": "Marketing Manager",
+          "count": 42
+        },
+        {
+          "name": "Vice President",
+          "count": 39
+        },
+        {
+          "name": "Chief Operating Officer",
+          "count": 25
+        },
+        {
+          "name": "Principal",
+          "count": 24
+        },
+        {
+          "name": "Operations Manager",
+          "count": 23
+        },
+        {
+          "name": "Marketing Director",
+          "count": 21
+        },
+        {
+          "name": "General Manager",
+          "count": 21
+        },
+        {
+          "name": "Marketing Executive",
+          "count": 20
+        },
+        {
+          "name": "Vice President Marketing",
+          "count": 18
+        },
+        {
+          "name": "Director of Marketing",
+          "count": 18
+        },
+        {
+          "name": "Human Resources Executive",
+          "count": 14
+        },
+        {
+          "name": "Chief Financial Officer",
+          "count": 12
+        },
+        {
+          "name": "Director of Operations",
+          "count": 11
+        },
+        {
+          "name": "Vice President of Marketing",
+          "count": 10
+        },
+        {
+          "name": "Engineer",
+          "count": 10
+        },
+        {
+          "name": "Director",
+          "count": 9
+        },
+        {
+          "name": "Executive Director",
+          "count": 9
+        },
+        {
+          "name": "Marketing Coordinator",
+          "count": 8
+        },
+        {
+          "name": "Chief Marketing Officer",
+          "count": 7
+        },
+        {
+          "name": "Director of Human Resources",
+          "count": 7
+        },
+        {
+          "name": "Managing Director",
+          "count": 7
+        },
+        {
+          "name": "Partner",
+          "count": 7
+        },
+        {
+          "name": "Director of Sales and Marketing",
+          "count": 6
+        },
+        {
+          "name": "Manager of Human Resources",
+          "count": 6
+        },
+        {
+          "name": "Vice President Sales and Marketing",
+          "count": 6
+        },
+        {
+          "name": "Co-Owner",
+          "count": 5
+        },
+        {
+          "name": "Director Marketing",
+          "count": 5
+        },
+        {
+          "name": "Production Manager",
+          "count": 5
+        },
+        {
+          "name": "Vice President-marketing",
+          "count": 5
+        }
+      ]
+    },
+    "DE": {
+      "name": "Germany",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 440
+        },
+        {
+          "name": "ecommerce",
+          "count": 240
+        },
+        {
+          "name": "education",
+          "count": 48
+        },
+        {
+          "name": "agency",
+          "count": 36
+        },
+        {
+          "name": "finance",
+          "count": 16
+        },
+        {
+          "name": "healthcare",
+          "count": 8
+        },
+        {
+          "name": "legal",
+          "count": 7
+        },
+        {
+          "name": "Information Technology And Services",
+          "count": 6
+        }
+      ],
+      "people": [
+        {
+          "name": "Project Manager",
+          "count": 6
+        }
+      ]
+    },
+    "AU": {
+      "name": "Australia",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 135
+        },
+        {
+          "name": "technology",
+          "count": 130
+        },
+        {
+          "name": "Financial Services",
+          "count": 109
+        },
+        {
+          "name": "education",
+          "count": 70
+        },
+        {
+          "name": "agency",
+          "count": 38
+        },
+        {
+          "name": "finance",
+          "count": 25
+        },
+        {
+          "name": "Renewables & Environment",
+          "count": 24
+        },
+        {
+          "name": "Marketing And Advertising",
+          "count": 21
+        },
+        {
+          "name": "Professional Training & Coaching",
+          "count": 21
+        },
+        {
+          "name": "real_estate",
+          "count": 14
+        },
+        {
+          "name": "healthcare",
+          "count": 13
+        },
+        {
+          "name": "Banking",
+          "count": 12
+        },
+        {
+          "name": "Hospitality",
+          "count": 11
+        },
+        {
+          "name": "legal",
+          "count": 11
+        },
+        {
+          "name": "Health, Wellness And Fitness",
+          "count": 8
+        },
+        {
+          "name": "Internet",
+          "count": 6
+        },
+        {
+          "name": "Law Practice",
+          "count": 6
+        },
+        {
+          "name": "Information Technology And Services",
+          "count": 5
+        },
+        {
+          "name": "Restaurants",
+          "count": 5
+        }
+      ],
+      "people": [
+        {
+          "name": "Mortgage Broker",
+          "count": 33
+        },
+        {
+          "name": "Owner",
+          "count": 28
+        },
+        {
+          "name": "Director",
+          "count": 15
+        },
+        {
+          "name": "Managing Director",
+          "count": 15
+        },
+        {
+          "name": "Business Owner",
+          "count": 7
+        },
+        {
+          "name": "Business Development Manager",
+          "count": 6
+        },
+        {
+          "name": "Vice President",
+          "count": 5
+        },
+        {
+          "name": "Senior Mortgage Broker",
+          "count": 5
+        }
+      ]
+    },
+    "NL": {
+      "name": "Netherlands",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 146
+        },
+        {
+          "name": "ecommerce",
+          "count": 136
+        },
+        {
+          "name": "education",
+          "count": 40
+        },
+        {
+          "name": "agency",
+          "count": 15
+        },
+        {
+          "name": "Marketing And Advertising",
+          "count": 6
+        }
+      ],
+      "people": [
+        {
+          "name": "Project Manager",
+          "count": 7
+        },
+        {
+          "name": "Owner",
+          "count": 6
+        }
+      ]
+    },
+    "FR": {
+      "name": "France",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 147
+        },
+        {
+          "name": "technology",
+          "count": 116
+        },
+        {
+          "name": "agency",
+          "count": 24
+        },
+        {
+          "name": "education",
+          "count": 13
+        }
+      ],
+      "people": []
+    },
+    "IT": {
+      "name": "Italy",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 141
+        },
+        {
+          "name": "ecommerce",
+          "count": 106
+        },
+        {
+          "name": "agency",
+          "count": 33
+        },
+        {
+          "name": "education",
+          "count": 18
+        }
+      ],
+      "people": []
+    },
+    "ES": {
+      "name": "Spain",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 123
+        },
+        {
+          "name": "technology",
+          "count": 112
+        },
+        {
+          "name": "education",
+          "count": 10
+        },
+        {
+          "name": "agency",
+          "count": 9
+        }
+      ],
+      "people": []
+    },
+    "FI": {
+      "name": "Finland",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 63
+        },
+        {
+          "name": "technology",
+          "count": 32
+        },
+        {
+          "name": "education",
+          "count": 9
+        }
+      ],
+      "people": [
+        {
+          "name": "senior Researcher",
+          "count": 41
+        },
+        {
+          "name": "Specialist",
+          "count": 15
+        },
+        {
+          "name": "Communications Specialist",
+          "count": 13
+        },
+        {
+          "name": "principal Researcher",
+          "count": 9
+        },
+        {
+          "name": "Application specialist",
+          "count": 8
+        },
+        {
+          "name": "Director",
+          "count": 8
+        },
+        {
+          "name": "head of Section",
+          "count": 7
+        },
+        {
+          "name": "CEO",
+          "count": 6
+        },
+        {
+          "name": "Project Manager",
+          "count": 6
+        },
+        {
+          "name": "Project Consultant",
+          "count": 5
+        },
+        {
+          "name": "Project Manager, Regenerative Agriculture",
+          "count": 5
+        },
+        {
+          "name": "Researcher",
+          "count": 5
+        }
+      ]
+    },
+    "SE": {
+      "name": "Sweden",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 81
+        },
+        {
+          "name": "technology",
+          "count": 57
+        },
+        {
+          "name": "education",
+          "count": 12
+        },
+        {
+          "name": "agency",
+          "count": 10
+        }
+      ],
+      "people": [
+        {
+          "name": "Project Manager",
+          "count": 18
+        },
+        {
+          "name": "Associate Consultant",
+          "count": 11
+        },
+        {
+          "name": "CEO",
+          "count": 5
+        }
+      ]
+    },
+    "CH": {
+      "name": "Switzerland",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 92
+        },
+        {
+          "name": "ecommerce",
+          "count": 49
+        },
+        {
+          "name": "education",
+          "count": 16
+        },
+        {
+          "name": "finance",
+          "count": 7
+        },
+        {
+          "name": "agency",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "VN": {
+      "name": "Vietnam",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 82
+        },
+        {
+          "name": "technology",
+          "count": 48
+        },
+        {
+          "name": "agency",
+          "count": 12
+        },
+        {
+          "name": "education",
+          "count": 6
+        }
+      ],
+      "people": []
+    },
+    "AE": {
+      "name": "United Arab Emirates",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 66
+        },
+        {
+          "name": "ecommerce",
+          "count": 23
+        },
+        {
+          "name": "agency",
+          "count": 13
+        },
+        {
+          "name": "education",
+          "count": 11
+        },
+        {
+          "name": "real_estate",
+          "count": 10
+        },
+        {
+          "name": "finance",
+          "count": 8
+        },
+        {
+          "name": "healthcare",
+          "count": 7
+        }
+      ],
+      "people": []
+    },
+    "ID": {
+      "name": "Indonesia",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 70
+        },
+        {
+          "name": "ecommerce",
+          "count": 45
+        },
+        {
+          "name": "education",
+          "count": 10
+        },
+        {
+          "name": "agency",
+          "count": 7
+        },
+        {
+          "name": "finance",
+          "count": 6
+        }
+      ],
+      "people": []
+    },
+    "DK": {
+      "name": "Denmark",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 75
+        },
+        {
+          "name": "technology",
+          "count": 46
+        },
+        {
+          "name": "agency",
+          "count": 7
+        }
+      ],
+      "people": []
+    },
+    "AT": {
+      "name": "Austria",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 58
+        },
+        {
+          "name": "ecommerce",
+          "count": 54
+        },
+        {
+          "name": "agency",
+          "count": 7
+        },
+        {
+          "name": "education",
+          "count": 7
+        }
+      ],
+      "people": []
+    },
+    "BE": {
+      "name": "Belgium",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 53
+        },
+        {
+          "name": "ecommerce",
+          "count": 25
+        },
+        {
+          "name": "education",
+          "count": 11
+        },
+        {
+          "name": "agency",
+          "count": 9
+        }
+      ],
+      "people": [
+        {
+          "name": "Researcher",
+          "count": 27
+        }
+      ]
+    },
+    "BR": {
+      "name": "Brazil",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 73
+        },
+        {
+          "name": "ecommerce",
+          "count": 40
+        },
+        {
+          "name": "agency",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "SG": {
+      "name": "Singapore",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 48
+        },
+        {
+          "name": "ecommerce",
+          "count": 27
+        },
+        {
+          "name": "education",
+          "count": 17
+        },
+        {
+          "name": "agency",
+          "count": 9
+        },
+        {
+          "name": "finance",
+          "count": 8
+        },
+        {
+          "name": "healthcare",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "RU": {
+      "name": "Russia",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 60
+        },
+        {
+          "name": "ecommerce",
+          "count": 35
+        },
+        {
+          "name": "education",
+          "count": 8
+        },
+        {
+          "name": "agency",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "NO": {
+      "name": "Norway",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 34
+        },
+        {
+          "name": "technology",
+          "count": 34
+        }
+      ],
+      "people": [
+        {
+          "name": "Project Architect",
+          "count": 11
+        },
+        {
+          "name": "Senior Architect",
+          "count": 8
+        },
+        {
+          "name": "Senior Project Manager",
+          "count": 8
+        },
+        {
+          "name": "Project Manager",
+          "count": 6
+        }
+      ]
+    },
+    "IE": {
+      "name": "Ireland",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 32
+        },
+        {
+          "name": "technology",
+          "count": 28
+        },
+        {
+          "name": "education",
+          "count": 24
+        },
+        {
+          "name": "agency",
+          "count": 5
+        },
+        {
+          "name": "finance",
+          "count": 5
+        },
+        {
+          "name": "healthcare",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "PL": {
+      "name": "Poland",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 52
+        },
+        {
+          "name": "technology",
+          "count": 40
+        }
+      ],
+      "people": []
+    },
+    "ZA": {
+      "name": "South Africa",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 33
+        },
+        {
+          "name": "ecommerce",
+          "count": 22
+        },
+        {
+          "name": "education",
+          "count": 11
+        },
+        {
+          "name": "healthcare",
+          "count": 11
+        }
+      ],
+      "people": [
+        {
+          "name": "Director",
+          "count": 8
+        }
+      ]
+    },
+    "JP": {
+      "name": "Japan",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 35
+        },
+        {
+          "name": "ecommerce",
+          "count": 28
+        },
+        {
+          "name": "agency",
+          "count": 14
+        },
+        {
+          "name": "education",
+          "count": 6
+        }
+      ],
+      "people": []
+    },
+    "PK": {
+      "name": "Pakistan",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 35
+        },
+        {
+          "name": "ecommerce",
+          "count": 27
+        },
+        {
+          "name": "education",
+          "count": 6
+        },
+        {
+          "name": "agency",
+          "count": 6
+        },
+        {
+          "name": "finance",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "TR": {
+      "name": "Türkiye",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 41
+        },
+        {
+          "name": "ecommerce",
+          "count": 29
+        },
+        {
+          "name": "education",
+          "count": 8
+        }
+      ],
+      "people": []
+    },
+    "CN": {
+      "name": "China",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 37
+        },
+        {
+          "name": "ecommerce",
+          "count": 32
+        },
+        {
+          "name": "agency",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "MY": {
+      "name": "Malaysia",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 33
+        },
+        {
+          "name": "education",
+          "count": 16
+        },
+        {
+          "name": "ecommerce",
+          "count": 15
+        },
+        {
+          "name": "finance",
+          "count": 10
+        }
+      ],
+      "people": []
+    },
+    "NZ": {
+      "name": "New Zealand",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 28
+        },
+        {
+          "name": "technology",
+          "count": 20
+        },
+        {
+          "name": "education",
+          "count": 13
+        },
+        {
+          "name": "agency",
+          "count": 8
+        }
+      ],
+      "people": []
+    },
+    "RO": {
+      "name": "Romania",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 38
+        },
+        {
+          "name": "technology",
+          "count": 30
+        }
+      ],
+      "people": []
+    },
+    "IL": {
+      "name": "Israel",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 33
+        },
+        {
+          "name": "ecommerce",
+          "count": 21
+        },
+        {
+          "name": "Law Practice",
+          "count": 5
+        }
+      ],
+      "people": [
+        {
+          "name": "Owner",
+          "count": 5
+        }
+      ]
+    },
+    "VI": {
+      "name": "U.S. Virgin Islands",
+      "companies": [
+        {
+          "name": "Real Estate & Construction",
+          "count": 6
+        }
+      ],
+      "people": [
+        {
+          "name": "President",
+          "count": 23
+        },
+        {
+          "name": "Owner",
+          "count": 14
+        },
+        {
+          "name": "Manager",
+          "count": 9
+        },
+        {
+          "name": "Vice President",
+          "count": 7
+        },
+        {
+          "name": "Director of Marketing",
+          "count": 5
+        }
+      ]
+    },
+    "GR": {
+      "name": "Greece",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 26
+        },
+        {
+          "name": "ecommerce",
+          "count": 22
+        },
+        {
+          "name": "education",
+          "count": 8
+        }
+      ],
+      "people": []
+    },
+    "HK": {
+      "name": "Hong Kong SAR China",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 22
+        },
+        {
+          "name": "technology",
+          "count": 16
+        },
+        {
+          "name": "education",
+          "count": 9
+        },
+        {
+          "name": "finance",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "CZ": {
+      "name": "Czechia",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 26
+        },
+        {
+          "name": "ecommerce",
+          "count": 20
+        }
+      ],
+      "people": [
+        {
+          "name": "Project Manager",
+          "count": 5
+        }
+      ]
+    },
+    "NP": {
+      "name": "Nepal",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 25
+        },
+        {
+          "name": "agency",
+          "count": 10
+        },
+        {
+          "name": "ecommerce",
+          "count": 9
+        },
+        {
+          "name": "finance",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "PT": {
+      "name": "Portugal",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 29
+        },
+        {
+          "name": "technology",
+          "count": 19
+        }
+      ],
+      "people": []
+    },
+    "PH": {
+      "name": "Philippines",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 19
+        },
+        {
+          "name": "education",
+          "count": 12
+        },
+        {
+          "name": "ecommerce",
+          "count": 11
+        },
+        {
+          "name": "finance",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "BD": {
+      "name": "Bangladesh",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 32
+        },
+        {
+          "name": "ecommerce",
+          "count": 14
+        }
+      ],
+      "people": []
+    },
+    "NG": {
+      "name": "Nigeria",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 18
+        },
+        {
+          "name": "ecommerce",
+          "count": 10
+        },
+        {
+          "name": "education",
+          "count": 9
+        },
+        {
+          "name": "finance",
+          "count": 8
+        }
+      ],
+      "people": []
+    },
+    "MX": {
+      "name": "Mexico",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 23
+        },
+        {
+          "name": "technology",
+          "count": 16
+        }
+      ],
+      "people": []
+    },
+    "TW": {
+      "name": "Taiwan",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 24
+        },
+        {
+          "name": "ecommerce",
+          "count": 11
+        }
+      ],
+      "people": []
+    },
+    "LT": {
+      "name": "Lithuania",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 14
+        },
+        {
+          "name": "technology",
+          "count": 8
+        }
+      ],
+      "people": [
+        {
+          "name": "Tourism and Marketing Division Project Manager",
+          "count": 6
+        },
+        {
+          "name": "Business Division Project Manager",
+          "count": 5
+        }
+      ]
+    },
+    "TH": {
+      "name": "Thailand",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 18
+        },
+        {
+          "name": "ecommerce",
+          "count": 10
+        },
+        {
+          "name": "education",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "UA": {
+      "name": "Ukraine",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 22
+        },
+        {
+          "name": "ecommerce",
+          "count": 9
+        }
+      ],
+      "people": []
+    },
+    "HU": {
+      "name": "Hungary",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 18
+        },
+        {
+          "name": "technology",
+          "count": 12
+        }
+      ],
+      "people": []
+    },
+    "KR": {
+      "name": "South Korea",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 24
+        },
+        {
+          "name": "education",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "KE": {
+      "name": "Kenya",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 17
+        },
+        {
+          "name": "education",
+          "count": 11
+        }
+      ],
+      "people": []
+    },
+    "SA": {
+      "name": "Saudi Arabia",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 15
+        },
+        {
+          "name": "ecommerce",
+          "count": 12
+        }
+      ],
+      "people": []
+    },
+    "EG": {
+      "name": "Egypt",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 12
+        },
+        {
+          "name": "technology",
+          "count": 12
+        }
+      ],
+      "people": []
+    },
+    "AR": {
+      "name": "Argentina",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 14
+        },
+        {
+          "name": "ecommerce",
+          "count": 7
+        }
+      ],
+      "people": []
+    },
+    "EE": {
+      "name": "Estonia",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 13
+        },
+        {
+          "name": "ecommerce",
+          "count": 8
+        }
+      ],
+      "people": []
+    },
+    "BG": {
+      "name": "Bulgaria",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 11
+        },
+        {
+          "name": "ecommerce",
+          "count": 7
+        }
+      ],
+      "people": []
+    },
+    "CL": {
+      "name": "Chile",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 13
+        },
+        {
+          "name": "ecommerce",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "RS": {
+      "name": "Serbia",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 11
+        },
+        {
+          "name": "ecommerce",
+          "count": 7
+        }
+      ],
+      "people": []
+    },
+    "CO": {
+      "name": "Colombia",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 10
+        },
+        {
+          "name": "technology",
+          "count": 6
+        }
+      ],
+      "people": []
+    },
+    "SK": {
+      "name": "Slovakia",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 9
+        },
+        {
+          "name": "ecommerce",
+          "count": 7
+        }
+      ],
+      "people": []
+    },
+    "CY": {
+      "name": "Cyprus",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 8
+        },
+        {
+          "name": "finance",
+          "count": 7
+        }
+      ],
+      "people": []
+    },
+    "LV": {
+      "name": "Latvia",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 7
+        },
+        {
+          "name": "technology",
+          "count": 7
+        }
+      ],
+      "people": []
+    },
+    "GH": {
+      "name": "Ghana",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 13
+        }
+      ],
+      "people": []
+    },
+    "HR": {
+      "name": "Croatia",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 12
+        }
+      ],
+      "people": []
+    },
+    "MA": {
+      "name": "Morocco",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 11
+        }
+      ],
+      "people": []
+    },
+    "IS": {
+      "name": "Iceland",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 5
+        },
+        {
+          "name": "technology",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "PE": {
+      "name": "Peru",
+      "companies": [
+        {
+          "name": "ecommerce",
+          "count": 5
+        },
+        {
+          "name": "technology",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "LK": {
+      "name": "Sri Lanka",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 7
+        }
+      ],
+      "people": []
+    },
+    "TZ": {
+      "name": "Tanzania",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 7
+        }
+      ],
+      "people": []
+    },
+    "JO": {
+      "name": "Jordan",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 6
+        }
+      ],
+      "people": []
+    },
+    "SI": {
+      "name": "Slovenia",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 6
+        }
+      ],
+      "people": []
+    },
+    "KH": {
+      "name": "Cambodia",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 5
+        }
+      ],
+      "people": []
+    },
+    "KZ": {
+      "name": "Kazakhstan",
+      "companies": [
+        {
+          "name": "technology",
+          "count": 5
+        }
+      ],
+      "people": []
+    }
+  }
+}

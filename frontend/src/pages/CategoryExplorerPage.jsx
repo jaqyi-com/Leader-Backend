@@ -1,20 +1,29 @@
 import { useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles, ArrowRight, Search, Grid3x3, Layers,
   Users2, Building2, Briefcase, Zap, X, Filter, Globe2
 } from "lucide-react";
 import CATEGORIES_DATA from "../categories.json";
+import WORLD_CATEGORIES from "../worldCategories.json";
 import { initCounts, getCounts, useLiveCounts } from "../liveCounts";
+import CountryPicker from "../components/CountryPicker";
+import { countryByCode, toCountryCode } from "../countries";
 
 initCounts("categories", CATEGORIES_DATA);
+initCounts("world_categories", WORLD_CATEGORIES);
 
-// ── Country config ─────────────────────────────────────────────────────────
-const COUNTRIES = [
-  { key: "india", label: "India", flag: "🇮🇳", subtitle: "1.36M+ Ingested B2B Companies & Founders" },
-  { key: "usa",   label: "USA & Global", flag: "🇺🇸", subtitle: "45M+ Global Enterprises & Professionals" },
-];
+// ── Countries with category cards ──────────────────────────────────────────
+// India / USA: "categories" (src/counts/explorerCards.js). Every other country: "world_categories"
+// (src/counts/worldCategories.js). Counts equal what a card's click finds; both are served live.
+const LEGACY_KEY = { IN: "india", US: "usa" };
+// Countries that have cards for this mode ("company" | "people").
+const categoryCountries = (mode) => ["IN", "US", ...Object.entries(getCounts("world_categories")?.countries || {})
+  .filter(([, e]) => (e[mode === "company" ? "companies" : "people"] || []).length > 0).map(([c]) => c)];
+const categoriesFor = (code, mode) => (LEGACY_KEY[code]
+  ? getCounts("categories")[LEGACY_KEY[code]]?.[mode]
+  : getCounts("world_categories")?.countries?.[code]?.[mode === "company" ? "companies" : "people"]) || [];
 
 import { PEOPLE_ROLE_GROUPS, COMPANY_INDUSTRY_GROUPS } from "../categoryGroups";
 
@@ -31,21 +40,32 @@ const QUICK_TAGS = {
 
 export default function CategoryExplorerPage() {
   const navigate = useNavigate();
-  const [country, setCountry] = useState("india");
+  const countsVersion = useLiveCounts("countries", "categories", "world_categories");
+  const [searchParams] = useSearchParams();
+  const [code, setCode] = useState(() => {
+    const fromUrl = toCountryCode(searchParams.get("country"));
+    return categoryCountries("company").includes(fromUrl) ? fromUrl : "IN";
+  });
+  const country = LEGACY_KEY[code] || code; // "india" | "usa" | ISO code
   const [mode, setMode] = useState("company"); // "people" or "company"
   const [searchQ, setSearchQ] = useState("");
   const [selectedGroup, setSelectedGroup] = useState("all");
 
-  const isIndia = country === "india";
-  const activeCountryObj = COUNTRIES.find(c => c.key === country) || COUNTRIES[0];
+  const isMain = !!LEGACY_KEY[code];
+  const countryInfo = countryByCode(code);
+  const activeCountryObj = { label: countryInfo?.name || code };
+  const CATEGORY_COUNTRIES = useMemo(() => categoryCountries(mode), [mode, countsVersion]);
 
   const groups = mode === "people" ? PEOPLE_ROLE_GROUPS : COMPANY_INDUSTRY_GROUPS;
-  const quickTags = (QUICK_TAGS[country] && QUICK_TAGS[country][mode]) || QUICK_TAGS.usa[mode];
 
   // Pick base category list for country + mode
   // Counts come from the count job (src/counts/explorerCards.js) and equal what a card's click finds.
-  const countsVersion = useLiveCounts("categories");
-  const baseCategories = useMemo(() => getCounts("categories")[country]?.[mode] || [], [country, mode, countsVersion]);
+  const baseCategories = useMemo(() => categoriesFor(code, mode), [code, mode, countsVersion]);
+  // Other countries: the trending chips are simply their largest categories.
+  const quickTags = isMain ? QUICK_TAGS[country][mode] : baseCategories.slice(0, 8).map((c) => c.name);
+  // Outside India / USA many records have no industry or job title: say how much the cards cover.
+  const countryTotal = countryInfo?.[mode === "people" ? "people" : "companies"] || 0;
+  const browseAll = () => navigate(`${mode === "people" ? "/app/people" : "/app/companies"}?country=${code}`);
 
   // Filtered by group pill and search query
   const filtered = useMemo(() => {
@@ -73,7 +93,8 @@ export default function CategoryExplorerPage() {
 
   const handleClick = (cat) => {
     const enc = encodeURIComponent(cat.name);
-    const countryParam = `&f_country=${country}`;
+    // India / USA: the f_country rules; other countries: ?country=CODE (worldCategories.categoryCardParams)
+    const countryParam = isMain ? `&f_country=${country}` : `&country=${code}`;
     // Exact title / category, so the card's count is exactly what the click finds
     if (mode === "people") {
       navigate(`/app/people?f_job_title_eq=${enc}${countryParam}`);
@@ -82,14 +103,15 @@ export default function CategoryExplorerPage() {
     }
   };
 
-  const handleCountryChange = (newCountry) => {
-    setCountry(newCountry);
+  const handleCountryChange = (newCode) => {
+    setCode(newCode);
     setSelectedGroup("all");
     setSearchQ("");
   };
 
   const handleModeChange = (newMode) => {
     setMode(newMode);
+    if (!categoryCountries(newMode).includes(code)) setCode("IN"); // no cards of this kind there
     setSelectedGroup("all");
     setSearchQ("");
   };
@@ -145,24 +167,8 @@ export default function CategoryExplorerPage() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           
           <div className="flex items-center flex-wrap gap-3">
-            {/* Country Tabs: India / USA */}
-            <div className="flex items-center rounded-xl p-1 bg-[var(--surface)] border border-[var(--border)]">
-              {COUNTRIES.map(c => (
-                <button
-                  key={c.key}
-                  onClick={() => handleCountryChange(c.key)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                  style={{
-                    background: country === c.key ? "var(--accent)" : "transparent",
-                    color: country === c.key ? "#fff" : "var(--text-3)",
-                    boxShadow: country === c.key ? "0 2px 10px var(--accent-glow)" : "none",
-                  }}
-                >
-                  <span className="text-sm">{c.flag}</span>
-                  {c.label}
-                </button>
-              ))}
-            </div>
+            {/* Country: India, USA and every country with category data */}
+            <CountryPicker value={code} onChange={handleCountryChange} kind={mode === "people" ? "people" : "companies"} codes={CATEGORY_COUNTRIES} allowAll={false} />
 
             {/* Mode Toggle — People / Companies */}
             <div
@@ -200,7 +206,7 @@ export default function CategoryExplorerPage() {
             <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--text-3)]" />
             <input
               className="input pl-10 pr-9 w-full text-sm font-medium rounded-xl"
-              placeholder={`Search ${country === "india" ? "India" : "USA"} ${mode === "people" ? "job titles (e.g. Founder, CEO, Manager)..." : "industries (e.g. Garments, Hotel, Tech)..."}`}
+              placeholder={`Search ${activeCountryObj.label} ${mode === "people" ? "job titles (e.g. Founder, CEO, Manager)..." : "industries (e.g. Garments, Hotel, Tech)..."}`}
               value={searchQ}
               onChange={e => setSearchQ(e.target.value)}
             />
@@ -252,6 +258,19 @@ export default function CategoryExplorerPage() {
         </div>
       </div>
 
+      {!isMain && countryTotal > 0 && (
+        <div className="flex items-center justify-between flex-wrap gap-2 px-4 py-2.5 rounded-xl text-xs"
+          style={{ background: "var(--surface-2)", border: "1px solid var(--border)", color: "var(--text-3)" }}>
+          <span>
+            <Globe2 size={13} className="inline mr-1.5 -mt-0.5" style={{ color: "var(--accent)" }} />
+            Doott has <strong className="text-[var(--text-2)]">{countryTotal.toLocaleString()}</strong> {mode === "people" ? "people" : "companies"} in {activeCountryObj.label}. Many have no {mode === "people" ? "job title" : "industry"}, so the cards below show only part of them.
+          </span>
+          <button onClick={browseAll} className="font-semibold cursor-pointer" style={{ color: "var(--accent)" }}>
+            Browse all {mode === "people" ? "people" : "companies"} in {activeCountryObj.label} →
+          </button>
+        </div>
+      )}
+
       {/* ── Categories Grid ───────────────────────────────── */}
       <AnimatePresence mode="wait">
         {filtered.length === 0 ? (
@@ -265,7 +284,7 @@ export default function CategoryExplorerPage() {
             <Layers size={44} className="opacity-30 text-[var(--accent)]" />
             <h3 className="text-base font-bold text-[var(--text)]">No categories found</h3>
             <p className="text-xs max-w-sm text-center">
-              No {country === "india" ? "India" : "USA"} {mode === "people" ? "job titles" : "industries"} match your query "{searchQ}".
+              No {activeCountryObj.label} {mode === "people" ? "job titles" : "industries"} match your query "{searchQ}".
             </p>
             <button
               onClick={() => { setSearchQ(""); setSelectedGroup("all"); }}

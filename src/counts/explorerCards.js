@@ -232,4 +232,4 @@ function assemble(base, results) {
   return { categories, cities };
 }
 
-module.exports = { KINDS, discoverRange, mergeDiscovered, pickTop, buildCards, countRange, assemble, canonicalCity };
+module.exports = { NOT_A_CATEGORY, KINDS, discoverRange, mergeDiscovered, pickTop, buildCards, countRange, assemble, canonicalCity };

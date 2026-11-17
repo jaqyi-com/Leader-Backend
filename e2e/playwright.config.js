@@ -47,6 +47,8 @@ module.exports = defineConfig({
         FRONTEND_URL: WEB, CORS_ORIGIN: WEB,
         NEON_DATABASE_URL: `postgresql://postgres@127.0.0.1:${PG_PORT}/postgres`,
         OPENAI_API_KEY: "fake", APOLLO_API_KEY: "fake", SMTP_USER: "fake", SMTP_PASS: "fake",
+        // Tests create their own accounts; emails are captured, never sent.
+        REGISTRATION_MODE: "open", MAIL_OUTBOX_FILE: "/dev/null",
       },
     },
     {

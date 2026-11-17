@@ -15,6 +15,7 @@ const fs = require("fs");
 const FILES = {
   countries: () => require("../../frontend/src/countries.json"),
   world_cities: () => require("../../frontend/src/worldCities.json"),
+  world_categories: () => require("../../frontend/src/worldCategories.json"),
   cities: () => require("../../frontend/src/cities.json"),
   categories: () => require("../../frontend/src/categories.json"),
 };

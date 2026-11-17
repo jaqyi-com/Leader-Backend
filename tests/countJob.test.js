@@ -45,7 +45,7 @@ test("a full run completes in many small slices and publishes every count", { sk
   assert.equal(s.runs[0].status, "done", JSON.stringify(s.log.slice(-5)));
   assert.ok(s.runs[0].slices >= 12, `one unit per call: ${s.runs[0].slices} chained calls`);
   const keys = (await q("SELECT key FROM app.explorer_counts ORDER BY key")).rows.map((r) => r.key);
-  assert.deepEqual(keys, ["categories", "cities", "countries", "world_cities"]);
+  assert.deepEqual(keys, ["categories", "cities", "countries", "world_categories", "world_cities"]);
   // done for today: another call does nothing
   const again = await cron("refresh-counts");
   assert.equal((await again.json()).status, "up_to_date");
@@ -70,6 +70,12 @@ test("each card's number is what its search finds", { skip }, async () => {
   assert.equal(mumbai.count, (await get("/api/final-people?f_city=Mumbai&f_country=india&limit=500")).records.length);
   const austin = cities.usa.companies.find((c) => c.name === "Austin");
   assert.equal(austin.count, (await get("/api/final-companies?f_city=Austin&f_state_eq=TX&limit=500")).records.length);
+  // other countries' category cards (world_categories): Germany's industries
+  const { data: wcat } = (await q("SELECT data FROM app.explorer_counts WHERE key = 'world_categories'")).rows[0];
+  const deSoftware = wcat.countries.DE.companies.find((c) => c.name === "Software");
+  assert.ok(deSoftware, "Germany Software category card");
+  assert.equal(deSoftware.count, (await get("/api/final-companies?f_industry_eq=Software&country=DE&limit=500")).records.length);
+  assert.ok(!wcat.countries.GB, "a US address with a UK number counts for the USA, not the UK");
   // and the app serves the new numbers without a deploy
   const served = await stack.http("GET", "/api/explorer-counts?keys=categories", { token: user.token });
   assert.equal(served.json.categories.india.company.find((c) => c.name === "Software").count, software.count);

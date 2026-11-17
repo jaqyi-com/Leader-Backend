@@ -30,6 +30,7 @@ function subscribe(fn) {
 const VALID = {
   countries: (d) => Array.isArray(d?.countries) && d.countries.length > 0,
   world_cities: (d) => d && typeof d.countries === "object",
+  world_categories: (d) => d && typeof d.countries === "object",
   cities: (d) => d?.india && d?.usa,
   categories: (d) => d?.india && d?.usa,
 };

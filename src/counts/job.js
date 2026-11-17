@@ -5,6 +5,7 @@
 // Once a day Vercel Cron calls GET /api/cron/refresh-counts (src/routes/cron.js). A run does:
 //   fill            fill empty cities outside India / USA from landline numbers (fillCities.js)
 //   world:*         city cards for countries other than India / USA        → "world_cities"
+//   categories:*    industry / job-title cards for countries other than India / USA → "world_categories"
 //   countries:*     people / companies per country                          → "countries"
 //   explorer:*      (weekly) India / USA category and city cards            → "categories", "cities"
 // Results are saved in app.explorer_counts, which the app serves (src/utils/explorerCounts.js).
@@ -19,6 +20,7 @@
 const explorerCounts = require("../utils/explorerCounts");
 const fill = require("./fillCities");
 const world = require("./worldCities");
+const worldCategories = require("./worldCategories");
 const country = require("./countryCounts");
 const explorer = require("./explorerCards");
 const { tablePages, ranges } = require("./cards");
@@ -37,7 +39,8 @@ CREATE TABLE IF NOT EXISTS app.count_jobs (
   finished_at  timestamptz
 )`;
 
-const DAILY = ["fill", "world:companies", "world:people", "world:publish", "countries:companies", "countries:people", "countries:publish"];
+const DAILY = ["fill", "world:companies", "world:people", "world:publish",
+  "categories:companies", "categories:people", "categories:publish", "countries:companies", "countries:people", "countries:publish"];
 const WEEKLY = ["explorer:discover:companies", "explorer:count:companies", "explorer:discover:people", "explorer:count:people", "explorer:publish"];
 // Block ranges per full scan, sized so one range takes well under a minute.
 const CHUNKS = {
@@ -123,6 +126,20 @@ async function unit(db, name, state, log) {
     await explorerCounts.save(db, "world_cities", doc);
     log(`published world_cities: ${Object.keys(doc.countries).length} countries`);
     delete R.world;
+    return true;
+  }
+
+  if (group === "categories" && a !== "publish") {
+    R.categories = R.categories || {};
+    R.categories[a] = await worldCategories.cardsForKind(db, a);
+    log(`categories ${a}: ${Object.values(R.categories[a]).reduce((s, l) => s + l.length, 0)} cards`);
+    return true;
+  }
+  if (name === "categories:publish") {
+    const doc = worldCategories.assemble(R.categories || {});
+    await explorerCounts.save(db, "world_categories", doc);
+    log(`published world_categories: ${Object.keys(doc.countries).length} countries`);
+    delete R.categories;
     return true;
   }
 

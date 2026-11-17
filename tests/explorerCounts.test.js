@@ -31,7 +31,7 @@ test("empty table: the built-in files are served; bad keys are refused", { skip 
   assert.match(r.headers.get("cache-control") || "", /private, no-cache/);
   assert.equal((await stack.http("GET", "/api/explorer-counts?keys=world_cities,passwords", { token: user.token })).status, 400);
   const all = await stack.http("GET", "/api/explorer-counts", { token: user.token });
-  assert.deepEqual(Object.keys(all.json).sort(), ["categories", "cities", "countries", "world_cities"]);
+  assert.deepEqual(Object.keys(all.json).sort(), ["categories", "cities", "countries", "world_categories", "world_cities"]);
 });
 
 test("a refresh saved to the table is served at once, with no deploy", { skip }, async () => {

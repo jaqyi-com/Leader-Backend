@@ -8,7 +8,7 @@
  * Usage:
  *   node scripts/refresh_counts.js                 # daily steps (+ weekly India/USA cards when due)
  *   node scripts/refresh_counts.js --full          # also the India / USA category and city cards
- *   node scripts/refresh_counts.js --only world,countries   # just these groups (fill, world, countries, explorer)
+ *   node scripts/refresh_counts.js --only world,countries   # just these groups (fill, world, categories, countries, explorer)
  *   node scripts/refresh_counts.js --files         # afterwards, copy the served counts into the
  *                                                  # built-in files frontend/src/*.json (commit them)
  * A run already in progress (e.g. tonight's) is continued instead of starting a new one.
@@ -22,7 +22,7 @@ const explorerCounts = require("../src/utils/explorerCounts");
 
 const arg = (name) => process.argv.includes(name);
 const value = (name) => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : null; };
-const FILES = { countries: "countries.json", world_cities: "worldCities.json", cities: "cities.json", categories: "categories.json" };
+const FILES = { countries: "countries.json", world_cities: "worldCities.json", world_categories: "worldCategories.json", cities: "cities.json", categories: "categories.json" };
 
 (async () => {
   const db = new Client({ connectionString: process.env.NEON_DATABASE_URL });
@@ -31,7 +31,7 @@ const FILES = { countries: "countries.json", world_cities: "worldCities.json", c
   if (value("--only")) {
     const groups = value("--only").split(",");
     steps = [...job.DAILY, ...job.WEEKLY].filter((s) => groups.includes(s.split(":")[0]));
-    if (!steps.length) throw new Error("--only takes: fill, world, countries, explorer");
+    if (!steps.length) throw new Error("--only takes: fill, world, categories, countries, explorer");
   }
   const r = await job.runToEnd(db, { force: true, full: arg("--full") ? true : null, steps, budgetMs: 60 * 60 * 1000, log: console.log });
   console.log(`run ${r.id}: ${r.status}${r.error ? ` (${r.error})` : ""}`);
