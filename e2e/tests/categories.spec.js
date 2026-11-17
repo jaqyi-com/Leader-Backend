@@ -28,6 +28,10 @@ test("other countries have their own category cards, and a card opens that searc
 
   // pick Germany in the country picker
   const de = WORLD.countries.DE.companies;
+  await expect(page.getByRole("tab", { name: /India/ })).toHaveAttribute("aria-selected", "true");
+  await page.getByRole("tab", { name: /USA/ }).click();
+  await expect(page.getByText(/Search and segment\s*United States/)).toBeVisible();
+  await page.getByRole("tab", { name: /Global/ }).click();
   await page.getByRole("button", { name: "Country", exact: true }).click();
   await page.getByLabel("Search countries").fill("Germany");
   await page.getByRole("option", { name: /Germany/ }).click();

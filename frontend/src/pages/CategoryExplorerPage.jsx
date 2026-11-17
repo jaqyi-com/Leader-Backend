@@ -18,9 +18,16 @@ initCounts("world_categories", WORLD_CATEGORIES);
 // India / USA: "categories" (src/counts/explorerCards.js). Every other country: "world_categories"
 // (src/counts/worldCategories.js). Counts equal what a card's click finds; both are served live.
 const LEGACY_KEY = { IN: "india", US: "usa" };
-// Countries that have cards for this mode ("company" | "people").
-const categoryCountries = (mode) => ["IN", "US", ...Object.entries(getCounts("world_categories")?.countries || {})
-  .filter(([, e]) => (e[mode === "company" ? "companies" : "people"] || []).length > 0).map(([c]) => c)];
+// Countries other than India / USA that have cards for this mode ("company" | "people"), largest first.
+const globalCountries = (mode) => Object.entries(getCounts("world_categories")?.countries || {})
+  .filter(([, e]) => (e[mode === "company" ? "companies" : "people"] || []).length > 0).map(([c]) => c);
+const categoryCountries = (mode) => ["IN", "US", ...globalCountries(mode)];
+// The three tabs: India, USA, Global (every other country, picked in the Global country picker).
+const TABS = [
+  { key: "IN", label: "India", flag: "🇮🇳" },
+  { key: "US", label: "USA", flag: "🇺🇸" },
+  { key: "GLOBAL", label: "Global", flag: "🌐" },
+];
 const categoriesFor = (code, mode) => (LEGACY_KEY[code]
   ? getCounts("categories")[LEGACY_KEY[code]]?.[mode]
   : getCounts("world_categories")?.countries?.[code]?.[mode === "company" ? "companies" : "people"]) || [];
@@ -54,7 +61,8 @@ export default function CategoryExplorerPage() {
   const isMain = !!LEGACY_KEY[code];
   const countryInfo = countryByCode(code);
   const activeCountryObj = { label: countryInfo?.name || code };
-  const CATEGORY_COUNTRIES = useMemo(() => categoryCountries(mode), [mode, countsVersion]);
+  const GLOBAL_COUNTRIES = useMemo(() => globalCountries(mode), [mode, countsVersion]);
+  const tab = isMain ? code : "GLOBAL";
 
   const groups = mode === "people" ? PEOPLE_ROLE_GROUPS : COMPANY_INDUSTRY_GROUPS;
 
@@ -109,9 +117,15 @@ export default function CategoryExplorerPage() {
     setSearchQ("");
   };
 
+  const handleTab = (key) => {
+    if (key === tab) return;
+    handleCountryChange(key === "GLOBAL" ? globalCountries(mode)[0] || "IN" : key);
+  };
+
   const handleModeChange = (newMode) => {
     setMode(newMode);
-    if (!categoryCountries(newMode).includes(code)) setCode("IN"); // no cards of this kind there
+    // a Global country without cards of this kind: switch to the largest one that has them
+    if (!categoryCountries(newMode).includes(code)) setCode(globalCountries(newMode)[0] || "IN");
     setSelectedGroup("all");
     setSearchQ("");
   };
@@ -168,7 +182,32 @@ export default function CategoryExplorerPage() {
           
           <div className="flex items-center flex-wrap gap-3">
             {/* Country: India, USA and every country with category data */}
-            <CountryPicker value={code} onChange={handleCountryChange} kind={mode === "people" ? "people" : "companies"} codes={CATEGORY_COUNTRIES} allowAll={false} />
+            {/* Country tabs: India | USA | Global */}
+            <div className="flex items-center rounded-xl p-1 bg-[var(--surface)] border border-[var(--border)]" role="tablist" aria-label="Region">
+              {TABS.map((t) => (
+                <button
+                  key={t.key}
+                  role="tab"
+                  aria-selected={tab === t.key}
+                  onClick={() => handleTab(t.key)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                  style={{
+                    background: tab === t.key ? "var(--accent)" : "transparent",
+                    color: tab === t.key ? "#fff" : "var(--text-3)",
+                    boxShadow: tab === t.key ? "0 2px 10px var(--accent-glow)" : "none",
+                  }}
+                >
+                  <span className="text-sm">{t.flag}</span>
+                  {t.label}
+                  {t.key === "GLOBAL" && <span className="opacity-75 font-semibold">{GLOBAL_COUNTRIES.length}</span>}
+                </button>
+              ))}
+            </div>
+
+            {/* Global: which country */}
+            {tab === "GLOBAL" && (
+              <CountryPicker value={code} onChange={handleCountryChange} kind={mode === "people" ? "people" : "companies"} codes={GLOBAL_COUNTRIES} allowAll={false} />
+            )}
 
             {/* Mode Toggle — People / Companies */}
             <div
