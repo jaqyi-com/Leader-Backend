@@ -4,6 +4,7 @@ import {
   BookOpen, ChevronDown, ChevronRight, ArrowRight, Info,
   Users2, Filter, Layers,
 } from "lucide-react";
+import { PEOPLE_M, COMPANIES_M } from "../siteStats";
 
 const sections = [
   {
@@ -11,7 +12,7 @@ const sections = [
     icon: Layers,
     title: "Platform Overview",
     color: "from-violet-500 to-purple-600",
-    content: `Doott is a B2B intelligence platform that gives you direct access to a live database of 43.9M+ people and companies — with tools to search, explore, filter and export your data.
+    content: `Doott is a B2B intelligence platform that gives you direct access to a live database of ${PEOPLE_M}+ people and ${COMPANIES_M}+ companies — with tools to search, explore, filter and export your data.
 
 **What you can do:**
 1. **Companies & People** — Browse and search millions of live records. Filter by any column, export to CSV instantly.
@@ -25,7 +26,7 @@ const sections = [
     icon: Users2,
     title: "Companies & People",
     color: "from-blue-500 to-cyan-500",
-    content: `The Companies and People pages give you direct access to Doott's live B2B database — 43.9M+ people records and millions of company entries, stored in Google Cloud SQL (PostgreSQL) with Redis caching for sub-second queries.
+    content: `The Companies and People pages give you direct access to Doott's live B2B database — ${PEOPLE_M}+ people records and ${COMPANIES_M}+ company entries, stored in Google Cloud SQL (PostgreSQL) with Redis caching for sub-second queries.
 
 **People table columns:**
 full_name, first_name, last_name, job_title, linked_url, location, city, state, pincode, lat, long, geo_source, emails, phones, created_at
@@ -247,7 +248,7 @@ export default function DocumentationPage() {
       {/* Stats strip */}
       <div className="card p-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
         {[
-          { n: "43.9M+", l: "People records" },
+          { n: `${PEOPLE_M}+`, l: "People records" },
           { n: "Live",    l: "Cloud SQL DB"  },
           { n: "7",       l: "Core modules"  },
           { n: "100%",    l: "CSV exportable" },

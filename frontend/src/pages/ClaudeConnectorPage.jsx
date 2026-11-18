@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Copy, Check, ShieldCheck, Terminal, MessageSquare, Plug, ArrowRight } from "lucide-react";
 import { Nav, Footer } from "./LandingPage";
 import { MCP_URL, CLAUDE_CODE_COMMAND, CLAUDE_TOOLS, EXAMPLE_PROMPTS } from "../claudeConnector";
+import { PEOPLE_M, COMPANIES_M } from "../siteStats";
 
 /** Public setup guide for the Doott connector for Claude (pre-rendered at /claude). */
 export default function ClaudeConnectorPage() {
@@ -17,7 +18,7 @@ export default function ClaudeConnectorPage() {
           <h1 className="display text-4xl md:text-6xl mb-6">Search Doott from inside Claude.</h1>
           <p className="text-muted-foreground text-lg leading-relaxed max-w-2xl mb-10">
             Connect your Doott account to Claude once. Then ask for leads in plain English: Claude searches
-            43.9M people and 1.5M companies for you and answers with names, emails and phone numbers.
+            {PEOPLE_M} people and {COMPANIES_M} companies for you and answers with names, emails and phone numbers.
           </p>
           <p className="font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-3">Connector URL</p>
           <CopyField value={MCP_URL} />

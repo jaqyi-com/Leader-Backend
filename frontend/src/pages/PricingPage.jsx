@@ -3,9 +3,10 @@ import { motion } from "framer-motion";
 import { Check, Zap, Database, Mail, Phone, Download, Users, Globe, Shield, Lock, ArrowRight } from "lucide-react";
 import doottLogo from "../assets/doott-logo.png";
 import { COVERED_COUNTRIES } from "../countries";
+import { PEOPLE_M } from "../siteStats";
 
 const FEATURES = [
-  { icon: Database, title: "43.9M+ Verified Contacts", desc: `India, the USA, Canada and ${COVERED_COUNTRIES.length - 3} more countries` },
+  { icon: Database, title: `${PEOPLE_M}+ B2B Contacts`, desc: `India, the USA, Canada and ${COVERED_COUNTRIES.length - 3} more countries` },
   { icon: Mail,     title: "Verified Email Addresses", desc: "Direct work emails with deliverability verification" },
   { icon: Phone,    title: "Direct Phone Numbers", desc: "Mobile & direct dial numbers for decision makers" },
   { icon: Download, title: "Unlimited CSV Exports", desc: "Export unlimited leads with zero row limits" },
@@ -230,7 +231,7 @@ export default function PricingPage() {
       >
         <p style={{ fontSize: 13, color: "#94a3b8", margin: 0, lineHeight: 1.6 }}>
           💡 <strong style={{ color: "#ffffff" }}>Compare:</strong> ZoomInfo costs ₹15,000+/mo · Apollo costs ₹3,000+/mo.<br />
-          <span style={{ color: "#22c55e", fontWeight: 700 }}>Doott gives you 43.9M+ contacts for ₹179 lifetime.</span>
+          <span style={{ color: "#22c55e", fontWeight: 700 }}>Doott gives you {PEOPLE_M}+ contacts for ₹179 lifetime.</span>
         </p>
       </motion.div>
 

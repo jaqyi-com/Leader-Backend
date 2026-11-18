@@ -1,5 +1,9 @@
 {
  "generatedAt": "2026-11-12T14:44:30.948Z",
+ "totals": {
+  "people": 45460624,
+  "companies": 1751626
+ },
  "countries": [
   {
    "code": "IN",

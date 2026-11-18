@@ -2,26 +2,28 @@
 // HTML file for each indexable page, and at runtime (components/RouteMeta.jsx) so the
 // tags stay correct after client-side navigation.
 
+import { PEOPLE_M } from "./siteStats.js";
+
 export const SITE_URL = "https://doott.jaqyi.com";
 
 const DEFAULT = {
   title: "Doott – B2B Contact Database & Lead Gen Platform",
   description:
-    "Search 43.9M B2B contacts with verified emails, phones and job titles. Filter and export to CSV in seconds. No per-seat pricing.",
+    `Search ${PEOPLE_M} B2B contacts with emails, phones and job titles. Filter and export to CSV in seconds. ₹179 lifetime, no per-seat pricing.`,
 };
 
 // Public pages that should rank. Each one is pre-rendered to static HTML.
 export const INDEXABLE_ROUTES = {
   "/": DEFAULT,
   "/pricing": {
-    title: "Doott Pricing – Lifetime Access to 43.9M B2B Contacts",
+    title: `Doott Pricing – Lifetime Access to ${PEOPLE_M} B2B Contacts`,
     description:
       "One price, lifetime access to Doott's B2B database: verified emails, direct phone numbers, company data and unlimited CSV exports. No per-seat fees.",
   },
   "/claude": {
     title: "Connect Doott to Claude – Search B2B Leads from Your Chat",
     description:
-      "Add Doott as a connector in Claude and search 43.9M B2B contacts and companies by asking in plain English. Setup takes a minute: add the URL, sign in, click Allow.",
+      `Add Doott as a connector in Claude and search ${PEOPLE_M} B2B contacts and companies by asking in plain English. Setup takes a minute: add the URL, sign in, click Allow.`,
   },
 };
 

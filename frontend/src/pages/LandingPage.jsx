@@ -14,6 +14,7 @@ import CATEGORIES_DATA from "../categories.json";
 import { PEOPLE_ROLE_GROUPS, COMPANY_INDUSTRY_GROUPS } from "../categoryGroups";
 import doottLogo from "../assets/doott-logo.png";
 import { COVERED_COUNTRIES } from "../countries";
+import { PEOPLE_M, PEOPLE_MILLION } from "../siteStats";
 
 const LOGOS = [
   "Google Cloud SQL", "PostgreSQL", "Redis", "React",
@@ -129,7 +130,7 @@ function Hero() {
             transition={{ duration: 0.7, delay: 0.05 }}
             className="display text-[44px] sm:text-[64px] md:text-[84px]"
           >
-            43.9 million<br />
+            {PEOPLE_MILLION}<br />
             B2B contacts.<br />
             <em className="italic text-foreground/60">Instantly searchable.</em>
           </motion.h1>
@@ -186,7 +187,7 @@ function Hero() {
             aria-label="Database statistics"
           >
             {[
-              { n: "43.9M+", l: "People" },
+              { n: `${PEOPLE_M}+`, l: "People" },
               { n: "100%",   l: "Searchable" },
               { n: "CSV",    l: "Export" },
             ].map((s, i) => (
@@ -234,7 +235,7 @@ function DatabaseShowcase() {
               People &amp; Companies.<br />One B2B database.
             </h2>
             <p className="text-muted-foreground max-w-sm text-sm leading-relaxed">
-              43.9 million verified B2B contacts and millions of company records — live on Google Cloud SQL PostgreSQL,
+              {PEOPLE_MILLION} B2B contacts and millions of company records — live on Google Cloud SQL PostgreSQL,
               cached with Redis, and instantly accessible through a clean,
               sortable, searchable interface. Export to CSV in one click.
             </p>
@@ -254,7 +255,7 @@ function DatabaseShowcase() {
               </div>
             </div>
 
-            <p className="font-serif text-5xl md:text-6xl text-foreground mb-2">43.9M+</p>
+            <p className="font-serif text-5xl md:text-6xl text-foreground mb-2">{PEOPLE_M}+</p>
             <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground mb-8">Individual contacts indexed</p>
 
             <p className="text-muted-foreground text-sm leading-relaxed mb-8">
@@ -577,7 +578,7 @@ function ClaudeSection() {
           <p className="eyebrow mb-4 opacity-60 flex items-center gap-2"><Sparkles size={14} /> New · Doott × Claude</p>
           <h2 className="display text-3xl md:text-5xl mb-6">Find leads by asking Claude.</h2>
           <p className="text-muted-foreground leading-relaxed mb-10 max-w-lg">
-            Connect Doott to Claude and search 43.9M contacts from your chat. Claude filters by job title,
+            Connect Doott to Claude and search {PEOPLE_M} contacts from your chat. Claude filters by job title,
             city, industry and verified email, and gives you a ready-to-use table.
           </p>
           <ol className="space-y-6 mb-10">
@@ -638,7 +639,7 @@ function Metrics() {
       <div className="mx-auto max-w-6xl px-6 py-20 md:py-28">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-12 md:gap-4 divide-y md:divide-y-0 md:divide-x divide-border">
           {[
-            { stat: "43.9M+", label: "People Records" },
+            { stat: `${PEOPLE_M}+`, label: "People Records" },
             { stat: "17",     label: "Data Columns" },
             { stat: String(COVERED_COUNTRIES.length), label: "Countries" },
             { stat: "100%",   label: "Exportable" },
@@ -662,11 +663,11 @@ function UseCases() {
   const cases = [
     {
       title: "Sales Teams",
-      desc: "Stop buying stale B2B lead lists from overpriced platforms. Search 43.9M real verified contacts by job title, location, industry, and company size. Export exactly who you need to CSV. No subscriptions. No per-seat limits. A true ZoomInfo alternative.",
+      desc: `Stop buying stale B2B lead lists from overpriced platforms. Search ${PEOPLE_M} real contacts by job title, location, industry, and company size. Export exactly who you need to CSV. No subscriptions. No per-seat limits. A true ZoomInfo alternative.`,
     },
     {
       title: "Recruiters",
-      desc: "Find candidates by job title and location instantly across 43.9 million B2B profiles. Filter to people with LinkedIn URLs. Export to CSV and start outreach immediately — no expensive ATS required.",
+      desc: `Find candidates by job title and location instantly across ${PEOPLE_MILLION} B2B profiles. Filter to people with LinkedIn URLs. Export to CSV and start outreach immediately — no expensive ATS required.`,
     },
     {
       title: "Founders",
@@ -731,8 +732,8 @@ function FAQ() {
               a: "Yes. Add Doott as a custom connector in Claude (Settings → Connectors) with the URL " + MCP_URL + ", sign in to Doott and click Allow. Claude can then search people and companies and verify emails for you. The connector is read-only, and you can disconnect it at any time. See doott.jaqyi.com/claude for the full guide.",
             },
             {
-              q: "Is Doott a free alternative to ZoomInfo or Apollo.io?",
-              a: "Yes. Doott is free to start with no credit card required and no per-seat pricing — giving you access to a 43.9M contact B2B database similar to ZoomInfo, Apollo.io, and Hunter.io, but without the high subscription costs.",
+              q: "Is Doott a cheaper alternative to ZoomInfo or Apollo.io?",
+              a: `Yes. Doott costs a one-time ₹179 for lifetime access — no subscription and no per-seat pricing — to a ${PEOPLE_M} contact B2B database similar to ZoomInfo, Apollo.io and Hunter.io, without their monthly fees.`,
             },
           ].map((faq, i) => (
             <details key={i} className="group border border-border bg-secondary/10 p-6 [&_summary::-webkit-details-marker]:hidden">
@@ -756,12 +757,12 @@ function FinalCTA() {
   return (
     <section className="border-b border-border bg-foreground text-background" aria-label="Call to action — access B2B database">
       <div className="mx-auto max-w-6xl px-6 py-24 md:py-32 flex flex-col items-center text-center">
-        <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-background/50 mb-6">Ready to search 43.9M verified B2B contacts?</p>
+        <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-background/50 mb-6">Ready to search {PEOPLE_M} B2B contacts?</p>
         <h2 className="font-serif font-bold tracking-tight text-background text-4xl md:text-6xl lg:text-7xl mb-8 max-w-3xl leading-tight">
           The B2B data is live.<br />Start prospecting now.
         </h2>
         <p className="text-background/60 mb-10 max-w-lg font-serif text-lg">
-          Free to start. No credit card required. No per-seat pricing.
+          One-time ₹179 for lifetime access. No subscription. No per-seat pricing.
           Access verified B2B People, Email, Phone, and Companies databases immediately.
         </p>
         <div className="flex flex-wrap gap-4 justify-center">
@@ -801,7 +802,7 @@ export function Footer() {
           <Link to="/app/docs" className="hover:text-foreground transition">Docs</Link>
         </nav>
         <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-          © {new Date().getFullYear()} Doott · 43.9M verified B2B contacts
+          © {new Date().getFullYear()} Doott · {PEOPLE_M} B2B contacts
         </p>
       </div>
     </footer>

@@ -56,6 +56,9 @@ test("block-range totals equal one whole-table count", { skip }, async () => {
   const live = (await q("SELECT data FROM app.explorer_counts WHERE key = 'countries'")).rows[0].data;
   const whole = country.assemble(await country.countRange(stack.pg.pool, "people", 0, null), await country.countRange(stack.pg.pool, "companies", 0, null));
   assert.deepEqual(live.countries, whole.countries);
+  // headline totals: every row, with or without a country
+  const rows = async (t) => Number((await q(`SELECT count(*) n FROM final.${t}`)).rows[0].n);
+  assert.deepEqual(live.totals, { people: await rows("people"), companies: await rows("companies") });
   assert.equal(live.countries.find((c) => c.code === "DE").companies, 15);
 });
 

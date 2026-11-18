@@ -8,6 +8,7 @@
 // (SUSPECT_CODES) are left out.
 // The full scan of final.people (~45M rows) is split into block ranges so each piece fits in one
 // API call (src/counts/job.js); the pieces are simply added up.
+// "*" counts every row (with or without a country): the site's headline totals ("45.4M people").
 // ============================================================
 
 const { peopleCountryWhere, companiesCountryWhere, countryName, SUSPECT_CODES } = require("../utils/countries");
@@ -26,6 +27,7 @@ async function countRange(db, kind, from, to) {
   const add = (code, n) => { counts[code] = (counts[code] || 0) + n; };
   for (const r of rows) {
     const n = Number(r.n);
+    add("*", n);
     if (r.is_us) add("US", n);
     if (r.is_in) add("IN", n);
     // Other countries: the phone country, unless the address already says India or the USA.
@@ -47,7 +49,8 @@ function assemble(people, companies) {
     .filter((code) => /^[A-Z]{2}$/.test(code) && !SUSPECT_CODES.has(code) && countryName(code))
     .map((code) => ({ code, name: countryName(code), people: people[code] || 0, companies: companies[code] || 0 }))
     .sort((a, b) => (b.people + b.companies) - (a.people + a.companies) || a.name.localeCompare(b.name));
-  return { generatedAt: new Date().toISOString(), countries };
+  const totals = { people: people["*"] || 0, companies: companies["*"] || 0 };
+  return { generatedAt: new Date().toISOString(), totals, countries };
 }
 
 module.exports = { countRange, addCounts, assemble };

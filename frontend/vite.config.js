@@ -1,9 +1,26 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { PEOPLE_TOTAL, PEOPLE_M, PEOPLE_MILLION } from "./src/siteStats.js";
+
+// index.html uses %DOOTT_PEOPLE_M% / %DOOTT_PEOPLE_MILLION% for the headline count (src/siteStats.js,
+// from countries.json totals made by the count job), so the number is never typed by hand.
+function siteStatsInHtml() {
+  return {
+    name: "doott-site-stats",
+    // "pre": before Vite's own %ENV% replacement, which would warn about unknown names
+    transformIndexHtml: {
+      order: "pre",
+      handler(html) {
+        if (!PEOPLE_TOTAL) throw new Error("frontend/src/countries.json has no totals: run node scripts/refresh_counts.js --only countries --files");
+        return html.replaceAll("%DOOTT_PEOPLE_MILLION%", PEOPLE_MILLION).replaceAll("%DOOTT_PEOPLE_M%", PEOPLE_M);
+      },
+    },
+  };
+}
 
 export default defineConfig({
   envDir: ".",
-  plugins: [react()],
+  plugins: [react(), siteStatsInHtml()],
 
   server: {
     port: 5174,
