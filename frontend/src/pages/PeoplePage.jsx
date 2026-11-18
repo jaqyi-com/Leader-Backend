@@ -7,6 +7,8 @@ import {
 } from "lucide-react";
 import { fpGetDatabase, fpGetStats, fpGetColumns, fpRefresh } from "../api";
 import toast from "react-hot-toast";
+import useRowSelection from "../useRowSelection";
+import { ExportMenu, SelectionBar, SelectAllCheckbox, RowCheckbox, selectedRowStyle } from "../components/RowSelection";
 import QueryBuilder, { qbFiltersToParams, paramsToQbFilters } from "../components/QueryBuilder";
 import QuickFilters, { NO_QUICK_FILTERS, quickFilterParams } from "../components/QuickFilters";
 import CountryPicker from "../components/CountryPicker";
@@ -250,25 +252,8 @@ export default function PeoplePage() {
     setPage(1);
   };
 
-  const exportCSV = () => {
-    if (!cols.length || !records.length) return;
-    const sanitizeCsvCell = (val) => {
-      const str = String(val ?? "");
-      if (/^[=+\-@\t\r]/.test(str)) {
-        return `'${str}`;
-      }
-      return str;
-    };
-    const hdrs = cols.map(c => c.label);
-    const rows = records.map(r => cols.map(c => r[c.key] || ""));
-    const csv = [hdrs, ...rows]
-      .map(r => r.map(v => `"${sanitizeCsvCell(v).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    a.download = "people_data.csv";
-    a.click();
-  };
+  // Selected rows (kept across pages and filters) for "Export selected"
+  const selection = useRowSelection();
 
   const pages = Math.ceil(total / limit);
   const statRows = stats ? [
@@ -354,9 +339,7 @@ export default function PeoplePage() {
           </p> */}
         </div>
         <div className="flex gap-2 flex-wrap">
-          <button onClick={exportCSV} disabled={!records.length} className="btn-ghost text-xs gap-1.5">
-            <Download size={13} />Export CSV
-          </button>
+          <ExportMenu selection={selection} cols={cols} pageRows={records} base={"people"} />
           <button onClick={handleRefresh} disabled={refreshing || loading} className="btn-ghost text-xs gap-1.5">
             <RefreshCw size={13} className={refreshing || loading ? "animate-spin" : ""} />
             {refreshing ? "Refreshing…" : "Refresh"}
@@ -425,12 +408,15 @@ export default function PeoplePage() {
         onChange={handleFiltersChange}
       />
 
+      <SelectionBar selection={selection} cols={cols} pageRows={records} base={"people"} />
+
       {/* Table */}
       <div className="card overflow-hidden flex-1">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
+                <SelectAllCheckbox selection={selection} pageRows={records} />
                 {visibleCols.map(c => (
                   <Fragment key={c.key}>
                     <th onClick={() => handleSort(c.key)}
@@ -450,6 +436,7 @@ export default function PeoplePage() {
               {loading ? (
                 Array.from({ length: 8 }).map((_, idx) => (
                   <tr key={`skel-${idx}`} className="border-b border-[var(--border)] animate-pulse">
+                    <td className="w-9" />
                     {(visibleCols.length > 0 ? visibleCols : Array.from({ length: 6 })).map((_, ci) => (
                       <td key={ci} className="px-3 py-3">
                         <div className="h-4 bg-[var(--surface-2)] rounded" style={{ width: `${55 + (ci * 19) % 60}px` }} />
@@ -459,7 +446,7 @@ export default function PeoplePage() {
                 ))
               ) : hasError ? (
                 <tr>
-                  <td colSpan={visibleCols.length || 1} className="py-16 text-center text-[var(--text-3)]">
+                  <td colSpan={visibleCols.length + 1} className="py-16 text-center text-[var(--text-3)]">
                     <RefreshCw size={32} className="mx-auto mb-3 opacity-50 text-red-400" />
                     <p className="text-sm font-semibold text-red-400">Failed to load records after automatic retries</p>
                     <p className="text-[11px] mt-1 opacity-60">The server took too long to respond. Click below to try again.</p>
@@ -473,14 +460,15 @@ export default function PeoplePage() {
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={visibleCols.length || 1} className="py-16 text-center text-[var(--text-3)]">
+                  <td colSpan={visibleCols.length + 1} className="py-16 text-center text-[var(--text-3)]">
                     <Database size={32} className="mx-auto mb-3 opacity-30" />
                     <p>No records found.</p>
                     <p className="text-[10px] mt-1 opacity-60">Try adjusting your search or clearing filters.</p>
                   </td>
                 </tr>
               ) : records.map((r, i) => (
-                <tr key={i} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors">
+                <tr key={i} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors" style={selectedRowStyle(selection, r)}>
+                  <RowCheckbox selection={selection} pageRows={records} index={i} />
                   {visibleCols.map(c => (
                     <Fragment key={c.key}>
                       <td className="px-3 py-2.5">
