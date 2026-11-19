@@ -9,6 +9,7 @@ import { fpnGetDatabase, fpnGetStats, fpnGetColumns, fpnRefresh } from "../api";
 import toast from "react-hot-toast";
 import useRowSelection from "../useRowSelection";
 import { ExportMenu, SelectionBar, SelectAllCheckbox, RowCheckbox, selectedRowStyle } from "../components/RowSelection";
+import { CheckHeader, CheckCell, withoutCheckCols } from "../components/CheckBadges";
 
 export default function PeopleNumberPage() {
   const [records,    setRecords]    = useState([]);
@@ -174,6 +175,7 @@ export default function PeopleNumberPage() {
     );
   };
 
+  const tableCols = withoutCheckCols(cols);
   return (
     <div className="flex flex-col gap-5 h-full">
 
@@ -284,7 +286,8 @@ export default function PeopleNumberPage() {
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
                 <SelectAllCheckbox selection={selection} pageRows={records} />
-                {cols.map(c => (
+                <CheckHeader />
+                {tableCols.map(c => (
                   <th key={c.key} onClick={() => handleSort(c.key)}
                     className="text-left px-3 py-3 text-[var(--text-3)] font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap cursor-pointer hover:text-[var(--text-2)] select-none">
                     {c.label}{sortBy === c.key ? (sortDir === "asc" ? " ↑" : " ↓") : ""}
@@ -296,8 +299,8 @@ export default function PeopleNumberPage() {
               {loading ? (
                 Array.from({ length: 8 }).map((_, idx) => (
                   <tr key={`skel-${idx}`} className="border-b border-[var(--border)] animate-pulse">
-                    <td className="w-9" />
-                    {(cols.length > 0 ? cols : Array.from({ length: 6 })).map((_, ci) => (
+                    <td className="w-9" /><td />
+                    {(tableCols.length > 0 ? tableCols : Array.from({ length: 6 })).map((_, ci) => (
                       <td key={ci} className="px-3 py-3">
                         <div className="h-4 bg-[var(--surface-2)] rounded" style={{ width: `${55 + (ci * 19) % 60}px` }} />
                       </td>
@@ -306,7 +309,7 @@ export default function PeopleNumberPage() {
                 ))
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={cols.length + 1} className="py-16 text-center text-[var(--text-3)]">
+                  <td colSpan={tableCols.length + 2} className="py-16 text-center text-[var(--text-3)]">
                     <Database size={32} className="mx-auto mb-3 opacity-30" />
                     <p>No records found.</p>
                     <p className="text-[10px] mt-1 opacity-60">Try adjusting your search or clearing filters.</p>
@@ -315,7 +318,8 @@ export default function PeopleNumberPage() {
               ) : records.map((r, i) => (
                 <tr key={i} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors" style={selectedRowStyle(selection, r)}>
                   <RowCheckbox selection={selection} pageRows={records} index={i} />
-                  {cols.map(c => (
+                  <CheckCell row={r} />
+                  {tableCols.map(c => (
                     <td key={c.key} className="px-3 py-2.5">
                       {renderCell(c, r[c.key])}
                     </td>

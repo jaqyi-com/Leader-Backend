@@ -81,7 +81,7 @@ function normalizeRow({ selectCols, colToField }, row) {
   for (const col of selectCols) {
     const field = colToField[col] || col;
     const val   = row[col];
-    out[field] = val !== null && val !== undefined ? String(val) : "";
+    out[field] = val === null || val === undefined ? "" : val instanceof Date ? val.toISOString() : String(val);
   }
   return out;
 }

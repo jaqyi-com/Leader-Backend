@@ -58,7 +58,8 @@ const KNOWN_PEOPLE_COLS = [
   "uuid", "company_uuid", "full_name", "first_name", "last_name", "job_title",
   "linked_url", "location", "city", "state", "pincode", "lat", "long",
   "geo_source", "emails", "phones", "created_at", "embedding",
-  "is_email_valid", "email_status", "email_score", "email_verified_at"
+  "is_email_valid", "email_status", "email_score", "email_verified_at",
+  "phone_status", "phone_e164", "phone_line_type", "phone_verified_at"
 ];
 
 function buildSchemaObj(actualCols) {
@@ -85,7 +86,7 @@ function normalizeRow({ selectCols, colToField }, row) {
   for (const col of selectCols) {
     const field = colToField[col] || col;
     const val   = row[col];
-    out[field] = val !== null && val !== undefined ? String(val) : "";
+    out[field] = val === null || val === undefined ? "" : val instanceof Date ? val.toISOString() : String(val);
   }
 
   // Auto-derive first_name / last_name from full_name when DB has nulls

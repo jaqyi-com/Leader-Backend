@@ -105,7 +105,7 @@ async function startPostgres(state) {
     job_title text, linked_url text, location text, city text, state text, pincode text, lat text, long text,
     geo_source text, emails text, phones text, created_at text, embedding text,
     is_email_valid boolean, email_status text, email_score numeric, email_verified_at timestamptz,
-    phone_status text, phone_line_type text, phone_country text)`);
+    phone_status text, phone_e164 text, phone_line_type text, phone_country text, phone_verified_at timestamptz)`);
   const rows = syntheticPeople();
   for (const r of rows) {
     await pool.query(
@@ -117,7 +117,7 @@ async function startPostgres(state) {
   await pool.query(`create table final.companies (
     uuid uuid primary key default gen_random_uuid(), business_name text, industry text, phone text, phones text, emails text,
     website text, address text, city text, state text, pincode text, geo_source text, rating text, reviews text,
-    email_status text, is_email_valid boolean, phone_status text, phone_line_type text, phone_country text, created_at text, embedding text)`);
+    email_status text, is_email_valid boolean, email_verified_at timestamptz, phone_status text, phone_e164 text, phone_line_type text, phone_country text, phone_verified_at timestamptz, created_at text, embedding text)`);
   const companies = syntheticCompanies();
   for (const r of companies) {
     await pool.query(

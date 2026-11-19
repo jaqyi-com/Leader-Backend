@@ -9,6 +9,7 @@ import { fpGetDatabase, fpGetStats, fpGetColumns, fpRefresh } from "../api";
 import toast from "react-hot-toast";
 import useRowSelection from "../useRowSelection";
 import { ExportMenu, SelectionBar, SelectAllCheckbox, RowCheckbox, selectedRowStyle } from "../components/RowSelection";
+import { CheckHeader, CheckCell, withoutCheckCols } from "../components/CheckBadges";
 import QueryBuilder, { qbFiltersToParams, paramsToQbFilters } from "../components/QueryBuilder";
 import QuickFilters, { NO_QUICK_FILTERS, quickFilterParams } from "../components/QuickFilters";
 import CountryPicker from "../components/CountryPicker";
@@ -262,6 +263,7 @@ export default function PeoplePage() {
 
   // Show all columns to ensure consistent layout and prevent columns from hiding dynamically
   const visibleCols = cols;
+  const tableCols = withoutCheckCols(visibleCols);
 
   // ── Smart cell renderer ───────────────────────────────────
   const renderCell = (col, val) => {
@@ -417,7 +419,8 @@ export default function PeoplePage() {
             <thead>
               <tr className="border-b border-[var(--border)] bg-[var(--surface-2)]">
                 <SelectAllCheckbox selection={selection} pageRows={records} />
-                {visibleCols.map(c => (
+                <CheckHeader />
+                {tableCols.map(c => (
                   <Fragment key={c.key}>
                     <th onClick={() => handleSort(c.key)}
                       className="text-left px-3 py-3 text-[var(--text-3)] font-semibold uppercase tracking-wider text-[10px] whitespace-nowrap cursor-pointer hover:text-[var(--text-2)] select-none">
@@ -436,8 +439,8 @@ export default function PeoplePage() {
               {loading ? (
                 Array.from({ length: 8 }).map((_, idx) => (
                   <tr key={`skel-${idx}`} className="border-b border-[var(--border)] animate-pulse">
-                    <td className="w-9" />
-                    {(visibleCols.length > 0 ? visibleCols : Array.from({ length: 6 })).map((_, ci) => (
+                    <td className="w-9" /><td />
+                    {(tableCols.length > 0 ? tableCols : Array.from({ length: 6 })).map((_, ci) => (
                       <td key={ci} className="px-3 py-3">
                         <div className="h-4 bg-[var(--surface-2)] rounded" style={{ width: `${55 + (ci * 19) % 60}px` }} />
                       </td>
@@ -446,7 +449,7 @@ export default function PeoplePage() {
                 ))
               ) : hasError ? (
                 <tr>
-                  <td colSpan={visibleCols.length + 1} className="py-16 text-center text-[var(--text-3)]">
+                  <td colSpan={tableCols.length + 2} className="py-16 text-center text-[var(--text-3)]">
                     <RefreshCw size={32} className="mx-auto mb-3 opacity-50 text-red-400" />
                     <p className="text-sm font-semibold text-red-400">Failed to load records after automatic retries</p>
                     <p className="text-[11px] mt-1 opacity-60">The server took too long to respond. Click below to try again.</p>
@@ -460,7 +463,7 @@ export default function PeoplePage() {
                 </tr>
               ) : records.length === 0 ? (
                 <tr>
-                  <td colSpan={visibleCols.length + 1} className="py-16 text-center text-[var(--text-3)]">
+                  <td colSpan={tableCols.length + 2} className="py-16 text-center text-[var(--text-3)]">
                     <Database size={32} className="mx-auto mb-3 opacity-30" />
                     <p>No records found.</p>
                     <p className="text-[10px] mt-1 opacity-60">Try adjusting your search or clearing filters.</p>
@@ -469,7 +472,8 @@ export default function PeoplePage() {
               ) : records.map((r, i) => (
                 <tr key={i} className="border-b border-[var(--border)] hover:bg-[var(--surface-2)] transition-colors" style={selectedRowStyle(selection, r)}>
                   <RowCheckbox selection={selection} pageRows={records} index={i} />
-                  {visibleCols.map(c => (
+                  <CheckCell row={r} />
+                  {tableCols.map(c => (
                     <Fragment key={c.key}>
                       <td className="px-3 py-2.5">
                         {renderCell(c, r[c.key])}
