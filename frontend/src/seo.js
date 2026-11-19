@@ -3,6 +3,7 @@
 // tags stay correct after client-side navigation.
 
 import { PEOPLE_M } from "./siteStats.js";
+import { TOTAL_CATEGORIES, CATEGORY_COUNTRIES } from "./categoryStats.js";
 
 export const SITE_URL = "https://doott.jaqyi.com";
 
@@ -19,6 +20,11 @@ export const INDEXABLE_ROUTES = {
     title: `Doott Pricing – Lifetime Access to ${PEOPLE_M} B2B Contacts`,
     description:
       "One price, lifetime access to Doott's B2B database: verified emails, direct phone numbers, company data and unlimited CSV exports. No per-seat fees.",
+  },
+  "/categories": {
+    title: "B2B Industries & Job Titles by Country – Doott Categories",
+    description:
+      `Browse ${TOTAL_CATEGORIES.toLocaleString("en-US")} industries and job titles across ${CATEGORY_COUNTRIES} countries in Doott, including India and the USA. Open any category to see its companies or decision-makers.`,
   },
   "/claude": {
     title: "Connect Doott to Claude – Search B2B Leads from Your Chat",

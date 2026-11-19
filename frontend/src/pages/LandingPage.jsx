@@ -1,4 +1,3 @@
-import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -10,10 +9,9 @@ import {
   Sparkles, ArrowRight, } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import { MCP_URL, EXAMPLE_PROMPTS } from "../claudeConnector";
-import CATEGORIES_DATA from "../categories.json";
-import { PEOPLE_ROLE_GROUPS, COMPANY_INDUSTRY_GROUPS } from "../categoryGroups";
+import { CATEGORIES_DATA, TOTAL_CATEGORIES, CATEGORY_COUNTRIES, GLOBAL_COUNTRIES } from "../categoryStats";
 import doottLogo from "../assets/doott-logo.png";
-import { COVERED_COUNTRIES } from "../countries";
+import { COVERED_COUNTRIES, flag } from "../countries";
 import { PEOPLE_M, PEOPLE_MILLION } from "../siteStats";
 
 const LOGOS = [
@@ -64,7 +62,7 @@ export function Nav() {
           className="hidden items-center gap-8 font-mono text-[11px] uppercase tracking-[0.2em] text-muted-foreground md:flex"
         >
           <a href="/#database" className="transition hover:text-foreground">Database</a>
-          <a href="/#categories" className="transition hover:text-foreground">Categories</a>
+          <Link to="/categories" className="transition hover:text-foreground">Categories</Link>
           <a href="/#features" className="transition hover:text-foreground">Features</a>
           <a href="/#faq" className="transition hover:text-foreground">FAQ</a>
           <Link to="/claude" className="transition hover:text-foreground">Claude</Link>
@@ -359,143 +357,76 @@ function DatabaseShowcase() {
   );
 }
 
-/* ── Categories Showcase ───────────────────────────────────── */
-// Every industry and job title in Doott, from the same generated file as the in-app Categories page
-// (src/counts/explorerCards.js). Names only; each link opens that exact filter.
-const COUNTRY_TABS = [
-  { key: "india", label: "India" },
-  { key: "usa", label: "USA" },
-];
-const MODE_TABS = [
-  { key: "company", label: "Industries", unit: "companies" },
-  { key: "people", label: "Job titles", unit: "people" },
-];
+/* ── Categories preview ────────────────────────────────────── */
+// The full list lives on its own page (/categories, PublicCategoriesPage.jsx); here only the most
+// common industries and job titles, from the same generated files.
 const fmt = (n) => n.toLocaleString("en-US");
-const TOTAL_SUBCATEGORIES = ["india", "usa"].reduce(
-  (sum, c) => sum + CATEGORIES_DATA[c].company.length + CATEGORIES_DATA[c].people.length, 0);
+const PREVIEW = [
+  { title: "Top industries in India", items: CATEGORIES_DATA.india.company.slice(0, 8), href: (n) => `/app/companies?f_industry_eq=${encodeURIComponent(n)}&f_country=india` },
+  { title: "Top job titles in the USA", items: CATEGORIES_DATA.usa.people.slice(0, 8), href: (n) => `/app/people?f_job_title_eq=${encodeURIComponent(n)}&f_country=usa` },
+  { title: "Top industries in the USA", items: CATEGORIES_DATA.usa.company.slice(0, 8), href: (n) => `/app/companies?f_industry_eq=${encodeURIComponent(n)}&f_country=usa` },
+];
+
+// Every country with category lists: India and the USA first, then the rest by size.
+const CATEGORY_PLACES = [
+  { code: "IN", name: "India", n: CATEGORIES_DATA.india.company.length + CATEGORIES_DATA.india.people.length },
+  { code: "US", name: "USA", n: CATEGORIES_DATA.usa.company.length + CATEGORIES_DATA.usa.people.length },
+  ...GLOBAL_COUNTRIES.map((c) => ({ code: c.code, name: c.name, n: c.company.length + c.people.length })),
+];
 
 function CategoriesShowcase() {
-  const [country, setCountry] = useState("india");
-  const [mode, setMode] = useState("company");
-  const [group, setGroup] = useState("all");
-  const [query, setQuery] = useState("");
-
-  const groups = mode === "people" ? PEOPLE_ROLE_GROUPS : COMPANY_INDUSTRY_GROUPS;
-  const all = CATEGORIES_DATA[country][mode];
-
-  const list = useMemo(() => {
-    let out = all;
-    const g = groups.find((x) => x.key === group);
-    if (g?.keywords) out = out.filter((c) => g.keywords.some((kw) => c.name.toLowerCase().includes(kw)));
-    const q = query.trim().toLowerCase();
-    if (q) out = out.filter((c) => c.name.toLowerCase().includes(q));
-    return out;
-  }, [all, groups, group, query]);
-
-  const hrefFor = (name) => {
-    const enc = encodeURIComponent(name);
-    return mode === "people"
-      ? `/app/people?f_job_title_eq=${enc}&f_country=${country}`
-      : `/app/companies?f_industry_eq=${enc}&f_country=${country}`;
-  };
-
-  const pill = (active) =>
-    `px-4 py-2 font-mono text-[11px] uppercase tracking-[0.15em] transition border ${
-      active
-        ? "border-foreground bg-foreground text-background font-semibold"
-        : "border-border bg-background/50 text-muted-foreground hover:text-foreground"
-    }`;
-
   return (
-    <section id="categories" className="border-b border-border bg-secondary/10 py-24 md:py-32" aria-label="Browse all B2B categories">
+    <section id="categories" className="border-b border-border bg-secondary/10 py-24 md:py-32" aria-label="B2B categories">
       <div className="mx-auto max-w-6xl px-6">
-        {/* Section Header */}
         <div className="mb-12">
-          <p className="eyebrow mb-4">◆ {fmt(TOTAL_SUBCATEGORIES)} industries &amp; job titles</p>
+          <p className="eyebrow mb-4">◆ {fmt(TOTAL_CATEGORIES)} industries &amp; job titles · {CATEGORY_COUNTRIES} countries</p>
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
             <div>
               <h2 className="display text-3xl md:text-5xl max-w-2xl">
                 Browse every category &amp; decision-maker role.
               </h2>
               <p className="text-muted-foreground mt-4 max-w-xl text-sm leading-relaxed">
-                Every industry and job title in Doott for India and the USA. Open one to see its companies
-                or people.
+                Industries and job titles for India, the USA and {CATEGORY_COUNTRIES - 2} more countries. Pick a country to see all of its categories.
               </p>
             </div>
             <Link
-              to="/app/categories"
+              to="/categories"
               className="inline-flex h-11 items-center gap-2 border border-primary bg-primary px-5 font-mono text-[11px] uppercase tracking-[0.18em] text-primary-foreground transition hover:opacity-90 self-start md:self-auto"
             >
-              Open category explorer →
+              Browse all categories →
             </Link>
           </div>
         </div>
 
-        {/* Country, type and search */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-5">
-          <div className="flex flex-wrap items-center gap-2">
-            {COUNTRY_TABS.map((c) => (
-              <button key={c.key} onClick={() => { setCountry(c.key); setGroup("all"); }} className={pill(country === c.key)} aria-pressed={country === c.key}>
-                {c.label}
-              </button>
-            ))}
-            <span className="mx-1 h-6 w-px bg-border" aria-hidden="true" />
-            {MODE_TABS.map((m) => (
-              <button key={m.key} onClick={() => { setMode(m.key); setGroup("all"); }} className={pill(mode === m.key)} aria-pressed={mode === m.key}>
-                {m.label} <span className="opacity-60">({CATEGORIES_DATA[country][m.key].length})</span>
-              </button>
-            ))}
-          </div>
-          <div className="relative w-full lg:w-[280px]">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="search"
-              placeholder={mode === "people" ? "Search job titles…" : "Search industries…"}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label={mode === "people" ? "Search job titles" : "Search industries"}
-              className="w-full pl-9 pr-4 py-2 border border-border bg-background text-xs text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-foreground font-mono"
-            />
-          </div>
-        </div>
-
-        {/* Groups */}
-        <div className="flex flex-wrap gap-2 mb-6 pb-6 border-b border-border">
-          {groups.map((g) => (
-            <button
-              key={g.key}
-              onClick={() => setGroup(g.key)}
-              aria-pressed={group === g.key}
-              className={`px-3 py-1 border font-mono text-[10px] uppercase tracking-[0.12em] transition-colors ${
-                group === g.key ? "border-foreground text-foreground bg-secondary" : "border-border text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {g.label}
-            </button>
+        <div className="grid grid-cols-1 gap-px border border-border bg-border md:grid-cols-3">
+          {PREVIEW.map((p) => (
+            <div key={p.title} className="bg-background p-6">
+              <h3 className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-4">{p.title}</h3>
+              <ul className="space-y-2">
+                {p.items.map((c) => (
+                  <li key={c.name}>
+                    <Link to={p.href(c.name)} className="text-sm hover:text-primary transition">{c.name}</Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ))}
         </div>
-
-        {/* Every subcategory */}
-        <p className="font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground mb-3">
-          {fmt(list.length)} of {fmt(all.length)} {mode === "people" ? "job titles" : "industries"}
-        </p>
-        <div className="border border-border bg-background max-h-[600px] overflow-y-auto">
-          {list.length === 0 ? (
-            <p className="p-8 text-sm text-muted-foreground">Nothing matches “{query}”. Try a shorter word.</p>
-          ) : (
-            // Styles live on the list (child selectors) so each of the hundreds of links stays small in the pre-rendered HTML.
-            <ul className="grid grid-cols-1 gap-px bg-border sm:grid-cols-2 lg:grid-cols-3 [&>li]:bg-background [&_a]:flex [&_a]:items-center [&_a]:justify-between [&_a]:gap-3 [&_a]:px-4 [&_a]:py-3 [&_a]:text-sm [&_a:hover]:bg-secondary/40 [&_a:hover>span:first-child]:text-primary [&_a>span:first-child]:min-w-0 [&_a>span:first-child]:truncate">
-              {list.map((c) => (
-                <li key={c.name}>
-                  <Link to={hrefFor(c.name)}><span>{c.name}</span></Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-        <p className="mt-3 text-xs text-muted-foreground">
-          Opening a category needs a Doott account.
-        </p>
+        <h3 className="mt-12 mb-4 font-mono text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+          Browse by country · {CATEGORY_PLACES.length} countries
+        </h3>
+        <ul aria-label="Categories by country" className="flex flex-wrap gap-2 [&_a]:inline-flex [&_a]:items-center [&_a]:gap-1.5 [&_a]:border [&_a]:border-border [&_a]:bg-background [&_a]:px-3 [&_a]:py-1.5 [&_a]:text-xs [&_a]:transition [&_a:hover]:border-foreground [&_a:hover]:text-primary [&_a>span:last-child]:text-muted-foreground [&_a>span:last-child]:font-mono [&_a>span:last-child]:text-[10px]">
+          {CATEGORY_PLACES.map((c) => (
+            <li key={c.code}>
+              <Link to={`/categories?country=${c.code}`} title={`${c.name}: ${c.n} industries and job titles`}>
+                <span aria-hidden="true">{flag(c.code)}</span>{c.name}<span>{c.n}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <Link to="/categories" className="mt-6 inline-block font-mono text-[11px] uppercase tracking-[0.15em] text-primary hover:underline underline-offset-4">
+          See all {fmt(TOTAL_CATEGORIES)} categories, by country →
+        </Link>
       </div>
     </section>
   );
@@ -796,6 +727,7 @@ export function Footer() {
         <nav aria-label="Footer navigation" className="flex flex-wrap justify-center items-center gap-x-6 gap-y-2 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
           <Link to="/login" className="hover:text-foreground transition">Sign In</Link>
           <a href="/#database" className="hover:text-foreground transition">Database</a>
+          <Link to="/categories" className="hover:text-foreground transition">Categories</Link>
           <a href="/#features" className="hover:text-foreground transition">Features</a>
           <a href="/#faq" className="hover:text-foreground transition">FAQ</a>
           <Link to="/claude" className="hover:text-foreground transition">Claude</Link>

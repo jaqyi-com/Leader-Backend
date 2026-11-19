@@ -7,6 +7,7 @@ User-agent: *
 Allow: /$
 Allow: /pricing
 Allow: /claude
+Allow: /categories
 Allow: /login
 Allow: /register
 Allow: /api-docs

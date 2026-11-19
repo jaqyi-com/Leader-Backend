@@ -31,7 +31,7 @@ module.exports = defineConfig({
   webServer: [
     {
       // Accounts live in PostgreSQL (schema "app", created by the backend on first use).
-      command: `sh -c 'D=$(mktemp -d) && "${PG_BIN}/initdb" -D "$D" -U postgres -A trust -E UTF8 --locale=C >/dev/null && exec "${PG_BIN}/postgres" -D "$D" -p ${PG_PORT} -k "$D" -c listen_addresses=127.0.0.1'`,
+      command: `sh -c 'T="\${TMPDIR:-/tmp}"; rm -rf "\$T"/doott-e2e-pg-*; D=$(mktemp -d "\$T/doott-e2e-pg-XXXXXX") && "${PG_BIN}/initdb" -D "$D" -U postgres -A trust -E UTF8 --locale=C >/dev/null && exec "${PG_BIN}/postgres" -D "$D" -p ${PG_PORT} -k "$D" -c listen_addresses=127.0.0.1'`,
       port: PG_PORT,
       reuseExistingServer: false,
       timeout: 30_000,

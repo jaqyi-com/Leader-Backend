@@ -13,6 +13,7 @@ import { ThemeProvider } from "./context/ThemeContext";
 import LandingPage from "./pages/LandingPage";
 import PricingPage from "./pages/PricingPage";
 import ClaudeConnectorPage from "./pages/ClaudeConnectorPage";
+import PublicCategoriesPage from "./pages/PublicCategoriesPage";
 
 // Everything except the public marketing pages loads on demand, so the landing page stays light.
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="/"                element={<LandingPage />} />
             <Route path="/pricing"         element={<PricingPage />} />
             <Route path="/claude"          element={<ClaudeConnectorPage />} />
+            <Route path="/categories"      element={<PublicCategoriesPage />} />
             <Route path="/join"            element={<JoinPage />} />
             <Route path="/login"           element={<LoginPage />} />
             <Route path="/register"        element={<RegisterGate />} />

@@ -39,6 +39,10 @@
       "destination": "/claude/index.html"
     },
     {
+      "source": "/categories",
+      "destination": "/categories/index.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/app-shell.html"
     }
